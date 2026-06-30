@@ -55,6 +55,11 @@ export const useOntologyStore = defineStore('ontology', () => {
     return apiDownload('/ontology/export?format=turtle')
   }
 
+  function clearError() { error.value = null }
+
+  function reportError(e: unknown) { setError(e) }
+
   return { classes, selectedIri, meta, error, selected, tree,
-           refresh, select, createClass, saveClass, deleteClass, loadFile, exportTurtle }
+           refresh, select, createClass, saveClass, deleteClass, loadFile, exportTurtle,
+           clearError, reportError }
 })

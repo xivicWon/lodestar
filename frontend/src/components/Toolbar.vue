@@ -19,11 +19,12 @@ function removeClass() {
 }
 
 async function exportFile() {
-  const blob = await store.exportTurtle()
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url; a.download = 'ontology.ttl'; a.click()
-  URL.revokeObjectURL(url)
+  try {
+    const blob = await store.exportTurtle()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = 'ontology.ttl'; a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) { store.reportError(e) }
 }
 </script>
 

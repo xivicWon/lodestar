@@ -34,4 +34,14 @@ describe('buildTree', () => {
     const tree = buildTree([cls('e#A', ['e#B']), cls('e#B', ['e#A'])])
     expect(Array.isArray(tree)).toBe(true) // returns without stack overflow
   })
+
+  it('terminates on a cycle reachable from a root (R -> A -> B -> A)', () => {
+    // R is a root; A under R; B under A; A also under B (cycle A<->B below R)
+    const tree = buildTree([cls('e#R'), cls('e#A', ['e#R', 'e#B']), cls('e#B', ['e#A'])])
+    const r = tree.find(n => n.iri === 'e#R')!
+    const a = r.children.find(n => n.iri === 'e#A')!
+    const b = a.children.find(n => n.iri === 'e#B')!
+    // B's child A is pruned by the ancestors guard (A already on path R->A->B)
+    expect(b.children.map(n => n.iri)).toEqual([])
+  })
 })

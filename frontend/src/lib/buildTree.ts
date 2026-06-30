@@ -19,7 +19,7 @@ export function buildTree(classes: ClassDto[]): TreeNode[] {
     if (ancestors.has(parentIri)) return []
     const path = new Set(ancestors).add(parentIri)
     return classes
-      .filter(c => parentsOf(c).includes(parentIri))
+      .filter(c => parentsOf(c).includes(parentIri) && !path.has(c.iri))
       .map(c => ({ iri: c.iri, label: c.label, children: childrenOf(c.iri, path) }))
   }
 
