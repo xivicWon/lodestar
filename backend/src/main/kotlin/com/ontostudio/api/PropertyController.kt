@@ -37,14 +37,14 @@ class PropertyController(private val service: PropertyService) {
     fun createData(@RequestBody r: CreateDataPropRequest): DataPropertyDto =
         service.createData(r.label, r.domains, r.range)
 
-    @PatchMapping("/object/{iri}")
-    fun setChars(@PathVariable iri: String, @RequestBody r: CharacteristicsRequest): ObjectPropertyDto =
+    @PatchMapping("/object/by-iri")
+    fun setChars(@RequestParam iri: String, @RequestBody r: CharacteristicsRequest): ObjectPropertyDto =
         service.setObjectCharacteristics(iri, r.characteristics)
 
-    @DeleteMapping("/{type}/{iri}")
+    @DeleteMapping("/by-iri")
     fun delete(
-        @PathVariable type: String,
-        @PathVariable iri: String,
+        @RequestParam type: String,
+        @RequestParam iri: String,
         @RequestParam(defaultValue = "false") cascade: Boolean
     ) = service.delete(type, iri, cascade)
 }

@@ -32,14 +32,14 @@ export const useOntologyStore = defineStore('ontology', () => {
 
   async function saveClass(iri: string, patch: { label?: string; superClasses?: string[] }) {
     error.value = null
-    try { await apiPatch<ClassDto>(`/classes/${encodeURIComponent(iri)}`, patch); await refresh() }
+    try { await apiPatch<ClassDto>(`/classes/by-iri?iri=${encodeURIComponent(iri)}`, patch); await refresh() }
     catch (e) { setError(e) }
   }
 
   async function deleteClass(iri: string, cascade = false) {
     error.value = null
     try {
-      await apiDelete(`/classes/${encodeURIComponent(iri)}?cascade=${cascade}`)
+      await apiDelete(`/classes/by-iri?iri=${encodeURIComponent(iri)}&cascade=${cascade}`)
       if (selectedIri.value === iri) selectedIri.value = null
       await refresh()
     } catch (e) { setError(e) }

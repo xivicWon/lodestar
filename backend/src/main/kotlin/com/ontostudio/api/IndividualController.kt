@@ -13,14 +13,14 @@ class IndividualController(private val service: IndividualService) {
     @GetMapping fun list(@RequestParam(required = false) type: String?): List<IndividualDto> = service.list(type)
     @PostMapping fun create(@RequestBody r: CreateIndividualRequest): IndividualDto = service.create(r.label, r.types)
 
-    @PostMapping("/{iri}/assertions")
-    fun addAssertion(@PathVariable iri: String, @RequestBody r: AssertionRequest): IndividualDto =
+    @PostMapping("/assertions")
+    fun addAssertion(@RequestParam iri: String, @RequestBody r: AssertionRequest): IndividualDto =
         if (r.isLiteral) service.addDataAssertion(iri, r.property, r.value)
         else service.addObjectAssertion(iri, r.property, r.value)
 
-    @DeleteMapping("/{iri}")
+    @DeleteMapping("/by-iri")
     fun delete(
-        @PathVariable iri: String,
+        @RequestParam iri: String,
         @RequestParam(defaultValue = "false") cascade: Boolean
     ) = service.delete(iri, cascade)
 }
