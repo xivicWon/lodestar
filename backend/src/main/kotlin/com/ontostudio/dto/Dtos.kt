@@ -33,3 +33,5 @@ data class OntologyMetaDto(
 )
 
 data class NewOntologyRequest(val ontologyIri: String?, val baseIri: String)
+
+data class ClassNode(val iri: String, val label: String?, val children: List<ClassNode>)

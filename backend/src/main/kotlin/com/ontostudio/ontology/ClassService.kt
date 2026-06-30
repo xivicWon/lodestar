@@ -5,8 +5,10 @@ import com.ontostudio.core.OntologyHolder
 import com.ontostudio.core.OntologyMapper
 import com.ontostudio.dto.ApiException
 import com.ontostudio.dto.ClassDto
+import com.ontostudio.dto.ClassNode
 import org.semanticweb.owlapi.model.IRI
 import org.semanticweb.owlapi.model.OWLAnnotationAssertionAxiom
+import org.semanticweb.owlapi.model.OWLClass
 import org.semanticweb.owlapi.model.OWLDeclarationAxiom
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -56,6 +58,16 @@ class ClassService(private val holder: OntologyHolder, private val mapper: Ontol
         ont.subClassAxiomsForSubClass(cls).toList().forEach { mgr.removeAxiom(ont, it) }
         supers.forEach { mgr.addAxiom(ont, df.getOWLSubClassOfAxiom(cls, df.getOWLClass(IRI.create(it)))) }
         mapper.classDto(cls)
+    }
+
+    fun tree(): List<ClassNode> = synchronized(holder.lock) {
+        fun childrenOf(parent: OWLClass): List<ClassNode> =
+            ont.classesInSignature().filter { c ->
+                ont.subClassAxiomsForSubClass(c).anyMatch { ax ->
+                    !ax.superClass.isAnonymous && ax.superClass.asOWLClass() == parent
+                }
+            }.map { c -> ClassNode(c.iri.toString(), mapper.labelOf(c.iri), childrenOf(c)) }.toList()
+        childrenOf(df.owlThing)
     }
 
     fun delete(iri: String, cascade: Boolean) = synchronized(holder.lock) {

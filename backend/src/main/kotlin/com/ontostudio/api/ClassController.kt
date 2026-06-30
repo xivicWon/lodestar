@@ -1,6 +1,7 @@
 package com.ontostudio.api
 
 import com.ontostudio.dto.ClassDto
+import com.ontostudio.dto.ClassNode
 import com.ontostudio.ontology.ClassService
 import org.springframework.web.bind.annotation.*
 
@@ -11,6 +12,7 @@ data class PatchClassRequest(val label: String? = null, val superClasses: List<S
 @RequestMapping("/api/classes")
 class ClassController(private val service: ClassService) {
     @GetMapping fun list(): List<ClassDto> = service.list()
+    @GetMapping("/tree") fun tree(): List<ClassNode> = service.tree()
     @GetMapping("/{iri}") fun get(@PathVariable iri: String): ClassDto = service.get(iri)
     @PostMapping fun create(@RequestBody r: CreateClassRequest): ClassDto = service.create(r.label, r.superClass)
 
