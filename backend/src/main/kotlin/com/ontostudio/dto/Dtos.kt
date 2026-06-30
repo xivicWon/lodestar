@@ -31,3 +31,5 @@ data class OntologyMetaDto(
     val ontologyIri: String?, val baseIri: String,
     val prefixes: Map<String, String>, val counts: Map<String, Int>
 )
+
+data class NewOntologyRequest(val ontologyIri: String?, val baseIri: String)

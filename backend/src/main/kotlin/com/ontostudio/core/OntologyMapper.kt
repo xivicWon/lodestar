@@ -7,10 +7,10 @@ import org.springframework.stereotype.Component
 @Component
 class OntologyMapper(private val holder: OntologyHolder) {
 
-    fun labelOf(iri: IRI): String? {
+    fun labelOf(iri: IRI): String? = synchronized(holder.lock) {
         val rdfsLabel = holder.dataFactory.rdfsLabel.iri
         // annotationAssertionAxioms returns Java Stream; toList() is Java 16+ terminal op
-        return holder.ontology.annotationAssertionAxioms(iri)
+        holder.ontology.annotationAssertionAxioms(iri)
             .toList()
             .mapNotNull { ax ->
                 // OWL API 5.x asLiteral() returns java.util.Optional<OWLLiteral>
@@ -19,11 +19,11 @@ class OntologyMapper(private val holder: OntologyHolder) {
             .firstOrNull()
     }
 
-    fun meta(): OntologyMetaDto {
+    fun meta(): OntologyMetaDto = synchronized(holder.lock) {
         val o = holder.ontology
         // OWL API 5.x OWLOntologyID.getOntologyIRI() returns java.util.Optional<IRI>
         val ontologyIriStr = o.ontologyID.ontologyIRI.orElse(null)?.toString()
-        return OntologyMetaDto(
+        OntologyMetaDto(
             ontologyIri = ontologyIriStr,
             baseIri = holder.baseIri,
             prefixes = emptyMap(),
