@@ -3,12 +3,15 @@ package com.ontostudio.core
 import com.ontostudio.dto.AnnotationDto
 import com.ontostudio.dto.ClassDto
 import com.ontostudio.dto.DataPropertyDto
+import com.ontostudio.dto.IndividualDto
 import com.ontostudio.dto.ObjectPropertyDto
 import com.ontostudio.dto.OntologyMetaDto
+import com.ontostudio.dto.PropertyAssertionDto
 import org.semanticweb.owlapi.model.IRI
 import org.semanticweb.owlapi.model.OWLClass
 import org.semanticweb.owlapi.model.OWLDataProperty
 import org.semanticweb.owlapi.model.OWLDatatype
+import org.semanticweb.owlapi.model.OWLNamedIndividual
 import org.semanticweb.owlapi.model.OWLObjectProperty
 import org.springframework.stereotype.Component
 
@@ -72,6 +75,28 @@ class OntologyMapper(private val holder: OntologyHolder) {
                 .map { it.asOWLClass().iri.toString() }.toList(),
             range, o.functionalDataPropertyAxioms(p).findAny().isPresent, annotationsOf(p.iri)
         )
+    }
+
+    fun individualDto(ind: OWLNamedIndividual): IndividualDto = synchronized(holder.lock) {
+        val o = holder.ontology
+        val types = o.classAssertionAxioms(ind).map { it.classExpression }
+            .filter { !it.isAnonymous }.map { it.asOWLClass().iri.toString() }.toList()
+        val objAssertions = o.objectPropertyAssertionAxioms(ind).map {
+            PropertyAssertionDto(
+                it.property.asOWLObjectProperty().iri.toString(),
+                it.`object`.asOWLNamedIndividual().iri.toString(),
+                false
+            )
+        }.toList()
+        val dataAssertions = o.dataPropertyAssertionAxioms(ind).map {
+            PropertyAssertionDto(
+                it.property.asOWLDataProperty().iri.toString(),
+                it.`object`.literal,
+                true
+            )
+        }.toList()
+        IndividualDto(ind.iri.toString(), labelOf(ind.iri), types,
+            objAssertions + dataAssertions, annotationsOf(ind.iri))
     }
 
     fun meta(): OntologyMetaDto = synchronized(holder.lock) {
