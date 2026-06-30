@@ -2,9 +2,14 @@ package com.ontostudio.core
 
 import com.ontostudio.dto.AnnotationDto
 import com.ontostudio.dto.ClassDto
+import com.ontostudio.dto.DataPropertyDto
+import com.ontostudio.dto.ObjectPropertyDto
 import com.ontostudio.dto.OntologyMetaDto
 import org.semanticweb.owlapi.model.IRI
 import org.semanticweb.owlapi.model.OWLClass
+import org.semanticweb.owlapi.model.OWLDataProperty
+import org.semanticweb.owlapi.model.OWLDatatype
+import org.semanticweb.owlapi.model.OWLObjectProperty
 import org.springframework.stereotype.Component
 
 @Component
@@ -38,6 +43,35 @@ class OntologyMapper(private val holder: OntologyHolder) {
             .map { it.superClass }.filter { !it.isAnonymous }
             .map { it.asOWLClass().iri.toString() }.toList()
         return ClassDto(cls.iri.toString(), labelOf(cls.iri), supers, annotationsOf(cls.iri))
+    }
+
+    fun objectPropertyDto(p: OWLObjectProperty): ObjectPropertyDto = synchronized(holder.lock) {
+        val o = holder.ontology
+        val chars = buildList {
+            if (o.functionalObjectPropertyAxioms(p).findAny().isPresent) add("FUNCTIONAL")
+            if (o.transitiveObjectPropertyAxioms(p).findAny().isPresent) add("TRANSITIVE")
+            if (o.symmetricObjectPropertyAxioms(p).findAny().isPresent) add("SYMMETRIC")
+        }
+        ObjectPropertyDto(
+            p.iri.toString(), labelOf(p.iri),
+            o.objectPropertyDomainAxioms(p).map { it.domain }.filter { !it.isAnonymous }
+                .map { it.asOWLClass().iri.toString() }.toList(),
+            o.objectPropertyRangeAxioms(p).map { it.range }.filter { !it.isAnonymous }
+                .map { it.asOWLClass().iri.toString() }.toList(),
+            chars, null, annotationsOf(p.iri)
+        )
+    }
+
+    fun dataPropertyDto(p: OWLDataProperty): DataPropertyDto = synchronized(holder.lock) {
+        val o = holder.ontology
+        val range = o.dataPropertyRangeAxioms(p).map { it.range }
+            .toList().filterIsInstance<OWLDatatype>().firstOrNull()?.iri?.toString()
+        DataPropertyDto(
+            p.iri.toString(), labelOf(p.iri),
+            o.dataPropertyDomainAxioms(p).map { it.domain }.filter { !it.isAnonymous }
+                .map { it.asOWLClass().iri.toString() }.toList(),
+            range, o.functionalDataPropertyAxioms(p).findAny().isPresent, annotationsOf(p.iri)
+        )
     }
 
     fun meta(): OntologyMetaDto = synchronized(holder.lock) {
