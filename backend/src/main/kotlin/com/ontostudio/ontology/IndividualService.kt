@@ -3,8 +3,11 @@ package com.ontostudio.ontology
 import com.ontostudio.core.IriFactory
 import com.ontostudio.core.OntologyHolder
 import com.ontostudio.core.OntologyMapper
+import com.ontostudio.core.externalReferencingAxioms
+import com.ontostudio.dto.ApiException
 import com.ontostudio.dto.IndividualDto
 import org.semanticweb.owlapi.model.IRI
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 
 @Service
@@ -41,8 +44,13 @@ class IndividualService(private val holder: OntologyHolder, private val mapper: 
         mapper.individualDto(ind)
     }
 
-    fun delete(iri: String) = synchronized(holder.lock) {
-        val ind = df.getOWLNamedIndividual(IRI.create(iri))
+    fun delete(iri: String, cascade: Boolean) = synchronized(holder.lock) {
+        val owlIri = IRI.create(iri)
+        if (!ont.containsIndividualInSignature(owlIri))
+            throw ApiException(HttpStatus.NOT_FOUND, "not_found", "개체 없음", iri)
+        val ind = df.getOWLNamedIndividual(owlIri)
+        if (!cascade && externalReferencingAxioms(ont, ind).isNotEmpty())
+            throw ApiException(HttpStatus.CONFLICT, "in_use", "사용 중인 개체입니다", iri)
         val axioms = ont.referencingAxioms(ind).toList()
         mgr.removeAxioms(ont, axioms.stream())
     }

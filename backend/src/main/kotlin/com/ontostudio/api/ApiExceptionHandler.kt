@@ -11,4 +11,8 @@ class ApiExceptionHandler {
     @ExceptionHandler(ApiException::class)
     fun handle(e: ApiException): ResponseEntity<ApiError> =
         ResponseEntity.status(e.status).body(ApiError(e.error, e.message, e.targetIri))
+
+    @ExceptionHandler(Exception::class)
+    fun handleGeneric(e: Exception): ResponseEntity<ApiError> =
+        ResponseEntity.status(500).body(ApiError("internal", e.message ?: "internal error", null))
 }

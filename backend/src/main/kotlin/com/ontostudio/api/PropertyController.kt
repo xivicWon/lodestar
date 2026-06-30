@@ -42,6 +42,9 @@ class PropertyController(private val service: PropertyService) {
         service.setObjectCharacteristics(iri, r.characteristics)
 
     @DeleteMapping("/{type}/{iri}")
-    fun delete(@PathVariable type: String, @PathVariable iri: String) =
-        service.delete(type, iri)
+    fun delete(
+        @PathVariable type: String,
+        @PathVariable iri: String,
+        @RequestParam(defaultValue = "false") cascade: Boolean
+    ) = service.delete(type, iri, cascade)
 }

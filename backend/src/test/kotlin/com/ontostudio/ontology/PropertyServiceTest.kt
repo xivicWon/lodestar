@@ -2,6 +2,8 @@ package com.ontostudio.ontology
 
 import com.ontostudio.core.OntologyHolder
 import com.ontostudio.core.OntologyMapper
+import com.ontostudio.dto.ApiException
+import org.springframework.http.HttpStatus
 import kotlin.test.*
 
 class PropertyServiceTest {
@@ -29,5 +31,18 @@ class PropertyServiceTest {
         val s = svc()
         val p = s.createData("age", listOf("http://ex#Person"), "http://www.w3.org/2001/XMLSchema#int")
         assertEquals("http://www.w3.org/2001/XMLSchema#int", p.range)
+    }
+
+    @Test fun `delete unknown property throws 404`() {
+        val s = svc()
+        val e = assertFailsWith<ApiException> { s.delete("object", "http://ex#nope", false) }
+        assertEquals(HttpStatus.NOT_FOUND, e.status)
+    }
+
+    @Test fun `delete object property cascade false succeeds when standalone`() {
+        val s = svc()
+        val p = s.createObject("hasPart", emptyList(), emptyList())
+        s.delete("object", p.iri, false)
+        assertEquals(0, s.listObject().size)
     }
 }

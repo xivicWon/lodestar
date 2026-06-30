@@ -18,5 +18,9 @@ class IndividualController(private val service: IndividualService) {
         if (r.isLiteral) service.addDataAssertion(iri, r.property, r.value)
         else service.addObjectAssertion(iri, r.property, r.value)
 
-    @DeleteMapping("/{iri}") fun delete(@PathVariable iri: String) = service.delete(iri)
+    @DeleteMapping("/{iri}")
+    fun delete(
+        @PathVariable iri: String,
+        @RequestParam(defaultValue = "false") cascade: Boolean
+    ) = service.delete(iri, cascade)
 }

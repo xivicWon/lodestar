@@ -61,13 +61,16 @@ class ClassService(private val holder: OntologyHolder, private val mapper: Ontol
     }
 
     fun tree(): List<ClassNode> = synchronized(holder.lock) {
-        fun childrenOf(parent: OWLClass): List<ClassNode> =
-            ont.classesInSignature().filter { c ->
+        fun childrenOf(parent: OWLClass, visited: MutableSet<OWLClass>): List<ClassNode> {
+            if (parent in visited) return emptyList()
+            visited.add(parent)
+            return ont.classesInSignature().filter { c ->
                 ont.subClassAxiomsForSubClass(c).anyMatch { ax ->
                     !ax.superClass.isAnonymous && ax.superClass.asOWLClass() == parent
                 }
-            }.map { c -> ClassNode(c.iri.toString(), mapper.labelOf(c.iri), childrenOf(c)) }.toList()
-        childrenOf(df.owlThing)
+            }.map { c -> ClassNode(c.iri.toString(), mapper.labelOf(c.iri), childrenOf(c, visited)) }.toList()
+        }
+        childrenOf(df.owlThing, mutableSetOf())
     }
 
     fun delete(iri: String, cascade: Boolean) = synchronized(holder.lock) {

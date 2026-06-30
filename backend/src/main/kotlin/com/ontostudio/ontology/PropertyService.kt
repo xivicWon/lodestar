@@ -3,6 +3,7 @@ package com.ontostudio.ontology
 import com.ontostudio.core.IriFactory
 import com.ontostudio.core.OntologyHolder
 import com.ontostudio.core.OntologyMapper
+import com.ontostudio.core.externalReferencingAxioms
 import com.ontostudio.dto.ApiException
 import com.ontostudio.dto.DataPropertyDto
 import com.ontostudio.dto.ObjectPropertyDto
@@ -80,12 +81,27 @@ class PropertyService(private val holder: OntologyHolder, private val mapper: On
             mapper.objectPropertyDto(p)
         }
 
-    fun delete(type: String, iri: String) = synchronized(holder.lock) {
+    fun delete(type: String, iri: String, cascade: Boolean) = synchronized(holder.lock) {
+        val owlIri = IRI.create(iri)
         val entity: OWLEntity = when (type) {
-            "object" -> df.getOWLObjectProperty(IRI.create(iri))
-            "data"   -> df.getOWLDataProperty(IRI.create(iri))
-            else     -> df.getOWLAnnotationProperty(IRI.create(iri))
+            "object" -> {
+                if (!ont.containsObjectPropertyInSignature(owlIri))
+                    throw ApiException(HttpStatus.NOT_FOUND, "not_found", "속성 없음", iri)
+                df.getOWLObjectProperty(owlIri)
+            }
+            "data" -> {
+                if (!ont.containsDataPropertyInSignature(owlIri))
+                    throw ApiException(HttpStatus.NOT_FOUND, "not_found", "속성 없음", iri)
+                df.getOWLDataProperty(owlIri)
+            }
+            else -> {
+                if (!ont.containsAnnotationPropertyInSignature(owlIri))
+                    throw ApiException(HttpStatus.NOT_FOUND, "not_found", "속성 없음", iri)
+                df.getOWLAnnotationProperty(owlIri)
+            }
         }
+        if (!cascade && externalReferencingAxioms(ont, entity).isNotEmpty())
+            throw ApiException(HttpStatus.CONFLICT, "in_use", "사용 중인 속성입니다", iri)
         // Materialize with .toList() first to avoid ConcurrentModificationException
         mgr.removeAxioms(ont, ont.referencingAxioms(entity).toList().stream())
     }

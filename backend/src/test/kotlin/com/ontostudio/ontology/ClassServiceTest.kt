@@ -49,4 +49,17 @@ class ClassServiceTest {
         val e = assertFailsWith<ApiException> { s.delete(animal.iri, cascade = false) }
         assertEquals(HttpStatus.CONFLICT, e.status)
     }
+
+    @Test fun `tree does not stack overflow on cyclic hierarchy`() {
+        val (s, h, _) = svc()
+        val a = s.create("A", null)
+        val b = s.create("B", null)
+        val df = h.dataFactory
+        val mgr = h.manager
+        val ont = h.ontology
+        // Add A ⊑ B and B ⊑ A (cycle)
+        mgr.addAxiom(ont, df.getOWLSubClassOfAxiom(df.getOWLClass(org.semanticweb.owlapi.model.IRI.create(a.iri)), df.getOWLClass(org.semanticweb.owlapi.model.IRI.create(b.iri))))
+        mgr.addAxiom(ont, df.getOWLSubClassOfAxiom(df.getOWLClass(org.semanticweb.owlapi.model.IRI.create(b.iri)), df.getOWLClass(org.semanticweb.owlapi.model.IRI.create(a.iri))))
+        assertNotNull(s.tree())
+    }
 }

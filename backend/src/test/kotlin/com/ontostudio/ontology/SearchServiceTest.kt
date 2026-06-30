@@ -12,4 +12,13 @@ class SearchServiceTest {
         val hits = SearchService(h, m).search("anim")
         assertTrue(hits.any { it.label == "Animal" })
     }
+
+    @Test fun `usage finds axioms for an object property`() {
+        val h = OntologyHolder(); h.newOntology(null, "http://ex#")
+        val m = OntologyMapper(h)
+        val ps = PropertyService(h, m)
+        val p = ps.createObject("hasPart", listOf("http://ex#Car"), emptyList())
+        val axioms = SearchService(h, m).usage(p.iri)
+        assertTrue(axioms.isNotEmpty())
+    }
 }

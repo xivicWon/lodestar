@@ -25,7 +25,21 @@ class SearchService(private val holder: OntologyHolder, private val mapper: Onto
     }
 
     fun usage(iri: String): List<String> = synchronized(holder.lock) {
-        val entity = holder.dataFactory.getOWLClass(IRI.create(iri))
-        holder.ontology.referencingAxioms(entity).map { it.toString() }.toList()
+        val df = holder.dataFactory
+        val ont = holder.ontology
+        val owlIri = IRI.create(iri)
+        val axioms = buildList {
+            if (ont.containsClassInSignature(owlIri))
+                addAll(ont.referencingAxioms(df.getOWLClass(owlIri)).toList())
+            if (ont.containsObjectPropertyInSignature(owlIri))
+                addAll(ont.referencingAxioms(df.getOWLObjectProperty(owlIri)).toList())
+            if (ont.containsDataPropertyInSignature(owlIri))
+                addAll(ont.referencingAxioms(df.getOWLDataProperty(owlIri)).toList())
+            if (ont.containsIndividualInSignature(owlIri))
+                addAll(ont.referencingAxioms(df.getOWLNamedIndividual(owlIri)).toList())
+            if (ont.containsAnnotationPropertyInSignature(owlIri))
+                addAll(ont.referencingAxioms(df.getOWLAnnotationProperty(owlIri)).toList())
+        }
+        axioms.distinct().map { it.toString() }
     }
 }

@@ -2,6 +2,8 @@ package com.ontostudio.io
 
 import com.ontostudio.core.OntologyHolder
 import com.ontostudio.core.OntologyMapper
+import com.ontostudio.dto.ApiException
+import org.springframework.http.HttpStatus
 import kotlin.test.*
 
 class IoServiceTest {
@@ -20,5 +22,14 @@ class IoServiceTest {
         // 재로드 후 동일 클래스 수 (라운드트립)
         io.load(out, "http://ex#")
         assertEquals(2, mapper.meta().counts["classes"])
+    }
+
+    @Test fun `load malformed bytes throws ApiException`() {
+        val holder = OntologyHolder()
+        val io = IoService(holder)
+        val e = assertFailsWith<ApiException> {
+            io.load("this is not ontology".toByteArray(), "http://ex#")
+        }
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, e.status)
     }
 }
