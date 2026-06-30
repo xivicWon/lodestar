@@ -45,4 +45,11 @@ class PropertyServiceTest {
         s.delete("object", p.iri, false)
         assertEquals(0, s.listObject().size)
     }
+
+    @Test fun `delete object property with domain cascade false succeeds`() {
+        val s = svc()
+        val p = s.createObject("hasPart", listOf("http://ex#Car"), emptyList())
+        s.delete("object", p.iri, false)
+        assertEquals(0, s.listObject().size)
+    }
 }

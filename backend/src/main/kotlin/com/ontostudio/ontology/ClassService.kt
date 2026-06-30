@@ -6,10 +6,9 @@ import com.ontostudio.core.OntologyMapper
 import com.ontostudio.dto.ApiException
 import com.ontostudio.dto.ClassDto
 import com.ontostudio.dto.ClassNode
+import com.ontostudio.core.externalReferencingAxioms
 import org.semanticweb.owlapi.model.IRI
-import org.semanticweb.owlapi.model.OWLAnnotationAssertionAxiom
 import org.semanticweb.owlapi.model.OWLClass
-import org.semanticweb.owlapi.model.OWLDeclarationAxiom
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 
@@ -61,29 +60,23 @@ class ClassService(private val holder: OntologyHolder, private val mapper: Ontol
     }
 
     fun tree(): List<ClassNode> = synchronized(holder.lock) {
-        fun childrenOf(parent: OWLClass, visited: MutableSet<OWLClass>): List<ClassNode> {
-            if (parent in visited) return emptyList()
-            visited.add(parent)
+        fun childrenOf(parent: OWLClass, ancestors: Set<OWLClass>): List<ClassNode> {
+            if (parent in ancestors) return emptyList()
+            val path = ancestors + parent
             return ont.classesInSignature().filter { c ->
                 ont.subClassAxiomsForSubClass(c).anyMatch { ax ->
                     !ax.superClass.isAnonymous && ax.superClass.asOWLClass() == parent
                 }
-            }.map { c -> ClassNode(c.iri.toString(), mapper.labelOf(c.iri), childrenOf(c, visited)) }.toList()
+            }.map { c -> ClassNode(c.iri.toString(), mapper.labelOf(c.iri), childrenOf(c, path)) }.toList()
         }
-        childrenOf(df.owlThing, mutableSetOf())
+        childrenOf(df.owlThing, emptySet())
     }
 
     fun delete(iri: String, cascade: Boolean) = synchronized(holder.lock) {
         val cls = classOrThrow(iri)
         val allReferencing = ont.referencingAxioms(cls).toList()
-        if (!cascade) {
-            val external = allReferencing.filter {
-                it !is OWLDeclarationAxiom &&
-                !(it is OWLAnnotationAssertionAxiom && it.subject == cls.iri)
-            }
-            if (external.isNotEmpty())
-                throw ApiException(HttpStatus.CONFLICT, "in_use", "사용 중인 클래스입니다", iri)
-        }
+        if (!cascade && externalReferencingAxioms(ont, cls).isNotEmpty())
+            throw ApiException(HttpStatus.CONFLICT, "in_use", "사용 중인 클래스입니다", iri)
         mgr.removeAxioms(ont, allReferencing.stream())
     }
 }

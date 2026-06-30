@@ -31,4 +31,14 @@ class IndividualServiceTest {
         val e = assertFailsWith<ApiException> { s.delete("http://ex#nobody", false) }
         assertEquals(HttpStatus.NOT_FOUND, e.status)
     }
+
+    @Test fun `delete individual referenced by assertion cascade false throws 409`() {
+        val h = OntologyHolder(); h.newOntology(null, "http://ex#")
+        val s = IndividualService(h, OntologyMapper(h))
+        val fido = s.create("Fido", listOf("http://ex#Dog"))
+        val owner = s.create("Owner", emptyList())
+        s.addObjectAssertion(owner.iri, "http://ex#owns", fido.iri)
+        val e = assertFailsWith<ApiException> { s.delete(fido.iri, false) }
+        assertEquals(HttpStatus.CONFLICT, e.status)
+    }
 }
