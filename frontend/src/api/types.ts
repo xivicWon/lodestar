@@ -1,0 +1,11 @@
+export interface AnnotationDto { property: string; value: string; lang: string | null }
+export interface ClassDto { iri: string; label: string | null; superClasses: string[]; annotations: AnnotationDto[] }
+export interface OntologyMetaDto { ontologyIri: string | null; baseIri: string; prefixes: Record<string, string>; counts: Record<string, number> }
+
+export class ApiError extends Error {
+  error: string
+  targetIri: string | null
+  constructor(error: string, message: string, targetIri: string | null) {
+    super(message); this.name = 'ApiError'; this.error = error; this.targetIri = targetIri
+  }
+}

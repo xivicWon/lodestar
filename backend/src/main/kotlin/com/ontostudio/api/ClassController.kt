@@ -13,18 +13,18 @@ data class PatchClassRequest(val label: String? = null, val superClasses: List<S
 class ClassController(private val service: ClassService) {
     @GetMapping fun list(): List<ClassDto> = service.list()
     @GetMapping("/tree") fun tree(): List<ClassNode> = service.tree()
-    @GetMapping("/{iri}") fun get(@PathVariable iri: String): ClassDto = service.get(iri)
+    @GetMapping("/by-iri") fun get(@RequestParam iri: String): ClassDto = service.get(iri)
     @PostMapping fun create(@RequestBody r: CreateClassRequest): ClassDto = service.create(r.label, r.superClass)
 
-    @PatchMapping("/{iri}")
-    fun patch(@PathVariable iri: String, @RequestBody r: PatchClassRequest): ClassDto {
+    @PatchMapping("/by-iri")
+    fun patch(@RequestParam iri: String, @RequestBody r: PatchClassRequest): ClassDto {
         var dto: ClassDto? = null
         r.label?.let { dto = service.setLabel(iri, it) }
         r.superClasses?.let { dto = service.setSuperClasses(iri, it) }
         return dto ?: service.get(iri)
     }
 
-    @DeleteMapping("/{iri}")
-    fun delete(@PathVariable iri: String, @RequestParam(defaultValue = "false") cascade: Boolean) =
+    @DeleteMapping("/by-iri")
+    fun delete(@RequestParam iri: String, @RequestParam(defaultValue = "false") cascade: Boolean) =
         service.delete(iri, cascade)
 }

@@ -8,5 +8,5 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api")
 class SearchController(private val service: SearchService) {
     @GetMapping("/search") fun search(@RequestParam q: String): List<SearchHit> = service.search(q)
-    @GetMapping("/usage/{iri}") fun usage(@PathVariable iri: String): List<String> = service.usage(iri)
+    @GetMapping("/usage") fun usage(@RequestParam iri: String): List<String> = service.usage(iri)
 }
