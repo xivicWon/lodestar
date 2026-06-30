@@ -18,4 +18,16 @@ class OntologyHolderTest {
         val second = f.forLabel("Red Wine", setOf(first))
         assertEquals("http://ex#Red_Wine_2", second.toString())
     }
+
+    @Test fun `iri factory keeps unicode letters in slug`() {
+        val f = IriFactory("http://ex#")
+        val iri = f.forLabel("동물", emptySet())
+        assertEquals("http://ex#동물", iri.toString())
+    }
+
+    @Test fun `iri factory falls back to Entity for symbol-only label`() {
+        val f = IriFactory("http://ex#")
+        val iri = f.forLabel("***", emptySet())
+        assertEquals("http://ex#Entity", iri.toString())
+    }
 }

@@ -4,7 +4,7 @@ import org.semanticweb.owlapi.model.IRI
 
 class IriFactory(private val baseIri: String) {
     fun forLabel(label: String, existing: Set<IRI>): IRI {
-        val slug = label.trim().replace(Regex("\\s+"), "_").replace(Regex("[^A-Za-z0-9_]"), "")
+        val slug = label.trim().replace(Regex("\\s+"), "_").replace(Regex("[^\\p{L}\\p{N}_]"), "")
             .ifBlank { "Entity" }
         var candidate = IRI.create(baseIri + slug)
         var n = 2
