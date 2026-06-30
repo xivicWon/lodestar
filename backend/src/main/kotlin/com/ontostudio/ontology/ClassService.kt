@@ -6,6 +6,8 @@ import com.ontostudio.core.OntologyMapper
 import com.ontostudio.dto.ApiException
 import com.ontostudio.dto.ClassDto
 import org.semanticweb.owlapi.model.IRI
+import org.semanticweb.owlapi.model.OWLAnnotationAssertionAxiom
+import org.semanticweb.owlapi.model.OWLDeclarationAxiom
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 
@@ -42,7 +44,7 @@ class ClassService(private val holder: OntologyHolder, private val mapper: Ontol
 
     fun setLabel(iri: String, label: String): ClassDto = synchronized(holder.lock) {
         val cls = classOrThrow(iri)
-        ont.annotationAssertionAxioms(cls.iri)
+        ont.annotationAssertionAxioms(cls.iri).toList()
             .filter { it.property.iri == df.rdfsLabel.iri }
             .forEach { mgr.removeAxiom(ont, it) }
         mgr.addAxiom(ont, df.getOWLAnnotationAssertionAxiom(cls.iri, df.getOWLAnnotation(df.rdfsLabel, df.getOWLLiteral(label))))
@@ -51,16 +53,22 @@ class ClassService(private val holder: OntologyHolder, private val mapper: Ontol
 
     fun setSuperClasses(iri: String, supers: List<String>): ClassDto = synchronized(holder.lock) {
         val cls = classOrThrow(iri)
-        ont.subClassAxiomsForSubClass(cls).forEach { mgr.removeAxiom(ont, it) }
+        ont.subClassAxiomsForSubClass(cls).toList().forEach { mgr.removeAxiom(ont, it) }
         supers.forEach { mgr.addAxiom(ont, df.getOWLSubClassOfAxiom(cls, df.getOWLClass(IRI.create(it)))) }
         mapper.classDto(cls)
     }
 
     fun delete(iri: String, cascade: Boolean) = synchronized(holder.lock) {
         val cls = classOrThrow(iri)
-        val referencing = ont.referencingAxioms(cls).toList()
-        if (referencing.isNotEmpty() && !cascade)
-            throw ApiException(HttpStatus.CONFLICT, "in_use", "사용 중인 클래스입니다", iri)
-        mgr.removeAxioms(ont, referencing.stream())
+        val allReferencing = ont.referencingAxioms(cls).toList()
+        if (!cascade) {
+            val external = allReferencing.filter {
+                it !is OWLDeclarationAxiom &&
+                !(it is OWLAnnotationAssertionAxiom && it.subject == cls.iri)
+            }
+            if (external.isNotEmpty())
+                throw ApiException(HttpStatus.CONFLICT, "in_use", "사용 중인 클래스입니다", iri)
+        }
+        mgr.removeAxioms(ont, allReferencing.stream())
     }
 }

@@ -22,7 +22,7 @@ class OntologyMapper(private val holder: OntologyHolder) {
             .firstOrNull()
     }
 
-    fun annotationsOf(iri: IRI): List<AnnotationDto> =
+    fun annotationsOf(iri: IRI): List<AnnotationDto> = synchronized(holder.lock) {
         holder.ontology.annotationAssertionAxioms(iri).map {
             val lit = it.value.asLiteral().orElse(null)
             AnnotationDto(
@@ -31,8 +31,9 @@ class OntologyMapper(private val holder: OntologyHolder) {
                 lit?.lang?.ifBlank { null }
             )
         }.toList()
+    }
 
-    fun classDto(cls: OWLClass): ClassDto {
+    fun classDto(cls: OWLClass): ClassDto = synchronized(holder.lock) {
         val supers = holder.ontology.subClassAxiomsForSubClass(cls)
             .map { it.superClass }.filter { !it.isAnonymous }
             .map { it.asOWLClass().iri.toString() }.toList()

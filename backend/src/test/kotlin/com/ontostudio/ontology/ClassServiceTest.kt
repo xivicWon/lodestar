@@ -2,6 +2,8 @@ package com.ontostudio.ontology
 
 import com.ontostudio.core.OntologyHolder
 import com.ontostudio.core.OntologyMapper
+import com.ontostudio.dto.ApiException
+import org.springframework.http.HttpStatus
 import kotlin.test.*
 
 class ClassServiceTest {
@@ -31,5 +33,20 @@ class ClassServiceTest {
         val a = s.create("Animal", null)
         s.delete(a.iri, cascade = true)
         assertEquals(0, s.list().size)
+    }
+
+    @Test fun `delete standalone class with cascade false succeeds`() {
+        val (s, _, _) = svc()
+        val animal = s.create("Animal", null)
+        s.delete(animal.iri, cascade = false)
+        assertEquals(0, s.list().size)
+    }
+
+    @Test fun `delete class referenced by subclass with cascade false throws 409`() {
+        val (s, _, _) = svc()
+        val animal = s.create("Animal", null)
+        s.create("Dog", animal.iri)
+        val e = assertFailsWith<ApiException> { s.delete(animal.iri, cascade = false) }
+        assertEquals(HttpStatus.CONFLICT, e.status)
     }
 }

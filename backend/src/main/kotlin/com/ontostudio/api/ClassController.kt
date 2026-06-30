@@ -16,9 +16,10 @@ class ClassController(private val service: ClassService) {
 
     @PatchMapping("/{iri}")
     fun patch(@PathVariable iri: String, @RequestBody r: PatchClassRequest): ClassDto {
-        r.label?.let { service.setLabel(iri, it) }
-        r.superClasses?.let { service.setSuperClasses(iri, it) }
-        return service.get(iri)
+        var dto: ClassDto? = null
+        r.label?.let { dto = service.setLabel(iri, it) }
+        r.superClasses?.let { dto = service.setSuperClasses(iri, it) }
+        return dto ?: service.get(iri)
     }
 
     @DeleteMapping("/{iri}")
