@@ -20,6 +20,11 @@ const rows = computed(() => store.objectProperties.map(p => ({
 })))
 
 const sorted = computed(() => [...rows.value].sort((a, b) => Number(b.related) - Number(a.related)))
+
+function rename(iri: string, current: string) {
+  const next = window.prompt('관계 이름 (예: placedBy)', current)
+  if (next && next.trim()) store.renameRelation(iri, next.trim())
+}
 </script>
 
 <template>
@@ -32,6 +37,7 @@ const sorted = computed(() => [...rows.value].sort((a, b) => Number(b.related) -
         <span class="arrow">→</span>
         <span class="rng">{{ r.range }}</span>
         <span class="lbl">{{ r.label }}</span>
+        <button class="rename-btn" title="관계 이름 변경" @click="rename(r.iri, r.label)">✎</button>
       </li>
     </ul>
   </div>
@@ -47,4 +53,6 @@ h3 { margin: 0 0 12px; font-size: 14px; }
 .dom, .rng { font-weight: 600; }
 .arrow { color: #6b7280; }
 .lbl { color: #6b7280; margin-left: auto; }
+.rename-btn { border: none; background: none; cursor: pointer; color: #6b7280; font-size: 13px; padding: 0 4px; }
+.rename-btn:hover { color: #4f46e5; }
 </style>

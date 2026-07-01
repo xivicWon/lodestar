@@ -21,6 +21,16 @@ describe('ontologyStore rdb', () => {
     expect(s.objectProperties).toEqual([rel])
   })
 
+  it('renameRelation patches label and refreshes', async () => {
+    const patch = vi.spyOn(client, 'apiPatch').mockResolvedValue({} as any)
+    vi.spyOn(client, 'apiGet').mockResolvedValue([] as any)
+    const s = useOntologyStore()
+    await s.renameRelation('e#orders_customer_id_ref', 'placedBy')
+    expect(patch).toHaveBeenCalledWith(
+      '/properties/object/label?iri=' + encodeURIComponent('e#orders_customer_id_ref'),
+      { label: 'placedBy' })
+  })
+
   it('importDdl posts sql and refreshes', async () => {
     const post = vi.spyOn(client, 'apiPost').mockResolvedValue({} as any)
     vi.spyOn(client, 'apiGet').mockResolvedValue([] as any)

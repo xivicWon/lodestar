@@ -69,6 +69,14 @@ export const useOntologyStore = defineStore('ontology', () => {
     } catch (e) { setError(e) }
   }
 
+  async function renameRelation(iri: string, label: string) {
+    error.value = null
+    try {
+      await apiPatch<ObjectPropertyDto>(`/properties/object/label?iri=${encodeURIComponent(iri)}`, { label })
+      await refresh()
+    } catch (e) { setError(e) }
+  }
+
   async function importConnection(info: ConnectionInfo) {
     error.value = null
     try {
@@ -100,7 +108,7 @@ export const useOntologyStore = defineStore('ontology', () => {
 
   return { classes, selectedIri, meta, error, selected, tree,
            reasonResult, runReasoner, inferredChildrenOf,
-           objectProperties, importDdl, importConnection,
+           objectProperties, importDdl, importConnection, renameRelation,
            refresh, select, createClass, saveClass, deleteClass, loadFile, exportTurtle,
            clearError, reportError }
 })
