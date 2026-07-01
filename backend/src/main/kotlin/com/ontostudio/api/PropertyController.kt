@@ -19,6 +19,8 @@ data class CreateDataPropRequest(
 
 data class CharacteristicsRequest(val characteristics: List<String>)
 
+data class LabelRequest(val label: String)
+
 @RestController
 @RequestMapping("/api/properties")
 class PropertyController(private val service: PropertyService) {
@@ -40,6 +42,10 @@ class PropertyController(private val service: PropertyService) {
     @PatchMapping("/object/by-iri")
     fun setChars(@RequestParam iri: String, @RequestBody r: CharacteristicsRequest): ObjectPropertyDto =
         service.setObjectCharacteristics(iri, r.characteristics)
+
+    @PatchMapping("/object/label")
+    fun setObjectLabel(@RequestParam iri: String, @RequestBody r: LabelRequest): ObjectPropertyDto =
+        service.setObjectLabel(iri, r.label)
 
     @DeleteMapping("/by-iri")
     fun delete(

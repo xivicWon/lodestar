@@ -20,6 +20,19 @@ class PropertyServiceTest {
         assertTrue(p.ranges.contains("http://ex#Wheel"))
     }
 
+    @Test fun `rename object property label`() {
+        val s = svc()
+        val p = s.createObject("orders_customer_id_ref", emptyList(), emptyList())
+        val updated = s.setObjectLabel(p.iri, "placedBy")
+        assertEquals("placedBy", updated.label)
+    }
+
+    @Test fun `rename unknown object property throws 404`() {
+        val s = svc()
+        val e = assertFailsWith<ApiException> { s.setObjectLabel("http://ex#nope", "x") }
+        assertEquals(HttpStatus.NOT_FOUND, e.status)
+    }
+
     @Test fun `set transitive characteristic`() {
         val s = svc()
         val p = s.createObject("hasPart", emptyList(), emptyList())

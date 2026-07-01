@@ -62,6 +62,19 @@ class PropertyService(private val holder: OntologyHolder, private val mapper: On
             mapper.dataPropertyDto(p)
         }
 
+    fun setObjectLabel(iri: String, label: String): ObjectPropertyDto = synchronized(holder.lock) {
+        val owlIri = IRI.create(iri)
+        if (!ont.containsObjectPropertyInSignature(owlIri))
+            throw ApiException(HttpStatus.NOT_FOUND, "not_found", "속성 없음", iri)
+        val p = df.getOWLObjectProperty(owlIri)
+        ont.annotationAssertionAxioms(p.iri).toList()
+            .filter { it.property.iri == df.rdfsLabel.iri }
+            .forEach { mgr.removeAxiom(ont, it) }
+        mgr.addAxiom(ont, df.getOWLAnnotationAssertionAxiom(
+            p.iri, df.getOWLAnnotation(df.rdfsLabel, df.getOWLLiteral(label))))
+        mapper.objectPropertyDto(p)
+    }
+
     fun setObjectCharacteristics(iri: String, chars: List<String>): ObjectPropertyDto =
         synchronized(holder.lock) {
             val p = df.getOWLObjectProperty(IRI.create(iri))
