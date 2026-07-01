@@ -19,6 +19,7 @@ export const useOntologyStore = defineStore('ontology', () => {
   }
 
   async function refresh() {
+    reasonResult.value = null
     classes.value = await apiGet<ClassDto[]>('/classes')
     try { meta.value = await apiGet<OntologyMetaDto>('/ontology/meta') } catch { /* meta optional */ }
   }

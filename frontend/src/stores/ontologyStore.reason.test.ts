@@ -18,6 +18,17 @@ describe('ontologyStore reasoning', () => {
     expect(s.reasonResult?.inferredSubClassOf).toEqual([{ sub: 'e#Dog', sup: 'e#Carnivore' }])
   })
 
+  it('refresh clears a stale reasonResult', async () => {
+    const s = useOntologyStore()
+    s.reasonResult = { consistent: true, unsatisfiableClasses: [], inferredSubClassOf: [] }
+    vi.spyOn(client, 'apiGet').mockImplementation((path: string) => {
+      if (path === '/classes') return Promise.resolve([]) as any
+      return Promise.resolve({}) as any
+    })
+    await s.refresh()
+    expect(s.reasonResult).toBeNull()
+  })
+
   it('inferredChildrenOf maps edges to labelled children', async () => {
     const s = useOntologyStore()
     s.classes = [
