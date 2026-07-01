@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, apiDownload, ApiError } from '../api/client'
-import type { ClassDto, OntologyMetaDto } from '../api/types'
+import type { ClassDto, OntologyMetaDto, ReasonResult } from '../api/types'
 import { buildTree } from '../lib/buildTree'
 
 export const useOntologyStore = defineStore('ontology', () => {
@@ -9,6 +9,7 @@ export const useOntologyStore = defineStore('ontology', () => {
   const selectedIri = ref<string | null>(null)
   const meta = ref<OntologyMetaDto | null>(null)
   const error = ref<string | null>(null)
+  const reasonResult = ref<ReasonResult | null>(null)
 
   const selected = computed(() => classes.value.find(c => c.iri === selectedIri.value) ?? null)
   const tree = computed(() => buildTree(classes.value))
@@ -55,11 +56,28 @@ export const useOntologyStore = defineStore('ontology', () => {
     return apiDownload('/ontology/export?format=turtle')
   }
 
+  async function runReasoner() {
+    error.value = null
+    try { reasonResult.value = await apiPost<ReasonResult>('/reason', {}) }
+    catch (e) { setError(e) }
+  }
+
+  function inferredChildrenOf(iri: string): { iri: string; label: string | null }[] {
+    const edges = reasonResult.value?.inferredSubClassOf ?? []
+    return edges
+      .filter(e => e.sup === iri)
+      .map(e => {
+        const c = classes.value.find(k => k.iri === e.sub)
+        return { iri: e.sub, label: c?.label ?? null }
+      })
+  }
+
   function clearError() { error.value = null }
 
   function reportError(e: unknown) { setError(e) }
 
   return { classes, selectedIri, meta, error, selected, tree,
+           reasonResult, runReasoner, inferredChildrenOf,
            refresh, select, createClass, saveClass, deleteClass, loadFile, exportTurtle,
            clearError, reportError }
 })

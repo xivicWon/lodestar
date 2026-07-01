@@ -2,6 +2,13 @@ export interface AnnotationDto { property: string; value: string; lang: string |
 export interface ClassDto { iri: string; label: string | null; superClasses: string[]; annotations: AnnotationDto[] }
 export interface OntologyMetaDto { ontologyIri: string | null; baseIri: string; prefixes: Record<string, string>; counts: Record<string, number> }
 
+export interface InferredEdge { sub: string; sup: string }
+export interface ReasonResult {
+  consistent: boolean
+  unsatisfiableClasses: string[]
+  inferredSubClassOf: InferredEdge[]
+}
+
 export class ApiError extends Error {
   error: string
   targetIri: string | null
