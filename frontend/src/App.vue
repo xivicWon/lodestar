@@ -5,7 +5,7 @@ import ImportPanel from './components/ImportPanel.vue'
 import ConsistencyBadge from './components/ConsistencyBadge.vue'
 import ClassTree from './components/ClassTree.vue'
 import ClassDetail from './components/ClassDetail.vue'
-import RelationsPanel from './components/RelationsPanel.vue'
+import RelationsView from './components/RelationsView.vue'
 import { useOntologyStore } from './stores/ontologyStore'
 
 const store = useOntologyStore()
@@ -31,7 +31,7 @@ onMounted(() => { store.refresh() })
       <aside class="left"><ClassTree /></aside>
       <section class="right">
         <ClassDetail />
-        <RelationsPanel />
+        <RelationsView />
       </section>
     </div>
   </div>
