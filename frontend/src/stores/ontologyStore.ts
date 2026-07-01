@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, apiDownload, ApiError } from '../api/client'
-import type { ClassDto, OntologyMetaDto, ReasonResult } from '../api/types'
+import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo } from '../api/types'
 import { buildTree } from '../lib/buildTree'
 
 export const useOntologyStore = defineStore('ontology', () => {
@@ -10,6 +10,7 @@ export const useOntologyStore = defineStore('ontology', () => {
   const meta = ref<OntologyMetaDto | null>(null)
   const error = ref<string | null>(null)
   const reasonResult = ref<ReasonResult | null>(null)
+  const objectProperties = ref<ObjectPropertyDto[]>([])
 
   const selected = computed(() => classes.value.find(c => c.iri === selectedIri.value) ?? null)
   const tree = computed(() => buildTree(classes.value))
@@ -21,6 +22,8 @@ export const useOntologyStore = defineStore('ontology', () => {
   async function refresh() {
     reasonResult.value = null
     classes.value = await apiGet<ClassDto[]>('/classes')
+    try { objectProperties.value = await apiGet<ObjectPropertyDto[]>('/properties/object') }
+    catch { objectProperties.value = [] }
     try { meta.value = await apiGet<OntologyMetaDto>('/ontology/meta') } catch { /* meta optional */ }
   }
 
@@ -57,6 +60,24 @@ export const useOntologyStore = defineStore('ontology', () => {
     return apiDownload('/ontology/export?format=turtle')
   }
 
+  async function importDdl(sql: string, schemaName?: string) {
+    error.value = null
+    try {
+      await apiPost<OntologyMetaDto>('/rdb/import/ddl', { sql, schemaName })
+      selectedIri.value = null
+      await refresh()
+    } catch (e) { setError(e) }
+  }
+
+  async function importConnection(info: ConnectionInfo) {
+    error.value = null
+    try {
+      await apiPost<OntologyMetaDto>('/rdb/import/connection', info)
+      selectedIri.value = null
+      await refresh()
+    } catch (e) { setError(e) }
+  }
+
   async function runReasoner() {
     error.value = null
     try { reasonResult.value = await apiPost<ReasonResult>('/reason', {}) }
@@ -79,6 +100,7 @@ export const useOntologyStore = defineStore('ontology', () => {
 
   return { classes, selectedIri, meta, error, selected, tree,
            reasonResult, runReasoner, inferredChildrenOf,
+           objectProperties, importDdl, importConnection,
            refresh, select, createClass, saveClass, deleteClass, loadFile, exportTurtle,
            clearError, reportError }
 })

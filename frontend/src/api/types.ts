@@ -16,3 +16,17 @@ export class ApiError extends Error {
     super(message); this.name = 'ApiError'; this.error = error; this.targetIri = targetIri
   }
 }
+
+export interface ObjectPropertyDto {
+  iri: string
+  label: string | null
+  domains: string[]
+  ranges: string[]
+  characteristics: string[]
+  inverseOf: string | null
+  annotations: AnnotationDto[]
+}
+
+export interface ConnectionInfo {
+  host: string; port: number; database: string; user: string; password: string
+}
