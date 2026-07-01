@@ -16,6 +16,11 @@ const store = useOntologyStore()
     <ul v-if="node.children.length" class="tree-children">
       <ClassTreeNode v-for="child in node.children" :key="child.iri" :node="child" />
     </ul>
+    <ul v-if="store.inferredChildrenOf(node.iri).length" class="tree-children inferred">
+      <li v-for="ic in store.inferredChildrenOf(node.iri)" :key="'inf-' + ic.iri" class="inferred-child">
+        {{ ic.label ?? ic.iri }} <span class="inferred-tag">(추론됨)</span>
+      </li>
+    </ul>
   </li>
 </template>
 
@@ -24,4 +29,6 @@ const store = useOntologyStore()
 .node-label { cursor: pointer; display: block; padding: 2px 6px; border-radius: 4px; }
 .node-label:hover { background: #eef2ff; }
 .node-label.selected { background: #c7d2fe; font-weight: 600; }
+.inferred-child { padding: 2px 6px; color: #6d28d9; font-style: italic; }
+.inferred-tag { font-size: 11px; background: #ede9fe; color: #6d28d9; border-radius: 8px; padding: 0 6px; font-style: normal; }
 </style>
