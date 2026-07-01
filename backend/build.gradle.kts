@@ -17,6 +17,9 @@ dependencies {
     implementation("net.sourceforge.owlapi:org.semanticweb.hermit:1.4.5.519") {
         exclude(group = "net.sourceforge.owlapi")
     }
+    implementation("com.github.jsqlparser:jsqlparser:4.9")
+    implementation("org.postgresql:postgresql:42.7.4")
+    testImplementation("com.h2database:h2:2.3.232")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation(kotlin("test"))
 }
