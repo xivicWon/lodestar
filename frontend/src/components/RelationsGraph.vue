@@ -39,6 +39,8 @@ onMounted(() => {
   network.on('click', (params: { nodes: string[] }) => {
     if (params.nodes && params.nodes.length > 0) store.select(params.nodes[0])
   })
+  // 물리 안정화가 끝날 때마다(최초 로드 + 데이터 변경 후) 그래프를 화면에 맞춤
+  network.on('stabilizationIterationsDone', () => network?.fit({ animation: false }))
   rebuild()
 })
 

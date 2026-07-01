@@ -30,8 +30,8 @@ onMounted(() => { store.refresh() })
     <div class="panes">
       <aside class="left"><ClassTree /></aside>
       <section class="right">
-        <ClassDetail />
-        <RelationsView />
+        <div class="detail-pane"><ClassDetail /></div>
+        <div class="relations-pane"><RelationsView /></div>
       </section>
     </div>
   </div>
@@ -46,7 +46,9 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Ro
 .layout { display: flex; flex-direction: column; height: 100vh; }
 .panes { display: flex; flex: 1; min-height: 0; }
 .left { width: 320px; border-right: 1px solid #e5e7eb; min-height: 0; }
-.right { flex: 1; min-height: 0; }
+.right { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.detail-pane { flex: 0 0 auto; max-height: 40%; overflow: auto; border-bottom: 1px solid #e5e7eb; }
+.relations-pane { flex: 1 1 auto; min-height: 0; }
 .status-bar { padding: 6px 12px; }
 .import-toggle-bar { padding: 6px 12px; }
 .toggle-import-btn { padding: 6px 14px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 14px; }
