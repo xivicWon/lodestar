@@ -1,0 +1,51 @@
+package com.ontostudio.rdb
+
+import org.semanticweb.owlapi.apibinding.OWLManager
+import org.semanticweb.owlapi.model.IRI
+import org.semanticweb.owlapi.model.OWLOntology
+import org.springframework.stereotype.Component
+
+/** SchemaModel → OWLOntology (TBox only). 무상태: 매 호출마다 새 manager/ontology 생성. */
+@Component
+class SchemaToOwlMapper {
+
+    /** IRI-안전 슬러그: 공백→_, 문자/숫자/_ 이외 제거. 결정론적(카운터 없음). */
+    internal fun slug(name: String): String =
+        name.trim().replace(Regex("\\s+"), "_").replace(Regex("[^\\p{L}\\p{N}_]"), "").ifBlank { "x" }
+
+    internal fun classIri(base: String, table: String): IRI = IRI.create(base + slug(table))
+    internal fun dataPropIri(base: String, table: String, column: String): IRI =
+        IRI.create(base + slug(table) + "." + slug(column))
+
+    fun build(schema: SchemaModel, baseIri: String): OWLOntology {
+        val mgr = OWLManager.createOWLOntologyManager()
+        val df = mgr.owlDataFactory
+        val ont = mgr.createOntology()
+
+        for (table in schema.tables) {
+            val cls = df.getOWLClass(classIri(baseIri, table.name))
+            mgr.addAxiom(ont, df.getOWLDeclarationAxiom(cls))
+            mgr.addAxiom(ont, df.getOWLAnnotationAssertionAxiom(
+                cls.iri, df.getOWLAnnotation(df.rdfsLabel, df.getOWLLiteral(table.name))))
+            if (table.primaryKey.isNotEmpty()) {
+                mgr.addAxiom(ont, df.getOWLAnnotationAssertionAxiom(
+                    cls.iri, df.getOWLAnnotation(df.rdfsComment,
+                        df.getOWLLiteral("PK: " + table.primaryKey.joinToString(", ")))))
+            }
+
+            // FK 컬럼은 DataProperty로 중복 생성하지 않는다 (Task 4에서 ObjectProperty로 승격)
+            val fkColumns = table.foreignKeys.flatMap { it.fkColumns }.toHashSet()
+            for (col in table.columns) {
+                if (col.name in fkColumns) continue
+                val dp = df.getOWLDataProperty(dataPropIri(baseIri, table.name, col.name))
+                mgr.addAxiom(ont, df.getOWLDeclarationAxiom(dp))
+                mgr.addAxiom(ont, df.getOWLAnnotationAssertionAxiom(
+                    dp.iri, df.getOWLAnnotation(df.rdfsLabel, df.getOWLLiteral(col.name))))
+                mgr.addAxiom(ont, df.getOWLDataPropertyDomainAxiom(dp, cls))
+                mgr.addAxiom(ont, df.getOWLDataPropertyRangeAxiom(
+                    dp, df.getOWLDatatype(IRI.create(sqlTypeToXsd(col.sqlType)))))
+            }
+        }
+        return ont
+    }
+}
