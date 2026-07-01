@@ -47,4 +47,36 @@ class SchemaToOwlMapperTest {
             .map { it.value.asLiteral().get().literal }.toList()
         assertEquals(listOf("orders"), labels)
     }
+
+    @Test fun `fk becomes object property with domain and range`() {
+        val ont = mapper.build(sampleTwoTables(), base)
+        val df = ont.owlOntologyManager.owlDataFactory
+        val op = df.getOWLObjectProperty(IRI.create(base + "orders_customer_id_ref"))
+        assertTrue(ont.containsObjectPropertyInSignature(op.iri))
+        assertEquals(listOf(base + "orders"),
+            ont.objectPropertyDomainAxioms(op).map { it.domain.asOWLClass().iri.toString() }.toList())
+        assertEquals(listOf(base + "customers"),
+            ont.objectPropertyRangeAxioms(op).map { it.range.asOWLClass().iri.toString() }.toList())
+    }
+
+    @Test fun `fk column is not duplicated as data property`() {
+        val ont = mapper.build(sampleTwoTables(), base)
+        assertTrue(!ont.containsDataPropertyInSignature(IRI.create(base + "orders.customer_id")))
+    }
+
+    @Test fun `self referencing fk maps domain and range to same class`() {
+        val schema = SchemaModel(listOf(
+            TableInfo("employee",
+                listOf(ColumnInfo("id", "integer", false), ColumnInfo("manager_id", "integer", true)),
+                listOf("id"),
+                listOf(ForeignKeyInfo(listOf("manager_id"), "employee", listOf("id"))))
+        ))
+        val ont = mapper.build(schema, base)
+        val df = ont.owlOntologyManager.owlDataFactory
+        val op = df.getOWLObjectProperty(IRI.create(base + "employee_manager_id_ref"))
+        assertEquals(listOf(base + "employee"),
+            ont.objectPropertyDomainAxioms(op).map { it.domain.asOWLClass().iri.toString() }.toList())
+        assertEquals(listOf(base + "employee"),
+            ont.objectPropertyRangeAxioms(op).map { it.range.asOWLClass().iri.toString() }.toList())
+    }
 }

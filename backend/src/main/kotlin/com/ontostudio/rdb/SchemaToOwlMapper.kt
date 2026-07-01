@@ -17,6 +17,9 @@ class SchemaToOwlMapper {
     internal fun dataPropIri(base: String, table: String, column: String): IRI =
         IRI.create(base + slug(table) + "." + slug(column))
 
+    internal fun fkPropIri(base: String, table: String, fkColumns: List<String>): IRI =
+        IRI.create(base + slug(table) + "_" + fkColumns.joinToString("_") { slug(it) } + "_ref")
+
     fun build(schema: SchemaModel, baseIri: String): OWLOntology {
         val mgr = OWLManager.createOWLOntologyManager()
         val df = mgr.owlDataFactory
@@ -44,6 +47,17 @@ class SchemaToOwlMapper {
                 mgr.addAxiom(ont, df.getOWLDataPropertyDomainAxiom(dp, cls))
                 mgr.addAxiom(ont, df.getOWLDataPropertyRangeAxiom(
                     dp, df.getOWLDatatype(IRI.create(sqlTypeToXsd(col.sqlType)))))
+            }
+
+            for (fk in table.foreignKeys) {
+                val op = df.getOWLObjectProperty(fkPropIri(baseIri, table.name, fk.fkColumns))
+                val target = df.getOWLClass(classIri(baseIri, fk.refTable))
+                mgr.addAxiom(ont, df.getOWLDeclarationAxiom(op))
+                mgr.addAxiom(ont, df.getOWLAnnotationAssertionAxiom(
+                    op.iri, df.getOWLAnnotation(df.rdfsLabel, df.getOWLLiteral(
+                        "${table.name} → ${fk.refTable} (${fk.fkColumns.joinToString(", ")})"))))
+                mgr.addAxiom(ont, df.getOWLObjectPropertyDomainAxiom(op, cls))
+                mgr.addAxiom(ont, df.getOWLObjectPropertyRangeAxiom(op, target))
             }
         }
         return ont
