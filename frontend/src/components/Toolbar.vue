@@ -35,6 +35,7 @@ async function exportFile() {
       <input type="file" accept=".ttl,.owl,.rdf,.xml" @change="onFile" hidden />
     </label>
     <button class="export-btn" @click="exportFile">내보내기</button>
+    <button class="reason-btn" @click="store.runReasoner">추론 실행</button>
     <span class="spacer" />
     <button class="add-class-btn" @click="addClass">+ 클래스</button>
     <button class="delete-btn" :disabled="!store.selectedIri" @click="removeClass">삭제</button>

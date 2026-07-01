@@ -14,6 +14,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("net.sourceforge.owlapi:owlapi-distribution:5.5.0")
+    implementation("net.sourceforge.owlapi:org.semanticweb.hermit:1.4.5.519") {
+        exclude(group = "net.sourceforge.owlapi")
+    }
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation(kotlin("test"))
 }

@@ -35,3 +35,10 @@ data class OntologyMetaDto(
 data class NewOntologyRequest(val ontologyIri: String?, val baseIri: String)
 
 data class ClassNode(val iri: String, val label: String?, val children: List<ClassNode>)
+
+data class InferredEdgeDto(val sub: String, val sup: String)
+data class ReasonResultDto(
+    val consistent: Boolean,
+    val unsatisfiableClasses: List<String>,
+    val inferredSubClassOf: List<InferredEdgeDto>
+)
