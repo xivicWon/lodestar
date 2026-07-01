@@ -1,0 +1,11 @@
+@prefix : <http://ex#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+:Animal a owl:Class .
+:Dog a owl:Class ; rdfs:subClassOf :Animal .
+:eats a owl:ObjectProperty ; rdfs:domain :Animal ; rdfs:range :Animal .
+:Carnivore a owl:Class ; owl:equivalentClass
+  [ a owl:Class ; owl:intersectionOf
+    ( :Animal [ a owl:Restriction ; owl:onProperty :eats ; owl:someValuesFrom :Animal ] ) ] .
+:Dog rdfs:subClassOf [ a owl:Restriction ; owl:onProperty :eats ; owl:someValuesFrom :Animal ] .

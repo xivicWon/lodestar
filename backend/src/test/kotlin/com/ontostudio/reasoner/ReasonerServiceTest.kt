@@ -26,4 +26,16 @@ class ReasonerServiceTest {
         val r = ReasonerService(h).reason()
         assertFalse(r.consistent)
     }
+
+    @Test fun `infers Dog subClassOf Carnivore (not asserted)`() {
+        val h = load("reasoner-demo.ttl")
+        val r = ReasonerService(h).reason()
+        assertTrue(r.consistent)
+        assertTrue(
+            r.inferredSubClassOf.any { it.sub == "http://ex#Dog" && it.sup == "http://ex#Carnivore" },
+            "expected inferred Dog ⊑ Carnivore, got ${r.inferredSubClassOf}"
+        )
+        // asserted Dog ⊑ Animal must NOT appear as inferred
+        assertFalse(r.inferredSubClassOf.any { it.sub == "http://ex#Dog" && it.sup == "http://ex#Animal" })
+    }
 }
