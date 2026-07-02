@@ -31,6 +31,14 @@ describe('ontologyStore rdb', () => {
       { label: 'placedBy' })
   })
 
+  it('importSample posts to sample endpoint and refreshes', async () => {
+    const post = vi.spyOn(client, 'apiPost').mockResolvedValue({} as any)
+    vi.spyOn(client, 'apiGet').mockResolvedValue([] as any)
+    const s = useOntologyStore()
+    await s.importSample()
+    expect(post).toHaveBeenCalledWith('/rdb/import/sample', {})
+  })
+
   it('importDdl posts sql and refreshes', async () => {
     const post = vi.spyOn(client, 'apiPost').mockResolvedValue({} as any)
     vi.spyOn(client, 'apiGet').mockResolvedValue([] as any)

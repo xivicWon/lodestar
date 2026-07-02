@@ -16,6 +16,14 @@ describe('ImportPanel', () => {
     expect(spy).toHaveBeenCalledWith('CREATE TABLE t (id INT);', undefined)
   })
 
+  it('injects sample legacy on button click', async () => {
+    const store = useOntologyStore()
+    const spy = vi.spyOn(store, 'importSample').mockResolvedValue()
+    const w = mount(ImportPanel)
+    await w.find('.import-sample-btn').trigger('click')
+    expect(spy).toHaveBeenCalled()
+  })
+
   it('switches to connection tab and imports connection', async () => {
     const store = useOntologyStore()
     const spy = vi.spyOn(store, 'importConnection').mockResolvedValue()
