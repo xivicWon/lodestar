@@ -6,24 +6,29 @@ import java.sql.Connection
 /** JDBC Connection → SchemaModel. DatabaseMetaData 표준 API만 사용(드라이버 무관). */
 @Service
 class MetadataService {
-    private val systemSchemas = setOf("information_schema", "pg_catalog", "pg_toast")
+    // PostgreSQL/MySQL 시스템 스키마·카탈로그(MySQL은 DB=카탈로그) 모두 제외.
+    private val systemNames = setOf(
+        "information_schema", "pg_catalog", "pg_toast",
+        "mysql", "performance_schema", "sys"
+    )
 
     fun extract(conn: Connection): SchemaModel {
         val md = conn.metaData
-        val catalog = conn.catalog
         val tables = mutableListOf<TableInfo>()
 
-        // (schema, table) 목록 수집
-        val ids = mutableListOf<Pair<String?, String>>()
-        md.getTables(catalog, null, "%", arrayOf("TABLE")).use { rs ->
+        // (catalog, schema, table) 목록 수집 — 행별 cat/schem을 이후 조회에 그대로 사용(벤더 무관).
+        val ids = mutableListOf<Triple<String?, String?, String>>()
+        md.getTables(conn.catalog, null, "%", arrayOf("TABLE")).use { rs ->
             while (rs.next()) {
+                val cat = rs.getString("TABLE_CAT")
                 val schem = rs.getString("TABLE_SCHEM")
-                if (schem != null && schem.lowercase() in systemSchemas) continue
-                ids.add(schem to rs.getString("TABLE_NAME"))
+                if (cat != null && cat.lowercase() in systemNames) continue
+                if (schem != null && schem.lowercase() in systemNames) continue
+                ids.add(Triple(cat, schem, rs.getString("TABLE_NAME")))
             }
         }
 
-        for ((schem, name) in ids) {
+        for ((catalog, schem, name) in ids) {
             val columns = mutableListOf<ColumnInfo>()
             md.getColumns(catalog, schem, name, "%").use { rs ->
                 while (rs.next()) {

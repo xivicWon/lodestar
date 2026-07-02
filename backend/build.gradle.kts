@@ -19,6 +19,7 @@ dependencies {
     }
     implementation("com.github.jsqlparser:jsqlparser:4.9")
     implementation("org.postgresql:postgresql:42.7.4")
+    implementation("com.mysql:mysql-connector-j:9.1.0")
     implementation("com.h2database:h2:2.3.232")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation(kotlin("test"))

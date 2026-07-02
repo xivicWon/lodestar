@@ -34,4 +34,16 @@ describe('ImportPanel', () => {
     await w.find('.import-conn-btn').trigger('click')
     expect(spy).toHaveBeenCalled()
   })
+
+  it('imports with selected mysql vendor', async () => {
+    const store = useOntologyStore()
+    const spy = vi.spyOn(store, 'importConnection').mockResolvedValue()
+    const w = mount(ImportPanel)
+    await w.find('.tab-connection').trigger('click')
+    await w.find('.vendor-select').setValue('mysql')
+    await w.find('.host-input').setValue('192.168.0.1')
+    await w.find('.db-input').setValue('app')
+    await w.find('.import-conn-btn').trigger('click')
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ vendor: 'mysql', port: 3306 }))
+  })
 })

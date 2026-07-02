@@ -8,8 +8,13 @@ const tab = ref<'ddl' | 'connection'>('ddl')
 const ddl = ref('')
 const schemaName = ref('')
 
+const vendor = ref<'postgresql' | 'mysql'>('postgresql')
 const host = ref(''); const port = ref(5432); const database = ref('')
 const user = ref(''); const password = ref('')
+
+function onVendorChange() {
+  port.value = vendor.value === 'mysql' ? 3306 : 5432
+}
 
 function runDdl() {
   if (!ddl.value.trim()) return
@@ -18,7 +23,7 @@ function runDdl() {
 function runConnection() {
   store.importConnection({
     host: host.value, port: Number(port.value), database: database.value,
-    user: user.value, password: password.value,
+    user: user.value, password: password.value, vendor: vendor.value,
   })
 }
 </script>
@@ -43,6 +48,11 @@ function runConnection() {
     </div>
 
     <div v-else class="pane">
+      <label>Vendor</label>
+      <select class="vendor-select" v-model="vendor" @change="onVendorChange">
+        <option value="postgresql">PostgreSQL</option>
+        <option value="mysql">MySQL</option>
+      </select>
       <label>Host</label><input class="host-input" v-model="host" placeholder="localhost" />
       <label>Port</label><input class="port-input" v-model="port" type="number" />
       <label>Database</label><input class="db-input" v-model="database" />
