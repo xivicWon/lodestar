@@ -1,0 +1,225 @@
+-- Lodestar Reality Harness — 지저분한 레거시 샘플 스키마 (E1-1)
+-- 특징: FK 제약 거의 없음(암묵적 관계), 암호 같은 테이블/컬럼명, 복합키, 뷰 1개.
+-- 목적: 토이가 아닌 "진짜 레거시"에 가까운 조건에서 스캔/표현/AI 추정을 검증.
+-- 관계는 대부분 명시 FK가 아니라 이름 규칙(CUST_NO, ORD_NO 등)으로만 암시된다.
+
+-- ===== 고객/거래처 =====
+CREATE TABLE TB_CUST_MST (
+  CUST_NO      CHAR(10) PRIMARY KEY,
+  CUST_NM      VARCHAR(100),
+  BIZ_NO       VARCHAR(20),
+  RPRS_NM      VARCHAR(50),
+  TEL_NO       VARCHAR(20),
+  REG_DT       TIMESTAMP,
+  USE_YN       CHAR(1)
+);
+
+CREATE TABLE TB_CUST_ADDR (
+  CUST_NO      CHAR(10),
+  ADDR_SEQ     INTEGER,
+  ZIP_CD       VARCHAR(10),
+  ADDR1        VARCHAR(200),
+  ADDR2        VARCHAR(200),
+  PRIMARY KEY (CUST_NO, ADDR_SEQ)
+);
+
+CREATE TABLE TB_VNDR_MST (
+  VNDR_CD      CHAR(8) PRIMARY KEY,
+  VNDR_NM      VARCHAR(100),
+  PAY_TERM     VARCHAR(20),
+  USE_YN       CHAR(1)
+);
+
+-- ===== 상품/재고 =====
+CREATE TABLE TB_ITEM_MST (
+  ITEM_CD      CHAR(12) PRIMARY KEY,
+  ITEM_NM      VARCHAR(150),
+  ITEM_GBN     CHAR(2),
+  UNIT_CD      CHAR(3),
+  STD_PRC      NUMERIC(15,2),
+  VNDR_CD      CHAR(8),
+  USE_YN       CHAR(1)
+);
+
+CREATE TABLE TB_ITEM_GRP (
+  GRP_CD       CHAR(4) PRIMARY KEY,
+  GRP_NM       VARCHAR(80),
+  UP_GRP_CD    CHAR(4)
+);
+
+CREATE TABLE TB_ITEM_GRP_MAP (
+  ITEM_CD      CHAR(12),
+  GRP_CD       CHAR(4),
+  PRIMARY KEY (ITEM_CD, GRP_CD)
+);
+
+CREATE TABLE TB_STOK_QTY (
+  WH_CD        CHAR(4),
+  ITEM_CD      CHAR(12),
+  STOK_QTY     NUMERIC(15,3),
+  UPD_DT       TIMESTAMP,
+  PRIMARY KEY (WH_CD, ITEM_CD)
+);
+
+CREATE TABLE TB_WH_MST (
+  WH_CD        CHAR(4) PRIMARY KEY,
+  WH_NM        VARCHAR(80),
+  LOC_NM       VARCHAR(100)
+);
+
+CREATE TABLE TB_STOK_MOV (
+  MOV_NO       CHAR(15) PRIMARY KEY,
+  MOV_GBN      CHAR(2),
+  WH_CD        CHAR(4),
+  ITEM_CD      CHAR(12),
+  MOV_QTY      NUMERIC(15,3),
+  MOV_DT       TIMESTAMP
+);
+
+-- ===== 주문/판매 =====
+CREATE TABLE TB_ORD_HD (
+  ORD_NO       CHAR(15) PRIMARY KEY,
+  CUST_NO      CHAR(10),
+  ORD_DT       TIMESTAMP,
+  ORD_STAT     CHAR(2),
+  TOT_AMT      NUMERIC(18,2),
+  EMP_NO       CHAR(8)
+);
+
+CREATE TABLE TB_ORD_DTL (
+  ORD_NO       CHAR(15),
+  ORD_SEQ      INTEGER,
+  ITEM_CD      CHAR(12),
+  ORD_QTY      NUMERIC(15,3),
+  UNIT_PRC     NUMERIC(15,2),
+  AMT          NUMERIC(18,2),
+  PRIMARY KEY (ORD_NO, ORD_SEQ)
+);
+
+CREATE TABLE TB_DLVR_HD (
+  DLVR_NO      CHAR(15) PRIMARY KEY,
+  ORD_NO       CHAR(15),
+  DLVR_DT      TIMESTAMP,
+  DLVR_STAT    CHAR(2)
+);
+
+CREATE TABLE TB_DLVR_DTL (
+  DLVR_NO      CHAR(15),
+  DLVR_SEQ     INTEGER,
+  ITEM_CD      CHAR(12),
+  DLVR_QTY     NUMERIC(15,3),
+  PRIMARY KEY (DLVR_NO, DLVR_SEQ)
+);
+
+CREATE TABLE TB_RTN_HD (
+  RTN_NO       CHAR(15) PRIMARY KEY,
+  ORD_NO       CHAR(15),
+  RTN_DT       TIMESTAMP,
+  RTN_RSN      VARCHAR(200)
+);
+
+-- ===== 결제/회계 =====
+CREATE TABLE TB_PAY_MST (
+  PAY_NO       CHAR(15) PRIMARY KEY,
+  ORD_NO       CHAR(15),
+  PAY_MTHD     CHAR(2),
+  PAY_AMT      NUMERIC(18,2),
+  PAY_DT       TIMESTAMP
+);
+
+CREATE TABLE TB_ACCT_SLIP (
+  SLIP_NO      CHAR(15) PRIMARY KEY,
+  SLIP_DT      TIMESTAMP,
+  ACCT_CD      CHAR(6),
+  DR_AMT       NUMERIC(18,2),
+  CR_AMT       NUMERIC(18,2),
+  RMK          VARCHAR(300)
+);
+
+CREATE TABLE TB_ACCT_CD (
+  ACCT_CD      CHAR(6) PRIMARY KEY,
+  ACCT_NM      VARCHAR(100),
+  ACCT_GBN     CHAR(1)
+);
+
+CREATE TABLE TB_TAX_INV (
+  TAX_NO       CHAR(18) PRIMARY KEY,
+  CUST_NO      CHAR(10),
+  ISU_DT       TIMESTAMP,
+  SUP_AMT      NUMERIC(18,2),
+  VAT_AMT      NUMERIC(18,2)
+);
+
+-- ===== 인사/조직 =====
+CREATE TABLE TB_EMP_MST (
+  EMP_NO       CHAR(8) PRIMARY KEY,
+  EMP_NM       VARCHAR(50),
+  DEPT_CD      CHAR(5),
+  JOB_CD       CHAR(4),
+  HIRE_DT      TIMESTAMP,
+  MGR_EMP_NO   CHAR(8),
+  RETIR_YN     CHAR(1)
+);
+
+CREATE TABLE TB_DEPT_MST (
+  DEPT_CD      CHAR(5) PRIMARY KEY,
+  DEPT_NM      VARCHAR(80),
+  UP_DEPT_CD   CHAR(5),
+  USE_YN       CHAR(1)
+);
+
+CREATE TABLE TB_JOB_CD (
+  JOB_CD       CHAR(4) PRIMARY KEY,
+  JOB_NM       VARCHAR(50)
+);
+
+CREATE TABLE TB_ATTND (
+  EMP_NO       CHAR(8),
+  WRK_DT       CHAR(8),
+  IN_TM        CHAR(4),
+  OUT_TM       CHAR(4),
+  PRIMARY KEY (EMP_NO, WRK_DT)
+);
+
+CREATE TABLE TB_SAL_MST (
+  EMP_NO       CHAR(8),
+  PAY_YM       CHAR(6),
+  BASE_SAL     NUMERIC(15,0),
+  BONUS        NUMERIC(15,0),
+  PRIMARY KEY (EMP_NO, PAY_YM)
+);
+
+-- ===== 공통/코드 =====
+CREATE TABLE TB_COMM_CD (
+  GRP_CD       CHAR(4),
+  CD           CHAR(4),
+  CD_NM        VARCHAR(100),
+  SORT_ORD     INTEGER,
+  PRIMARY KEY (GRP_CD, CD)
+);
+
+CREATE TABLE TB_UNIT_CD (
+  UNIT_CD      CHAR(3) PRIMARY KEY,
+  UNIT_NM      VARCHAR(30)
+);
+
+CREATE TABLE TB_LOG_HIST (
+  LOG_SEQ      INTEGER PRIMARY KEY,
+  TBL_NM       VARCHAR(50),
+  ACT_GBN      CHAR(1),
+  ACT_EMP_NO   CHAR(8),
+  ACT_DT       TIMESTAMP
+);
+
+-- 명시 FK 를 가진 드문 예외 하나 (레거시에도 가끔 있음)
+CREATE TABLE TB_ORD_MEMO (
+  MEMO_NO      INTEGER PRIMARY KEY,
+  ORD_NO       CHAR(15),
+  MEMO_TXT     VARCHAR(500),
+  CONSTRAINT FK_ORD_MEMO FOREIGN KEY (ORD_NO) REFERENCES TB_ORD_HD (ORD_NO)
+);
+
+-- 뷰 (DdlParser 는 CREATE TABLE 만 처리하므로 스킵되어야 함)
+CREATE VIEW VW_ORD_SUMMARY AS
+  SELECT H.ORD_NO, H.CUST_NO, H.TOT_AMT
+  FROM TB_ORD_HD H;
