@@ -25,6 +25,7 @@ function pct(agreement: number): string {
         {{ store.enriching ? '평가 중…' : `📊 신뢰도 평가(${RUNS}회)` }}
       </button>
       <span class="enrich-hint">암호 같은 테이블 이름을 AI가 비즈니스 의미로 추정 → 승인 시 반영</span>
+      <span class="confirm-count">확정 {{ store.confirmations.length }}건</span>
     </div>
 
     <ul v-if="store.scoredCandidates.length" class="scored-list">
@@ -43,7 +44,7 @@ function pct(agreement: number): string {
           <span v-for="v in c.variants" :key="v.label" class="variant">{{ v.label }} ×{{ v.count }}</span>
         </div>
         <div class="cand-actions">
-          <button class="approve-btn" @click="store.applyEnrichment(c.targetIri, c.consensusLabel)">승인</button>
+          <button class="approve-btn" @click="store.confirm(c.targetIri, c.consensusLabel)">승인</button>
           <button class="dismiss-btn" @click="store.dismissEnrichment(c.targetIri)">거부</button>
         </div>
       </li>
@@ -58,7 +59,7 @@ function pct(agreement: number): string {
         </div>
         <div class="cand-desc">{{ c.description }}</div>
         <div class="cand-actions">
-          <button class="approve-btn" @click="store.applyEnrichment(c.targetIri, c.suggestedLabel)">승인</button>
+          <button class="approve-btn" @click="store.confirm(c.targetIri, c.suggestedLabel)">승인</button>
           <button class="dismiss-btn" @click="store.dismissEnrichment(c.targetIri)">거부</button>
         </div>
       </li>
@@ -82,6 +83,7 @@ function pct(agreement: number): string {
 .variants { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 6px; }
 .variant { font-size: 11px; color: #6b7280; background: #f1f5f9; border-radius: 4px; padding: 1px 6px; }
 .enrich-hint { font-size: 12px; color: #6b7280; }
+.confirm-count { margin-left: auto; font-size: 12px; font-weight: 700; color: #166534; background: #dcfce7; border-radius: 10px; padding: 1px 10px; }
 .cand-list { list-style: none; margin: 10px 0 0; padding: 0; max-height: 260px; overflow: auto; }
 .cand-row { padding: 8px; border-bottom: 1px solid #f1f5f9; }
 .cand-main { display: flex; gap: 8px; align-items: baseline; font-size: 13px; }

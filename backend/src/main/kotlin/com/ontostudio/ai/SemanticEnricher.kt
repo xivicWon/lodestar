@@ -6,6 +6,7 @@ import com.ontostudio.dto.ApiException
 import com.ontostudio.rdb.MetadataService
 import com.ontostudio.rdb.SampleLegacyDb
 import com.ontostudio.rdb.SchemaToOwlMapper
+import com.ontostudio.savepoint.ConfirmationStore
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import java.sql.Connection
@@ -28,25 +29,45 @@ class SemanticEnricher(
     private val sampleDb: SampleLegacyDb,
     private val metadata: MetadataService,
     private val mapper: SchemaToOwlMapper,
+    private val confirmations: ConfirmationStore,
 ) {
     private val baseIri = "http://lodestar/rdb/legacy#"
     private val json = ObjectMapper()
 
+    private fun classIri(tableName: String) = baseIri + mapper.slug(tableName)
+
     fun enrichSample(): List<EnrichmentCandidate> {
         val (prompt, tableNames) = sampleDb.open().use { conn -> buildPrompt(conn) }
+        // 미확정(추정 대상) 테이블이 하나도 없으면 AI를 호출하지 않고 빈 결과(E8 그라운딩).
+        if (tableNames.isEmpty()) return emptyList()
         val response = advisor.ask(prompt)
         return parse(response, tableNames)
     }
 
-    /** 프롬프트와 (원본 테이블명 집합)을 만든다. */
+    /**
+     * 프롬프트와 (추정 대상 테이블명 집합)을 만든다.
+     * 확정된 테이블은 추정 대상에서 제외하고, 확정 라벨을 "이미 확정된 사실" 앵커로 주입한다(E8 그라운딩).
+     */
     internal fun buildPrompt(conn: Connection): Pair<String, Set<String>> {
         val schema = metadata.extract(conn)
+        val confirmedHere = schema.tables.filter { confirmations.isConfirmed(classIri(it.name)) }
+        val targets = schema.tables.filter { !confirmations.isConfirmed(classIri(it.name)) }
+        val labelByIri = confirmations.all().associate { it.iri to it.label }
+
         val sb = StringBuilder()
+        if (confirmedHere.isNotEmpty()) {
+            sb.appendLine("## 이미 확정된 사실 (변경 금지, 이 의미에 일관되게 추론하라)")
+            for (t in confirmedHere) {
+                sb.appendLine("- ${t.name} = ${labelByIri[classIri(t.name)].orEmpty()}")
+            }
+            sb.appendLine()
+        }
+        sb.appendLine("## 추정 대상")
         sb.appendLine("다음은 레거시 DB 테이블 목록이다. 암호 같은 이름·컬럼·샘플 데이터를 보고 각 테이블의")
         sb.appendLine("비즈니스 의미를 추정하라. 반드시 아래 JSON 배열만 출력한다(그 외 텍스트 금지):")
         sb.appendLine("""[{"table":"<원본테이블명>","label":"<한국어 비즈니스 이름>","description":"<한 줄 설명>"}]""")
         sb.appendLine()
-        for (t in schema.tables) {
+        for (t in targets) {
             sb.appendLine("### ${t.name}")
             sb.appendLine("컬럼: " + t.columns.joinToString(", ") { it.name })
             val rows = sampleRows(conn, t.name, 3)
@@ -56,7 +77,7 @@ class SemanticEnricher(
             }
             sb.appendLine()
         }
-        return sb.toString() to schema.tables.map { it.name }.toSet()
+        return sb.toString() to targets.map { it.name }.toSet()
     }
 
     private fun sampleRows(conn: Connection, table: String, limit: Int): List<Map<String, String>> {

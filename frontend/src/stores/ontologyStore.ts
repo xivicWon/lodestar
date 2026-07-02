@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, apiDownload, ApiError } from '../api/client'
-import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, ScoredCandidate, RelationCandidate, ImpactResult, ChatAnswer } from '../api/types'
+import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, ScoredCandidate, ConfirmedFact, RelationCandidate, ImpactResult, ChatAnswer } from '../api/types'
 import { buildTree } from '../lib/buildTree'
 
 export const useOntologyStore = defineStore('ontology', () => {
@@ -14,6 +14,7 @@ export const useOntologyStore = defineStore('ontology', () => {
   const enrichCandidates = ref<EnrichmentCandidate[]>([])
   const enriching = ref(false)
   const scoredCandidates = ref<ScoredCandidate[]>([])
+  const confirmations = ref<ConfirmedFact[]>([])
   const relCandidates = ref<RelationCandidate[]>([])
   const suggesting = ref(false)
   const impact = ref<ImpactResult | null>(null)
@@ -118,6 +119,32 @@ export const useOntologyStore = defineStore('ontology', () => {
   function dismissEnrichment(targetIri: string) {
     enrichCandidates.value = enrichCandidates.value.filter(c => c.targetIri !== targetIri)
     scoredCandidates.value = scoredCandidates.value.filter(c => c.targetIri !== targetIri)
+  }
+
+  async function fetchConfirmations() {
+    error.value = null
+    try { confirmations.value = await apiGet<ConfirmedFact[]>('/confirmations') }
+    catch (e) { setError(e) }
+  }
+
+  /** E8 승인(세이브포인트): 라벨 반영 + 확정 기록 후, 후보에서 제거하고 상태 갱신. */
+  async function confirm(targetIri: string, label: string) {
+    error.value = null
+    try {
+      await apiPost<ClassDto>('/enrich/confirm', { targetIri, label })
+      enrichCandidates.value = enrichCandidates.value.filter(c => c.targetIri !== targetIri)
+      scoredCandidates.value = scoredCandidates.value.filter(c => c.targetIri !== targetIri)
+      await refresh()
+      await fetchConfirmations()
+    } catch (e) { setError(e) }
+  }
+
+  async function deleteConfirmation(iri: string) {
+    error.value = null
+    try {
+      await apiDelete(`/confirmations?iri=${encodeURIComponent(iri)}`)
+      await fetchConfirmations()
+    } catch (e) { setError(e) }
   }
 
   async function renameRelation(iri: string, label: string) {
@@ -225,6 +252,7 @@ export const useOntologyStore = defineStore('ontology', () => {
            objectProperties, importDdl, importConnection, importSample, renameRelation,
            enrichCandidates, enriching, enrichSample, applyEnrichment, dismissEnrichment,
            scoredCandidates, scoredEnrichSample,
+           confirmations, fetchConfirmations, confirm, deleteConfirmation,
            relCandidates, suggesting, suggestRelations, applyRelation, dismissRelation,
            impact, fetchImpact,
            projects, listProjects, saveProject, loadProject,

@@ -17,15 +17,25 @@ describe('EnrichPanel', () => {
     expect(spy).toHaveBeenCalled()
   })
 
-  it('renders candidates and approves one', async () => {
+  it('renders candidates and confirms one on approve', async () => {
     const store = useOntologyStore()
     store.enrichCandidates = [cand] as any
-    const spy = vi.spyOn(store, 'applyEnrichment').mockResolvedValue()
+    const spy = vi.spyOn(store, 'confirm').mockResolvedValue()
     const w = mount(EnrichPanel)
     expect(w.text()).toContain('TB_CUST_MST')
     expect(w.text()).toContain('고객 마스터')
     await w.find('.approve-btn').trigger('click')
     expect(spy).toHaveBeenCalledWith('e#TB_CUST_MST', '고객 마스터')
+  })
+
+  it('renders confirmed count', () => {
+    const store = useOntologyStore()
+    store.confirmations = [
+      { iri: 'e#A', label: '고객', kind: 'class' },
+      { iri: 'e#B', label: '주문', kind: 'class' },
+    ] as any
+    const w = mount(EnrichPanel)
+    expect(w.find('.confirm-count').text()).toContain('확정 2건')
   })
 
   it('runs scored evaluation on button click', async () => {
@@ -43,7 +53,7 @@ describe('EnrichPanel', () => {
       description: '주문 전표', agreement: 0.6, n: 5,
       variants: [{ label: '주문 헤더', count: 3 }, { label: '오더 정보', count: 2 }],
     }] as any
-    const spy = vi.spyOn(store, 'applyEnrichment').mockResolvedValue()
+    const spy = vi.spyOn(store, 'confirm').mockResolvedValue()
     const w = mount(EnrichPanel)
     // agreement 0.6 → amber '보통' badge
     const badge = w.find('.agree-badge')
