@@ -5,6 +5,7 @@ import ImportPanel from './components/ImportPanel.vue'
 import EnrichPanel from './components/EnrichPanel.vue'
 import RelationSuggestPanel from './components/RelationSuggestPanel.vue'
 import ProjectPanel from './components/ProjectPanel.vue'
+import ChatPanel from './components/ChatPanel.vue'
 import ConsistencyBadge from './components/ConsistencyBadge.vue'
 import ClassTree from './components/ClassTree.vue'
 import ClassDetail from './components/ClassDetail.vue'
@@ -17,6 +18,7 @@ const showImport = ref(false)
 const showEnrich = ref(false)
 const showRel = ref(false)
 const showProject = ref(false)
+const showChat = ref(false)
 onMounted(() => { store.refresh() })
 </script>
 
@@ -36,11 +38,15 @@ onMounted(() => { store.refresh() })
       <button class="toggle-project-btn" @click="showProject = !showProject">
         {{ showProject ? '프로젝트 닫기' : '프로젝트' }}
       </button>
+      <button class="toggle-chat-btn" @click="showChat = !showChat">
+        {{ showChat ? 'AI 챗 닫기' : 'AI 챗' }}
+      </button>
     </div>
     <ImportPanel v-if="showImport" />
     <EnrichPanel v-if="showEnrich" />
     <RelationSuggestPanel v-if="showRel" />
     <ProjectPanel v-if="showProject" />
+    <ChatPanel v-if="showChat" />
     <div class="status-bar"><ConsistencyBadge /></div>
     <div v-if="store.error" class="error-banner" role="alert">
       <span>{{ store.error }}</span>
@@ -70,7 +76,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Ro
 .relations-pane { flex: 1 1 auto; min-height: 0; }
 .status-bar { padding: 6px 12px; }
 .import-toggle-bar { padding: 6px 12px; }
-.toggle-import-btn, .toggle-enrich-btn, .toggle-rel-btn, .toggle-project-btn { padding: 6px 14px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 14px; margin-right: 6px; }
+.toggle-import-btn, .toggle-enrich-btn, .toggle-rel-btn, .toggle-project-btn, .toggle-chat-btn { padding: 6px 14px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 14px; margin-right: 6px; }
 .error-banner { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: #fee2e2; border-bottom: 1px solid #fca5a5; color: #991b1b; font-size: 14px; }
 .dismiss-error { background: none; border: none; cursor: pointer; font-size: 18px; color: #991b1b; padding: 0 4px; line-height: 1; }
 </style>
