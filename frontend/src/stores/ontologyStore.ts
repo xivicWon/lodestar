@@ -69,6 +69,15 @@ export const useOntologyStore = defineStore('ontology', () => {
     } catch (e) { setError(e) }
   }
 
+  async function importSample() {
+    error.value = null
+    try {
+      await apiPost<OntologyMetaDto>('/rdb/import/sample', {})
+      selectedIri.value = null
+      await refresh()
+    } catch (e) { setError(e) }
+  }
+
   async function renameRelation(iri: string, label: string) {
     error.value = null
     try {
@@ -108,7 +117,7 @@ export const useOntologyStore = defineStore('ontology', () => {
 
   return { classes, selectedIri, meta, error, selected, tree,
            reasonResult, runReasoner, inferredChildrenOf,
-           objectProperties, importDdl, importConnection, renameRelation,
+           objectProperties, importDdl, importConnection, importSample, renameRelation,
            refresh, select, createClass, saveClass, deleteClass, loadFile, exportTurtle,
            clearError, reportError }
 })

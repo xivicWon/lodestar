@@ -25,6 +25,10 @@ function runConnection() {
 
 <template>
   <div class="import-panel">
+    <div class="sample-bar">
+      <button class="import-sample-btn" @click="store.importSample()">🧪 샘플 레거시 주입 (27테이블)</button>
+      <span class="sample-hint">FK 거의 없는 지저분한 샘플로 바로 체험</span>
+    </div>
     <div class="tabs">
       <button class="tab-ddl" :class="{ active: tab === 'ddl' }" @click="tab = 'ddl'">DDL 스크립트</button>
       <button class="tab-connection" :class="{ active: tab === 'connection' }" @click="tab = 'connection'">DB 연결</button>
@@ -58,4 +62,7 @@ function runConnection() {
 label { font-size: 12px; font-weight: 600; margin: 8px 0 2px; }
 input, textarea { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; box-sizing: border-box; }
 .import-ddl-btn, .import-conn-btn { margin-top: 10px; padding: 8px; background: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; }
+.sample-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #e5e7eb; }
+.import-sample-btn { padding: 6px 12px; background: #059669; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.sample-hint { font-size: 12px; color: #6b7280; }
 </style>

@@ -15,7 +15,8 @@ class RdbImportController(
     private val ddlParser: DdlParser,
     private val schemaMapper: SchemaToOwlMapper,
     private val holder: OntologyHolder,
-    private val ontologyMapper: OntologyMapper
+    private val ontologyMapper: OntologyMapper,
+    private val sampleLegacyDb: SampleLegacyDb
 ) {
     private fun ingest(schema: SchemaModel, dbName: String): OntologyMetaDto {
         val baseIri = "http://lodestar/rdb/${schemaMapper.slug(dbName)}#"
@@ -31,4 +32,9 @@ class RdbImportController(
     @PostMapping("/import/connection")
     fun importConnection(@RequestBody info: ConnectionInfo): OntologyMetaDto =
         dbConnector.open(info).use { conn -> ingest(metadataService.extract(conn), info.database) }
+
+    /** E1-2: 번들 샘플 레거시를 H2에 적재 → 라이브 경로로 임포트. 데모/검증용 원클릭. */
+    @PostMapping("/import/sample")
+    fun importSample(): OntologyMetaDto =
+        sampleLegacyDb.open().use { conn -> ingest(metadataService.extract(conn), "legacy") }
 }
