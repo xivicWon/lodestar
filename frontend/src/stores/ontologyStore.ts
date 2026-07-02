@@ -16,6 +16,7 @@ export const useOntologyStore = defineStore('ontology', () => {
   const relCandidates = ref<RelationCandidate[]>([])
   const suggesting = ref(false)
   const impact = ref<ImpactResult | null>(null)
+  const projects = ref<string[]>([])
 
   const selected = computed(() => classes.value.find(c => c.iri === selectedIri.value) ?? null)
   const tree = computed(() => buildTree(classes.value))
@@ -167,6 +168,27 @@ export const useOntologyStore = defineStore('ontology', () => {
     } catch (e) { setError(e) }
   }
 
+  async function listProjects() {
+    error.value = null
+    try { projects.value = await apiGet<string[]>('/projects') }
+    catch (e) { setError(e) }
+  }
+
+  async function saveProject(name: string) {
+    error.value = null
+    try { projects.value = await apiPost<string[]>('/projects/save?name=' + encodeURIComponent(name), {}) }
+    catch (e) { setError(e) }
+  }
+
+  async function loadProject(name: string) {
+    error.value = null
+    try {
+      await apiPost<OntologyMetaDto>('/projects/load?name=' + encodeURIComponent(name), {})
+      await refresh()
+      select(null)
+    } catch (e) { setError(e) }
+  }
+
   function clearError() { error.value = null }
 
   function reportError(e: unknown) { setError(e) }
@@ -177,6 +199,7 @@ export const useOntologyStore = defineStore('ontology', () => {
            enrichCandidates, enriching, enrichSample, applyEnrichment, dismissEnrichment,
            relCandidates, suggesting, suggestRelations, applyRelation, dismissRelation,
            impact, fetchImpact,
+           projects, listProjects, saveProject, loadProject,
            refresh, select, createClass, saveClass, deleteClass, loadFile, exportTurtle,
            clearError, reportError }
 })
