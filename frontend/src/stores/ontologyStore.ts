@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, apiDownload, ApiError } from '../api/client'
-import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, RelationCandidate, ImpactResult, ChatAnswer } from '../api/types'
+import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, ScoredCandidate, RelationCandidate, ImpactResult, ChatAnswer } from '../api/types'
 import { buildTree } from '../lib/buildTree'
 
 export const useOntologyStore = defineStore('ontology', () => {
@@ -13,6 +13,7 @@ export const useOntologyStore = defineStore('ontology', () => {
   const objectProperties = ref<ObjectPropertyDto[]>([])
   const enrichCandidates = ref<EnrichmentCandidate[]>([])
   const enriching = ref(false)
+  const scoredCandidates = ref<ScoredCandidate[]>([])
   const relCandidates = ref<RelationCandidate[]>([])
   const suggesting = ref(false)
   const impact = ref<ImpactResult | null>(null)
@@ -95,17 +96,28 @@ export const useOntologyStore = defineStore('ontology', () => {
     finally { enriching.value = false }
   }
 
+  async function scoredEnrichSample(runs = 5) {
+    error.value = null
+    enriching.value = true
+    try {
+      scoredCandidates.value = await apiPost<ScoredCandidate[]>('/ai/enrich/sample/scored?runs=' + runs, {})
+    } catch (e) { setError(e) }
+    finally { enriching.value = false }
+  }
+
   async function applyEnrichment(targetIri: string, label: string) {
     error.value = null
     try {
       await apiPatch<ClassDto>(`/classes/by-iri?iri=${encodeURIComponent(targetIri)}`, { label })
       enrichCandidates.value = enrichCandidates.value.filter(c => c.targetIri !== targetIri)
+      scoredCandidates.value = scoredCandidates.value.filter(c => c.targetIri !== targetIri)
       await refresh()
     } catch (e) { setError(e) }
   }
 
   function dismissEnrichment(targetIri: string) {
     enrichCandidates.value = enrichCandidates.value.filter(c => c.targetIri !== targetIri)
+    scoredCandidates.value = scoredCandidates.value.filter(c => c.targetIri !== targetIri)
   }
 
   async function renameRelation(iri: string, label: string) {
@@ -212,6 +224,7 @@ export const useOntologyStore = defineStore('ontology', () => {
            reasonResult, runReasoner, inferredChildrenOf,
            objectProperties, importDdl, importConnection, importSample, renameRelation,
            enrichCandidates, enriching, enrichSample, applyEnrichment, dismissEnrichment,
+           scoredCandidates, scoredEnrichSample,
            relCandidates, suggesting, suggestRelations, applyRelation, dismissRelation,
            impact, fetchImpact,
            projects, listProjects, saveProject, loadProject,
