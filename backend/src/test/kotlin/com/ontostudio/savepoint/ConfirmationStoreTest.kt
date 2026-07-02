@@ -11,7 +11,10 @@ class ConfirmationStoreTest {
 
     private val tmp = Files.createTempFile("confirmations", ".json")
 
-    @AfterTest fun cleanup() { Files.deleteIfExists(tmp) }
+    @AfterTest fun cleanup() {
+        Files.deleteIfExists(tmp)
+        Files.deleteIfExists(java.nio.file.Paths.get("$tmp.corrupt"))
+    }
 
     private fun store() = ConfirmationStore(tmp.toString())
 
@@ -29,6 +32,14 @@ class ConfirmationStoreTest {
         val reloaded = store()
         assertTrue(reloaded.isConfirmed("iri#A"))
         assertEquals("고객 마스터", reloaded.all().single().label)
+    }
+
+    @Test fun `corrupt file is backed up and store starts empty (no silent data loss)`() {
+        Files.write(tmp, "{{ this is not valid json".toByteArray())
+        val s = store() // 예외 없이 시작해야 함
+        assertTrue(s.all().isEmpty())
+        // 손상 파일은 조용히 삭제되지 않고 .corrupt 로 보존되어야 함
+        assertTrue(Files.exists(java.nio.file.Paths.get("$tmp.corrupt")))
     }
 
     @Test fun `remove deletes and persists`() {
