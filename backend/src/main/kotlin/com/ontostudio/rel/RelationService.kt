@@ -49,26 +49,33 @@ class RelationService(
         val coreByIri = classes.associate { c ->
             c.iri.toString() to coreName(shortName(c.iri.toString()))
         }
+        fun tokensOf(core: String) = core.split("_").filter { it.isNotBlank() }
+        val tokensByIri = coreByIri.mapValues { tokensOf(it.value) }
         // 각 데이터프로퍼티의 DTO를 한 번만 계산 (domains 포함).
         val dataProps = ont.dataPropertiesInSignature().toList().map { mapper.dataPropertyDto(it) }
 
         val out = mutableListOf<RelationCandidate>()
         for (a in classes) {
             val aIri = a.iri.toString()
+            val aCore = coreByIri.getValue(aIri)
+            val aTokens = tokensByIri.getValue(aIri)
             val columns = dataProps.filter { it.domains.contains(aIri) }
             for (dp in columns) {
                 val colName = dp.label ?: shortName(dp.iri).substringAfterLast('.')
                 val stem = stemOf(colName)
                 if (stem.length < 2) continue
+                // 컬럼이 A 자신의 식별자(예: TB_ORD_HD.ORD_NO)면 외부 참조가 아니므로 제외 → 오탐 방지
+                if (aCore.equals(stem, ignoreCase = true) ||
+                    aTokens.any { it.equals(stem, ignoreCase = true) }) continue
                 for (b in classes) {
                     val bIri = b.iri.toString()
                     if (bIri == aIri) continue
                     val bCore = coreByIri.getValue(bIri)
-                    val tokens = bCore.split("_").filter { it.isNotBlank() }
-                    val matches = bCore.contains(stem, ignoreCase = true) ||
-                        tokens.any { it.equals(stem, ignoreCase = true) }
-                    if (!matches) continue
-                    val confidence = if (bCore.equals(stem, ignoreCase = true)) 0.9 else 0.6
+                    // 엄격 매칭: stem == B 코어 전체 또는 B의 한 토큰 (느슨한 substring 금지 → 오탐 방지)
+                    val exact = bCore.equals(stem, ignoreCase = true)
+                    val tokenMatch = tokensByIri.getValue(bIri).any { it.equals(stem, ignoreCase = true) }
+                    if (!exact && !tokenMatch) continue
+                    val confidence = if (exact) 0.9 else 0.6
                     out.add(RelationCandidate(aIri, bIri, colName, confidence, "has" + capitalize(stem)))
                 }
             }
