@@ -33,6 +33,23 @@ class ConsensusScorerTest {
         assertEquals("고객 마스터", c.consensusLabel)
     }
 
+    @Test fun `clustering is order-independent (deterministic)`() {
+        // A,B,C 는 체인(A-B=0.6, B-C=0.5, A-C=0.33). union-find 연결요소로 순서 무관하게 동일 결과.
+        val a = "a b c d"; val b = "a b c e"; val c = "a b e f"
+        val r1 = scorer.score(listOf(a, b, c))
+        val r2 = scorer.score(listOf(c, b, a))
+        val r3 = scorer.score(listOf(b, c, a))
+        assertEquals(r1.agreement, r2.agreement, 1e-9)
+        assertEquals(r1.agreement, r3.agreement, 1e-9)
+        assertEquals(r1.consensusLabel, r2.consensusLabel)
+    }
+
+    @Test fun `agreement uses provided denominator (runs), not appearances`() {
+        // 5회 실행 중 1회만 등장한 라벨: 부풀려지면 안 됨 → 1/5 = 0.2
+        val c = scorer.score(listOf("고객 마스터"), denominator = 5)
+        assertEquals(0.2, c.agreement, 1e-9)
+    }
+
     @Test fun `empty list gives zero agreement and empty label`() {
         val c = scorer.score(emptyList())
         assertEquals(0.0, c.agreement)

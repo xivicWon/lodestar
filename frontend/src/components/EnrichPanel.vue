@@ -36,6 +36,7 @@ function pct(agreement: number): string {
           <span class="agree-badge" :class="badge(c.agreement).cls">
             {{ badge(c.agreement).text }} {{ pct(c.agreement) }}
           </span>
+          <span class="agree-n">({{ c.n }}회 중)</span>
         </div>
         <div class="cand-desc">{{ c.description }}</div>
         <div class="variants">
@@ -73,6 +74,7 @@ function pct(agreement: number): string {
 .scored-run-btn { padding: 6px 12px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
 .scored-run-btn:disabled { opacity: 0.6; cursor: default; }
 .scored-list { list-style: none; margin: 10px 0 0; padding: 0; max-height: 320px; overflow: auto; }
+.agree-n { font-size: 11px; color: #9ca3af; }
 .agree-badge { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 10px; margin-left: auto; }
 .badge-high { background: #dcfce7; color: #166534; }
 .badge-mid { background: #fef3c7; color: #92400e; }
