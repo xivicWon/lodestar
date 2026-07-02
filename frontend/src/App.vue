@@ -7,6 +7,7 @@ import RelationSuggestPanel from './components/RelationSuggestPanel.vue'
 import ConsistencyBadge from './components/ConsistencyBadge.vue'
 import ClassTree from './components/ClassTree.vue'
 import ClassDetail from './components/ClassDetail.vue'
+import ImpactPanel from './components/ImpactPanel.vue'
 import RelationsView from './components/RelationsView.vue'
 import { useOntologyStore } from './stores/ontologyStore'
 
@@ -42,7 +43,7 @@ onMounted(() => { store.refresh() })
     <div class="panes">
       <aside class="left"><ClassTree /></aside>
       <section class="right">
-        <div class="detail-pane"><ClassDetail /></div>
+        <div class="detail-pane"><ClassDetail /><ImpactPanel /></div>
         <div class="relations-pane"><RelationsView /></div>
       </section>
     </div>

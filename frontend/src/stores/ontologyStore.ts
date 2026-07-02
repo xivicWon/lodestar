@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, apiDownload, ApiError } from '../api/client'
-import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, RelationCandidate } from '../api/types'
+import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, RelationCandidate, ImpactResult } from '../api/types'
 import { buildTree } from '../lib/buildTree'
 
 export const useOntologyStore = defineStore('ontology', () => {
@@ -15,6 +15,7 @@ export const useOntologyStore = defineStore('ontology', () => {
   const enriching = ref(false)
   const relCandidates = ref<RelationCandidate[]>([])
   const suggesting = ref(false)
+  const impact = ref<ImpactResult | null>(null)
 
   const selected = computed(() => classes.value.find(c => c.iri === selectedIri.value) ?? null)
   const tree = computed(() => buildTree(classes.value))
@@ -159,6 +160,13 @@ export const useOntologyStore = defineStore('ontology', () => {
     relCandidates.value = relCandidates.value.filter((_, i) => i !== idx)
   }
 
+  async function fetchImpact(iri: string) {
+    error.value = null
+    try {
+      impact.value = await apiGet<ImpactResult>('/impact?iri=' + encodeURIComponent(iri))
+    } catch (e) { setError(e) }
+  }
+
   function clearError() { error.value = null }
 
   function reportError(e: unknown) { setError(e) }
@@ -168,6 +176,7 @@ export const useOntologyStore = defineStore('ontology', () => {
            objectProperties, importDdl, importConnection, importSample, renameRelation,
            enrichCandidates, enriching, enrichSample, applyEnrichment, dismissEnrichment,
            relCandidates, suggesting, suggestRelations, applyRelation, dismissRelation,
+           impact, fetchImpact,
            refresh, select, createClass, saveClass, deleteClass, loadFile, exportTurtle,
            clearError, reportError }
 })
