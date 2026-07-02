@@ -29,7 +29,8 @@ class ScoredEnricher(
         }
         return byIri.map { (iri, cands) ->
             val labels = cands.map { it.suggestedLabel }
-            val consensus = scorer.score(labels)
+            // 분모는 총 실행 횟수(runs): 일부 실행에서 누락된 항목은 신뢰도가 낮아야 한다.
+            val consensus = scorer.score(labels, denominator = runs)
             // description: consensus 군집 대표(=consensusLabel) 후보 것, 없으면 첫 후보 것.
             val description = cands.firstOrNull { it.suggestedLabel == consensus.consensusLabel }?.description
                 ?: cands.first().description
@@ -39,7 +40,7 @@ class ScoredEnricher(
                 consensusLabel = consensus.consensusLabel,
                 description = description,
                 agreement = consensus.agreement,
-                n = labels.size,
+                n = runs,
                 variants = consensus.variants,
             )
         }.sortedBy { it.agreement }

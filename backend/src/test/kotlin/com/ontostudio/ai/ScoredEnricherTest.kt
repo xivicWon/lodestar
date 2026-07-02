@@ -34,4 +34,23 @@ class ScoredEnricherTest {
         // description은 consensus 군집 대표 후보의 것
         assertEquals("거래처 기본정보", cust.description)
     }
+
+    @Test fun `item missing from some runs is not inflated (denominator = runs)`() {
+        // 3회 중 TB_CUST_MST 는 1회만 등장 → agreement 는 1/3 (부풀려진 1.0 아님).
+        val advisor = RotatingAdvisor(
+            listOf(
+                """[{"table":"TB_CUST_MST","label":"고객 마스터","description":"x"}]""",
+                """[{"table":"TB_ORD_HD","label":"주문 헤더","description":"y"}]""",
+                """[{"table":"TB_ORD_HD","label":"주문 헤더","description":"y"}]""",
+            )
+        )
+        val enricher = SemanticEnricher(advisor, SampleLegacyDb(), MetadataService(), SchemaToOwlMapper())
+        val scored = ScoredEnricher(enricher, ConsensusScorer()).scoredEnrich(runs = 3)
+
+        val cust = scored.first { it.currentName == "TB_CUST_MST" }
+        assertEquals(1.0 / 3.0, cust.agreement, 1e-9)
+        assertEquals(3, cust.n)
+        // 흔들리는 항목이 앞으로 정렬됨(가장 낮은 agreement)
+        assertEquals("TB_CUST_MST", scored.first().currentName)
+    }
 }
