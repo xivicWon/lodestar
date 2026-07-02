@@ -26,7 +26,7 @@ class RdbImportControllerTest {
         val body = """{"sql": ${org.json.JSONObject.quote(ddl)}, "schemaName": "shop"}"""
         mvc.perform(post("/api/rdb/import/ddl").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.counts.classes").value(2))
+            .andExpect(jsonPath("$.meta.counts.classes").value(2))
 
         // 기존 클래스 API로 조회 가능해야 한다
         mvc.perform(get("/api/classes")).andExpect(status().isOk)

@@ -11,6 +11,7 @@ import ClassTree from './components/ClassTree.vue'
 import ClassDetail from './components/ClassDetail.vue'
 import ImpactPanel from './components/ImpactPanel.vue'
 import RelationsView from './components/RelationsView.vue'
+import MergeNotice from './components/MergeNotice.vue'
 import { useOntologyStore } from './stores/ontologyStore'
 
 const store = useOntologyStore()
@@ -42,6 +43,7 @@ onMounted(() => { store.refresh() })
         {{ showChat ? 'AI 챗 닫기' : 'AI 챗' }}
       </button>
     </div>
+    <MergeNotice />
     <ImportPanel v-if="showImport" />
     <EnrichPanel v-if="showEnrich" />
     <RelationSuggestPanel v-if="showRel" />
