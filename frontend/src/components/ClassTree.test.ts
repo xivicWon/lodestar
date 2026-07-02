@@ -20,4 +20,18 @@ describe('ClassTree', () => {
     await wrapper.findAll('.node-label')[0].trigger('click')
     expect(s.selectedIri).toBe('e#Animal')
   })
+
+  it('filters nodes by search query', async () => {
+    const s = useOntologyStore()
+    s.classes = [
+      { iri: 'e#TB_CUST_MST', label: 'TB_CUST_MST', superClasses: [], annotations: [] },
+      { iri: 'e#TB_ORD_HD', label: 'TB_ORD_HD', superClasses: [], annotations: [] },
+      { iri: 'e#TB_ORD_DTL', label: 'TB_ORD_DTL', superClasses: [], annotations: [] },
+    ]
+    const wrapper = mount(ClassTree)
+    await wrapper.find('.tree-search').setValue('ORD')
+    expect(wrapper.text()).toContain('TB_ORD_HD')
+    expect(wrapper.text()).toContain('TB_ORD_DTL')
+    expect(wrapper.text()).not.toContain('TB_CUST_MST')
+  })
 })
