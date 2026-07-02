@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, apiDownload, ApiError } from '../api/client'
-import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo } from '../api/types'
+import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate } from '../api/types'
 import { buildTree } from '../lib/buildTree'
 
 export const useOntologyStore = defineStore('ontology', () => {
@@ -11,6 +11,8 @@ export const useOntologyStore = defineStore('ontology', () => {
   const error = ref<string | null>(null)
   const reasonResult = ref<ReasonResult | null>(null)
   const objectProperties = ref<ObjectPropertyDto[]>([])
+  const enrichCandidates = ref<EnrichmentCandidate[]>([])
+  const enriching = ref(false)
 
   const selected = computed(() => classes.value.find(c => c.iri === selectedIri.value) ?? null)
   const tree = computed(() => buildTree(classes.value))
@@ -78,6 +80,28 @@ export const useOntologyStore = defineStore('ontology', () => {
     } catch (e) { setError(e) }
   }
 
+  async function enrichSample() {
+    error.value = null
+    enriching.value = true
+    try {
+      enrichCandidates.value = await apiPost<EnrichmentCandidate[]>('/ai/enrich/sample', {})
+    } catch (e) { setError(e) }
+    finally { enriching.value = false }
+  }
+
+  async function applyEnrichment(targetIri: string, label: string) {
+    error.value = null
+    try {
+      await apiPatch<ClassDto>(`/classes/by-iri?iri=${encodeURIComponent(targetIri)}`, { label })
+      enrichCandidates.value = enrichCandidates.value.filter(c => c.targetIri !== targetIri)
+      await refresh()
+    } catch (e) { setError(e) }
+  }
+
+  function dismissEnrichment(targetIri: string) {
+    enrichCandidates.value = enrichCandidates.value.filter(c => c.targetIri !== targetIri)
+  }
+
   async function renameRelation(iri: string, label: string) {
     error.value = null
     try {
@@ -118,6 +142,7 @@ export const useOntologyStore = defineStore('ontology', () => {
   return { classes, selectedIri, meta, error, selected, tree,
            reasonResult, runReasoner, inferredChildrenOf,
            objectProperties, importDdl, importConnection, importSample, renameRelation,
+           enrichCandidates, enriching, enrichSample, applyEnrichment, dismissEnrichment,
            refresh, select, createClass, saveClass, deleteClass, loadFile, exportTurtle,
            clearError, reportError }
 })
