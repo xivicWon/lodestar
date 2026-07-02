@@ -21,6 +21,25 @@ describe('ontologyStore rdb', () => {
     expect(s.objectProperties).toEqual([rel])
   })
 
+  it('enrichSample posts and stores candidates', async () => {
+    const cand = { targetIri: 'e#TB_CUST_MST', currentName: 'TB_CUST_MST', suggestedLabel: '고객 마스터', description: 'x' }
+    vi.spyOn(client, 'apiPost').mockResolvedValue([cand] as any)
+    const s = useOntologyStore()
+    await s.enrichSample()
+    expect(s.enrichCandidates).toEqual([cand])
+  })
+
+  it('applyEnrichment patches class label and removes candidate', async () => {
+    const cand = { targetIri: 'e#TB_CUST_MST', currentName: 'TB_CUST_MST', suggestedLabel: '고객 마스터', description: 'x' }
+    const patch = vi.spyOn(client, 'apiPatch').mockResolvedValue({} as any)
+    vi.spyOn(client, 'apiGet').mockResolvedValue([] as any)
+    const s = useOntologyStore()
+    s.enrichCandidates = [cand] as any
+    await s.applyEnrichment('e#TB_CUST_MST', '고객 마스터')
+    expect(patch).toHaveBeenCalledWith('/classes/by-iri?iri=' + encodeURIComponent('e#TB_CUST_MST'), { label: '고객 마스터' })
+    expect(s.enrichCandidates.length).toBe(0)
+  })
+
   it('renameRelation patches label and refreshes', async () => {
     const patch = vi.spyOn(client, 'apiPatch').mockResolvedValue({} as any)
     vi.spyOn(client, 'apiGet').mockResolvedValue([] as any)

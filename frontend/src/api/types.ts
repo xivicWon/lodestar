@@ -30,3 +30,10 @@ export interface ObjectPropertyDto {
 export interface ConnectionInfo {
   host: string; port: number; database: string; user: string; password: string
 }
+
+export interface EnrichmentCandidate {
+  targetIri: string
+  currentName: string
+  suggestedLabel: string
+  description: string
+}
