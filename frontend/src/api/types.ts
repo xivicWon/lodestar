@@ -2,6 +2,9 @@ export interface AnnotationDto { property: string; value: string; lang: string |
 export interface ClassDto { iri: string; label: string | null; superClasses: string[]; annotations: AnnotationDto[] }
 export interface OntologyMetaDto { ontologyIri: string | null; baseIri: string; prefixes: Record<string, string>; counts: Record<string, number> }
 
+export interface MergeSummary { reapplied: number; stale: number; staleIris: string[] }
+export interface ImportResult { meta: OntologyMetaDto; merge: MergeSummary }
+
 export interface InferredEdge { sub: string; sup: string }
 export interface ReasonResult {
   consistent: boolean

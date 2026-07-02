@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, apiDownload, ApiError } from '../api/client'
-import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, ScoredCandidate, ConfirmedFact, RelationCandidate, ImpactResult, ChatAnswer } from '../api/types'
+import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, ScoredCandidate, ConfirmedFact, RelationCandidate, ImpactResult, ChatAnswer, ImportResult, MergeSummary } from '../api/types'
 import { buildTree } from '../lib/buildTree'
 
 export const useOntologyStore = defineStore('ontology', () => {
@@ -21,6 +21,7 @@ export const useOntologyStore = defineStore('ontology', () => {
   const projects = ref<string[]>([])
   const chatMessages = ref<{ role: 'user' | 'assistant'; text: string }[]>([])
   const asking = ref(false)
+  const lastMerge = ref<MergeSummary | null>(null)
 
   const selected = computed(() => classes.value.find(c => c.iri === selectedIri.value) ?? null)
   const tree = computed(() => buildTree(classes.value))
@@ -73,7 +74,8 @@ export const useOntologyStore = defineStore('ontology', () => {
   async function importDdl(sql: string, schemaName?: string) {
     error.value = null
     try {
-      await apiPost<OntologyMetaDto>('/rdb/import/ddl', { sql, schemaName })
+      const res = await apiPost<ImportResult>('/rdb/import/ddl', { sql, schemaName })
+      lastMerge.value = res.merge
       selectedIri.value = null
       await refresh()
     } catch (e) { setError(e) }
@@ -82,7 +84,8 @@ export const useOntologyStore = defineStore('ontology', () => {
   async function importSample() {
     error.value = null
     try {
-      await apiPost<OntologyMetaDto>('/rdb/import/sample', {})
+      const res = await apiPost<ImportResult>('/rdb/import/sample', {})
+      lastMerge.value = res.merge
       selectedIri.value = null
       await refresh()
     } catch (e) { setError(e) }
@@ -158,7 +161,8 @@ export const useOntologyStore = defineStore('ontology', () => {
   async function importConnection(info: ConnectionInfo) {
     error.value = null
     try {
-      await apiPost<OntologyMetaDto>('/rdb/import/connection', info)
+      const res = await apiPost<ImportResult>('/rdb/import/connection', info)
+      lastMerge.value = res.merge
       selectedIri.value = null
       await refresh()
     } catch (e) { setError(e) }
@@ -250,6 +254,7 @@ export const useOntologyStore = defineStore('ontology', () => {
   return { classes, selectedIri, meta, error, selected, tree,
            reasonResult, runReasoner, inferredChildrenOf,
            objectProperties, importDdl, importConnection, importSample, renameRelation,
+           lastMerge,
            enrichCandidates, enriching, enrichSample, applyEnrichment, dismissEnrichment,
            scoredCandidates, scoredEnrichSample,
            confirmations, fetchConfirmations, confirm, deleteConfirmation,

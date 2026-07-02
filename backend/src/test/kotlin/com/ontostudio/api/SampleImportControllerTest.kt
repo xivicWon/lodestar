@@ -22,7 +22,7 @@ class SampleImportControllerTest {
     @Test fun `import sample loads many classes reachable via existing api`() {
         mvc.perform(post("/api/rdb/import/sample"))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.counts.classes").value(org.hamcrest.Matchers.greaterThanOrEqualTo(25)))
+            .andExpect(jsonPath("$.meta.counts.classes").value(org.hamcrest.Matchers.greaterThanOrEqualTo(25)))
 
         mvc.perform(get("/api/classes")).andExpect(status().isOk)
             .andExpect(jsonPath("$[?(@.label=='TB_CUST_MST')]").exists())

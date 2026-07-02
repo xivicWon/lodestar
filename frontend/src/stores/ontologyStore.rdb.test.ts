@@ -65,4 +65,22 @@ describe('ontologyStore rdb', () => {
     await s.importDdl('CREATE TABLE t (id INT);', 'shop')
     expect(post).toHaveBeenCalledWith('/rdb/import/ddl', { sql: 'CREATE TABLE t (id INT);', schemaName: 'shop' })
   })
+
+  it('importSample captures merge summary into lastMerge', async () => {
+    const result = { meta: {}, merge: { reapplied: 2, stale: 1, staleIris: ['e#X'] } }
+    vi.spyOn(client, 'apiPost').mockResolvedValue(result as any)
+    vi.spyOn(client, 'apiGet').mockResolvedValue([] as any)
+    const s = useOntologyStore()
+    await s.importSample()
+    expect(s.lastMerge).toEqual({ reapplied: 2, stale: 1, staleIris: ['e#X'] })
+  })
+
+  it('importDdl captures merge summary into lastMerge', async () => {
+    const result = { meta: {}, merge: { reapplied: 1, stale: 0, staleIris: [] } }
+    vi.spyOn(client, 'apiPost').mockResolvedValue(result as any)
+    vi.spyOn(client, 'apiGet').mockResolvedValue([] as any)
+    const s = useOntologyStore()
+    await s.importDdl('CREATE TABLE t (id INT);', 'shop')
+    expect(s.lastMerge).toEqual({ reapplied: 1, stale: 0, staleIris: [] })
+  })
 })
