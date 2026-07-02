@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, apiDownload, ApiError } from '../api/client'
-import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate } from '../api/types'
+import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, RelationCandidate } from '../api/types'
 import { buildTree } from '../lib/buildTree'
 
 export const useOntologyStore = defineStore('ontology', () => {
@@ -13,6 +13,8 @@ export const useOntologyStore = defineStore('ontology', () => {
   const objectProperties = ref<ObjectPropertyDto[]>([])
   const enrichCandidates = ref<EnrichmentCandidate[]>([])
   const enriching = ref(false)
+  const relCandidates = ref<RelationCandidate[]>([])
+  const suggesting = ref(false)
 
   const selected = computed(() => classes.value.find(c => c.iri === selectedIri.value) ?? null)
   const tree = computed(() => buildTree(classes.value))
@@ -135,6 +137,28 @@ export const useOntologyStore = defineStore('ontology', () => {
       })
   }
 
+  async function suggestRelations() {
+    error.value = null
+    suggesting.value = true
+    try {
+      relCandidates.value = await apiPost<RelationCandidate[]>('/rel/suggest', {})
+    } catch (e) { setError(e) }
+    finally { suggesting.value = false }
+  }
+
+  async function applyRelation(fromIri: string, toIri: string, name: string) {
+    error.value = null
+    try {
+      await apiPost<ObjectPropertyDto>('/properties/object', { label: name, domains: [fromIri], ranges: [toIri] })
+      relCandidates.value = relCandidates.value.filter(c => !(c.fromIri === fromIri && c.toIri === toIri && c.suggestedName === name))
+      await refresh()
+    } catch (e) { setError(e) }
+  }
+
+  function dismissRelation(idx: number) {
+    relCandidates.value = relCandidates.value.filter((_, i) => i !== idx)
+  }
+
   function clearError() { error.value = null }
 
   function reportError(e: unknown) { setError(e) }
@@ -143,6 +167,7 @@ export const useOntologyStore = defineStore('ontology', () => {
            reasonResult, runReasoner, inferredChildrenOf,
            objectProperties, importDdl, importConnection, importSample, renameRelation,
            enrichCandidates, enriching, enrichSample, applyEnrichment, dismissEnrichment,
+           relCandidates, suggesting, suggestRelations, applyRelation, dismissRelation,
            refresh, select, createClass, saveClass, deleteClass, loadFile, exportTurtle,
            clearError, reportError }
 })
