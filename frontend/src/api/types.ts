@@ -45,3 +45,9 @@ export interface RelationCandidate {
   confidence: number
   suggestedName: string
 }
+
+export interface ImpactResult {
+  iri: string
+  upstream: string[]
+  downstream: string[]
+}
