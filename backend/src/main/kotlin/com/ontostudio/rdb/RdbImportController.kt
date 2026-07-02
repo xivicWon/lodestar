@@ -18,23 +18,23 @@ class RdbImportController(
     private val ontologyMapper: OntologyMapper,
     private val sampleLegacyDb: SampleLegacyDb
 ) {
-    private fun ingest(schema: SchemaModel, dbName: String): OntologyMetaDto {
-        val baseIri = "http://lodestar/rdb/${schemaMapper.slug(dbName)}#"
-        val ont = schemaMapper.build(schema, baseIri)
-        holder.replace(ont, baseIri)
+    /** 모든 입력 경로의 공통 종착: 소스 → SchemaModel → 온톨로지 주입. */
+    private fun ingest(source: SchemaSource): OntologyMetaDto {
+        val baseIri = "http://lodestar/rdb/${schemaMapper.slug(source.name)}#"
+        holder.replace(schemaMapper.build(source.extract(), baseIri), baseIri)
         return ontologyMapper.meta()
     }
 
     @PostMapping("/import/ddl")
     fun importDdl(@RequestBody req: DdlImportRequest): OntologyMetaDto =
-        ingest(ddlParser.parse(req.sql), req.schemaName ?: "schema")
+        ingest(DdlSource(req.sql, req.schemaName, ddlParser))
 
     @PostMapping("/import/connection")
     fun importConnection(@RequestBody info: ConnectionInfo): OntologyMetaDto =
-        dbConnector.open(info).use { conn -> ingest(metadataService.extract(conn), info.database) }
+        ingest(LiveJdbcSource(info, dbConnector, metadataService))
 
     /** E1-2: 번들 샘플 레거시를 H2에 적재 → 라이브 경로로 임포트. 데모/검증용 원클릭. */
     @PostMapping("/import/sample")
     fun importSample(): OntologyMetaDto =
-        sampleLegacyDb.open().use { conn -> ingest(metadataService.extract(conn), "legacy") }
+        ingest(SampleSource(sampleLegacyDb, metadataService))
 }
