@@ -27,4 +27,44 @@ describe('EnrichPanel', () => {
     await w.find('.approve-btn').trigger('click')
     expect(spy).toHaveBeenCalledWith('e#TB_CUST_MST', '고객 마스터')
   })
+
+  it('runs scored evaluation on button click', async () => {
+    const store = useOntologyStore()
+    const spy = vi.spyOn(store, 'scoredEnrichSample').mockResolvedValue()
+    const w = mount(EnrichPanel)
+    await w.find('.scored-run-btn').trigger('click')
+    expect(spy).toHaveBeenCalledWith(5)
+  })
+
+  it('renders scored candidate with confidence badge and approves consensus label', async () => {
+    const store = useOntologyStore()
+    store.scoredCandidates = [{
+      targetIri: 'e#TB_ORD_HD', currentName: 'TB_ORD_HD', consensusLabel: '주문 헤더',
+      description: '주문 전표', agreement: 0.6, n: 5,
+      variants: [{ label: '주문 헤더', count: 3 }, { label: '오더 정보', count: 2 }],
+    }] as any
+    const spy = vi.spyOn(store, 'applyEnrichment').mockResolvedValue()
+    const w = mount(EnrichPanel)
+    // agreement 0.6 → amber '보통' badge
+    const badge = w.find('.agree-badge')
+    expect(badge.classes()).toContain('badge-mid')
+    expect(badge.text()).toContain('보통')
+    expect(badge.text()).toContain('60%')
+    expect(w.text()).toContain('주문 헤더')
+    expect(w.text()).toContain('오더 정보 ×2')
+    await w.find('.scored-list .approve-btn').trigger('click')
+    expect(spy).toHaveBeenCalledWith('e#TB_ORD_HD', '주문 헤더')
+  })
+
+  it('shows green 확신 badge for high agreement', () => {
+    const store = useOntologyStore()
+    store.scoredCandidates = [{
+      targetIri: 'e#X', currentName: 'X', consensusLabel: 'L', description: '',
+      agreement: 0.9, n: 5, variants: [{ label: 'L', count: 5 }],
+    }] as any
+    const w = mount(EnrichPanel)
+    const badge = w.find('.agree-badge')
+    expect(badge.classes()).toContain('badge-high')
+    expect(badge.text()).toContain('확신')
+  })
 })

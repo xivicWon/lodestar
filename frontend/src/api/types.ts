@@ -38,6 +38,21 @@ export interface EnrichmentCandidate {
   description: string
 }
 
+export interface Variant {
+  label: string
+  count: number
+}
+
+export interface ScoredCandidate {
+  targetIri: string
+  currentName: string
+  consensusLabel: string
+  description: string
+  agreement: number
+  n: number
+  variants: Variant[]
+}
+
 export interface RelationCandidate {
   fromIri: string
   toIri: string
