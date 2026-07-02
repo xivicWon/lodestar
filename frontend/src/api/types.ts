@@ -37,3 +37,11 @@ export interface EnrichmentCandidate {
   suggestedLabel: string
   description: string
 }
+
+export interface RelationCandidate {
+  fromIri: string
+  toIri: string
+  viaColumn: string
+  confidence: number
+  suggestedName: string
+}
