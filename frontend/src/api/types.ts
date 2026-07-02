@@ -32,6 +32,7 @@ export interface ObjectPropertyDto {
 
 export interface ConnectionInfo {
   host: string; port: number; database: string; user: string; password: string
+  vendor?: string
 }
 
 export interface EnrichmentCandidate {

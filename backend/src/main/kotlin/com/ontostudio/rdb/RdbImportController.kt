@@ -39,6 +39,15 @@ class RdbImportController(
     fun importConnection(@RequestBody info: ConnectionInfo): ImportResult =
         ingest(LiveJdbcSource(info, dbConnector, metadataService))
 
+    /** 접속 검증 + DB(카탈로그) 목록. database 없이 접속해 스캔할 DB를 고르는 용도. */
+    @PostMapping("/databases")
+    fun listDatabases(@RequestBody info: ConnectionInfo): List<String> =
+        dbConnector.open(info).use { conn ->
+            val out = mutableListOf<String>()
+            conn.metaData.catalogs.use { rs -> while (rs.next()) out.add(rs.getString(1)) }
+            out.filter { it.lowercase() !in setOf("information_schema", "mysql", "performance_schema", "sys") }
+        }
+
     /** E1-2: 번들 샘플 레거시를 H2에 적재 → 라이브 경로로 임포트. 데모/검증용 원클릭. */
     @PostMapping("/import/sample")
     fun importSample(): ImportResult =
