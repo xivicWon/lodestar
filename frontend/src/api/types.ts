@@ -51,3 +51,5 @@ export interface ImpactResult {
   upstream: string[]
   downstream: string[]
 }
+
+export interface ChatAnswer { answer: string }

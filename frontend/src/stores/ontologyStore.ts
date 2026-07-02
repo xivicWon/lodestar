@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, apiDownload, ApiError } from '../api/client'
-import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, RelationCandidate, ImpactResult } from '../api/types'
+import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, RelationCandidate, ImpactResult, ChatAnswer } from '../api/types'
 import { buildTree } from '../lib/buildTree'
 
 export const useOntologyStore = defineStore('ontology', () => {
@@ -17,6 +17,8 @@ export const useOntologyStore = defineStore('ontology', () => {
   const suggesting = ref(false)
   const impact = ref<ImpactResult | null>(null)
   const projects = ref<string[]>([])
+  const chatMessages = ref<{ role: 'user' | 'assistant'; text: string }[]>([])
+  const asking = ref(false)
 
   const selected = computed(() => classes.value.find(c => c.iri === selectedIri.value) ?? null)
   const tree = computed(() => buildTree(classes.value))
@@ -189,6 +191,19 @@ export const useOntologyStore = defineStore('ontology', () => {
     } catch (e) { setError(e) }
   }
 
+  async function askChat(question: string) {
+    const q = question.trim()
+    if (!q) return
+    error.value = null
+    chatMessages.value.push({ role: 'user', text: q })
+    asking.value = true
+    try {
+      const res = await apiPost<ChatAnswer>('/ai/chat', { question: q })
+      chatMessages.value.push({ role: 'assistant', text: res.answer })
+    } catch (e) { setError(e) }
+    finally { asking.value = false }
+  }
+
   function clearError() { error.value = null }
 
   function reportError(e: unknown) { setError(e) }
@@ -200,6 +215,7 @@ export const useOntologyStore = defineStore('ontology', () => {
            relCandidates, suggesting, suggestRelations, applyRelation, dismissRelation,
            impact, fetchImpact,
            projects, listProjects, saveProject, loadProject,
+           chatMessages, asking, askChat,
            refresh, select, createClass, saveClass, deleteClass, loadFile, exportTurtle,
            clearError, reportError }
 })
