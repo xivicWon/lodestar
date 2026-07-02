@@ -53,6 +53,12 @@ export interface ScoredCandidate {
   variants: Variant[]
 }
 
+export interface ConfirmedFact {
+  iri: string
+  label: string
+  kind: string
+}
+
 export interface RelationCandidate {
   fromIri: string
   toIri: string

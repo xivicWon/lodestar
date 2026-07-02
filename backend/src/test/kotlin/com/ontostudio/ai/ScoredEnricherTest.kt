@@ -3,11 +3,20 @@ package com.ontostudio.ai
 import com.ontostudio.rdb.MetadataService
 import com.ontostudio.rdb.SampleLegacyDb
 import com.ontostudio.rdb.SchemaToOwlMapper
+import com.ontostudio.savepoint.ConfirmationStore
+import java.nio.file.Files
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /** 반복 추론 → 합의율 집계를 실 AI 없이 검증(E7). */
 class ScoredEnricherTest {
+
+    private val tmp = Files.createTempFile("confirmations", ".json")
+
+    @AfterTest fun cleanup() { Files.deleteIfExists(tmp) }
+
+    private fun emptyStore() = ConfirmationStore(tmp.toString())
 
     /** 호출마다 다른 JSON을 회전 반환하는 페이크 AI(비결정론 시뮬). */
     private class RotatingAdvisor(private val responses: List<String>) : AiAdvisor {
@@ -24,7 +33,7 @@ class ScoredEnricherTest {
                 """[{"table":"TB_CUST_MST","label":"거래처 정보","description":"거래처"}]""",
             )
         )
-        val enricher = SemanticEnricher(advisor, SampleLegacyDb(), MetadataService(), SchemaToOwlMapper())
+        val enricher = SemanticEnricher(advisor, SampleLegacyDb(), MetadataService(), SchemaToOwlMapper(), emptyStore())
         val scored = ScoredEnricher(enricher, ConsensusScorer()).scoredEnrich(runs = 3)
 
         val cust = scored.first { it.currentName == "TB_CUST_MST" }
@@ -44,7 +53,7 @@ class ScoredEnricherTest {
                 """[{"table":"TB_ORD_HD","label":"주문 헤더","description":"y"}]""",
             )
         )
-        val enricher = SemanticEnricher(advisor, SampleLegacyDb(), MetadataService(), SchemaToOwlMapper())
+        val enricher = SemanticEnricher(advisor, SampleLegacyDb(), MetadataService(), SchemaToOwlMapper(), emptyStore())
         val scored = ScoredEnricher(enricher, ConsensusScorer()).scoredEnrich(runs = 3)
 
         val cust = scored.first { it.currentName == "TB_CUST_MST" }
