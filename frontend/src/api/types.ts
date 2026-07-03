@@ -88,3 +88,5 @@ export interface ImpactResult {
 }
 
 export interface ChatAnswer { answer: string }
+
+export interface TrashEntry { iri: string; label: string; trashedAt: number }

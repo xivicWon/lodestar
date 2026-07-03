@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, apiDownload, ApiError } from '../api/client'
-import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, ScoredCandidate, ConfirmedFact, RelationCandidate, JudgedCandidate, ImpactResult, ChatAnswer, ImportResult, MergeSummary } from '../api/types'
+import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, ScoredCandidate, ConfirmedFact, RelationCandidate, JudgedCandidate, ImpactResult, ChatAnswer, ImportResult, MergeSummary, TrashEntry } from '../api/types'
 import { buildTree } from '../lib/buildTree'
 
 export const useOntologyStore = defineStore('ontology', () => {
@@ -24,6 +24,7 @@ export const useOntologyStore = defineStore('ontology', () => {
   const chatMessages = ref<{ role: 'user' | 'assistant'; text: string }[]>([])
   const asking = ref(false)
   const lastMerge = ref<MergeSummary | null>(null)
+  const trash = ref<TrashEntry[]>([])
 
   const selected = computed(() => classes.value.find(c => c.iri === selectedIri.value) ?? null)
   const tree = computed(() => buildTree(classes.value))
@@ -265,6 +266,40 @@ export const useOntologyStore = defineStore('ontology', () => {
     finally { asking.value = false }
   }
 
+  async function fetchTrash() {
+    error.value = null
+    try { trash.value = await apiGet<TrashEntry[]>('/trash') }
+    catch (e) { setError(e) }
+  }
+
+  /** E11: 클래스를 휴지통으로 이동(컬럼·관계 포함 soft delete) 후 상태 갱신. */
+  async function trashClass(iri: string) {
+    error.value = null
+    try {
+      await apiPost('/trash', { iri })
+      if (selectedIri.value === iri) selectedIri.value = null
+      await refresh()
+      await fetchTrash()
+    } catch (e) { setError(e) }
+  }
+
+  async function restoreTrash(iri: string) {
+    error.value = null
+    try {
+      await apiPost('/trash/restore?iri=' + encodeURIComponent(iri), {})
+      await refresh()
+      await fetchTrash()
+    } catch (e) { setError(e) }
+  }
+
+  async function purgeTrash(iri: string) {
+    error.value = null
+    try {
+      await apiDelete('/trash?iri=' + encodeURIComponent(iri))
+      await fetchTrash()
+    } catch (e) { setError(e) }
+  }
+
   function clearError() { error.value = null }
 
   function reportError(e: unknown) { setError(e) }
@@ -281,6 +316,7 @@ export const useOntologyStore = defineStore('ontology', () => {
            impact, fetchImpact,
            projects, listProjects, saveProject, loadProject,
            chatMessages, asking, askChat,
+           trash, fetchTrash, trashClass, restoreTrash, purgeTrash,
            refresh, select, createClass, saveClass, deleteClass, loadFile, exportTurtle,
            clearError, reportError }
 })
