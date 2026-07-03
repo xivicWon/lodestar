@@ -29,3 +29,30 @@ describe('ontologyStore scoredEnrichSample', () => {
     expect(spy).toHaveBeenCalledWith('/ai/enrich/sample/scored?runs=5', {})
   })
 })
+
+describe('ontologyStore enrichCurrent (E12)', () => {
+  it('posts to current-ontology enrich endpoint and stores candidates', async () => {
+    const cands = [{ targetIri: 'e#TB_CUST_MST', currentName: 'TB_CUST_MST', suggestedLabel: '고객 마스터', description: '거래처 기본정보' }]
+    const spy = vi.spyOn(client, 'apiPost').mockResolvedValue(cands as any)
+    const s = useOntologyStore()
+    await s.enrichCurrent()
+    expect(spy).toHaveBeenCalledWith('/ai/enrich', {})
+    expect(s.enrichCandidates).toEqual(cands)
+    expect(s.enriching).toBe(false)
+  })
+
+  it('posts to current-ontology scored endpoint with runs', async () => {
+    const spy = vi.spyOn(client, 'apiPost').mockResolvedValue(scored as any)
+    const s = useOntologyStore()
+    await s.scoredEnrichCurrent(5)
+    expect(spy).toHaveBeenCalledWith('/ai/enrich/scored?runs=5', {})
+    expect(s.scoredCandidates).toEqual(scored)
+  })
+
+  it('defaults current scored runs to 5', async () => {
+    const spy = vi.spyOn(client, 'apiPost').mockResolvedValue([] as any)
+    const s = useOntologyStore()
+    await s.scoredEnrichCurrent()
+    expect(spy).toHaveBeenCalledWith('/ai/enrich/scored?runs=5', {})
+  })
+})

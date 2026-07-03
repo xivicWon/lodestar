@@ -22,10 +22,15 @@ class ScoredEnricher(
     private val enricher: SemanticEnricher,
     private val scorer: ConsensusScorer,
 ) {
-    fun scoredEnrich(runs: Int): List<ScoredCandidate> {
+    fun scoredEnrich(runs: Int): List<ScoredCandidate> = aggregate(runs) { enricher.enrichSample() }
+
+    /** E12: 현재 온톨로지 대상 enrichCurrent 를 N회 반복해 동일 집계 로직으로 신뢰도를 붙인다. */
+    fun scoredEnrichCurrent(runs: Int): List<ScoredCandidate> = aggregate(runs) { enricher.enrichCurrent() }
+
+    private inline fun aggregate(runs: Int, run: () -> List<EnrichmentCandidate>): List<ScoredCandidate> {
         val byIri = LinkedHashMap<String, MutableList<EnrichmentCandidate>>()
         repeat(runs) {
-            for (c in enricher.enrichSample()) byIri.getOrPut(c.targetIri) { mutableListOf() }.add(c)
+            for (c in run()) byIri.getOrPut(c.targetIri) { mutableListOf() }.add(c)
         }
         return byIri.map { (iri, cands) ->
             val labels = cands.map { it.suggestedLabel }
