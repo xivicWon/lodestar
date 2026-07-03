@@ -113,6 +113,28 @@ class SemanticEnricherCurrentTest {
         assertTrue(svc.enrichCurrent().isEmpty())
     }
 
+    @Test fun `classes sharing a label do not collide (each maps to its own iri)`() {
+        // 두 클래스에 같은 라벨을 달아 이름 충돌을 유발 → 청크 내 고유 키로 둘 다 매핑돼야 함.
+        val holder = holderWith(
+            TableInfo("TB_A", listOf(col("A1")), emptyList(), emptyList()),
+            TableInfo("TB_B", listOf(col("B1")), emptyList(), emptyList()),
+        )
+        val cs = com.ontostudio.ontology.ClassService(holder, OntologyMapper(holder))
+        cs.setLabel(baseIri + "TB_A", "고객")
+        cs.setLabel(baseIri + "TB_B", "고객")
+        // 정렬(IRI) 상 TB_A→"고객", TB_B→"고객__2" 로 키 부여됨.
+        val fake = FakeAdvisor(
+            """[{"table":"고객","label":"라벨A","description":"a"},{"table":"고객__2","label":"라벨B","description":"b"}]"""
+        )
+        val candidates = enricher(fake, holder).enrichCurrent()
+
+        // 두 클래스 모두 후보를 받고, 서로 다른 실제 IRI 에 매핑(덮어쓰기 없음)
+        assertEquals(
+            setOf(baseIri + "TB_A", baseIri + "TB_B"),
+            candidates.map { it.targetIri }.toSet(),
+        )
+    }
+
     @Test fun `chunking splits targets and merges all candidates`() {
         val tables = (1..5).map {
             TableInfo("TB_T$it", listOf(col("C$it")), emptyList(), emptyList())
