@@ -170,6 +170,7 @@ class SemanticEnricher(
                 val name = ontologyMapper.labelOf(cls.iri) ?: fragmentOf(iri)
                 ClassCtx(iri, name, colsByClass[iri]?.toList() ?: emptyList())
             }
+            .sortedBy { it.iri } // 결정론적 순서(청크 경계·중복키 부여 안정화)
     }
 
     /**
@@ -236,8 +237,14 @@ class SemanticEnricher(
 
         val out = mutableListOf<EnrichmentCandidate>()
         for (chunk in targets.chunked(chunkSize.coerceAtLeast(1))) {
-            val nameToIri = chunk.associate { it.name to it.iri }
-            val response = advisor.ask(buildPromptFor(chunk, anchors))
+            // 같은 이름(중복 라벨/프래그먼트) 클래스가 서로 덮어쓰지 않도록 청크 내 고유 키 부여.
+            val seen = HashMap<String, Int>()
+            val keyed = chunk.map { c ->
+                val n = seen.merge(c.name, 1, Int::plus)!!
+                if (n == 1) c else c.copy(name = "${c.name}__$n")
+            }
+            val nameToIri = keyed.associate { it.name to it.iri }
+            val response = advisor.ask(buildPromptFor(keyed, anchors))
             out += parseCandidates(response, nameToIri)
         }
         return out
