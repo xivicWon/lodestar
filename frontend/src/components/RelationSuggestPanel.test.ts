@@ -50,14 +50,35 @@ describe('RelationSuggestPanel', () => {
     expect(w.text()).toContain('관계')
     expect(w.text()).toContain('제외')
     expect(w.text()).toContain('말이 됨')
-    // keep 항목에만 승인 버튼 → 정확히 1개.
+    expect(w.text()).toContain('노이즈')
+    // 이제 keep·drop 모두 승인+거부 버튼 → 최종 결정은 사람.
     const approve = w.findAll('.judged-list .approve-btn')
-    expect(approve.length).toBe(1)
+    const dismiss = w.findAll('.judged-list .dismiss-btn')
+    expect(approve.length).toBe(2)
+    expect(dismiss.length).toBe(2)
     await approve[0].trigger('click')
     expect(spy).toHaveBeenCalledWith('e#TB_ORD_HD', 'e#TB_CUST_MST', 'hasCust')
   })
 
-  it('rejecting a candidate calls dismissRelation', async () => {
+  it('rejecting a judged (AI-kept) candidate calls dismissJudged (사람이 뒤집음)', async () => {
+    const store = useOntologyStore()
+    store.judgedRelations = [{ ...cand, keep: true, reason: '말이 됨' }] as any
+    const spy = vi.spyOn(store, 'dismissJudged')
+    const w = mount(RelationSuggestPanel)
+    await w.find('.judged-list .dismiss-btn').trigger('click')
+    expect(spy).toHaveBeenCalledWith('e#TB_ORD_HD', 'e#TB_CUST_MST', 'CUST_NO')
+  })
+
+  it('approving an AI-dropped candidate still calls applyRelation (사람이 되살림)', async () => {
+    const store = useOntologyStore()
+    store.judgedRelations = [{ ...cand, keep: false, reason: '노이즈' }] as any
+    const spy = vi.spyOn(store, 'applyRelation').mockResolvedValue()
+    const w = mount(RelationSuggestPanel)
+    await w.find('.judged-list .approve-btn').trigger('click')
+    expect(spy).toHaveBeenCalledWith('e#TB_ORD_HD', 'e#TB_CUST_MST', 'hasCust')
+  })
+
+  it('rejecting a suggest candidate calls dismissRelation', async () => {
     const store = useOntologyStore()
     store.relCandidates = [cand] as any
     const spy = vi.spyOn(store, 'dismissRelation')

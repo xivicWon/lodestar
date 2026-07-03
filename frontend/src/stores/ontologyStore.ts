@@ -218,6 +218,12 @@ export const useOntologyStore = defineStore('ontology', () => {
     relCandidates.value = relCandidates.value.filter((_, i) => i !== idx)
   }
 
+  /** 판정 후보를 목록에서 제외(등록하지 않음). 사람이 AI 판정을 뒤집는 '거부'. */
+  function dismissJudged(fromIri: string, toIri: string, viaColumn: string) {
+    judgedRelations.value = judgedRelations.value.filter(
+      c => !(c.fromIri === fromIri && c.toIri === toIri && c.viaColumn === viaColumn))
+  }
+
   async function fetchImpact(iri: string) {
     error.value = null
     try {
@@ -271,7 +277,7 @@ export const useOntologyStore = defineStore('ontology', () => {
            scoredCandidates, scoredEnrichSample,
            confirmations, fetchConfirmations, confirm, deleteConfirmation,
            relCandidates, suggesting, suggestRelations, applyRelation, dismissRelation,
-           judgedRelations, judging, judgeRelations,
+           judgedRelations, judging, judgeRelations, dismissJudged,
            impact, fetchImpact,
            projects, listProjects, saveProject, loadProject,
            chatMessages, asking, askChat,
