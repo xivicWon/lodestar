@@ -17,13 +17,27 @@ describe('Toolbar', () => {
     vi.unstubAllGlobals()
   })
 
-  it('deletes the selected class', async () => {
+  it('trashes the selected class after confirm', async () => {
     const s = useOntologyStore()
     s.classes = [{ iri: 'e#Dog', label: 'Dog', superClasses: [], annotations: [] }]
     s.select('e#Dog')
-    const del = vi.spyOn(s, 'deleteClass').mockResolvedValue()
+    vi.stubGlobal('confirm', vi.fn(() => true))
+    const trash = vi.spyOn(s, 'trashClass').mockResolvedValue()
     const wrapper = mount(Toolbar)
     await wrapper.find('button.delete-btn').trigger('click')
-    expect(del).toHaveBeenCalledWith('e#Dog')
+    expect(trash).toHaveBeenCalledWith('e#Dog')
+    vi.unstubAllGlobals()
+  })
+
+  it('does not trash when confirm is cancelled', async () => {
+    const s = useOntologyStore()
+    s.classes = [{ iri: 'e#Dog', label: 'Dog', superClasses: [], annotations: [] }]
+    s.select('e#Dog')
+    vi.stubGlobal('confirm', vi.fn(() => false))
+    const trash = vi.spyOn(s, 'trashClass').mockResolvedValue()
+    const wrapper = mount(Toolbar)
+    await wrapper.find('button.delete-btn').trigger('click')
+    expect(trash).not.toHaveBeenCalled()
+    vi.unstubAllGlobals()
   })
 })

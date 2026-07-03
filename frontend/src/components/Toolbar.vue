@@ -15,7 +15,8 @@ function addClass() {
 }
 
 function removeClass() {
-  if (store.selectedIri) store.deleteClass(store.selectedIri)
+  if (!store.selectedIri) return
+  if (window.confirm('휴지통으로 이동 — 컬럼·관계 포함')) store.trashClass(store.selectedIri)
 }
 
 async function exportFile() {
