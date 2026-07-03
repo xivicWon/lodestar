@@ -22,21 +22,56 @@ const showRel = ref(false)
 const showProject = ref(false)
 const showChat = ref(false)
 const showTrash = ref(false)
-onMounted(() => { store.refresh() })
+onMounted(() => {
+  store.refresh()
+  store.fetchConfirmations().catch(() => {})
+})
 
 // 복원 파이프라인 5단계: 번호 → 이름 → 결과물. 왼쪽에서 오른쪽으로 흐른다.
 const steps = [
-  { key: 'import', no: '①', name: '가져오기', result: '테이블 → 클래스', color: '#0ea5e9',
-    tip: '운영 DB(JDBC)·DDL 스크립트·샘플에서 스키마를 읽어 온톨로지 클래스로 만듭니다' },
-  { key: 'enrich', no: '②', name: '의미 복원', result: '암호명 → 비즈니스 라벨', color: '#8b5cf6',
-    tip: '암호 같은 테이블 이름을 AI가 업무 의미(라벨)로 추정합니다' },
-  { key: 'rel', no: '③', name: '관계 복원', result: '숨은 관계 → 연결', color: '#0891b2',
-    tip: 'FK가 없어도 컬럼 이름 패턴으로 숨은 관계를 찾고 AI로 진짜만 걸러 ObjectProperty를 만듭니다' },
-  { key: 'reason', no: '④', name: '검증·추론', result: '일관성 · 자동분류', color: '#d97706',
-    tip: 'HermiT 추론기로 일관성 검사와 자동 계층 분류를 실행합니다' },
-  { key: 'chat', no: '⑤', name: '질문', result: '자연어 답변', color: '#059669',
-    tip: '완성된 지식 그래프에 자연어로 질문합니다' },
+  { key: 'import', no: '1', name: '가져오기', result: '테이블 → 클래스', color: '#0ea5e9',
+    tip: '① 가져오기 — 운영 DB(JDBC)·DDL 스크립트·샘플에서 스키마를 읽어 온톨로지 클래스로 만듭니다 (테이블 → 클래스)' },
+  { key: 'enrich', no: '2', name: '의미 복원', result: '암호명 → 라벨', color: '#8b5cf6',
+    tip: '② 의미 복원 — 암호 같은 테이블 이름을 AI가 업무 의미로 추정해 라벨을 답니다 (암호명 → 비즈니스 라벨)' },
+  { key: 'rel', no: '3', name: '관계 복원', result: '숨은 관계 → 연결', color: '#0891b2',
+    tip: '③ 관계 복원 — FK가 없어도 컬럼 이름 패턴으로 숨은 관계를 찾고 AI로 진짜만 걸러 ObjectProperty를 만듭니다 (관계 → 연결)' },
+  { key: 'reason', no: '4', name: '검증·추론', result: '일관성 · 분류', color: '#d97706',
+    tip: '④ 검증·추론 — HermiT 추론기로 일관성 검사와 자동 계층 분류를 실행합니다 (일관성 · 자동분류)' },
+  { key: 'chat', no: '5', name: '질문', result: '자연어 답변', color: '#059669',
+    tip: '⑤ 질문 — 완성된 지식 그래프에 자연어로 질문합니다 (자연어 답변)' },
 ] as const
+
+// 각 단계 진행 상태: done(완료) / progress(진행 중) / warn(주의) / idle(대기).
+type StepStatus = { state: 'done' | 'progress' | 'warn' | 'idle'; label?: string }
+function stepStatus(key: string): StepStatus {
+  if (key === 'import') {
+    const n = store.classes.length
+    return n > 0 ? { state: 'done', label: `${n}개` } : { state: 'idle' }
+  }
+  if (key === 'enrich') {
+    if (store.enriching) return { state: 'progress', label: '추정 중' }
+    const c = store.confirmations.filter(x => x.kind === 'class').length
+    if (c > 0) return { state: 'done', label: `${c}개 확정` }
+    return store.enrichCandidates.length ? { state: 'progress', label: '검토 중' } : { state: 'idle' }
+  }
+  if (key === 'rel') {
+    if (store.suggesting || store.judging) return { state: 'progress', label: '발굴 중' }
+    const n = store.objectProperties.length
+    if (n > 0) return { state: 'done', label: `${n}개` }
+    return (store.relCandidates.length || store.judgedRelations.length)
+      ? { state: 'progress', label: '검토 중' } : { state: 'idle' }
+  }
+  if (key === 'reason') {
+    if (store.reasoning) return { state: 'progress', label: '추론 중' }
+    if (store.reasonResult) {
+      return store.reasonResult.consistent
+        ? { state: 'done', label: '일관성 OK' } : { state: 'warn', label: '비일관' }
+    }
+    return { state: 'idle' }
+  }
+  return { state: 'idle' } // chat: 활용 단계 (완료 개념 없음)
+}
+const statusIcon: Record<string, string> = { done: '✓', warn: '⚠', progress: '●', idle: '' }
 
 function onStep(key: string) {
   if (key === 'import') showImport.value = !showImport.value
@@ -70,14 +105,22 @@ function resultText(key: string, result: string): string {
           <span v-if="i > 0" class="flow" aria-hidden="true">→</span>
           <button
             class="step-chip"
-            :class="{ active: isActive(s.key) }"
+            :class="[{ active: isActive(s.key) }, `st-${stepStatus(s.key).state}`]"
             :style="{ '--accent': s.color }"
             :data-tip="s.tip"
             :disabled="s.key === 'reason' && store.reasoning"
             @click="onStep(s.key)"
           >
-            <span class="step-head"><span class="step-no">{{ s.no }}</span>{{ s.name }}</span>
-            <span class="step-result">{{ resultText(s.key, s.result) }}</span>
+            <span class="step-head">
+              <span class="step-no">{{ s.no }}</span>
+              <span class="step-name">{{ s.name }}</span>
+              <span v-if="stepStatus(s.key).state !== 'idle'" class="step-status" :class="`badge-${stepStatus(s.key).state}`">
+                {{ statusIcon[stepStatus(s.key).state] }}
+              </span>
+            </span>
+            <span class="step-result">
+              {{ resultText(s.key, s.result) }}<span v-if="stepStatus(s.key).label" class="step-count"> · {{ stepStatus(s.key).label }}</span>
+            </span>
           </button>
         </template>
       </div>
@@ -145,19 +188,36 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Ro
 /* 복원 파이프라인 바 */
 .pipeline-bar { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-bottom: 1px solid #e5e7eb; background: #fafafa; flex-wrap: wrap; }
 .pipeline-title { font-size: 11px; font-weight: 700; color: #9ca3af; letter-spacing: 0.02em; }
-.steps { display: flex; align-items: stretch; gap: 6px; flex-wrap: wrap; }
-.flow { display: flex; align-items: center; color: #cbd5e1; font-size: 16px; }
+.steps { display: flex; align-items: stretch; gap: 4px; flex-wrap: wrap; }
+.flow { display: flex; align-items: center; color: #cbd5e1; font-size: 15px; }
 .step-chip {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
-  min-width: 104px; padding: 6px 12px; border: 1px solid #e2e8f0; border-left: 3px solid var(--accent);
+  display: flex; flex-direction: column; align-items: stretch; gap: 3px;
+  width: 158px; padding: 7px 11px; border: 1px solid #e2e8f0;
   border-radius: 8px; background: white; cursor: pointer; text-align: left; box-sizing: border-box;
+  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
 }
-.step-chip:hover { background: #f8fafc; }
-.step-chip:disabled { cursor: default; opacity: 0.75; }
-.step-chip.active { background: color-mix(in srgb, var(--accent) 10%, white); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
-.step-head { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700; color: #1f2937; line-height: 1.2; }
-.step-no { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; font-size: 12px; color: var(--accent); font-weight: 800; }
-.step-result { font-size: 11px; color: #94a3b8; line-height: 1.2; }
+.step-chip:hover { background: #f8fafc; border-color: #cbd5e1; }
+.step-chip:disabled { cursor: default; }
+/* 완료 단계는 은은한 강조(accent 틴트 + 좌측 바) */
+.step-chip.st-done { background: color-mix(in srgb, var(--accent) 6%, white); border-color: color-mix(in srgb, var(--accent) 35%, #e2e8f0); }
+.step-chip.st-warn { background: #fef2f2; border-color: #fecaca; }
+/* 현재 열려있는(활성) 단계는 accent 링으로 강조 */
+.step-chip.active { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+
+.step-head { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #1f2937; line-height: 1.25; }
+.step-no {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; flex: 0 0 18px; border-radius: 50%;
+  background: var(--accent); color: white; font-size: 11px; font-weight: 800;
+}
+.step-name { flex: 1 1 auto; }
+.step-status { flex: 0 0 auto; font-size: 12px; line-height: 1; }
+.badge-done { color: #16a34a; }
+.badge-warn { color: #dc2626; }
+.badge-progress { color: var(--accent); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.step-result { font-size: 11px; color: #94a3b8; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.step-count { color: color-mix(in srgb, var(--accent) 70%, #64748b); font-weight: 600; }
 
 /* 관리 바 */
 .manage-bar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid #e5e7eb; flex-wrap: wrap; }
