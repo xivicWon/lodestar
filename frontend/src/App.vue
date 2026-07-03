@@ -29,22 +29,22 @@ onMounted(() => { store.refresh() })
   <div class="layout">
     <Toolbar />
     <div class="import-toggle-bar">
-      <button class="toggle-btn toggle-import-btn" title="운영 DB(JDBC)·DDL 스크립트·샘플에서 스키마를 읽어 온톨로지로 가져옵니다" @click="showImport = !showImport">
+      <button class="toggle-btn toggle-import-btn" data-tip="운영 DB(JDBC)·DDL 스크립트·샘플에서 스키마를 읽어 온톨로지로 가져옵니다" @click="showImport = !showImport">
         {{ showImport ? 'RDB 가져오기 닫기' : 'RDB 가져오기' }}
       </button>
-      <button class="toggle-btn toggle-enrich-btn" title="암호 같은 테이블 이름을 AI가 비즈니스 의미(라벨)로 추정합니다" @click="showEnrich = !showEnrich">
+      <button class="toggle-btn toggle-enrich-btn" data-tip="암호 같은 테이블 이름을 AI가 비즈니스 의미(라벨)로 추정합니다" @click="showEnrich = !showEnrich">
         {{ showEnrich ? 'AI 의미 추정 닫기' : 'AI 의미 추정' }}
       </button>
-      <button class="toggle-btn toggle-rel-btn" title="FK가 없어도 컬럼 이름 패턴으로 숨은 관계를 찾고, AI로 진짜 관계만 걸러냅니다" @click="showRel = !showRel">
+      <button class="toggle-btn toggle-rel-btn" data-tip="FK가 없어도 컬럼 이름 패턴으로 숨은 관계를 찾고, AI로 진짜 관계만 걸러냅니다" @click="showRel = !showRel">
         {{ showRel ? '관계 발굴 닫기' : '관계 발굴' }}
       </button>
-      <button class="toggle-btn toggle-project-btn" title="현재 온톨로지를 프로젝트로 저장하거나 불러옵니다" @click="showProject = !showProject">
+      <button class="toggle-btn toggle-project-btn" data-tip="현재 온톨로지를 프로젝트로 저장하거나 불러옵니다" @click="showProject = !showProject">
         {{ showProject ? '프로젝트 닫기' : '프로젝트' }}
       </button>
-      <button class="toggle-btn toggle-chat-btn" title="온톨로지를 근거로 자연어 질문에 답합니다" @click="showChat = !showChat">
+      <button class="toggle-btn toggle-chat-btn" data-tip="온톨로지를 근거로 자연어 질문에 답합니다" @click="showChat = !showChat">
         {{ showChat ? 'AI 챗 닫기' : 'AI 챗' }}
       </button>
-      <button class="toggle-btn toggle-trash-btn" title="삭제한 클래스(테이블)를 보관·복구·완전삭제합니다. 삭제는 온톨로지에서만 일어나며 실 DB는 불변입니다" @click="showTrash = !showTrash">
+      <button class="toggle-btn toggle-trash-btn" data-tip="삭제한 클래스(테이블)를 보관·복구·완전삭제합니다. 삭제는 온톨로지에서만 일어나며 실 DB는 불변입니다" @click="showTrash = !showTrash">
         {{ showTrash ? '🗑 휴지통 닫기' : '🗑 휴지통' }}
       </button>
     </div>
@@ -73,6 +73,18 @@ onMounted(() => { store.refresh() })
 <style>
 * { box-sizing: border-box; }
 body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+/* 즉시 뜨는 커스텀 툴팁 (native title의 지연 제거) — 전역 적용 */
+[data-tip] { position: relative; }
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute; top: 100%; left: 0; margin-top: 6px;
+  background: #111827; color: #fff; font-size: 12px; line-height: 1.35;
+  padding: 6px 9px; border-radius: 6px;
+  white-space: normal; width: max-content; max-width: 300px;
+  z-index: 100; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25); pointer-events: none;
+}
+[data-tip-align="right"]:hover::after { left: auto; right: 0; }
 </style>
 
 <style scoped>
