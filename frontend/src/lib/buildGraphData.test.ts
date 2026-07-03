@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { buildGraphData, shortName } from './buildGraphData'
+import { buildGraphData, focusSubgraph, shortName } from './buildGraphData'
+import type { GraphData } from './buildGraphData'
 import type { ClassDto, ObjectPropertyDto } from '../api/types'
 
 const classes: ClassDto[] = [
@@ -56,5 +57,30 @@ describe('buildGraphData', () => {
       iri: 'e#emp_mgr', label: 'manages', domains: ['e#orders'], ranges: ['e#orders'],
     })])
     expect(g.edges[0].from).toBe(g.edges[0].to)
+  })
+})
+
+describe('focusSubgraph', () => {
+  const g: GraphData = {
+    nodes: [
+      { id: 'A', label: 'A' }, { id: 'B', label: 'B' },
+      { id: 'C', label: 'C' }, { id: 'D', label: 'D' },
+    ],
+    edges: [
+      { from: 'A', to: 'B', label: 'ab', arrows: 'to' },
+      { from: 'C', to: 'A', label: 'ca', arrows: 'to' },
+      { from: 'C', to: 'D', label: 'cd', arrows: 'to' },
+    ],
+  }
+
+  it('keeps only the center and its directly-connected neighbors', () => {
+    const sub = focusSubgraph(g, 'A')
+    expect(sub.nodes.map(n => n.id).sort()).toEqual(['A', 'B', 'C'])
+    expect(sub.edges.map(e => e.label).sort()).toEqual(['ab', 'ca'])
+    expect(sub.nodes.some(n => n.id === 'D')).toBe(false)
+  })
+
+  it('returns the original graph when center is absent', () => {
+    expect(focusSubgraph(g, 'Z')).toBe(g)
   })
 })

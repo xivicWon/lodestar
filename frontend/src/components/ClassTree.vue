@@ -23,6 +23,20 @@ const shown = computed<TreeNode[]>(() => {
   const q = query.value.trim().toLowerCase()
   return q ? prune(store.tree, q) : store.tree
 })
+
+// depth-first 표시 순서로 각 클래스에 번호를 매긴다.
+const indexMap = computed<Map<string, number>>(() => {
+  const m = new Map<string, number>()
+  let n = 0
+  const walk = (nodes: TreeNode[]) => {
+    for (const node of nodes) {
+      m.set(node.iri, ++n)
+      walk(node.children)
+    }
+  }
+  walk(shown.value)
+  return m
+})
 </script>
 
 <template>
@@ -31,7 +45,7 @@ const shown = computed<TreeNode[]>(() => {
     <p v-if="!store.tree.length" class="empty">클래스가 없습니다. 파일을 불러오거나 클래스를 추가하세요.</p>
     <p v-else-if="!shown.length" class="empty">검색 결과가 없습니다.</p>
     <ul v-else class="tree-root">
-      <ClassTreeNode v-for="node in shown" :key="node.iri" :node="node" />
+      <ClassTreeNode v-for="node in shown" :key="node.iri" :node="node" :index-map="indexMap" />
     </ul>
   </div>
 </template>

@@ -23,3 +23,15 @@ export function buildGraphData(
   }
   return { nodes, edges }
 }
+
+/**
+ * 특정 노드에 직접 연결된 이웃(1-hop)과 그 관계만 남긴 부분 그래프를 만든다.
+ * centerIri가 그래프에 없으면 원본을 그대로 반환한다.
+ */
+export function focusSubgraph(data: GraphData, centerIri: string): GraphData {
+  if (!data.nodes.some(n => n.id === centerIri)) return data
+  const keep = new Set<string>([centerIri])
+  const edges = data.edges.filter(e => e.from === centerIri || e.to === centerIri)
+  for (const e of edges) { keep.add(e.from); keep.add(e.to) }
+  return { nodes: data.nodes.filter(n => keep.has(n.id)), edges }
+}

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { mount } from '@vue/test-utils'
 import ClassTree from './ClassTree.vue'
@@ -19,6 +19,28 @@ describe('ClassTree', () => {
 
     await wrapper.findAll('.node-label')[0].trigger('click')
     expect(s.selectedIri).toBe('e#Animal')
+  })
+
+  it('shows a sequential number badge per class', () => {
+    const s = useOntologyStore()
+    s.classes = [
+      { iri: 'e#Animal', label: 'Animal', superClasses: [], annotations: [] },
+      { iri: 'e#Dog', label: 'Dog', superClasses: ['e#Animal'], annotations: [] },
+    ]
+    const wrapper = mount(ClassTree)
+    const nums = wrapper.findAll('.node-num').map(n => n.text())
+    expect(nums).toEqual(['1', '2'])
+  })
+
+  it('trashes a class when its × button is clicked', async () => {
+    const s = useOntologyStore()
+    s.classes = [
+      { iri: 'e#Animal', label: 'Animal', superClasses: [], annotations: [] },
+    ]
+    const spy = vi.spyOn(s, 'trashClass').mockResolvedValue(undefined as never)
+    const wrapper = mount(ClassTree)
+    await wrapper.find('.node-del').trigger('click')
+    expect(spy).toHaveBeenCalledWith('e#Animal')
   })
 
   it('filters nodes by search query', async () => {
