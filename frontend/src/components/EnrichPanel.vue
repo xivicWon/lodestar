@@ -18,13 +18,13 @@ function pct(agreement: number): string {
 <template>
   <div class="enrich-panel">
     <div class="enrich-bar">
-      <button class="enrich-run-btn" :disabled="store.enriching" @click="store.enrichSample()">
-        {{ store.enriching ? 'AI 추정 중…' : '🧠 AI 의미 추정 (샘플)' }}
+      <button class="enrich-run-btn" :disabled="store.enriching" @click="store.enrichCurrent()">
+        {{ store.enriching ? 'AI 추정 중…' : '🧠 AI 의미 추정' }}
       </button>
-      <button class="scored-run-btn" :disabled="store.enriching" @click="store.scoredEnrichSample(RUNS)">
+      <button class="scored-run-btn" :disabled="store.enriching" @click="store.scoredEnrichCurrent(RUNS)">
         {{ store.enriching ? '평가 중…' : `📊 신뢰도 평가(${RUNS}회)` }}
       </button>
-      <span class="enrich-hint">암호 같은 테이블 이름을 AI가 비즈니스 의미로 추정 → 승인 시 반영</span>
+      <span class="enrich-hint">현재 온톨로지의 암호 같은 테이블 이름을 AI가 비즈니스 의미로 추정 → 승인 시 반영</span>
       <span class="confirm-count">확정 {{ store.confirmations.length }}건</span>
     </div>
 

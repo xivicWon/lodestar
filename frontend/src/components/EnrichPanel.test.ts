@@ -9,9 +9,9 @@ beforeEach(() => setActivePinia(createPinia()))
 const cand = { targetIri: 'e#TB_CUST_MST', currentName: 'TB_CUST_MST', suggestedLabel: '고객 마스터', description: '거래처 기본정보' }
 
 describe('EnrichPanel', () => {
-  it('runs enrichment on button click', async () => {
+  it('runs current-ontology enrichment on button click', async () => {
     const store = useOntologyStore()
-    const spy = vi.spyOn(store, 'enrichSample').mockResolvedValue()
+    const spy = vi.spyOn(store, 'enrichCurrent').mockResolvedValue()
     const w = mount(EnrichPanel)
     await w.find('.enrich-run-btn').trigger('click')
     expect(spy).toHaveBeenCalled()
@@ -38,9 +38,9 @@ describe('EnrichPanel', () => {
     expect(w.find('.confirm-count').text()).toContain('확정 2건')
   })
 
-  it('runs scored evaluation on button click', async () => {
+  it('runs current-ontology scored evaluation on button click', async () => {
     const store = useOntologyStore()
-    const spy = vi.spyOn(store, 'scoredEnrichSample').mockResolvedValue()
+    const spy = vi.spyOn(store, 'scoredEnrichCurrent').mockResolvedValue()
     const w = mount(EnrichPanel)
     await w.find('.scored-run-btn').trigger('click')
     expect(spy).toHaveBeenCalledWith(5)

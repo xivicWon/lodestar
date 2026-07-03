@@ -112,6 +112,26 @@ export const useOntologyStore = defineStore('ontology', () => {
     finally { enriching.value = false }
   }
 
+  /** E12: 현재 로드된 온톨로지(라이브/DDL/샘플)를 대상으로 AI 의미 추정. */
+  async function enrichCurrent() {
+    error.value = null
+    enriching.value = true
+    try {
+      enrichCandidates.value = await apiPost<EnrichmentCandidate[]>('/ai/enrich', {})
+    } catch (e) { setError(e) }
+    finally { enriching.value = false }
+  }
+
+  /** E12+E7: 현재 온톨로지를 N회 반복 추론해 신뢰도(합의율)를 붙인다. */
+  async function scoredEnrichCurrent(runs = 5) {
+    error.value = null
+    enriching.value = true
+    try {
+      scoredCandidates.value = await apiPost<ScoredCandidate[]>('/ai/enrich/scored?runs=' + runs, {})
+    } catch (e) { setError(e) }
+    finally { enriching.value = false }
+  }
+
   async function applyEnrichment(targetIri: string, label: string) {
     error.value = null
     try {
@@ -308,8 +328,8 @@ export const useOntologyStore = defineStore('ontology', () => {
            reasonResult, runReasoner, inferredChildrenOf,
            objectProperties, importDdl, importConnection, importSample, renameRelation,
            lastMerge,
-           enrichCandidates, enriching, enrichSample, applyEnrichment, dismissEnrichment,
-           scoredCandidates, scoredEnrichSample,
+           enrichCandidates, enriching, enrichSample, enrichCurrent, applyEnrichment, dismissEnrichment,
+           scoredCandidates, scoredEnrichSample, scoredEnrichCurrent,
            confirmations, fetchConfirmations, confirm, deleteConfirmation,
            relCandidates, suggesting, suggestRelations, applyRelation, dismissRelation,
            judgedRelations, judging, judgeRelations, dismissJudged,

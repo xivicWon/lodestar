@@ -2,11 +2,15 @@ package com.ontostudio.ai
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.ontostudio.core.OntologyHolder
+import com.ontostudio.core.OntologyMapper
 import com.ontostudio.dto.ApiException
 import com.ontostudio.rdb.MetadataService
 import com.ontostudio.rdb.SampleLegacyDb
 import com.ontostudio.rdb.SchemaToOwlMapper
 import com.ontostudio.savepoint.ConfirmationStore
+import org.semanticweb.owlapi.model.IRI
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import java.sql.Connection
@@ -30,6 +34,10 @@ class SemanticEnricher(
     private val metadata: MetadataService,
     private val mapper: SchemaToOwlMapper,
     private val confirmations: ConfirmationStore,
+    // E12: 현재 로드된 온톨로지 대상(enrichCurrent). 기존 샘플 경로는 아래 필드를 쓰지 않는다.
+    private val holder: OntologyHolder = OntologyHolder(),
+    private val ontologyMapper: OntologyMapper = OntologyMapper(holder),
+    @Value("\${lodestar.enrich.chunk-size:40}") private val chunkSize: Int = 40,
 ) {
     private val baseIri = "http://lodestar/rdb/legacy#"
     private val json = ObjectMapper()
@@ -118,5 +126,120 @@ class SemanticEnricher(
                 description = item["description"]?.trim().orEmpty(),
             )
         }
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // E12: 현재 로드된 온톨로지(라이브 JDBC·DDL·샘플 무엇으로 임포트했든) 대상 의미추정.
+    //      근거 = 온톨로지의 클래스명 + 컬럼명(DataProperty)만. 샘플 행·DB 재접속 없음(D1).
+    // ---------------------------------------------------------------------------------------------
+
+    /** 한 클래스의 추정 컨텍스트: 실제 IRI, 표시 이름, 컬럼(짧은 이름) 목록. */
+    internal data class ClassCtx(val iri: String, val name: String, val columns: List<String>)
+
+    /** IRI fragment: '#' 뒤, 없으면 마지막 '/' 뒤. */
+    private fun fragmentOf(iri: String): String =
+        if (iri.contains('#')) iri.substringAfterLast('#') else iri.substringAfterLast('/')
+
+    /** DataProperty 짧은 이름: 라벨 있으면 그것, 없으면 fragment 의 마지막 '.' 뒤. */
+    private fun shortPropName(iri: IRI): String {
+        ontologyMapper.labelOf(iri)?.let { return it }
+        return fragmentOf(iri.toString()).substringAfterLast('.')
+    }
+
+    /**
+     * 현재 온톨로지에서 클래스별 {실제 IRI, 이름, 컬럼[]}을 수집한다.
+     * 컬럼 = 그 클래스를 domain 으로 갖는 DataProperty 들의 짧은 이름.
+     */
+    internal fun collectContext(): List<ClassCtx> = synchronized(holder.lock) {
+        val ont = holder.ontology
+        // 클래스 IRI → 컬럼 이름 목록(도메인 축 선계산).
+        val colsByClass = LinkedHashMap<String, MutableList<String>>()
+        ont.dataPropertiesInSignature().toList().forEach { dp ->
+            val short = shortPropName(dp.iri)
+            ont.dataPropertyDomainAxioms(dp).toList().forEach { ax ->
+                val dom = ax.domain
+                if (!dom.isAnonymous) {
+                    colsByClass.getOrPut(dom.asOWLClass().iri.toString()) { mutableListOf() }.add(short)
+                }
+            }
+        }
+        ont.classesInSignature().toList()
+            .filter { !it.isOWLThing }
+            .map { cls ->
+                val iri = cls.iri.toString()
+                val name = ontologyMapper.labelOf(cls.iri) ?: fragmentOf(iri)
+                ClassCtx(iri, name, colsByClass[iri]?.toList() ?: emptyList())
+            }
+    }
+
+    /**
+     * E3 프롬프트 구조 재사용: (선택) 확정 앵커 섹션 + 추정 대상 섹션. 샘플 행 라인 없음.
+     * anchors = (이름, 확정 라벨) 목록.
+     */
+    internal fun buildPromptFor(targets: List<ClassCtx>, anchors: List<Pair<String, String>>): String {
+        val sb = StringBuilder()
+        if (anchors.isNotEmpty()) {
+            sb.appendLine("## 이미 확정된 사실 (변경 금지, 이 의미에 일관되게 추론하라)")
+            for ((name, label) in anchors) sb.appendLine("- $name = $label")
+            sb.appendLine()
+        }
+        sb.appendLine("## 추정 대상")
+        sb.appendLine("다음은 레거시 DB 테이블 목록이다. 암호 같은 이름·컬럼을 보고 각 테이블의")
+        sb.appendLine("비즈니스 의미를 추정하라. 반드시 아래 JSON 배열만 출력한다(그 외 텍스트 금지):")
+        sb.appendLine("""[{"table":"<원본테이블명>","label":"<한국어 비즈니스 이름>","description":"<한 줄 설명>"}]""")
+        sb.appendLine()
+        for (t in targets) {
+            sb.appendLine("### ${t.name}")
+            sb.appendLine("컬럼: " + t.columns.joinToString(", "))
+            sb.appendLine()
+        }
+        return sb.toString()
+    }
+
+    /** AI 응답에서 JSON 배열을 관대하게 추출하고, nameToIri 로 실제 클래스 IRI 를 매핑한다(모르는 table 무시). */
+    internal fun parseCandidates(response: String, nameToIri: Map<String, String>): List<EnrichmentCandidate> {
+        val start = response.indexOf('[')
+        val end = response.lastIndexOf(']')
+        if (start < 0 || end <= start)
+            throw ApiException(HttpStatus.BAD_GATEWAY, "ai_parse", "AI 응답에서 JSON 배열을 찾지 못함", null)
+        val arr: List<Map<String, String>> = try {
+            json.readValue(response.substring(start, end + 1), object : TypeReference<List<Map<String, String>>>() {})
+        } catch (e: Exception) {
+            throw ApiException(HttpStatus.BAD_GATEWAY, "ai_parse", "AI 응답 JSON 파싱 실패: ${e.message}", null)
+        }
+        return arr.mapNotNull { item ->
+            val table = item["table"]?.trim() ?: return@mapNotNull null
+            val iri = nameToIri[table] ?: return@mapNotNull null
+            val label = item["label"]?.trim().orEmpty()
+            if (label.isEmpty()) return@mapNotNull null
+            EnrichmentCandidate(
+                targetIri = iri,
+                currentName = table,
+                suggestedLabel = label,
+                description = item["description"]?.trim().orEmpty(),
+            )
+        }
+    }
+
+    /**
+     * 현재 온톨로지 대상 의미추정(E12). 확정 클래스는 제외 + 앵커 주입(E8), 대규모는 청크 분할(D3).
+     * 미확정 대상이 없으면 AI 미호출 + 빈 결과.
+     */
+    fun enrichCurrent(): List<EnrichmentCandidate> {
+        val ctx = collectContext()
+        val targets = ctx.filter { !confirmations.isConfirmed(it.iri) }
+        if (targets.isEmpty()) return emptyList()
+
+        val labelByIri = confirmations.all().associate { it.iri to it.label }
+        val anchors = ctx.filter { confirmations.isConfirmed(it.iri) }
+            .map { it.name to labelByIri[it.iri].orEmpty() }
+
+        val out = mutableListOf<EnrichmentCandidate>()
+        for (chunk in targets.chunked(chunkSize.coerceAtLeast(1))) {
+            val nameToIri = chunk.associate { it.name to it.iri }
+            val response = advisor.ask(buildPromptFor(chunk, anchors))
+            out += parseCandidates(response, nameToIri)
+        }
+        return out
     }
 }
