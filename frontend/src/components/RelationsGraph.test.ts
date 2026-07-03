@@ -6,6 +6,8 @@ const h = vi.hoisted(() => {
   const clickHandlers: Array<(p: any) => void> = []
   const NetworkMock = vi.fn().mockImplementation(() => ({
     on: (evt: string, cb: (p: any) => void) => { if (evt === 'click') clickHandlers.push(cb) },
+    setOptions: vi.fn(),
+    fit: vi.fn(),
     destroy: vi.fn(),
   }))
   class DataSetMock {
@@ -43,5 +45,28 @@ describe('RelationsGraph', () => {
     expect(clickHandlers.length).toBe(1)
     clickHandlers[0]({ nodes: ['e#orders'], edges: [] })
     expect(store.selectedIri).toBe('e#orders')
+  })
+
+  it('in link mode, clicking two nodes creates a relation via applyRelation', async () => {
+    const store = useOntologyStore()
+    const spy = vi.spyOn(store, 'applyRelation').mockResolvedValue(undefined as never)
+    vi.spyOn(window, 'prompt').mockReturnValue('placedBy')
+    const w = mount(RelationsGraph, { attachTo: document.body })
+    await w.find('.link-toggle').trigger('click') // 관계 추가 모드 진입
+    clickHandlers[0]({ nodes: ['e#orders'], edges: [] })   // 출발
+    clickHandlers[0]({ nodes: ['e#customers'], edges: [] }) // 도착
+    expect(spy).toHaveBeenCalledWith('e#orders', 'e#customers', 'placedBy')
+    expect(store.selectedIri).toBeNull() // 링크 모드에선 선택되지 않음
+  })
+
+  it('link mode does not create a relation when prompt is cancelled', async () => {
+    const store = useOntologyStore()
+    const spy = vi.spyOn(store, 'applyRelation').mockResolvedValue(undefined as never)
+    vi.spyOn(window, 'prompt').mockReturnValue(null)
+    const w = mount(RelationsGraph, { attachTo: document.body })
+    await w.find('.link-toggle').trigger('click')
+    clickHandlers[0]({ nodes: ['e#orders'], edges: [] })
+    clickHandlers[0]({ nodes: ['e#customers'], edges: [] })
+    expect(spy).not.toHaveBeenCalled()
   })
 })

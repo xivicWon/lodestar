@@ -90,7 +90,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Ro
 <style scoped>
 .layout { display: flex; flex-direction: column; height: 100vh; }
 .panes { display: flex; flex: 1; min-height: 0; }
-.left { width: 320px; border-right: 1px solid #e5e7eb; min-height: 0; }
+.left { width: 400px; border-right: 1px solid #e5e7eb; min-height: 0; }
 .right { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .detail-pane { flex: 0 0 auto; max-height: 40%; overflow: auto; border-bottom: 1px solid #e5e7eb; }
 .relations-pane { flex: 1 1 auto; min-height: 0; }
