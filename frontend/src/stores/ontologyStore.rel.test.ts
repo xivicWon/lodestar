@@ -35,6 +35,24 @@ describe('ontologyStore relation suggestion', () => {
     expect(s.relCandidates).toEqual([])
   })
 
+  it('judgeRelations loads judged candidates from /rel/suggest/judged', async () => {
+    const judged = { ...cand, keep: true, reason: '말이 됨' }
+    const spy = vi.spyOn(client, 'apiPost').mockResolvedValue([judged] as any)
+    const s = useOntologyStore()
+    await s.judgeRelations()
+    expect(spy).toHaveBeenCalledWith('/rel/suggest/judged', {})
+    expect(s.judgedRelations).toEqual([judged])
+  })
+
+  it('applyRelation also removes a matching judged candidate', async () => {
+    const s = useOntologyStore()
+    s.judgedRelations = [{ ...cand, keep: true, reason: 'ok' }] as any
+    vi.spyOn(client, 'apiPost').mockResolvedValue({} as any)
+    vi.spyOn(client, 'apiGet').mockResolvedValue([] as any)
+    await s.applyRelation('e#TB_ORD_HD', 'e#TB_CUST_MST', 'hasCust')
+    expect(s.judgedRelations).toEqual([])
+  })
+
   it('dismissRelation removes the candidate at index', () => {
     const s = useOntologyStore()
     s.relCandidates = [cand, { ...cand, viaColumn: 'X_NO' }] as any
