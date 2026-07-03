@@ -10,6 +10,7 @@ export const useOntologyStore = defineStore('ontology', () => {
   const meta = ref<OntologyMetaDto | null>(null)
   const error = ref<string | null>(null)
   const reasonResult = ref<ReasonResult | null>(null)
+  const reasoning = ref(false)
   const objectProperties = ref<ObjectPropertyDto[]>([])
   const enrichCandidates = ref<EnrichmentCandidate[]>([])
   const enriching = ref(false)
@@ -193,8 +194,10 @@ export const useOntologyStore = defineStore('ontology', () => {
 
   async function runReasoner() {
     error.value = null
+    reasoning.value = true
     try { reasonResult.value = await apiPost<ReasonResult>('/reason', {}) }
     catch (e) { setError(e) }
+    finally { reasoning.value = false }
   }
 
   function inferredChildrenOf(iri: string): { iri: string; label: string | null }[] {
@@ -325,7 +328,7 @@ export const useOntologyStore = defineStore('ontology', () => {
   function reportError(e: unknown) { setError(e) }
 
   return { classes, selectedIri, meta, error, selected, tree,
-           reasonResult, runReasoner, inferredChildrenOf,
+           reasonResult, reasoning, runReasoner, inferredChildrenOf,
            objectProperties, importDdl, importConnection, importSample, renameRelation,
            lastMerge,
            enrichCandidates, enriching, enrichSample, enrichCurrent, applyEnrichment, dismissEnrichment,
