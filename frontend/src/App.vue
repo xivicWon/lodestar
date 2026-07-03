@@ -23,28 +23,74 @@ const showProject = ref(false)
 const showChat = ref(false)
 const showTrash = ref(false)
 onMounted(() => { store.refresh() })
+
+// 복원 파이프라인 5단계: 번호 → 이름 → 결과물. 왼쪽에서 오른쪽으로 흐른다.
+const steps = [
+  { key: 'import', no: '①', name: '가져오기', result: '테이블 → 클래스', color: '#0ea5e9',
+    tip: '운영 DB(JDBC)·DDL 스크립트·샘플에서 스키마를 읽어 온톨로지 클래스로 만듭니다' },
+  { key: 'enrich', no: '②', name: '의미 복원', result: '암호명 → 비즈니스 라벨', color: '#8b5cf6',
+    tip: '암호 같은 테이블 이름을 AI가 업무 의미(라벨)로 추정합니다' },
+  { key: 'rel', no: '③', name: '관계 복원', result: '숨은 관계 → 연결', color: '#0891b2',
+    tip: 'FK가 없어도 컬럼 이름 패턴으로 숨은 관계를 찾고 AI로 진짜만 걸러 ObjectProperty를 만듭니다' },
+  { key: 'reason', no: '④', name: '검증·추론', result: '일관성 · 자동분류', color: '#d97706',
+    tip: 'HermiT 추론기로 일관성 검사와 자동 계층 분류를 실행합니다' },
+  { key: 'chat', no: '⑤', name: '질문', result: '자연어 답변', color: '#059669',
+    tip: '완성된 지식 그래프에 자연어로 질문합니다' },
+] as const
+
+function onStep(key: string) {
+  if (key === 'import') showImport.value = !showImport.value
+  else if (key === 'enrich') showEnrich.value = !showEnrich.value
+  else if (key === 'rel') showRel.value = !showRel.value
+  else if (key === 'chat') showChat.value = !showChat.value
+  else if (key === 'reason') store.runReasoner()
+}
+
+function isActive(key: string): boolean {
+  if (key === 'import') return showImport.value
+  if (key === 'enrich') return showEnrich.value
+  if (key === 'rel') return showRel.value
+  if (key === 'chat') return showChat.value
+  if (key === 'reason') return store.reasoning
+  return false
+}
+
+function resultText(key: string, result: string): string {
+  return key === 'reason' && store.reasoning ? '추론 중…' : result
+}
 </script>
 
 <template>
   <div class="layout">
-    <Toolbar />
-    <div class="import-toggle-bar">
-      <button class="toggle-btn toggle-import-btn" data-tip="운영 DB(JDBC)·DDL 스크립트·샘플에서 스키마를 읽어 온톨로지로 가져옵니다" @click="showImport = !showImport">
-        {{ showImport ? 'RDB 가져오기 닫기' : 'RDB 가져오기' }}
+    <!-- 복원 파이프라인: 번호 → 흐름(→) → 결과 캡션 -->
+    <div class="pipeline-bar">
+      <span class="pipeline-title">복원 파이프라인</span>
+      <div class="steps">
+        <template v-for="(s, i) in steps" :key="s.key">
+          <span v-if="i > 0" class="flow" aria-hidden="true">→</span>
+          <button
+            class="step-chip"
+            :class="{ active: isActive(s.key) }"
+            :style="{ '--accent': s.color }"
+            :data-tip="s.tip"
+            :disabled="s.key === 'reason' && store.reasoning"
+            @click="onStep(s.key)"
+          >
+            <span class="step-head"><span class="step-no">{{ s.no }}</span>{{ s.name }}</span>
+            <span class="step-result">{{ resultText(s.key, s.result) }}</span>
+          </button>
+        </template>
+      </div>
+    </div>
+
+    <!-- 관리 도구: 저장·입출력·편집 (파이프라인 단계 아님) -->
+    <div class="manage-bar">
+      <span class="manage-title">관리</span>
+      <button class="manage-btn" data-tip="현재 온톨로지를 프로젝트(세이브포인트)로 저장하거나 불러옵니다" @click="showProject = !showProject">
+        {{ showProject ? '프로젝트 닫기' : '프로젝트 저장·열기' }}
       </button>
-      <button class="toggle-btn toggle-enrich-btn" data-tip="암호 같은 테이블 이름을 AI가 비즈니스 의미(라벨)로 추정합니다" @click="showEnrich = !showEnrich">
-        {{ showEnrich ? 'AI 의미 추정 닫기' : 'AI 의미 추정' }}
-      </button>
-      <button class="toggle-btn toggle-rel-btn" data-tip="FK가 없어도 컬럼 이름 패턴으로 숨은 관계를 찾고, AI로 진짜 관계만 걸러냅니다" @click="showRel = !showRel">
-        {{ showRel ? '관계 발굴 닫기' : '관계 발굴' }}
-      </button>
-      <button class="toggle-btn toggle-project-btn" data-tip="현재 온톨로지를 프로젝트로 저장하거나 불러옵니다" @click="showProject = !showProject">
-        {{ showProject ? '프로젝트 닫기' : '프로젝트' }}
-      </button>
-      <button class="toggle-btn toggle-chat-btn" data-tip="온톨로지를 근거로 자연어 질문에 답합니다" @click="showChat = !showChat">
-        {{ showChat ? 'AI 챗 닫기' : 'AI 챗' }}
-      </button>
-      <button class="toggle-btn toggle-trash-btn" data-tip="삭제한 클래스(테이블)를 보관·복구·완전삭제합니다. 삭제는 온톨로지에서만 일어나며 실 DB는 불변입니다" @click="showTrash = !showTrash">
+      <Toolbar />
+      <button class="manage-btn" data-tip="삭제한 클래스(테이블)를 보관·복구·완전삭제합니다. 삭제는 온톨로지에서만 일어나며 실 DB는 불변입니다" data-tip-align="right" @click="showTrash = !showTrash">
         {{ showTrash ? '🗑 휴지통 닫기' : '🗑 휴지통' }}
       </button>
     </div>
@@ -95,10 +141,29 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Ro
 .detail-pane { flex: 0 0 auto; max-height: 40%; overflow: auto; border-bottom: 1px solid #e5e7eb; }
 .relations-pane { flex: 1 1 auto; min-height: 0; }
 .status-bar { padding: 6px 12px; }
-.import-toggle-bar { padding: 6px 12px; }
-.import-toggle-bar { display: flex; flex-wrap: wrap; gap: 6px; }
-.toggle-btn { display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 0 14px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 14px; line-height: 1; box-sizing: border-box; }
-.toggle-btn:hover { background: #f9fafb; }
+
+/* 복원 파이프라인 바 */
+.pipeline-bar { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-bottom: 1px solid #e5e7eb; background: #fafafa; flex-wrap: wrap; }
+.pipeline-title { font-size: 11px; font-weight: 700; color: #9ca3af; letter-spacing: 0.02em; }
+.steps { display: flex; align-items: stretch; gap: 6px; flex-wrap: wrap; }
+.flow { display: flex; align-items: center; color: #cbd5e1; font-size: 16px; }
+.step-chip {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  min-width: 104px; padding: 6px 12px; border: 1px solid #e2e8f0; border-left: 3px solid var(--accent);
+  border-radius: 8px; background: white; cursor: pointer; text-align: left; box-sizing: border-box;
+}
+.step-chip:hover { background: #f8fafc; }
+.step-chip:disabled { cursor: default; opacity: 0.75; }
+.step-chip.active { background: color-mix(in srgb, var(--accent) 10%, white); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.step-head { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700; color: #1f2937; line-height: 1.2; }
+.step-no { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; font-size: 12px; color: var(--accent); font-weight: 800; }
+.step-result { font-size: 11px; color: #94a3b8; line-height: 1.2; }
+
+/* 관리 바 */
+.manage-bar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid #e5e7eb; flex-wrap: wrap; }
+.manage-title { font-size: 11px; font-weight: 700; color: #9ca3af; }
+.manage-btn { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 13px; box-sizing: border-box; }
+.manage-btn:hover { background: #f9fafb; }
 .error-banner { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: #fee2e2; border-bottom: 1px solid #fca5a5; color: #991b1b; font-size: 14px; }
 .dismiss-error { background: none; border: none; cursor: pointer; font-size: 18px; color: #991b1b; padding: 0 4px; line-height: 1; }
 </style>
