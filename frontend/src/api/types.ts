@@ -71,6 +71,16 @@ export interface RelationCandidate {
   suggestedName: string
 }
 
+export interface JudgedCandidate {
+  fromIri: string
+  toIri: string
+  viaColumn: string
+  confidence: number
+  suggestedName: string
+  keep: boolean
+  reason: string
+}
+
 export interface ImpactResult {
   iri: string
   upstream: string[]

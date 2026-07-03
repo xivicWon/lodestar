@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, apiDownload, ApiError } from '../api/client'
-import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, ScoredCandidate, ConfirmedFact, RelationCandidate, ImpactResult, ChatAnswer, ImportResult, MergeSummary } from '../api/types'
+import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, ScoredCandidate, ConfirmedFact, RelationCandidate, JudgedCandidate, ImpactResult, ChatAnswer, ImportResult, MergeSummary } from '../api/types'
 import { buildTree } from '../lib/buildTree'
 
 export const useOntologyStore = defineStore('ontology', () => {
@@ -17,6 +17,8 @@ export const useOntologyStore = defineStore('ontology', () => {
   const confirmations = ref<ConfirmedFact[]>([])
   const relCandidates = ref<RelationCandidate[]>([])
   const suggesting = ref(false)
+  const judgedRelations = ref<JudgedCandidate[]>([])
+  const judging = ref(false)
   const impact = ref<ImpactResult | null>(null)
   const projects = ref<string[]>([])
   const chatMessages = ref<{ role: 'user' | 'assistant'; text: string }[]>([])
@@ -193,11 +195,21 @@ export const useOntologyStore = defineStore('ontology', () => {
     finally { suggesting.value = false }
   }
 
+  async function judgeRelations() {
+    error.value = null
+    judging.value = true
+    try {
+      judgedRelations.value = await apiPost<JudgedCandidate[]>('/rel/suggest/judged', {})
+    } catch (e) { setError(e) }
+    finally { judging.value = false }
+  }
+
   async function applyRelation(fromIri: string, toIri: string, name: string) {
     error.value = null
     try {
       await apiPost<ObjectPropertyDto>('/properties/object', { label: name, domains: [fromIri], ranges: [toIri] })
       relCandidates.value = relCandidates.value.filter(c => !(c.fromIri === fromIri && c.toIri === toIri && c.suggestedName === name))
+      judgedRelations.value = judgedRelations.value.filter(c => !(c.fromIri === fromIri && c.toIri === toIri && c.suggestedName === name))
       await refresh()
     } catch (e) { setError(e) }
   }
@@ -259,6 +271,7 @@ export const useOntologyStore = defineStore('ontology', () => {
            scoredCandidates, scoredEnrichSample,
            confirmations, fetchConfirmations, confirm, deleteConfirmation,
            relCandidates, suggesting, suggestRelations, applyRelation, dismissRelation,
+           judgedRelations, judging, judgeRelations,
            impact, fetchImpact,
            projects, listProjects, saveProject, loadProject,
            chatMessages, asking, askChat,
