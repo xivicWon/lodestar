@@ -31,15 +31,15 @@ async function exportFile() {
 
 <template>
   <div class="toolbar">
-    <label class="file-btn" title="Turtle/RDF/OWL 온톨로지 파일을 불러옵니다">
+    <label class="file-btn" data-tip="Turtle/RDF/OWL 온톨로지 파일을 불러옵니다">
       불러오기
       <input type="file" accept=".ttl,.owl,.rdf,.xml" @change="onFile" hidden />
     </label>
-    <button class="export-btn" title="현재 온톨로지를 Turtle 파일로 내보냅니다" @click="exportFile">내보내기</button>
-    <button class="reason-btn" title="HermiT 추론기로 일관성 검사·자동 분류를 실행합니다" @click="store.runReasoner">추론 실행</button>
+    <button class="export-btn" data-tip="현재 온톨로지를 Turtle 파일로 내보냅니다" @click="exportFile">내보내기</button>
+    <button class="reason-btn" data-tip="HermiT 추론기로 일관성 검사·자동 분류를 실행합니다" @click="store.runReasoner">추론 실행</button>
     <span class="spacer" />
-    <button class="add-class-btn" title="새 클래스를 추가합니다" @click="addClass">+ 클래스</button>
-    <button class="delete-btn" title="선택한 클래스를 휴지통으로 이동합니다(컬럼·관계 포함, 실 DB는 불변). 클래스를 먼저 선택하세요" :disabled="!store.selectedIri" @click="removeClass">삭제</button>
+    <button class="add-class-btn" data-tip="새 클래스를 추가합니다" data-tip-align="right" @click="addClass">+ 클래스</button>
+    <button class="delete-btn" data-tip="선택한 클래스를 휴지통으로 이동합니다(컬럼·관계 포함, 실 DB는 불변). 클래스를 먼저 선택하세요" data-tip-align="right" :disabled="!store.selectedIri" @click="removeClass">삭제</button>
   </div>
 </template>
 
