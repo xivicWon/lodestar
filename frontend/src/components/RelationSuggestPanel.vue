@@ -1,11 +1,17 @@
 <script setup lang="ts">
+import { reactive } from 'vue'
 import { useOntologyStore } from '../stores/ontologyStore'
+import EvidenceDetail from './EvidenceDetail.vue'
 const store = useOntologyStore()
 
 function labelOf(iri: string): string {
   const c = store.classes.find(k => k.iri === iri)
   return c?.label ?? iri.split(/[#/]/).pop() ?? iri
 }
+
+// 카드별 상세 근거 펼침 상태 (기본 접힘).
+const expanded = reactive<Record<string, boolean>>({})
+function toggle(key: string) { expanded[key] = !expanded[key] }
 </script>
 
 <template>
@@ -28,8 +34,15 @@ function labelOf(iri: string): string {
           <span class="arrow">→</span>
           <span class="cand-to">{{ labelOf(c.toIri) }}</span>
           <span class="cand-via">via {{ c.viaColumn }}</span>
+          <span class="cand-conf">{{ c.confidence.toFixed(2) }}</span>
         </div>
         <div class="cand-reason"><span class="reason-label">근거</span> {{ c.reason }}</div>
+        <button v-if="c.evidence" class="detail-toggle"
+          @click="toggle(`j|${c.fromIri}|${c.toIri}|${c.viaColumn}`)">
+          {{ expanded[`j|${c.fromIri}|${c.toIri}|${c.viaColumn}`] ? '상세 근거 ▴' : '상세 근거 ▾' }}
+        </button>
+        <EvidenceDetail v-if="c.evidence && expanded[`j|${c.fromIri}|${c.toIri}|${c.viaColumn}`]"
+          :evidence="c.evidence" :via-column="c.viaColumn" />
         <div class="cand-actions">
           <button class="approve-btn" @click="store.applyRelation(c.fromIri, c.toIri, c.suggestedName)">승인</button>
           <button class="dismiss-btn" @click="store.dismissJudged(c.fromIri, c.toIri, c.viaColumn)">거부</button>
@@ -47,6 +60,12 @@ function labelOf(iri: string): string {
           <span class="cand-conf">{{ c.confidence.toFixed(2) }}</span>
         </div>
         <div class="cand-name">{{ c.suggestedName }}</div>
+        <button v-if="c.evidence" class="detail-toggle"
+          @click="toggle(`${c.fromIri}|${c.toIri}|${c.viaColumn}`)">
+          {{ expanded[`${c.fromIri}|${c.toIri}|${c.viaColumn}`] ? '상세 근거 ▴' : '상세 근거 ▾' }}
+        </button>
+        <EvidenceDetail v-if="c.evidence && expanded[`${c.fromIri}|${c.toIri}|${c.viaColumn}`]"
+          :evidence="c.evidence" :via-column="c.viaColumn" />
         <div class="cand-actions">
           <button class="approve-btn" @click="store.applyRelation(c.fromIri, c.toIri, c.suggestedName)">승인</button>
           <button class="dismiss-btn" @click="store.dismissRelation(i)">거부</button>
@@ -70,7 +89,7 @@ function labelOf(iri: string): string {
 .cand-reason { font-size: 12px; color: #374151; margin: 3px 0 6px; }
 .reason-label { display: inline-block; font-size: 10px; font-weight: 700; color: #7c3aed; background: #f3e8ff; border-radius: 4px; padding: 0 5px; margin-right: 4px; }
 .rel-hint { font-size: 12px; color: #6b7280; }
-.cand-list { list-style: none; margin: 10px 0 0; padding: 0; max-height: 260px; overflow: auto; }
+.cand-list { list-style: none; margin: 10px 0 0; padding: 0; max-height: 320px; overflow: auto; }
 .cand-row { padding: 8px; border-bottom: 1px solid #f1f5f9; }
 .cand-main { display: flex; gap: 8px; align-items: baseline; font-size: 13px; }
 .cand-from { font-weight: 700; }
@@ -79,6 +98,7 @@ function labelOf(iri: string): string {
 .cand-via { color: #6b7280; font-family: monospace; font-size: 12px; }
 .cand-conf { color: #0ea5e9; font-size: 12px; margin-left: auto; }
 .cand-name { font-size: 12px; color: #6b7280; margin: 2px 0 6px; font-family: monospace; }
+.detail-toggle { background: none; border: none; color: #8b5cf6; font-size: 11px; cursor: pointer; padding: 2px 0; margin: 0 0 4px; }
 .cand-actions { display: flex; gap: 6px; }
 .approve-btn { padding: 3px 12px; background: #059669; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; }
 .dismiss-btn { padding: 3px 12px; background: white; color: #6b7280; border: 1px solid #d1d5db; border-radius: 5px; cursor: pointer; font-size: 12px; }

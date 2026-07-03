@@ -18,6 +18,7 @@ data class JudgedCandidate(
     val suggestedName: String,
     val keep: Boolean,
     val reason: String,
+    val evidence: RelationEvidence,
 )
 
 /**
@@ -76,6 +77,7 @@ class RelationJudge(
                 suggestedName = c.suggestedName,
                 keep = v?.first ?: false,
                 reason = v?.second ?: "판정 없음",
+                evidence = c.evidence,
             )
         }
         // keep=true 우선, 그다음 confidence 내림차순.
