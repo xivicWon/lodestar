@@ -6,9 +6,19 @@ import { useOntologyStore } from '../stores/ontologyStore'
 
 beforeEach(() => setActivePinia(createPinia()))
 
+const evidence = {
+  matchType: 'token', matchStem: 'GROUP', matchedOn: 'group',
+  viaType: 'string', viaFunctional: false,
+  targetHasSameColumn: false, targetSimilarKeys: ['GROUP_SEQ'],
+  cardinality: 'N:1 추정', cardinalityReason: '대상이 코드/마스터 성격',
+  alternatives: [{ toIri: 'e#TB_GROUP', toLabel: '그룹', confidence: 0.9, matchType: 'exact' }],
+  fromLabel: '주문', toLabel: '고객',
+  fromColumns: ['ORD_NO', 'CUST_NO', 'GROUP_CD'], toColumns: ['GROUP_SEQ', 'GROUP_NM'],
+}
+
 const cand = {
   fromIri: 'e#TB_ORD_HD', toIri: 'e#TB_CUST_MST',
-  viaColumn: 'CUST_NO', confidence: 0.6, suggestedName: 'hasCust',
+  viaColumn: 'CUST_NO', confidence: 0.6, suggestedName: 'hasCust', evidence,
 }
 
 describe('RelationSuggestPanel', () => {
@@ -76,6 +86,21 @@ describe('RelationSuggestPanel', () => {
     const w = mount(RelationSuggestPanel)
     await w.find('.judged-list .approve-btn').trigger('click')
     expect(spy).toHaveBeenCalledWith('e#TB_ORD_HD', 'e#TB_CUST_MST', 'hasCust')
+  })
+
+  it('expands evidence detail on 상세 근거 toggle', async () => {
+    const store = useOntologyStore()
+    store.relCandidates = [cand] as any
+    const w = mount(RelationSuggestPanel)
+    // 기본 접힘: 상세 근거 텍스트 없음.
+    expect(w.text()).not.toContain('토큰 부분일치')
+    await w.find('.detail-toggle').trigger('click')
+    // 펼치면 매칭 방식·유사키·모호성·컬럼 근거가 보인다.
+    expect(w.text()).toContain('토큰 부분일치')
+    expect(w.text()).toContain('GROUP_SEQ')
+    expect(w.text()).toContain('N:1 추정')
+    expect(w.text()).toContain('더 유력')
+    expect(w.text()).toContain('GROUP_CD')
   })
 
   it('rejecting a suggest candidate calls dismissRelation', async () => {

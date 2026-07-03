@@ -63,12 +63,37 @@ export interface ConfirmedFact {
   kind: string
 }
 
+export interface AltTarget {
+  toIri: string
+  toLabel: string
+  confidence: number
+  matchType: string
+}
+
+export interface RelationEvidence {
+  matchType: string
+  matchStem: string
+  matchedOn: string
+  viaType: string | null
+  viaFunctional: boolean
+  targetHasSameColumn: boolean
+  targetSimilarKeys: string[]
+  cardinality: string
+  cardinalityReason: string
+  alternatives: AltTarget[]
+  fromLabel: string
+  toLabel: string
+  fromColumns: string[]
+  toColumns: string[]
+}
+
 export interface RelationCandidate {
   fromIri: string
   toIri: string
   viaColumn: string
   confidence: number
   suggestedName: string
+  evidence: RelationEvidence
 }
 
 export interface JudgedCandidate {
@@ -79,6 +104,7 @@ export interface JudgedCandidate {
   suggestedName: string
   keep: boolean
   reason: string
+  evidence: RelationEvidence
 }
 
 export interface ImpactResult {
