@@ -6,15 +6,21 @@ import { useOntologyStore } from './stores/ontologyStore'
 
 beforeEach(() => setActivePinia(createPinia()))
 
+// 그래프(vis-network)는 App 테스트 관심사가 아니므로 스텁으로 대체한다.
+const appStubs = { RelationsView: { template: '<div class="stub-relations" />' } }
+const mountApp = () => mount(App, { global: { stubs: appStubs } })
+
 describe('App', () => {
-  it('renders toolbar + tree + detail and refreshes on mount', async () => {
+  it('renders toolbar + tree + graph main and refreshes on mount', async () => {
     const s = useOntologyStore()
     const refresh = vi.spyOn(s, 'refresh').mockResolvedValue()
     vi.spyOn(s, 'fetchConfirmations').mockResolvedValue()
-    const wrapper = mount(App)
+    const wrapper = mountApp()
     expect(wrapper.find('.toolbar').exists()).toBe(true)
     expect(wrapper.find('.class-tree').exists()).toBe(true)
-    expect(wrapper.find('.class-detail').exists()).toBe(true)
+    // 상세는 side panel 로 이동 → 초기(미선택)엔 안 뜨고, 그래프 메인이 자리한다.
+    expect(wrapper.find('.stub-relations').exists()).toBe(true)
+    expect(wrapper.find('.link-cta').exists()).toBe(true)
     expect(refresh).toHaveBeenCalled()
   })
 
@@ -22,7 +28,7 @@ describe('App', () => {
     const store = useOntologyStore()
     vi.spyOn(store, 'refresh').mockResolvedValue()
     vi.spyOn(store, 'fetchConfirmations').mockResolvedValue()
-    const wrapper = mount(App)
+    const wrapper = mountApp()
     store.error = '온톨로지 파일을 읽을 수 없습니다'
     await wrapper.vm.$nextTick()
     expect(wrapper.find('.error-banner').exists()).toBe(true)
@@ -42,7 +48,7 @@ describe('App', () => {
       { iri: 'e#B', label: 'B', superClasses: [], annotations: [] },
     ]
     store.reasonResult = { consistent: true, inferredSubClassOf: [] } as any
-    const wrapper = mount(App)
+    const wrapper = mountApp()
     await wrapper.vm.$nextTick()
     const chips = wrapper.findAll('.step-chip')
     // ① 가져오기: 완료(done) + 클래스 수 표시
