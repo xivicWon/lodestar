@@ -66,8 +66,7 @@ const indexMap = computed<Map<string, number>>(() => {
       <button v-if="!store.referenceMeta" class="reference-load-btn" @click="fileInput?.click()">＋ 참조 온톨로지 로드</button>
       <input ref="fileInput" type="file" accept=".ttl,.owl,.rdf,.xml,.n3" hidden @change="onPickFile" />
       <ul v-if="store.referenceClasses.length" class="reference-list">
-        <li v-for="rc in store.referenceClasses" :key="rc.iri" class="reference-item"
-            :class="{ selected: store.selectedIri === rc.iri }" @click="store.select(rc.iri)">
+        <li v-for="rc in store.referenceClasses" :key="rc.iri" class="reference-item">
           {{ rc.label ?? rc.iri }}
         </li>
       </ul>
@@ -87,7 +86,5 @@ const indexMap = computed<Map<string, number>>(() => {
 .reference-load-btn { width: 100%; padding: 8px; border: 1px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; color: #475569; font-size: 12.5px; cursor: pointer; }
 .reference-load-btn:hover { background: #f1f5f9; }
 .reference-list { list-style: none; margin: 6px 0 0; padding: 0; }
-.reference-item { padding: 7px 10px; border-radius: 7px; font-size: 13px; color: #334155; background: #f8fafc; border: 1px solid #eef2f7; margin-bottom: 4px; cursor: pointer; }
-.reference-item:hover { background: #eef2f7; }
-.reference-item.selected { background: #e2e8f0; border-color: #cbd5e1; font-weight: 600; }
+.reference-item { padding: 7px 10px; border-radius: 7px; font-size: 13px; color: #334155; background: #f8fafc; border: 1px solid #eef2f7; margin-bottom: 4px; }
 </style>
