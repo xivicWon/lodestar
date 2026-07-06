@@ -38,7 +38,8 @@ describe('RelationSuggestPanel', () => {
     expect(w.text()).toContain('CUST_NO')
     expect(w.text()).toContain('hasCust')
     await w.find('.approve-btn').trigger('click')
-    expect(spy).toHaveBeenCalledWith('e#TB_ORD_HD', 'e#TB_CUST_MST', 'hasCust')
+    expect(spy).toHaveBeenCalledWith('e#TB_ORD_HD', 'e#TB_CUST_MST', 'hasCust',
+      { kind: 'NAMEPATTERN', provenance: 'INFERRED', confidence: 0.6 })
   })
 
   it('AI 판정 button calls judgeRelations', async () => {
@@ -67,7 +68,8 @@ describe('RelationSuggestPanel', () => {
     expect(approve.length).toBe(2)
     expect(dismiss.length).toBe(2)
     await approve[0].trigger('click')
-    expect(spy).toHaveBeenCalledWith('e#TB_ORD_HD', 'e#TB_CUST_MST', 'hasCust')
+    expect(spy).toHaveBeenCalledWith('e#TB_ORD_HD', 'e#TB_CUST_MST', 'hasCust',
+      { kind: 'AI', provenance: 'INFERRED', confidence: 0.6 })
   })
 
   it('rejecting a judged (AI-kept) candidate calls dismissJudged (사람이 뒤집음)', async () => {
@@ -85,7 +87,8 @@ describe('RelationSuggestPanel', () => {
     const spy = vi.spyOn(store, 'applyRelation').mockResolvedValue()
     const w = mount(RelationSuggestPanel)
     await w.find('.judged-list .approve-btn').trigger('click')
-    expect(spy).toHaveBeenCalledWith('e#TB_ORD_HD', 'e#TB_CUST_MST', 'hasCust')
+    expect(spy).toHaveBeenCalledWith('e#TB_ORD_HD', 'e#TB_CUST_MST', 'hasCust',
+      { kind: 'AI', provenance: 'INFERRED', confidence: 0.6 })
   })
 
   it('expands evidence detail on 상세 근거 toggle', async () => {
