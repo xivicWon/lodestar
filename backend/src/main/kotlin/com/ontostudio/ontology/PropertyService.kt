@@ -7,6 +7,7 @@ import com.ontostudio.core.externalReferencingAxioms
 import com.ontostudio.dto.ApiException
 import com.ontostudio.dto.DataPropertyDto
 import com.ontostudio.dto.ObjectPropertyDto
+import com.ontostudio.provenance.*
 import org.semanticweb.owlapi.model.IRI
 import org.semanticweb.owlapi.model.OWLAxiom
 import org.semanticweb.owlapi.model.OWLEntity
@@ -27,22 +28,36 @@ class PropertyService(private val holder: OntologyHolder, private val mapper: On
         ont.dataPropertiesInSignature().map { mapper.dataPropertyDto(it) }.toList()
     }
 
-    fun createObject(label: String, domains: List<String>, ranges: List<String>): ObjectPropertyDto =
-        synchronized(holder.lock) {
-            val iri = IriFactory(holder.baseIri).forLabel(
-                label,
-                ont.objectPropertiesInSignature().map { it.iri }.toList().toHashSet()
+    fun createObject(
+        label: String, domains: List<String>, ranges: List<String>,
+        prov: ProvenanceDto? = null,
+    ): ObjectPropertyDto = synchronized(holder.lock) {
+        val iri = IriFactory(holder.baseIri).forLabel(
+            label,
+            ont.objectPropertiesInSignature().map { it.iri }.toList().toHashSet()
+        )
+        val p = df.getOWLObjectProperty(iri)
+        mgr.addAxiom(ont, df.getOWLDeclarationAxiom(p))
+        mgr.addAxiom(
+            ont,
+            df.getOWLAnnotationAssertionAxiom(iri, df.getOWLAnnotation(df.rdfsLabel, df.getOWLLiteral(label)))
+        )
+        domains.forEach { mgr.addAxiom(ont, df.getOWLObjectPropertyDomainAxiom(p, df.getOWLClass(IRI.create(it)))) }
+        ranges.forEach { mgr.addAxiom(ont, df.getOWLObjectPropertyRangeAxiom(p, df.getOWLClass(IRI.create(it)))) }
+        // provenance annotations (기본값: MANUAL/EXTRACTED)
+        val pv = prov ?: ProvenanceDto(RelationKind.MANUAL, Provenance.EXTRACTED, null)
+        fun anno(propIri: String, value: String) = mgr.addAxiom(
+            ont,
+            df.getOWLAnnotationAssertionAxiom(
+                iri,
+                df.getOWLAnnotation(df.getOWLAnnotationProperty(IRI.create(propIri)), df.getOWLLiteral(value))
             )
-            val p = df.getOWLObjectProperty(iri)
-            mgr.addAxiom(ont, df.getOWLDeclarationAxiom(p))
-            mgr.addAxiom(
-                ont,
-                df.getOWLAnnotationAssertionAxiom(iri, df.getOWLAnnotation(df.rdfsLabel, df.getOWLLiteral(label)))
-            )
-            domains.forEach { mgr.addAxiom(ont, df.getOWLObjectPropertyDomainAxiom(p, df.getOWLClass(IRI.create(it)))) }
-            ranges.forEach { mgr.addAxiom(ont, df.getOWLObjectPropertyRangeAxiom(p, df.getOWLClass(IRI.create(it)))) }
-            mapper.objectPropertyDto(p)
-        }
+        )
+        anno(ProvenanceVocab.KIND, pv.kind.name)
+        anno(ProvenanceVocab.PROVENANCE, pv.provenance.name)
+        pv.confidence?.let { anno(ProvenanceVocab.CONFIDENCE, it.toString()) }
+        mapper.objectPropertyDto(p)
+    }
 
     fun createData(label: String, domains: List<String>, range: String?): DataPropertyDto =
         synchronized(holder.lock) {

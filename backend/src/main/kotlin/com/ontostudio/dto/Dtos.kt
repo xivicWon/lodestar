@@ -1,5 +1,7 @@
 package com.ontostudio.dto
 
+import com.ontostudio.provenance.ProvenanceDto
+
 data class AnnotationDto(val property: String, val value: String, val lang: String? = null)
 
 data class ClassDto(
@@ -11,7 +13,8 @@ data class ObjectPropertyDto(
     val iri: String, val label: String?,
     val domains: List<String>, val ranges: List<String>,
     val characteristics: List<String>, val inverseOf: String?,
-    val annotations: List<AnnotationDto>
+    val annotations: List<AnnotationDto>,
+    val provenance: ProvenanceDto? = null,
 )
 
 data class DataPropertyDto(

@@ -3,12 +3,16 @@ package com.ontostudio.api
 import com.ontostudio.dto.DataPropertyDto
 import com.ontostudio.dto.ObjectPropertyDto
 import com.ontostudio.ontology.PropertyService
+import com.ontostudio.provenance.*
 import org.springframework.web.bind.annotation.*
 
 data class CreateObjectPropRequest(
     val label: String,
     val domains: List<String> = emptyList(),
-    val ranges: List<String> = emptyList()
+    val ranges: List<String> = emptyList(),
+    val kind: RelationKind? = null,
+    val provenance: Provenance? = null,
+    val confidence: Double? = null,
 )
 
 data class CreateDataPropRequest(
@@ -32,8 +36,10 @@ class PropertyController(private val service: PropertyService) {
     fun listData(): List<DataPropertyDto> = service.listData()
 
     @PostMapping("/object")
-    fun createObject(@RequestBody r: CreateObjectPropRequest): ObjectPropertyDto =
-        service.createObject(r.label, r.domains, r.ranges)
+    fun createObject(@RequestBody r: CreateObjectPropRequest): ObjectPropertyDto {
+        val prov = r.kind?.let { ProvenanceDto(it, r.provenance ?: Provenance.INFERRED, r.confidence) }
+        return service.createObject(r.label, r.domains, r.ranges, prov)
+    }
 
     @PostMapping("/data")
     fun createData(@RequestBody r: CreateDataPropRequest): DataPropertyDto =
