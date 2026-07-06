@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 
@@ -7,6 +8,7 @@ const h = vi.hoisted(() => {
   const NetworkMock = vi.fn().mockImplementation(() => ({
     on: (evt: string, cb: (p: any) => void) => { if (evt === 'click') clickHandlers.push(cb) },
     setOptions: vi.fn(),
+    stabilize: vi.fn(),
     fit: vi.fn(),
     destroy: vi.fn(),
   }))
@@ -57,6 +59,29 @@ describe('RelationsGraph', () => {
     clickHandlers[0]({ nodes: ['e#customers'], edges: [] }) // 도착
     expect(spy).toHaveBeenCalledWith('e#orders', 'e#customers', 'placedBy')
     expect(store.selectedIri).toBeNull() // 링크 모드에선 선택되지 않음
+  })
+
+  it('re-runs physics only on structural change, not on label edits (그래프 계속 움직임 방지)', async () => {
+    const store = useOntologyStore()
+    store.classes = [
+      { iri: 'e#a', label: 'A', superClasses: [], annotations: [] },
+      { iri: 'e#b', label: 'B', superClasses: [], annotations: [] },
+    ]
+    store.objectProperties = []
+    mount(RelationsGraph, { attachTo: document.body })
+    const inst = NetworkMock.mock.results[0].value
+    const initial = inst.stabilize.mock.calls.length
+    expect(initial).toBeGreaterThanOrEqual(1) // 초기 배치 1회
+
+    // 비구조 변경(라벨만 수정): 물리 재실행 없음 → 노드 안 흔들림
+    store.classes = store.classes.map(c => (c.iri === 'e#a' ? { ...c, label: 'A2' } : c))
+    await nextTick()
+    expect(inst.stabilize.mock.calls.length).toBe(initial)
+
+    // 구조 변경(노드 추가): 재배치 1회만 실행
+    store.classes = [...store.classes, { iri: 'e#c', label: 'C', superClasses: [], annotations: [] }]
+    await nextTick()
+    expect(inst.stabilize.mock.calls.length).toBe(initial + 1)
   })
 
   it('link mode does not create a relation when prompt is cancelled', async () => {

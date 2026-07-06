@@ -12,16 +12,42 @@ const linkFrom = ref<string | null>(null)
 let network: Network | null = null
 let nodes: DataSet<any> | null = null
 let edges: DataSet<any> | null = null
+// 그래프 "구조"(노드 집합 + 간선 수)의 서명. 이게 바뀔 때만 물리 재배치를 돌린다.
+// 라벨 변경·선택 같은 비구조 변경에서는 물리를 켜지 않아 노드가 흔들리지 않는다.
+let lastSig = ''
+let relayoutTimer: ReturnType<typeof setTimeout> | null = null
+
+function signature(g: { nodes: { id: string }[]; edges: unknown[] }): string {
+  return g.nodes.map(n => n.id).sort().join('|') + '#' + g.edges.length
+}
 
 function rebuild() {
   if (!nodes || !edges) return
   let g = buildGraphData(store.classes, store.objectProperties)
   if (focused.value && store.selectedIri) g = focusSubgraph(g, store.selectedIri)
-  // 구조가 바뀌었으니 물리를 잠깐 켜서 재배치(안정화되면 다시 꺼짐)
-  network?.setOptions({ physics: { enabled: true } })
+  const sig = signature(g)
+  const structureChanged = sig !== lastSig
+  lastSig = sig
   nodes.clear(); nodes.add(g.nodes)
   edges.clear(); edges.add(g.edges)
   highlight()
+  if (structureChanged) relayout()
+}
+
+// 물리를 잠깐 켜고 stabilize()로 숨은 반복을 돌려 안정 위치로 배치한 뒤,
+// stabilizationIterationsDone 에서 다시 끈다. 연속 시뮬레이션(계속 떠다님)을 막는다.
+function relayout() {
+  if (!network) return
+  network.setOptions({ physics: { enabled: true } })
+  network.stabilize()
+  // 안전장치: 어떤 이유로 done 이벤트가 안 와도 강제로 멈춘다.
+  if (relayoutTimer) clearTimeout(relayoutTimer)
+  relayoutTimer = setTimeout(() => freeze(), 2500)
+}
+
+function freeze() {
+  if (relayoutTimer) { clearTimeout(relayoutTimer); relayoutTimer = null }
+  network?.setOptions({ physics: { enabled: false } })
 }
 
 function highlight() {
@@ -87,13 +113,16 @@ onMounted(() => {
   // 안정화가 끝나면 물리를 꺼서 그래프를 고정한다(계속 떠다니는 현상 방지).
   // 이후 클릭·드래그·관계추가 중에는 노드가 흔들리지 않는다.
   network.on('stabilizationIterationsDone', () => {
-    network?.setOptions({ physics: { enabled: false } })
+    freeze()
     network?.fit({ animation: false })
   })
   rebuild()
 })
 
-onBeforeUnmount(() => { network?.destroy(); network = null })
+onBeforeUnmount(() => {
+  if (relayoutTimer) clearTimeout(relayoutTimer)
+  network?.destroy(); network = null
+})
 
 watch(() => [store.classes, store.objectProperties], rebuild, { deep: true })
 watch(() => store.selectedIri, () => { focused.value ? rebuild() : highlight() })
@@ -102,6 +131,11 @@ watch(() => store.selectedIri, () => { focused.value ? rebuild() : highlight() }
 <template>
   <div class="relations-graph-wrap">
     <div class="graph-tools">
+      <button
+        class="relayout-btn"
+        title="노드를 보기 좋게 다시 배치합니다 (배치 후 자동으로 멈춥니다)"
+        @click="relayout"
+      >재배치</button>
       <button
         class="focus-toggle"
         :class="{ active: focused }"
@@ -126,7 +160,7 @@ watch(() => store.selectedIri, () => { focused.value ? rebuild() : highlight() }
 <style scoped>
 .relations-graph-wrap { position: relative; width: 100%; height: 100%; min-height: 420px; }
 .graph-tools { position: absolute; top: 8px; right: 8px; z-index: 2; display: flex; gap: 6px; }
-.focus-toggle, .link-toggle {
+.focus-toggle, .link-toggle, .relayout-btn {
   padding: 5px 12px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
@@ -136,7 +170,7 @@ watch(() => store.selectedIri, () => { focused.value ? rebuild() : highlight() }
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
-.focus-toggle:hover:not(:disabled), .link-toggle:hover { background: #f3f4f6; }
+.focus-toggle:hover:not(:disabled), .link-toggle:hover, .relayout-btn:hover { background: #f3f4f6; }
 .focus-toggle.active { background: #4f46e5; color: #ffffff; border-color: #4f46e5; }
 .link-toggle.active { background: #059669; color: #ffffff; border-color: #059669; }
 .focus-toggle:disabled { opacity: 0.5; cursor: not-allowed; }
