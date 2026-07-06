@@ -331,6 +331,7 @@ export const useOntologyStore = defineStore('ontology', () => {
   function reportError(e: unknown) { setError(e) }
 
   async function fetchReference() {
+    error.value = null
     try {
       referenceMeta.value = await apiGet<ReferenceMetaDto>('/reference/meta')
       referenceClasses.value = await apiGet<ClassDto[]>('/reference/classes')
