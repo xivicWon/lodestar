@@ -6,7 +6,7 @@ import ImpactPanel from './ImpactPanel.vue'
 
 const RDFS_COMMENT = 'http://www.w3.org/2000/01/rdf-schema#comment'
 const store = useOntologyStore()
-const emit = defineEmits<{ (e: 'close'): void; (e: 'add-relation'): void }>()
+const emit = defineEmits<{ (e: 'close'): void; (e: 'add-relation'): void; (e: 'add-alignment'): void }>()
 
 const label = ref('')
 const superClassesText = ref('')
@@ -43,6 +43,12 @@ const incoming = computed(() => {
     .map(p => ({ iri: p.iri, rel: p.label ?? shortName(p.iri), other: p.domains[0] }))
 })
 const mappingCount = computed(() => outgoing.value.length + incoming.value.length)
+
+const SKOS_LABEL: Record<string, string> = { EXACT: 'exactMatch', CLOSE: 'closeMatch', BROAD: 'broadMatch', NARROW: 'narrowMatch', RELATED: 'relatedMatch' }
+const myAlignments = computed(() => (store.selectedIri ? store.alignmentsOf(store.selectedIri) : []))
+function refLabel(iri: string): string {
+  return store.referenceClasses.find(c => c.iri === iri)?.label ?? shortName(iri)
+}
 
 function save() {
   const c = sel.value
@@ -97,12 +103,24 @@ function save() {
         </div>
       </div>
 
+      <div class="sec-title">온톨로지 정렬 · {{ myAlignments.length }}</div>
+      <p v-if="myAlignments.length === 0" class="empty">정렬된 참조 클래스가 없습니다.</p>
+      <div v-else class="alignments">
+        <div v-for="a in myAlignments" :key="a.targetIri + a.matchType" class="alignment">
+          <span class="al-match" :class="'m-' + a.matchType.toLowerCase()">{{ SKOS_LABEL[a.matchType] }}</span>
+          <span class="al-target">→ {{ refLabel(a.targetIri) }}</span>
+          <span v-if="a.confidence != null" class="al-conf">{{ a.confidence.toFixed(2) }}</span>
+          <button class="al-del" title="정렬 삭제" @click="store.deleteAlignment(a.sourceIri, a.targetIri, a.matchType)">×</button>
+        </div>
+      </div>
+
       <div class="sec-title">영향 분석</div>
       <ImpactPanel />
     </div>
 
     <div class="sp-actions">
       <button class="act add-rel-btn" @click="emit('add-relation')">＋ 관계 연동</button>
+      <button class="act ghost align-add-btn" @click="emit('add-alignment')">＋ 온톨로지 정렬</button>
     </div>
   </aside>
 </template>
@@ -150,4 +168,14 @@ function save() {
 
 .sp-actions { padding: 12px 16px; border-top: 1px solid #eef1f5; }
 .act { width: 100%; padding: 9px; border-radius: 8px; border: 1px solid #4f46e5; background: #4f46e5; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+.alignments { display: flex; flex-direction: column; gap: 7px; }
+.alignment { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid #eef1f5; border-radius: 9px; background: #f8fafc; font-size: 12.5px; }
+.al-match { flex: 0 0 auto; font-family: ui-monospace, Menlo, monospace; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 5px; background: #eef0fe; color: #3730a3; }
+.al-match.m-related, .al-match.m-broad, .al-match.m-narrow { background: #f1f5f9; color: #64748b; }
+.al-target { flex: 1; min-width: 0; font-weight: 600; }
+.al-conf { flex: 0 0 auto; font-variant-numeric: tabular-nums; color: #8592a8; font-size: 11.5px; }
+.al-del { flex: 0 0 auto; border: none; background: transparent; color: #94a3b8; font-size: 15px; cursor: pointer; line-height: 1; }
+.al-del:hover { color: #dc2626; }
+.act.ghost { background: #fff; color: #4f46e5; border: 1px solid #c7d2fe; margin-top: 8px; }
 </style>
