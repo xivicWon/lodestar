@@ -3,13 +3,15 @@ import { ref, computed } from 'vue'
 import { useOntologyStore } from '../stores/ontologyStore'
 import ClassTreeNode from './ClassTreeNode.vue'
 import type { TreeNode } from '../lib/buildTree'
+import { shortName } from '../lib/shortName'
 
 const store = useOntologyStore()
 const query = ref('')
 
 function matches(node: TreeNode, q: string): boolean {
   const label = (node.label ?? node.iri).toLowerCase()
-  if (label.includes(q)) return true
+  const table = shortName(node.iri).toLowerCase()
+  if (label.includes(q) || table.includes(q)) return true
   return node.children.some(c => matches(c, q))
 }
 
@@ -41,7 +43,7 @@ const indexMap = computed<Map<string, number>>(() => {
 
 <template>
   <div class="class-tree">
-    <input class="tree-search" v-model="query" placeholder="클래스 검색…" />
+    <input class="tree-search" v-model="query" placeholder="클래스 · 테이블명 검색…" />
     <p v-if="!store.tree.length" class="empty">클래스가 없습니다. 파일을 불러오거나 클래스를 추가하세요.</p>
     <p v-else-if="!shown.length" class="empty">검색 결과가 없습니다.</p>
     <ul v-else class="tree-root">
