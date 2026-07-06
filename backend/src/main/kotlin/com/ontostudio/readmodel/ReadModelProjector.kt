@@ -5,6 +5,7 @@ import com.ontostudio.core.OntologyHolder
 import com.ontostudio.core.OntologyMapper
 import com.ontostudio.ontology.ClassService
 import com.ontostudio.ontology.PropertyService
+import com.ontostudio.provenance.Provenance
 import com.ontostudio.provenance.RelationKind
 import com.ontostudio.savepoint.ConfirmationStore
 import org.springframework.stereotype.Service
@@ -31,8 +32,12 @@ class ReadModelProjector(
         // degree = 관계에서 from/to로 등장한 횟수
         val degree = HashMap<String, Int>()
         rels.forEach { r ->
-            r.domains.firstOrNull()?.let { degree[it] = (degree[it] ?: 0) + 1 }
-            r.ranges.firstOrNull()?.let { degree[it] = (degree[it] ?: 0) + 1 }
+            val from = r.domains.firstOrNull()
+            val to = r.ranges.firstOrNull()
+            if (from != null && to != null) {
+                degree[from] = (degree[from] ?: 0) + 1
+                degree[to] = (degree[to] ?: 0) + 1
+            }
         }
         DriverManager.getConnection("jdbc:sqlite:$dbPath").use { c ->
             c.autoCommit = false
@@ -55,7 +60,7 @@ class ReadModelProjector(
                     ps.setString(1, from); ps.setString(2, to)
                     ps.setString(3, r.label ?: shortName(r.iri))
                     ps.setString(4, (r.provenance?.kind ?: RelationKind.MANUAL).name)
-                    ps.setString(5, (r.provenance?.provenance)?.name ?: "EXTRACTED")
+                    ps.setString(5, (r.provenance?.provenance)?.name ?: Provenance.EXTRACTED.name)
                     if (r.provenance?.confidence != null) ps.setDouble(6, r.provenance!!.confidence!!) else ps.setNull(6, java.sql.Types.REAL)
                     ps.addBatch()
                 }

@@ -25,7 +25,7 @@ class ReadModelProjectorTest {
     private val confFile = Files.createTempFile("conf", ".json")
     @AfterTest fun cleanup() { Files.deleteIfExists(db); Files.deleteIfExists(confFile) }
 
-    private fun projector(): ReadModelProjector {
+    private fun projector(danglingDomainOnly: Boolean = false): ReadModelProjector {
         val holder = OntologyHolder()
         val df = holder.dataFactory
         listOf("http://ex#a", "http://ex#b").forEach {
@@ -37,6 +37,10 @@ class ReadModelProjectorTest {
         val props = PropertyService(holder, mapper)
         props.createObject("placedBy", listOf("http://ex#a"), listOf("http://ex#b"),
             ProvenanceDto(RelationKind.NAMEPATTERN, Provenance.INFERRED, 0.6))
+        if (danglingDomainOnly) {
+            // domain만 있고 range가 없는 관계: relation 행은 생기지 않아야 하며 degree에도 반영되면 안 된다.
+            props.createObject("dangling", listOf("http://ex#a"), emptyList(), null)
+        }
         val conf = ConfirmationStore(confFile.toString()).also { it.confirm(ConfirmedFact("http://ex#a", "a", "class")) }
         val ref = ReferenceService(ReferenceHolder())
         val align = AlignmentService(holder, ref)
@@ -75,6 +79,19 @@ class ReadModelProjectorTest {
                 assertTrue(rs.next()); assertEquals(1, rs.getInt("confirmed"))
             }
             // degree: a has 1 relation
+            c.createStatement().executeQuery("SELECT degree FROM class WHERE iri='http://ex#a'").use { rs ->
+                assertTrue(rs.next()); assertEquals(1, rs.getInt("degree"))
+            }
+        }
+    }
+
+    @Test fun `degree ignores relation with domain but no range`() {
+        projector(danglingDomainOnly = true).project(db.toString())
+        DriverManager.getConnection("jdbc:sqlite:${db}").use { c ->
+            fun count(t: String): Int = c.createStatement().executeQuery("SELECT COUNT(*) FROM $t").use { it.next(); it.getInt(1) }
+            // dangling(domain-only)은 relation 행을 만들지 않는다 (from/to 둘 다 있어야 INSERT됨)
+            assertEquals(1, count("relation"))
+            // degree('a')는 실제로 기록된 relation 행 수(placedBy 1건)만 반영해야 한다 (dangling 때문에 2가 되면 안 됨)
             c.createStatement().executeQuery("SELECT degree FROM class WHERE iri='http://ex#a'").use { rs ->
                 assertTrue(rs.next()); assertEquals(1, rs.getInt("degree"))
             }
