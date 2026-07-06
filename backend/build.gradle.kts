@@ -21,6 +21,7 @@ dependencies {
     implementation("org.postgresql:postgresql:42.7.4")
     implementation("com.mysql:mysql-connector-j:9.1.0")
     implementation("com.h2database:h2:2.3.232")
+    implementation("org.xerial:sqlite-jdbc:3.45.3.0")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation(kotlin("test"))
 }
