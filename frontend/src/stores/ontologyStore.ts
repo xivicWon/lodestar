@@ -354,6 +354,7 @@ export const useOntologyStore = defineStore('ontology', () => {
   }
 
   async function fetchAlignments() {
+    error.value = null
     try { alignments.value = await apiGet<AlignmentDto[]>('/alignments') }
     catch (e) { setError(e) }
   }
