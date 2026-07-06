@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useOntologyStore } from '../stores/ontologyStore'
 import ClassTreeNode from './ClassTreeNode.vue'
 import type { TreeNode } from '../lib/buildTree'
@@ -7,6 +7,14 @@ import { shortName } from '../lib/shortName'
 
 const store = useOntologyStore()
 const query = ref('')
+const fileInput = ref<HTMLInputElement | null>(null)
+
+onMounted(() => { store.fetchReference().catch(() => {}) })
+
+function onPickFile(e: Event) {
+  const f = (e.target as HTMLInputElement).files?.[0]
+  if (f) store.loadReference(f)
+}
 
 function matches(node: TreeNode, q: string): boolean {
   const label = (node.label ?? node.iri).toLowerCase()
@@ -49,6 +57,21 @@ const indexMap = computed<Map<string, number>>(() => {
     <ul v-else class="tree-root">
       <ClassTreeNode v-for="node in shown" :key="node.iri" :node="node" :index-map="indexMap" />
     </ul>
+
+    <div class="reference-section">
+      <div class="reference-head">
+        <span class="reference-title">참조 온톨로지<span v-if="store.referenceMeta"> · {{ store.referenceMeta.classCount }}</span></span>
+        <button v-if="store.referenceMeta" class="reference-clear" title="참조 비우기" @click="store.clearReference()">×</button>
+      </div>
+      <button v-if="!store.referenceMeta" class="reference-load-btn" @click="fileInput?.click()">＋ 참조 온톨로지 로드</button>
+      <input ref="fileInput" type="file" accept=".ttl,.owl,.rdf,.xml,.n3" hidden @change="onPickFile" />
+      <ul v-if="store.referenceClasses.length" class="reference-list">
+        <li v-for="rc in store.referenceClasses" :key="rc.iri" class="reference-item"
+            :class="{ selected: store.selectedIri === rc.iri }" @click="store.select(rc.iri)">
+          {{ rc.label ?? rc.iri }}
+        </li>
+      </ul>
+    </div>
   </div>
 </template>
 
@@ -57,4 +80,14 @@ const indexMap = computed<Map<string, number>>(() => {
 .tree-search { width: calc(100% - 16px); margin: 8px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; box-sizing: border-box; }
 .tree-root { list-style: none; padding: 8px; margin: 0; }
 .empty { color: #6b7280; padding: 12px; font-size: 14px; }
+.reference-section { border-top: 1px solid #e5e7eb; margin-top: 8px; padding: 8px; }
+.reference-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 6px; }
+.reference-title { font-size: 11px; font-weight: 800; letter-spacing: 0.04em; color: #64748b; text-transform: uppercase; }
+.reference-clear { border: none; background: transparent; color: #94a3b8; font-size: 15px; cursor: pointer; line-height: 1; }
+.reference-load-btn { width: 100%; padding: 8px; border: 1px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; color: #475569; font-size: 12.5px; cursor: pointer; }
+.reference-load-btn:hover { background: #f1f5f9; }
+.reference-list { list-style: none; margin: 6px 0 0; padding: 0; }
+.reference-item { padding: 7px 10px; border-radius: 7px; font-size: 13px; color: #334155; background: #f8fafc; border: 1px solid #eef2f7; margin-bottom: 4px; cursor: pointer; }
+.reference-item:hover { background: #eef2f7; }
+.reference-item.selected { background: #e2e8f0; border-color: #cbd5e1; font-weight: 600; }
 </style>
