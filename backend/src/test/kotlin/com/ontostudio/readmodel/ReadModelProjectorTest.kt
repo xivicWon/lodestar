@@ -53,4 +53,31 @@ class ReadModelProjectorTest {
             assertTrue(names.containsAll(setOf("class", "relation", "evidence", "alignment", "domain", "meta")), "tables: $names")
         }
     }
+
+    @Test fun `project writes class relation and alignment rows`() {
+        projector().project(db.toString())
+        DriverManager.getConnection("jdbc:sqlite:${db}").use { c ->
+            fun count(t: String): Int = c.createStatement().executeQuery("SELECT COUNT(*) FROM $t").use { it.next(); it.getInt(1) }
+            assertEquals(2, count("class"))
+            assertEquals(1, count("relation"))
+            // relation provenance round-trip
+            c.createStatement().executeQuery("SELECT from_iri,to_iri,name,kind,provenance,confidence FROM relation").use { rs ->
+                assertTrue(rs.next())
+                assertEquals("http://ex#a", rs.getString("from_iri"))
+                assertEquals("http://ex#b", rs.getString("to_iri"))
+                assertEquals("placedBy", rs.getString("name"))
+                assertEquals("NAMEPATTERN", rs.getString("kind"))
+                assertEquals("INFERRED", rs.getString("provenance"))
+                assertEquals(0.6, rs.getDouble("confidence"), 1e-9)
+            }
+            // confirmed flag from ConfirmationStore
+            c.createStatement().executeQuery("SELECT confirmed FROM class WHERE iri='http://ex#a'").use { rs ->
+                assertTrue(rs.next()); assertEquals(1, rs.getInt("confirmed"))
+            }
+            // degree: a has 1 relation
+            c.createStatement().executeQuery("SELECT degree FROM class WHERE iri='http://ex#a'").use { rs ->
+                assertTrue(rs.next()); assertEquals(1, rs.getInt("degree"))
+            }
+        }
+    }
 }

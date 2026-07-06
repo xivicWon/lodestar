@@ -5,6 +5,7 @@ import com.ontostudio.core.OntologyHolder
 import com.ontostudio.core.OntologyMapper
 import com.ontostudio.ontology.ClassService
 import com.ontostudio.ontology.PropertyService
+import com.ontostudio.provenance.RelationKind
 import com.ontostudio.savepoint.ConfirmationStore
 import org.springframework.stereotype.Service
 import java.sql.Connection
@@ -24,11 +25,67 @@ class ReadModelProjector(
     private val confirmations: ConfirmationStore,
 ) {
     fun project(dbPath: String) = synchronized(holder.lock) {
+        val classes = classService.list()
+        val rels = propertyService.listObject()
+        val aligns = alignmentService.list()
+        // degree = 관계에서 from/to로 등장한 횟수
+        val degree = HashMap<String, Int>()
+        rels.forEach { r ->
+            r.domains.firstOrNull()?.let { degree[it] = (degree[it] ?: 0) + 1 }
+            r.ranges.firstOrNull()?.let { degree[it] = (degree[it] ?: 0) + 1 }
+        }
         DriverManager.getConnection("jdbc:sqlite:$dbPath").use { c ->
             c.autoCommit = false
             createSchema(c)
+            c.prepareStatement("INSERT INTO class(iri,label,orig_table,domain_id,community,degree,confirmed) VALUES(?,?,?,?,?,?,?)").use { ps ->
+                for (cl in classes) {
+                    ps.setString(1, cl.iri); ps.setString(2, cl.label)
+                    ps.setString(3, shortName(cl.iri))
+                    ps.setObject(4, null); ps.setObject(5, null)
+                    ps.setInt(6, degree[cl.iri] ?: 0)
+                    ps.setInt(7, if (confirmations.isConfirmed(cl.iri)) 1 else 0)
+                    ps.addBatch()
+                }
+                ps.executeBatch()
+            }
+            c.prepareStatement("INSERT INTO relation(from_iri,to_iri,name,kind,provenance,confidence) VALUES(?,?,?,?,?,?)").use { ps ->
+                for (r in rels) {
+                    val from = r.domains.firstOrNull() ?: continue
+                    val to = r.ranges.firstOrNull() ?: continue
+                    ps.setString(1, from); ps.setString(2, to)
+                    ps.setString(3, r.label ?: shortName(r.iri))
+                    ps.setString(4, (r.provenance?.kind ?: RelationKind.MANUAL).name)
+                    ps.setString(5, (r.provenance?.provenance)?.name ?: "EXTRACTED")
+                    if (r.provenance?.confidence != null) ps.setDouble(6, r.provenance!!.confidence!!) else ps.setNull(6, java.sql.Types.REAL)
+                    ps.addBatch()
+                }
+                ps.executeBatch()
+            }
+            c.prepareStatement("INSERT INTO alignment(source_iri,target_iri,match_type,confidence,provenance) VALUES(?,?,?,?,?)").use { ps ->
+                for (a in aligns) {
+                    ps.setString(1, a.sourceIri); ps.setString(2, a.targetIri)
+                    ps.setString(3, a.matchType.name)
+                    if (a.confidence != null) ps.setDouble(4, a.confidence) else ps.setNull(4, java.sql.Types.REAL)
+                    ps.setString(5, a.provenance)
+                    ps.addBatch()
+                }
+                ps.executeBatch()
+            }
+            c.prepareStatement("INSERT INTO meta(key,value) VALUES(?,?)").use { ps ->
+                fun put(k: String, v: String) { ps.setString(1, k); ps.setString(2, v); ps.addBatch() }
+                put("classes", classes.size.toString())
+                put("relations", rels.size.toString())
+                put("alignments", aligns.size.toString())
+                put("ontologyIri", holder.ontology.ontologyID.ontologyIRI.orElse(null)?.toString() ?: "")
+                ps.executeBatch()
+            }
             c.commit()
         }
+    }
+
+    private fun shortName(iri: String): String {
+        val hash = iri.substringAfterLast('#', iri)
+        return hash.substringAfterLast('/', hash)
     }
 
     private fun createSchema(c: Connection) {
