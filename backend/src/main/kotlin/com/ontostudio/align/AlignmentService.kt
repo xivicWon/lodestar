@@ -5,8 +5,10 @@ import com.ontostudio.dto.AlignmentDto
 import com.ontostudio.dto.AlignmentRequest
 import com.ontostudio.dto.ApiException
 import com.ontostudio.reference.ReferenceService
+import org.semanticweb.owlapi.model.AxiomType
 import org.semanticweb.owlapi.model.IRI
 import org.semanticweb.owlapi.model.OWLAnnotation
+import org.semanticweb.owlapi.model.OWLAnnotationAssertionAxiom
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 
@@ -39,5 +41,34 @@ class AlignmentService(
         )
         holder.manager.addAxiom(holder.ontology, ax)
         AlignmentDto(req.sourceIri, req.targetIri, req.matchType, req.confidence, provenance)
+    }
+
+    fun list(): List<AlignmentDto> = synchronized(holder.lock) {
+        holder.ontology.axioms(AxiomType.ANNOTATION_ASSERTION).toList().mapNotNull { ax -> toDto(ax) }
+    }
+
+    fun delete(sourceIri: String, targetIri: String, matchType: com.ontostudio.dto.MatchType) = synchronized(holder.lock) {
+        val skos = SkosVocab.iriFor(matchType)
+        val target = holder.ontology.axioms(AxiomType.ANNOTATION_ASSERTION).toList().firstOrNull { ax ->
+            ax.property.iri.toString() == skos &&
+                (ax.subject as? IRI)?.toString() == sourceIri &&
+                ax.value.asIRI().orElse(null)?.toString() == targetIri
+        }
+        if (target != null) holder.manager.removeAxiom(holder.ontology, target)
+    }
+
+    private fun toDto(ax: OWLAnnotationAssertionAxiom): AlignmentDto? {
+        val matchType = SkosVocab.matchTypeFor(ax.property.iri.toString()) ?: return null
+        val src = (ax.subject as? IRI)?.toString() ?: return null
+        val tgt = ax.value.asIRI().orElse(null)?.toString() ?: return null
+        var confidence: Double? = null
+        var provenance = "manual"
+        ax.annotations().toList().forEach { a ->
+            when (a.property.iri.toString()) {
+                SkosVocab.CONFIDENCE -> confidence = a.value.asLiteral().orElse(null)?.parseDouble()
+                SkosVocab.PROVENANCE -> provenance = a.value.asLiteral().orElse(null)?.literal ?: "manual"
+            }
+        }
+        return AlignmentDto(src, tgt, matchType, confidence, provenance)
     }
 }

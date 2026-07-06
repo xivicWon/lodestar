@@ -1,6 +1,7 @@
 package com.ontostudio.align
 
 import com.ontostudio.core.OntologyHolder
+import com.ontostudio.dto.AlignmentDto
 import com.ontostudio.dto.ApiException
 import com.ontostudio.dto.AlignmentRequest
 import com.ontostudio.dto.MatchType
@@ -54,5 +55,24 @@ class AlignmentServiceTest {
         assertFailsWith<ApiException> {
             svc.create(AlignmentRequest(srcIri, "http://example.org/ref#Nope", MatchType.CLOSE, null))
         }
+    }
+
+    @Test fun `list round-trips created alignments including confidence and match type`() {
+        val svc = fixture()
+        svc.create(AlignmentRequest(srcIri, tgtIri, MatchType.CLOSE, 0.8))
+        val all = svc.list()
+        assertEquals(1, all.size)
+        assertEquals(srcIri, all[0].sourceIri)
+        assertEquals(tgtIri, all[0].targetIri)
+        assertEquals(MatchType.CLOSE, all[0].matchType)
+        assertEquals(0.8, all[0].confidence)
+        assertEquals("manual", all[0].provenance)
+    }
+
+    @Test fun `delete removes the matching alignment`() {
+        val svc = fixture()
+        svc.create(AlignmentRequest(srcIri, tgtIri, MatchType.CLOSE, 0.8))
+        svc.delete(srcIri, tgtIri, MatchType.CLOSE)
+        assertEquals(0, svc.list().size)
     }
 }
