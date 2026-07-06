@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import Toolbar from './components/Toolbar.vue'
 import ImportPanel from './components/ImportPanel.vue'
 import EnrichPanel from './components/EnrichPanel.vue'
@@ -9,9 +9,9 @@ import ChatPanel from './components/ChatPanel.vue'
 import TrashPanel from './components/TrashPanel.vue'
 import ConsistencyBadge from './components/ConsistencyBadge.vue'
 import ClassTree from './components/ClassTree.vue'
-import ClassDetail from './components/ClassDetail.vue'
-import ImpactPanel from './components/ImpactPanel.vue'
 import RelationsView from './components/RelationsView.vue'
+import NodeSidePanel from './components/NodeSidePanel.vue'
+import RelationLinkModal from './components/RelationLinkModal.vue'
 import MergeNotice from './components/MergeNotice.vue'
 import { useOntologyStore } from './stores/ontologyStore'
 
@@ -22,6 +22,11 @@ const showRel = ref(false)
 const showProject = ref(false)
 const showChat = ref(false)
 const showTrash = ref(false)
+// 관계 연동 레이어 팝업 / floating side panel 상태
+const showLink = ref(false)
+const panelDismissed = ref(false)
+// 노드를 클릭(선택)하면 side panel 을 다시 연다. ×/Esc 로 닫아도 선택은 유지.
+watch(() => store.selectedIri, () => { panelDismissed.value = false })
 onMounted(() => {
   store.refresh()
   store.fetchConfirmations().catch(() => {})
@@ -151,11 +156,23 @@ function resultText(key: string, result: string): string {
     </div>
     <div class="panes">
       <aside class="left"><ClassTree /></aside>
+      <!-- 그래프가 기본 화면. side panel 은 그래프를 밀지 않고 위에 floating 으로 뜬다. -->
       <section class="right">
-        <div class="detail-pane"><ClassDetail /><ImpactPanel /></div>
-        <div class="relations-pane"><RelationsView /></div>
+        <RelationsView />
+        <button class="link-cta" data-tip="소스·타깃 클래스를 선택해 관계를 만듭니다 (레이어 팝업)" @click="showLink = true">
+          ＋ 관계 연동
+        </button>
+        <Transition name="slide">
+          <NodeSidePanel
+            v-if="store.selectedIri && !panelDismissed"
+            @close="panelDismissed = true"
+            @add-relation="showLink = true"
+          />
+        </Transition>
       </section>
     </div>
+
+    <RelationLinkModal v-if="showLink" @close="showLink = false" />
   </div>
 </template>
 
@@ -180,9 +197,22 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Ro
 .layout { display: flex; flex-direction: column; height: 100vh; }
 .panes { display: flex; flex: 1; min-height: 0; }
 .left { width: 400px; border-right: 1px solid #e5e7eb; min-height: 0; }
-.right { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.detail-pane { flex: 0 0 auto; max-height: 40%; overflow: auto; border-bottom: 1px solid #e5e7eb; }
-.relations-pane { flex: 1 1 auto; min-height: 0; }
+/* 우측 = 그래프 단일 메인. position: relative 로 floating side panel·CTA 의 기준이 된다. */
+.right { flex: 1; min-height: 0; position: relative; }
+.link-cta {
+  position: absolute; bottom: 16px; left: 16px; z-index: 3;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 14px; border: none; border-radius: 9px;
+  background: #4f46e5; color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 41, 0.08), 0 6px 18px rgba(79, 70, 229, 0.25);
+}
+.link-cta:hover { background: #4338ca; }
+/* side panel 슬라이드 인/아웃 (그래프는 그대로) */
+.slide-enter-active, .slide-leave-active { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.22s ease; }
+.slide-enter-from, .slide-leave-to { transform: translateX(calc(100% + 24px)); opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .slide-enter-active, .slide-leave-active { transition: none; }
+}
 .status-bar { padding: 6px 12px; }
 
 /* 복원 파이프라인 바 */

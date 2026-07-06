@@ -3,7 +3,8 @@ import { ref } from 'vue'
 import RelationsPanel from './RelationsPanel.vue'
 import RelationsGraph from './RelationsGraph.vue'
 
-const mode = ref<'list' | 'graph'>('list')
+// 그래프가 기본 화면. 필요하면 목록(관계 표)으로 전환.
+const mode = ref<'list' | 'graph'>('graph')
 </script>
 
 <template>

@@ -1,16 +1,25 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { TreeNode } from '../lib/buildTree'
 import { useOntologyStore } from '../stores/ontologyStore'
+import { shortName } from '../lib/shortName'
 defineOptions({ name: 'ClassTreeNode' })
-defineProps<{ node: TreeNode; indexMap: Map<string, number> }>()
+const props = defineProps<{ node: TreeNode; indexMap: Map<string, number> }>()
 const store = useOntologyStore()
+
+// 원본 테이블명(IRI 프래그먼트). 라벨이 업무명으로 복원돼 원본과 다를 때만 노출.
+const origName = computed(() => shortName(props.node.iri))
+const showOrig = computed(() => !!props.node.label && props.node.label !== origName.value)
 </script>
 
 <template>
   <li class="tree-node">
     <div class="node-row" :class="{ selected: store.selectedIri === node.iri }" @click="store.select(node.iri)">
       <span class="node-num">{{ indexMap.get(node.iri) }}</span>
-      <span class="node-label">{{ node.label ?? node.iri }}</span>
+      <span class="node-text">
+        <span class="node-label">{{ node.label ?? node.iri }}</span>
+        <span v-if="showOrig" class="node-orig"><span class="node-orig-tag">TBL</span>{{ origName }}</span>
+      </span>
       <button class="node-del" title="삭제(휴지통으로 이동)" @click.stop="store.trashClass(node.iri)">×</button>
     </div>
     <ul v-if="node.children.length" class="tree-children">
@@ -50,15 +59,44 @@ const store = useOntologyStore()
   background: #e0e7ff;
   border-radius: 11px;
 }
-.node-label {
+.node-text {
   flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.node-label {
   font-size: 15px;
-  line-height: 1.4;
+  line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .node-row.selected .node-label { font-weight: 600; }
+.node-orig {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: #8592a8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.node-orig-tag {
+  flex: 0 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #8592a8;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
 .node-del {
   flex: 0 0 auto;
   width: 24px;
