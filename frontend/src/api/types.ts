@@ -116,3 +116,9 @@ export interface ImpactResult {
 export interface ChatAnswer { answer: string }
 
 export interface TrashEntry { iri: string; label: string; trashedAt: number }
+
+export type MatchType = 'EXACT' | 'CLOSE' | 'BROAD' | 'NARROW' | 'RELATED'
+export interface ReferenceMetaDto { ontologyIri: string | null; source: string | null; classCount: number }
+export interface AlignmentDto {
+  sourceIri: string; targetIri: string; matchType: MatchType; confidence: number | null; provenance: string
+}
