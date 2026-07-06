@@ -15,6 +15,8 @@ describe('App', () => {
     const s = useOntologyStore()
     const refresh = vi.spyOn(s, 'refresh').mockResolvedValue()
     vi.spyOn(s, 'fetchConfirmations').mockResolvedValue()
+    vi.spyOn(s, 'fetchReference').mockResolvedValue()
+    vi.spyOn(s, 'fetchAlignments').mockResolvedValue()
     const wrapper = mountApp()
     expect(wrapper.find('.toolbar').exists()).toBe(true)
     expect(wrapper.find('.class-tree').exists()).toBe(true)
@@ -28,6 +30,8 @@ describe('App', () => {
     const store = useOntologyStore()
     vi.spyOn(store, 'refresh').mockResolvedValue()
     vi.spyOn(store, 'fetchConfirmations').mockResolvedValue()
+    vi.spyOn(store, 'fetchReference').mockResolvedValue()
+    vi.spyOn(store, 'fetchAlignments').mockResolvedValue()
     const wrapper = mountApp()
     store.error = '온톨로지 파일을 읽을 수 없습니다'
     await wrapper.vm.$nextTick()
@@ -43,6 +47,8 @@ describe('App', () => {
     const store = useOntologyStore()
     vi.spyOn(store, 'refresh').mockResolvedValue()
     vi.spyOn(store, 'fetchConfirmations').mockResolvedValue()
+    vi.spyOn(store, 'fetchReference').mockResolvedValue()
+    vi.spyOn(store, 'fetchAlignments').mockResolvedValue()
     store.classes = [
       { iri: 'e#A', label: 'A', superClasses: [], annotations: [] },
       { iri: 'e#B', label: 'B', superClasses: [], annotations: [] },

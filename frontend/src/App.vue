@@ -12,6 +12,7 @@ import ClassTree from './components/ClassTree.vue'
 import RelationsView from './components/RelationsView.vue'
 import NodeSidePanel from './components/NodeSidePanel.vue'
 import RelationLinkModal from './components/RelationLinkModal.vue'
+import AlignmentModal from './components/AlignmentModal.vue'
 import MergeNotice from './components/MergeNotice.vue'
 import { useOntologyStore } from './stores/ontologyStore'
 
@@ -24,12 +25,14 @@ const showChat = ref(false)
 const showTrash = ref(false)
 // 관계 연동 레이어 팝업 / floating side panel 상태
 const showLink = ref(false)
+const showAlign = ref(false)
 const panelDismissed = ref(false)
 // 노드를 클릭(선택)하면 side panel 을 다시 연다. ×/Esc 로 닫아도 선택은 유지.
 watch(() => store.selectedIri, () => { panelDismissed.value = false })
 onMounted(() => {
   store.refresh()
   store.fetchConfirmations().catch(() => {})
+  store.fetchAlignments().catch(() => {})
 })
 
 // 복원 파이프라인 5단계: 번호 → 이름 → 결과물. 왼쪽에서 오른쪽으로 흐른다.
@@ -167,12 +170,14 @@ function resultText(key: string, result: string): string {
             v-if="store.selectedIri && !panelDismissed"
             @close="panelDismissed = true"
             @add-relation="showLink = true"
+            @add-alignment="showAlign = true"
           />
         </Transition>
       </section>
     </div>
 
     <RelationLinkModal v-if="showLink" @close="showLink = false" />
+    <AlignmentModal v-if="showAlign" @close="showAlign = false" />
   </div>
 </template>
 

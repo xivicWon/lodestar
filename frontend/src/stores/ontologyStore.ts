@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, apiDownload, ApiError } from '../api/client'
-import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, ScoredCandidate, ConfirmedFact, RelationCandidate, JudgedCandidate, ImpactResult, ChatAnswer, ImportResult, MergeSummary, TrashEntry } from '../api/types'
+import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, ScoredCandidate, ConfirmedFact, RelationCandidate, JudgedCandidate, ImpactResult, ChatAnswer, ImportResult, MergeSummary, TrashEntry, ReferenceMetaDto, AlignmentDto, MatchType } from '../api/types'
 import { buildTree } from '../lib/buildTree'
 
 export const useOntologyStore = defineStore('ontology', () => {
@@ -26,6 +26,9 @@ export const useOntologyStore = defineStore('ontology', () => {
   const asking = ref(false)
   const lastMerge = ref<MergeSummary | null>(null)
   const trash = ref<TrashEntry[]>([])
+  const referenceClasses = ref<ClassDto[]>([])
+  const referenceMeta = ref<ReferenceMetaDto | null>(null)
+  const alignments = ref<AlignmentDto[]>([])
 
   const selected = computed(() => classes.value.find(c => c.iri === selectedIri.value) ?? null)
   const tree = computed(() => buildTree(classes.value))
@@ -327,6 +330,55 @@ export const useOntologyStore = defineStore('ontology', () => {
 
   function reportError(e: unknown) { setError(e) }
 
+  async function fetchReference() {
+    error.value = null
+    try {
+      referenceMeta.value = await apiGet<ReferenceMetaDto>('/reference/meta')
+      referenceClasses.value = await apiGet<ClassDto[]>('/reference/classes')
+    } catch (e) { setError(e) }
+  }
+
+  async function loadReference(file: File) {
+    error.value = null
+    try { await apiUpload<ReferenceMetaDto>('/reference/load', file); await fetchReference() }
+    catch (e) { setError(e) }
+  }
+
+  async function clearReference() {
+    error.value = null
+    try {
+      await apiDelete('/reference')
+      referenceClasses.value = []
+      referenceMeta.value = null
+    } catch (e) { setError(e) }
+  }
+
+  async function fetchAlignments() {
+    error.value = null
+    try { alignments.value = await apiGet<AlignmentDto[]>('/alignments') }
+    catch (e) { setError(e) }
+  }
+
+  async function createAlignment(sourceIri: string, targetIri: string, matchType: MatchType, confidence?: number) {
+    error.value = null
+    try {
+      await apiPost<AlignmentDto>('/alignments', { sourceIri, targetIri, matchType, confidence: confidence ?? null })
+      await fetchAlignments()
+    } catch (e) { setError(e) }
+  }
+
+  async function deleteAlignment(sourceIri: string, targetIri: string, matchType: MatchType) {
+    error.value = null
+    try {
+      await apiDelete(`/alignments?sourceIri=${encodeURIComponent(sourceIri)}&targetIri=${encodeURIComponent(targetIri)}&matchType=${matchType}`)
+      await fetchAlignments()
+    } catch (e) { setError(e) }
+  }
+
+  function alignmentsOf(iri: string): AlignmentDto[] {
+    return alignments.value.filter(a => a.sourceIri === iri)
+  }
+
   return { classes, selectedIri, meta, error, selected, tree,
            reasonResult, reasoning, runReasoner, inferredChildrenOf,
            objectProperties, importDdl, importConnection, importSample, renameRelation,
@@ -340,6 +392,8 @@ export const useOntologyStore = defineStore('ontology', () => {
            projects, listProjects, saveProject, loadProject,
            chatMessages, asking, askChat,
            trash, fetchTrash, trashClass, restoreTrash, purgeTrash,
+           referenceClasses, referenceMeta, alignments, fetchReference, loadReference, clearReference,
+           fetchAlignments, createAlignment, deleteAlignment, alignmentsOf,
            refresh, select, createClass, saveClass, deleteClass, loadFile, exportTurtle,
            clearError, reportError }
 })

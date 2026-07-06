@@ -3,6 +3,7 @@ import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { Network, DataSet } from 'vis-network/standalone'
 import { useOntologyStore } from '../stores/ontologyStore'
 import { buildGraphData, focusSubgraph } from '../lib/buildGraphData'
+import { alignmentGraph } from '../lib/alignmentGraph'
 
 const store = useOntologyStore()
 const container = ref<HTMLDivElement | null>(null)
@@ -16,6 +17,9 @@ let edges: DataSet<any> | null = null
 // 라벨 변경·선택 같은 비구조 변경에서는 물리를 켜지 않아 노드가 흔들리지 않는다.
 let lastSig = ''
 let relayoutTimer: ReturnType<typeof setTimeout> | null = null
+// rebuild()에서 추가한 정렬 참조 노드(group: 'ref')의 id 집합.
+// highlight()가 이 노드들의 색을 회색으로 덮어쓰지 않도록 스킵하는 데 쓴다.
+let refIds = new Set<string>()
 
 function signature(g: { nodes: { id: string }[]; edges: unknown[] }): string {
   return g.nodes.map(n => n.id).sort().join('|') + '#' + g.edges.length
@@ -25,6 +29,19 @@ function rebuild() {
   if (!nodes || !edges) return
   let g = buildGraphData(store.classes, store.objectProperties)
   if (focused.value && store.selectedIri) g = focusSubgraph(g, store.selectedIri)
+  refIds = new Set<string>()
+  if (store.alignments.length) {
+    const refLabelOf = (iri: string) => store.referenceClasses.find(c => c.iri === iri)?.label ?? iri
+    // 정렬된 소스가 현재 그래프에 있는 것만
+    const present = new Set(g.nodes.map(n => n.id))
+    const visible = store.alignments.filter(a => present.has(a.sourceIri))
+    const extra = alignmentGraph(visible, refLabelOf)
+    // 참조 타깃 IRI가 이미 그래프에 있는 소스 클래스 IRI와 같으면 DataSet.add가
+    // 중복 id에서 예외를 던지므로 제외한다(간선은 기존 노드를 가리켜도 무방).
+    const newRefNodes = extra.nodes.filter(n => !present.has(n.id))
+    newRefNodes.forEach(n => refIds.add(n.id))
+    g = { nodes: [...g.nodes, ...newRefNodes], edges: [...g.edges, ...extra.edges] }
+  }
   const sig = signature(g)
   const structureChanged = sig !== lastSig
   lastSig = sig
@@ -54,6 +71,7 @@ function highlight() {
   if (!nodes) return
   const sel = store.selectedIri
   for (const n of nodes.get() as Array<{ id: string }>) {
+    if (refIds.has(n.id)) continue // group:'ref' 노드는 색을 건드리지 않아 그룹 색(cyan)을 유지한다
     const color = n.id === linkFrom.value ? '#bbf7d0' : n.id === sel ? '#c7d2fe' : '#e5e7eb'
     nodes.update({ id: n.id, color })
   }
@@ -92,6 +110,7 @@ onMounted(() => {
   edges = new DataSet<any>([])
   network = new Network(container.value as HTMLElement, { nodes, edges }, {
     nodes: { shape: 'box', color: '#e5e7eb', font: { size: 14 }, margin: { top: 8, right: 12, bottom: 8, left: 12 } as any },
+    groups: { ref: { color: { background: '#ecfeff', border: '#0891b2' }, shape: 'ellipse', font: { color: '#0e7490' } } },
     edges: {
       arrows: 'to',
       color: '#9ca3af',
@@ -124,7 +143,7 @@ onBeforeUnmount(() => {
   network?.destroy(); network = null
 })
 
-watch(() => [store.classes, store.objectProperties], rebuild, { deep: true })
+watch(() => [store.classes, store.objectProperties, store.alignments, store.referenceClasses], rebuild, { deep: true })
 watch(() => store.selectedIri, () => { focused.value ? rebuild() : highlight() })
 </script>
 
