@@ -3,6 +3,7 @@ import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { Network, DataSet } from 'vis-network/standalone'
 import { useOntologyStore } from '../stores/ontologyStore'
 import { buildGraphData, focusSubgraph } from '../lib/buildGraphData'
+import { alignmentGraph } from '../lib/alignmentGraph'
 
 const store = useOntologyStore()
 const container = ref<HTMLDivElement | null>(null)
@@ -25,6 +26,14 @@ function rebuild() {
   if (!nodes || !edges) return
   let g = buildGraphData(store.classes, store.objectProperties)
   if (focused.value && store.selectedIri) g = focusSubgraph(g, store.selectedIri)
+  if (store.alignments.length) {
+    const refLabelOf = (iri: string) => store.referenceClasses.find(c => c.iri === iri)?.label ?? iri
+    // 정렬된 소스가 현재 그래프에 있는 것만
+    const present = new Set(g.nodes.map(n => n.id))
+    const visible = store.alignments.filter(a => present.has(a.sourceIri))
+    const extra = alignmentGraph(visible, refLabelOf)
+    g = { nodes: [...g.nodes, ...extra.nodes], edges: [...g.edges, ...extra.edges] }
+  }
   const sig = signature(g)
   const structureChanged = sig !== lastSig
   lastSig = sig
@@ -92,6 +101,7 @@ onMounted(() => {
   edges = new DataSet<any>([])
   network = new Network(container.value as HTMLElement, { nodes, edges }, {
     nodes: { shape: 'box', color: '#e5e7eb', font: { size: 14 }, margin: { top: 8, right: 12, bottom: 8, left: 12 } as any },
+    groups: { ref: { color: { background: '#ecfeff', border: '#0891b2' }, shape: 'ellipse', font: { color: '#0e7490' } } },
     edges: {
       arrows: 'to',
       color: '#9ca3af',
@@ -124,7 +134,7 @@ onBeforeUnmount(() => {
   network?.destroy(); network = null
 })
 
-watch(() => [store.classes, store.objectProperties], rebuild, { deep: true })
+watch(() => [store.classes, store.objectProperties, store.alignments, store.referenceClasses], rebuild, { deep: true })
 watch(() => store.selectedIri, () => { focused.value ? rebuild() : highlight() })
 </script>
 
