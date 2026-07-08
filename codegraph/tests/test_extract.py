@@ -104,3 +104,25 @@ def test_java_interface_extends_edge():
     r = _extract_source("com/x/IFace.java", "java", src)
     kinds = {(e.src, e.kind, e.dst) for e in r.edges}
     assert ("type:com.x.IFace", "extends", "type:com.x.Other") in kinds
+
+
+def test_kotlin_interface_supertype_is_extends_not_implements():
+    """Bug 5 회귀: Kotlin `interface Vehicle : Movable`은 (인터페이스가 다른 인터페이스를
+    상속하는 것이므로) kind="extends"여야 한다. tree-sitter-kotlin은 interface를 별도
+    노드 타입이 아니라 class_declaration + `interface` 키워드 자식으로 표현하는데, 구 코드는
+    delegation_specifiers의 plain user_type을 무조건 implements로 판정해 오분류했다."""
+    src = b"package com.x\ninterface Vehicle : Movable\n"
+    r = _extract_source("com/x/Vehicle.kt", "kotlin", src)
+    kinds = {(e.src, e.kind, e.dst) for e in r.edges}
+    assert ("type:com.x.Vehicle", "extends", "type:com.x.Movable") in kinds
+    assert not any(k[0] == "type:com.x.Vehicle" and k[1] == "implements" for k in kinds)
+
+
+def test_kotlin_class_extends_and_implements_unaffected():
+    """Bug 5 fix가 Kotlin 클래스 케이스(생성자 호출 = extends, 순수 타입 참조 = implements)를
+    깨뜨리지 않는지 회귀 확인."""
+    src = b"package com.x\nclass Car : Base(), Drivable\n"
+    r = _extract_source("com/x/Car.kt", "kotlin", src)
+    kinds = {(e.src, e.kind, e.dst) for e in r.edges}
+    assert ("type:com.x.Car", "extends", "type:com.x.Base") in kinds
+    assert ("type:com.x.Car", "implements", "type:com.x.Drivable") in kinds

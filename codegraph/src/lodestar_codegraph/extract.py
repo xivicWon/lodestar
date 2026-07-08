@@ -78,7 +78,14 @@ def _supertypes(type_node: TsNode) -> list[tuple[str, str]]:
       생성자 호출 형태(`constructor_invocation`, 예: `Base()`)는 상위 클래스로 보고
       kind="extends", 순수 타입 참조(`user_type`, 예: `Comparable<Bar>`)는
       인터페이스 구현으로 보고 kind="implements" (휴리스틱).
+    - 단, Kotlin `interface`는 인터페이스만 상속할 수 있고 구현은 불가능하므로
+      (`interface Vehicle : Movable`), 소유 타입 선언(`type_node`)이 인터페이스이면
+      delegation_specifiers의 모든 대상을 kind="extends"로 강제한다 (Bug 5).
+      tree-sitter-kotlin은 interface를 별도 노드 타입(`interface_declaration`)이
+      아니라 `class_declaration` + `interface` 키워드 자식으로 표현하므로,
+      그 키워드 자식의 존재로 인터페이스 여부를 판별한다.
     """
+    kt_interface = any(c.type == "interface" for c in type_node.children)
     out: list[tuple[str, str]] = []
     for c in type_node.children:
         if c.type == "superclass":
@@ -108,7 +115,7 @@ def _supertypes(type_node: TsNode) -> list[tuple[str, str]]:
                     elif e.type == "user_type":
                         nm = _direct_type_name(e)
                         if nm:
-                            out.append((nm, "implements"))
+                            out.append((nm, "extends" if kt_interface else "implements"))
     return out
 
 
