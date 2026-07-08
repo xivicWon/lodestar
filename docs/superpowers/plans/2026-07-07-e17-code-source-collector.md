@@ -707,11 +707,26 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```kotlin
 package com.x
 class Svc {
-    fun handle() { save(1) }   // Repo.save 와 Store.save 두 후보 → AMBIGUOUS
-    fun save(n: Int) {}        // 자기 자신도 후보(같은 타입) → EXTRACTED 우선
+    fun handle() { save(1) }   // 자기 자신 save 존재 → 같은 타입 유일 → EXTRACTED
+    fun save(n: Int) {}
 }
 class Store {
     fun save(n: Int) {}
+}
+class Client {
+    fun use() { save(1) }      // Client엔 save 없음; Repo.save+Store.save+Svc.save 3후보, 같은타입 0 → AMBIGUOUS
+}
+```
+
+또한 `codegraph/tests/fixtures/sample/com/x/Foo.java`의 `run()`에 외부 호출 1건 추가(println은 function 노드 아님 → external):
+```java
+package com.x;
+import com.x.Repo;
+public class Foo extends Base {
+    void run() {
+        new Repo().save(1);
+        System.out.println("hi");   // println 미정의 → external_calls 카운트, 엣지 없음
+    }
 }
 ```
 
@@ -750,21 +765,32 @@ def test_same_type_call_is_extracted():
     assert hit and hit[0].provenance == "EXTRACTED" and hit[0].confidence == 1.0
 
 
+def test_same_type_call_prefers_extracted():
+    _, calls, _ = _pipeline()
+    # Svc.handle -> save : Svc.save(같은 타입) 유일 → EXTRACTED
+    hit = [e for e in calls if e.src.startswith("function:com.x.Svc.handle/")
+           and e.dst.startswith("function:com.x.Svc.save/")]
+    assert hit and hit[0].provenance == "EXTRACTED"
+
+
 def test_ambiguous_call_has_alternatives():
     _, calls, _ = _pipeline()
-    # Svc.handle -> save : Svc.save(같은 타입)이 있으므로 EXTRACTED 우선 채택
-    hit = [e for e in calls if e.src.startswith("function:com.x.Svc.handle/")
-           and "save" in e.dst]
+    # Client.use -> save : Client엔 save 없음, 후보 3개(Repo/Store/Svc) → AMBIGUOUS
+    hit = [e for e in calls if e.src.startswith("function:com.x.Client.use/")
+           and e.dst.split(".")[-1].startswith("save")]
     assert hit
-    # 같은 타입 우선 → EXTRACTED
-    assert hit[0].provenance == "EXTRACTED"
+    assert hit[0].provenance == "AMBIGUOUS"
+    assert len(hit[0].alternatives) >= 1          # 나머지 후보가 alternatives에
+    assert hit[0].confidence <= 0.4               # min(0.4, 0.8/3)
 
 
 def test_external_call_counted_no_edge():
     nodes, calls, external = _pipeline()
-    # Foo.run -> Repo.save : Repo가 내부에 있으므로 매칭됨 (external 아님)
-    assert external >= 0
+    # Foo.run -> println : 미정의 → external 카운트, 엣지 없음
+    assert external >= 1
     dsts = {e.dst for e in calls}
+    assert not any("println" in d for d in dsts)
+    # Repo.save 는 내부라 매칭됨(대조군)
     assert any(d.startswith("function:com.x.Repo.save/") for d in dsts)
 ```
 
