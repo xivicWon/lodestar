@@ -122,3 +122,7 @@ export interface ReferenceMetaDto { ontologyIri: string | null; source: string |
 export interface AlignmentDto {
   sourceIri: string; targetIri: string; matchType: MatchType; confidence: number | null; provenance: string
 }
+
+export type Provenance = 'EXTRACTED' | 'INFERRED' | 'AMBIGUOUS'
+export type RelationKind = 'FK' | 'NAMEPATTERN' | 'AI' | 'MANUAL'
+export interface RelationProvenance { kind: RelationKind; provenance: Provenance; confidence?: number }

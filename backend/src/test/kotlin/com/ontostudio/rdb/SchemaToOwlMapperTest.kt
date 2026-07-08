@@ -1,5 +1,10 @@
 package com.ontostudio.rdb
 
+import com.ontostudio.core.OntologyHolder
+import com.ontostudio.core.OntologyMapper
+import com.ontostudio.provenance.Provenance
+import com.ontostudio.provenance.ProvenanceDto
+import com.ontostudio.provenance.RelationKind
 import org.semanticweb.owlapi.model.IRI
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -57,6 +62,15 @@ class SchemaToOwlMapperTest {
             ont.objectPropertyDomainAxioms(op).map { it.domain.asOWLClass().iri.toString() }.toList())
         assertEquals(listOf(base + "customers"),
             ont.objectPropertyRangeAxioms(op).map { it.range.asOWLClass().iri.toString() }.toList())
+    }
+
+    @Test fun `fk object property carries FK-EXTRACTED-1_0 provenance`() {
+        val ont = mapper.build(sampleTwoTables(), base)
+        val df = ont.owlOntologyManager.owlDataFactory
+        val op = df.getOWLObjectProperty(IRI.create(base + "orders_customer_id_ref"))
+        val holder = OntologyHolder().apply { replace(ont, base) }
+        val dto = OntologyMapper(holder).objectPropertyDto(op)
+        assertEquals(ProvenanceDto(RelationKind.FK, Provenance.EXTRACTED, 1.0), dto.provenance)
     }
 
     @Test fun `fk column is not duplicated as data property`() {

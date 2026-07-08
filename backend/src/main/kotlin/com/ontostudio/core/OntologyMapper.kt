@@ -7,6 +7,7 @@ import com.ontostudio.dto.IndividualDto
 import com.ontostudio.dto.ObjectPropertyDto
 import com.ontostudio.dto.OntologyMetaDto
 import com.ontostudio.dto.PropertyAssertionDto
+import com.ontostudio.provenance.*
 import org.semanticweb.owlapi.model.IRI
 import org.semanticweb.owlapi.model.OWLClass
 import org.semanticweb.owlapi.model.OWLDataProperty
@@ -41,6 +42,16 @@ class OntologyMapper(private val holder: OntologyHolder) {
         }.toList()
     }
 
+    private fun provenanceOf(iri: IRI): ProvenanceDto? = synchronized(holder.lock) {
+        val ax = holder.ontology.annotationAssertionAxioms(iri).toList()
+        fun lit(propIri: String): String? = ax.firstOrNull { it.property.iri.toString() == propIri }
+            ?.value?.asLiteral()?.orElse(null)?.literal
+        val kind = ProvenanceVocab.kindOf(lit(ProvenanceVocab.KIND)) ?: return null
+        val prov = ProvenanceVocab.provenanceOf(lit(ProvenanceVocab.PROVENANCE)) ?: Provenance.EXTRACTED
+        val conf = lit(ProvenanceVocab.CONFIDENCE)?.toDoubleOrNull()
+        ProvenanceDto(kind, prov, conf)
+    }
+
     fun classDto(cls: OWLClass): ClassDto = synchronized(holder.lock) {
         val supers = holder.ontology.subClassAxiomsForSubClass(cls)
             .map { it.superClass }.filter { !it.isAnonymous }
@@ -61,7 +72,8 @@ class OntologyMapper(private val holder: OntologyHolder) {
                 .map { it.asOWLClass().iri.toString() }.toList(),
             o.objectPropertyRangeAxioms(p).map { it.range }.filter { !it.isAnonymous }
                 .map { it.asOWLClass().iri.toString() }.toList(),
-            chars, null, annotationsOf(p.iri)
+            chars, null, annotationsOf(p.iri),
+            provenance = provenanceOf(p.iri)
         )
     }
 

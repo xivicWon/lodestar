@@ -1,5 +1,8 @@
 package com.ontostudio.rdb
 
+import com.ontostudio.provenance.Provenance
+import com.ontostudio.provenance.ProvenanceVocab
+import com.ontostudio.provenance.RelationKind
 import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.model.IRI
 import org.semanticweb.owlapi.model.OWLOntology
@@ -58,6 +61,17 @@ class SchemaToOwlMapper {
                         "${table.name} → ${fk.refTable} (${fk.fkColumns.joinToString(", ")})"))))
                 mgr.addAxiom(ont, df.getOWLObjectPropertyDomainAxiom(op, cls))
                 mgr.addAxiom(ont, df.getOWLObjectPropertyRangeAxiom(op, target))
+                // FK 유래 관계: 최고 신뢰도 EXTRACTED로 provenance 부착
+                fun anno(propIri: String, value: String) = mgr.addAxiom(
+                    ont,
+                    df.getOWLAnnotationAssertionAxiom(
+                        op.iri,
+                        df.getOWLAnnotation(df.getOWLAnnotationProperty(IRI.create(propIri)), df.getOWLLiteral(value))
+                    )
+                )
+                anno(ProvenanceVocab.KIND, RelationKind.FK.name)
+                anno(ProvenanceVocab.PROVENANCE, Provenance.EXTRACTED.name)
+                anno(ProvenanceVocab.CONFIDENCE, "1.0")
             }
         }
         return ont

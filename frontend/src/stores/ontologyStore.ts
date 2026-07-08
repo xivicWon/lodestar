@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, apiDownload, ApiError } from '../api/client'
-import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, ScoredCandidate, ConfirmedFact, RelationCandidate, JudgedCandidate, ImpactResult, ChatAnswer, ImportResult, MergeSummary, TrashEntry, ReferenceMetaDto, AlignmentDto, MatchType } from '../api/types'
+import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, ScoredCandidate, ConfirmedFact, RelationCandidate, JudgedCandidate, ImpactResult, ChatAnswer, ImportResult, MergeSummary, TrashEntry, ReferenceMetaDto, AlignmentDto, MatchType, RelationProvenance } from '../api/types'
 import { buildTree } from '../lib/buildTree'
 
 export const useOntologyStore = defineStore('ontology', () => {
@@ -231,10 +231,12 @@ export const useOntologyStore = defineStore('ontology', () => {
     finally { judging.value = false }
   }
 
-  async function applyRelation(fromIri: string, toIri: string, name: string) {
+  async function applyRelation(fromIri: string, toIri: string, name: string, prov?: RelationProvenance) {
     error.value = null
     try {
-      await apiPost<ObjectPropertyDto>('/properties/object', { label: name, domains: [fromIri], ranges: [toIri] })
+      const body: Record<string, unknown> = { label: name, domains: [fromIri], ranges: [toIri] }
+      if (prov) { body.kind = prov.kind; body.provenance = prov.provenance; if (prov.confidence != null) body.confidence = prov.confidence }
+      await apiPost<ObjectPropertyDto>('/properties/object', body)
       relCandidates.value = relCandidates.value.filter(c => !(c.fromIri === fromIri && c.toIri === toIri && c.suggestedName === name))
       judgedRelations.value = judgedRelations.value.filter(c => !(c.fromIri === fromIri && c.toIri === toIri && c.suggestedName === name))
       await refresh()

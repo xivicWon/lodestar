@@ -44,7 +44,7 @@ function toggle(key: string) { expanded[key] = !expanded[key] }
         <EvidenceDetail v-if="c.evidence && expanded[`j|${c.fromIri}|${c.toIri}|${c.viaColumn}`]"
           :evidence="c.evidence" :via-column="c.viaColumn" />
         <div class="cand-actions">
-          <button class="approve-btn" @click="store.applyRelation(c.fromIri, c.toIri, c.suggestedName)">승인</button>
+          <button class="approve-btn" @click="store.applyRelation(c.fromIri, c.toIri, c.suggestedName, { kind: 'AI', provenance: 'INFERRED', confidence: c.confidence })">승인</button>
           <button class="dismiss-btn" @click="store.dismissJudged(c.fromIri, c.toIri, c.viaColumn)">거부</button>
         </div>
       </li>
@@ -67,7 +67,7 @@ function toggle(key: string) { expanded[key] = !expanded[key] }
         <EvidenceDetail v-if="c.evidence && expanded[`${c.fromIri}|${c.toIri}|${c.viaColumn}`]"
           :evidence="c.evidence" :via-column="c.viaColumn" />
         <div class="cand-actions">
-          <button class="approve-btn" @click="store.applyRelation(c.fromIri, c.toIri, c.suggestedName)">승인</button>
+          <button class="approve-btn" @click="store.applyRelation(c.fromIri, c.toIri, c.suggestedName, { kind: 'NAMEPATTERN', provenance: 'INFERRED', confidence: c.confidence })">승인</button>
           <button class="dismiss-btn" @click="store.dismissRelation(i)">거부</button>
         </div>
       </li>
