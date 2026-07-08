@@ -41,6 +41,12 @@ Lodestar의 기존 수집기는 **DB 스키마→OWL**(`DdlParser`/`SchemaToOwlM
 | D6 | 호출 해석 provenance = **EXTRACTED / INFERRED / AMBIGUOUS** | E16-0 어휘 재사용. 정밀도를 버리지 않고 신뢰도로 표기 |
 | D7 | 군집 = **Louvain**(networkx), god-node = degree 상위 | E16 D7과 동일 철학. 커뮤니티를 도메인 후보로 승격 준비 |
 | D8 | 대상 언어 v1 = **Java + Kotlin** (vtm/api) | 실제 테스트 대상. 문법 추가로 확장 가능하게 설계 |
+| D9 | 자기분석(Python) = **v1 제외, 후속** | v1은 Java+Kotlin 2문법만 검증에 집중 |
+| D10 | 산출물 `codegraph.json` = **git 커밋 안 함**(`codegraph/out/` gitignore) | 수 MB 산출물. 코드+테스트+소형 픽스처만 커밋(graphify 관례) |
+| D11 | **통합 단일 그래프**에서 언어 경계 넘어 해석(FQN 기준) | Java↔Kotlin 혼용. graphify 방식 일치 |
+| D12 | 오버로드 id = **arity 접미사**, 충돌 시 순번. 정밀 타입해석 안 함 | 근사 원칙. FQN`.name/arity`(예: `save/1`) |
+| D13 | INFERRED confidence **공식 명시**: 후보 유일=0.8, N개면 `min(0.4, 0.8/N)`→AMBIGUOUS, 같은 패키지 +0.1(≤0.9) | TDD 가능하게 결정적 공식 |
+| D14 | v1 **규모 상한 없음**, `meta`에 파싱스킵/외부호출 카운트 기록 | 성능 최적화는 후속 |
 
 ## 3. 산출 파일 스키마 (`codegraph.json`)
 
@@ -121,8 +127,9 @@ pyproject.toml         # 의존: tree-sitter, tree-sitter-java, tree-sitter-kotl
 ### 4.4 resolve (`resolve.py`) — calls 엣지 (provenance 핵심)
 호출 표현식(`obj.method(...)`, `method(...)`)을 함수 노드로 해석:
 - **EXTRACTED (1.0)**: 같은 파일/같은 type 내 정의로 명확히 해석, 또는 import된 단일 type의 메서드로 유일 해석.
-- **INFERRED (0.4~0.8)**: 리시버 타입 미상. 메서드명이 전역 function 노드 중 **정확히 1개**와 매칭 → 그 노드. confidence는 매칭 유일성/이름 특이성으로.
-- **AMBIGUOUS (≤0.4)**: 메서드명이 **여러** function 노드와 매칭 → 최빈/최근접 후보를 `to`, 나머지는 `alternatives[]`. 매칭 0개면 엣지 생성 안 함(외부/표준라이브러리 호출로 간주, meta 카운트).
+- **INFERRED**: 리시버 타입 미상. 메서드명이 전역 function 노드 중 **정확히 1개**와 매칭 → 그 노드. confidence=0.8, 호출부와 **같은 패키지**면 +0.1(상한 0.9).
+- **AMBIGUOUS**: 메서드명이 **여러(N)** function 노드와 매칭 → 같은 패키지 우선, 그다음 최근접 후보를 `to`, 나머지는 `alternatives[]`. confidence=`min(0.4, 0.8/N)`. 매칭 0개면 엣지 생성 안 함(외부/표준라이브러리 호출로 간주, `meta.external_calls` 카운트).
+- **오버로드 id**: `function:<FQN>.<name>/<arity>` (예: `function:com.x.Repo.save/1`). 같은 arity 충돌 시 선언순 순번 접미사.
 - **원칙(E16-0 준수)**: 애매한 호출을 확정 관계로 단정하지 않음 — provenance로 명시하고 confidence로 감쇠.
 
 ### 4.5 cluster (`cluster.py`)
@@ -174,6 +181,7 @@ python -m lodestar_codegraph \
 
 | 리스크 | 완화 |
 |---|---|
+| tree-sitter 코어(0.26)↔문법 wheel ABI 불일치 | `pyproject.toml`에 tree-sitter/문법 버전 **핀 고정**(검증: `tree-sitter-java` 0.23.x, `tree-sitter-kotlin` 1.1.x, core는 문법 ABI에 맞춰). E17-1에서 로드 스모크테스트 |
 | tree-sitter Kotlin 문법 미성숙/노드타입 상이 | 문법별 노드타입을 `parse.py`에 매핑 테이블로 격리. 실패 파일은 skip+기록 |
 | 이름기반 호출 해석 노이즈 | provenance/confidence로 명시, AMBIGUOUS 분리. 확정 아님 |
 | 대형 리포 성능(vtm/api 수천 파일) | 파일 단위 파싱(스트리밍), 그래프는 메모리 내 1회 구성. 필요시 후속 최적화 |
