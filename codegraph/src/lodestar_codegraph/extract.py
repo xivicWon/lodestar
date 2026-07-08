@@ -138,6 +138,58 @@ def _params_arity(func_node: TsNode) -> int:
     return 0
 
 
+def collect_functions(pf: ParsedFile) -> list[tuple[TsNode, str, str, str]]:
+    """이 파일의 모든 function 선언을 (fnode, function_id, owner_fqn, name)으로 수집한다.
+
+    이 함수는 함수 선언 순회 + id 구성(owner_fqn 누적, arity, `#seq` 오버로드 구분)
+    알고리즘의 **단일 구현체**다. `extract_file`(함수 Node/contains 엣지 생성)과
+    `resolve.resolve_calls`(호출부/후보 함수의 스팬·메타 재구성) 양쪽 모두 함수 id가
+    필요할 때 이 함수만 호출한다 — 예전에는 두 곳에서 각각 같은 알고리즘을 독립적으로
+    재구현해서, id 스킴이 바뀌면 한쪽만 갱신되고 다른 쪽은 조용히 어긋날 위험이 있었다
+    (DRY 위반 및 dangling id 위험).
+
+    top-level `type_decls` → `class_body`/`enum_body`/`interface_body` 내부의
+    `func_decls`(함수)와 중첩 `type_decls`(중첩 타입, owner_fqn을 이어붙여 재귀)를
+    문서 순서대로 순회한다. `extract_file`은 자신의 (동일한 알고리즘의) 타입 순회 중
+    함수 선언 노드를 만나면 이 함수가 반환한 결과를 `start_byte`로 조회해 Node/Edge를
+    만든다 — 그래서 edge_seq 번호 순서도 리팩토링 전과 동일하다.
+    """
+    spec = pf.spec
+    root = pf.tree.root_node
+    pkg = _package_name(root, spec)
+    out: list[tuple[TsNode, str, str, str]] = []
+    arity_seen: dict[str, int] = {}
+
+    def visit_type(tnode: TsNode, owner_fqn: str | None = None) -> None:
+        name = _child_field_ident(tnode)
+        if not name:
+            return
+        fqn = f"{owner_fqn}.{name}" if owner_fqn else (f"{pkg}.{name}" if pkg else name)
+        for body in tnode.children:
+            if body.type in ("class_body", "enum_body", "interface_body"):
+                for m in body.children:
+                    if m.type in spec.func_decls:
+                        visit_func(m, fqn)
+                    elif m.type in spec.type_decls:
+                        visit_type(m, fqn)
+
+    def visit_func(fnode: TsNode, owner_fqn: str) -> None:
+        name = _child_field_ident(fnode)
+        if not name:
+            return
+        arity = _params_arity(fnode)
+        base = f"{owner_fqn}.{name}/{arity}"
+        seen = arity_seen.get(base, 0)
+        arity_seen[base] = seen + 1
+        fid = f"function:{base}" + (f"#{seen}" if seen else "")
+        out.append((fnode, fid, owner_fqn, name))
+
+    for c in root.children:
+        if c.type in spec.type_decls:
+            visit_type(c)
+    return out
+
+
 def extract_file(pf: ParsedFile, edge_seq: Iterator[int]) -> ExtractResult:
     spec = pf.spec
     root = pf.tree.root_node
@@ -149,7 +201,13 @@ def extract_file(pf: ParsedFile, edge_seq: Iterator[int]) -> ExtractResult:
     r.nodes.append(Node(id=file_id, kind="file", label=rel.split("/")[-1],
                         qualified_name=rel, path=rel, lang=pf.sf.lang))
 
-    arity_seen: dict[str, int] = {}
+    # 함수 id/owner_fqn/name은 collect_functions()에서만 계산한다 (id/arity/#seq 로직의
+    # 유일한 구현). start_byte로 조회 — 같은 파일 안에서 func_decls 타입 노드는 서로
+    # 중첩되지 않으므로(클래스 멤버로만 나타남) start_byte가 함수 선언마다 유일하다.
+    func_by_start: dict[int, tuple[str, str, str]] = {
+        fnode.start_byte: (fid, owner_fqn, name)
+        for fnode, fid, owner_fqn, name in collect_functions(pf)
+    }
 
     def visit_type(tnode: TsNode, owner_fqn: str | None = None):
         name = _child_field_ident(tnode)
@@ -172,24 +230,21 @@ def extract_file(pf: ParsedFile, edge_seq: Iterator[int]) -> ExtractResult:
             sup_fqn = f"{pkg}.{sup_name}" if pkg else sup_name
             r.edges.append(Edge(next(edge_seq), tid, f"type:{sup_fqn}",
                                 sup_kind, EXTRACTED, 1.0))
-        # 멤버 함수
+        # 멤버 함수 (id/이름은 func_by_start에서 조회 — collect_functions와 동일한
+        # owner_fqn 계산이므로 여기서 다시 계산하지 않는다)
         for body in tnode.children:
             if body.type in ("class_body", "enum_body", "interface_body"):
                 for m in body.children:
                     if m.type in spec.func_decls:
-                        visit_func(m, fqn)
+                        visit_func(m)
                     elif m.type in spec.type_decls:  # 중첩 타입
                         visit_type(m, fqn)
 
-    def visit_func(fnode: TsNode, owner_fqn: str):
-        name = _child_field_ident(fnode)
-        if not name:
+    def visit_func(fnode: TsNode):
+        meta = func_by_start.get(fnode.start_byte)
+        if meta is None:  # collect_functions가 이름 없음 등으로 건너뛴 노드
             return
-        arity = _params_arity(fnode)
-        base = f"{owner_fqn}.{name}/{arity}"
-        seen = arity_seen.get(base, 0)
-        arity_seen[base] = seen + 1
-        fid = f"function:{base}" + (f"#{seen}" if seen else "")
+        fid, owner_fqn, name = meta
         r.nodes.append(Node(id=fid, kind="function", label=name,
                             qualified_name=f"{owner_fqn}.{name}", path=rel, lang=pf.sf.lang))
         r.edges.append(Edge(next(edge_seq), f"type:{owner_fqn}", fid,

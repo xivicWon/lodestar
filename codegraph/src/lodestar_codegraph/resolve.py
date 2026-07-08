@@ -3,7 +3,7 @@ from typing import Iterator
 from tree_sitter import Node as TsNode
 from .model import Node, Edge, EXTRACTED, INFERRED, AMBIGUOUS
 from .parse import ParsedFile
-from .extract import function_index, _child_field_ident, _package_name, _descend, _params_arity
+from .extract import function_index, _package_name, _descend, collect_functions
 
 
 def _called_name(call: TsNode) -> str | None:
@@ -46,46 +46,21 @@ def _called_name(call: TsNode) -> str | None:
 def _collect_functions(pf: ParsedFile) -> list[tuple[int, int, str, str, str]]:
     """이 파일의 모든 function 선언을 (start_byte, end_byte, function_id, owner_fqn, package)로 수집.
 
-    extract.extract_file과 *동일한* owner_fqn/arity 알고리즘 및 문서 순서 순회를 재현해서
-    함수 id(오버로드 시 #seq 접미사 포함)를 정확히 재구성한다. 참고코드처럼 '파일 내 같은
-    이름의 func_decl을 찾아 매칭'하는 방식은, 한 파일에 서로 다른 타입 소속의 동명 메서드가
-    여러 개 있으면(예: 이 fixture의 Svc.save/Store.save) 잘못된 함수에 스팬을 배정할 수
-    있어 정확한 owner_fqn 기반 재구성으로 대체했다.
+    함수 id/owner_fqn 재구성(owner_fqn 누적, arity, `#seq` 오버로드 구분)은
+    extract.collect_functions 단 하나의 구현체에서만 계산한다 — 예전엔 이 함수가 그
+    알고리즘을 독립적으로 재구현했는데, extract.extract_file 쪽 id 스킴이 바뀌면 이쪽만
+    갱신을 놓쳐 조용히 어긋난 id(즉 실제 Node와 매칭되지 않는 id)를 만들 위험이 있었다
+    (DRY 위반). 여기서는 그 결과에서 스팬(start_byte/end_byte)만 뽑고, package는
+    (owner_fqn만으로는 복원 불가하므로) 여전히 파일별로 _package_name(root, spec)에서
+    구한다 — `owner.rsplit('.', 1)[0]`류의 패키지 추정은 쓰지 않는다.
     """
     spec = pf.spec
     root = pf.tree.root_node
     pkg = _package_name(root, spec)
-    out: list[tuple[int, int, str, str, str]] = []
-    arity_seen: dict[str, int] = {}
-
-    def visit_type(tnode: TsNode, owner_fqn: str | None = None) -> None:
-        name = _child_field_ident(tnode)
-        if not name:
-            return
-        fqn = f"{owner_fqn}.{name}" if owner_fqn else (f"{pkg}.{name}" if pkg else name)
-        for body in tnode.children:
-            if body.type in ("class_body", "enum_body", "interface_body"):
-                for m in body.children:
-                    if m.type in spec.func_decls:
-                        visit_func(m, fqn)
-                    elif m.type in spec.type_decls:
-                        visit_type(m, fqn)
-
-    def visit_func(fnode: TsNode, owner_fqn: str) -> None:
-        name = _child_field_ident(fnode)
-        if not name:
-            return
-        arity = _params_arity(fnode)
-        base = f"{owner_fqn}.{name}/{arity}"
-        seen = arity_seen.get(base, 0)
-        arity_seen[base] = seen + 1
-        fid = f"function:{base}" + (f"#{seen}" if seen else "")
-        out.append((fnode.start_byte, fnode.end_byte, fid, owner_fqn, pkg))
-
-    for c in root.children:
-        if c.type in spec.type_decls:
-            visit_type(c)
-    return out
+    return [
+        (fnode.start_byte, fnode.end_byte, fid, owner_fqn, pkg)
+        for fnode, fid, owner_fqn, _name in collect_functions(pf)
+    ]
 
 
 def resolve_calls(parsed: list[ParsedFile], nodes: list[Node],
