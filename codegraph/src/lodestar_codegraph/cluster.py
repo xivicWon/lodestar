@@ -9,7 +9,7 @@ def annotate(nodes: list[Node], edges: list[Edge], god_percentile: float) -> Non
     g = nx.Graph()
     g.add_nodes_from(ids)
     for e in edges:
-        if e.src in ids and e.dst in ids:
+        if e.src in ids and e.dst in ids and e.src != e.dst:
             w = g.get_edge_data(e.src, e.dst, {}).get("weight", 0.0)
             g.add_edge(e.src, e.dst, weight=w + e.confidence)
 
