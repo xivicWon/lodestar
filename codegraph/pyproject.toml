@@ -1,0 +1,25 @@
+[project]
+name = "lodestar-codegraph"
+version = "0.1.0"
+description = "Lodestar code source collector — source → codegraph.json (tree-sitter)"
+requires-python = ">=3.11"
+dependencies = [
+  "tree-sitter==0.23.2",
+  "tree-sitter-java==0.23.5",
+  "tree-sitter-kotlin==1.1.0",
+  "networkx>=3.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
