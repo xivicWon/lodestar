@@ -276,6 +276,22 @@
       "rule": "A19",
       "expectedError": "evidence 와 conflicts 가 함께 사용함",
       "note": "evidence 와 conflicts 가 같은 id 를 씀 — 참조를 전부 정합하게 맞춰도 trigger 가 무엇을 가리키는지 모호해진다"
+    },
+    {
+      "file": "invalid.ceiling-not-applied.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A15",
+      "expectedError": "경고가 있는데 ceilingApplied=false",
+      "note": "A15 역방향 — 미해결 충돌이 있는데 상한을 적용하지 않음. 상한 전파(I1 §3.3)가 조용히 생략된다"
+    },
+    {
+      "file": "invalid.signal-trigger-unknown-name.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A18",
+      "expectedError": "trigger 'ev-99.signals.corroboration'",
+      "note": "SIGNAL_UNMEASURED 의 trigger 가 실재하지 않는 대상을 가리킴. 신호명 오류는 스키마 pattern 이 잡지만, 대상 실재 여부는 교차 검사(A18)의 몫이다 — C0 가 교차 규칙만 이식해도 구멍이 없어야 하므로 A18 이 evidence id·신호명을 모두 확인한다"
     }
   ]
 }

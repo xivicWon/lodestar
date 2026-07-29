@@ -41,6 +41,9 @@ CORE_CLASSES = {
 CEILING_REASONS = {"DEGRADED_SOURCE", "CONFLICT_UNRESOLVED", "NOT_COLLECTED"} | set(
     WARN_FOR_ABSENT.values()
 )
+# 이 경고가 있으면 상한 적용은 선택이 아니다 (I1 §3.3 의 직접 대상).
+# 커버리지 부재는 경고로 드러내되 상한을 강제하지는 않는다 — 그러면 사실상 모든 응답이 상한이다.
+MANDATORY_CEILING = {"DEGRADED_SOURCE", "CONFLICT_UNRESOLVED"}
 
 
 def cross_field_errors(d):
@@ -164,6 +167,13 @@ def cross_field_errors(d):
                     errs.append(f"A15: ceilingReasons 의 {r} 가 실제 warnings 에 없음")
         elif reasons:
             errs.append("A15: ceilingApplied=false 인데 ceilingReasons 가 비어있지 않음")
+        # 역방향 — 상한을 반드시 유발하는 사유가 있으면 적용하고 기록해야 한다.
+        # (커버리지 부재 NO_*·NOT_COLLECTED 는 경고 대상이지 상한 강제 사유는 아니다.)
+        for code in sorted(codes & MANDATORY_CEILING):
+            if not audit["ceilingApplied"]:
+                errs.append(f"A15: {code} 경고가 있는데 ceilingApplied=false")
+            elif code not in reasons:
+                errs.append(f"A15: {code} 경고가 있는데 ceilingReasons 에 빠짐")
     rule(_a15)
 
     # A17 — null 신호 ⟺ SIGNAL_UNMEASURED 경고 (양방향)
@@ -174,7 +184,14 @@ def cross_field_errors(d):
             for name, v in e["signals"].items()
             if v is None
         }
-        unmeasured_warned = {w["trigger"] for w in warnings_ if w["code"] == "SIGNAL_UNMEASURED"}
+    # 신호명이 실재하지 않는 trigger 는 A18 의 몫이다 — 여기서 이중 보고하지 않는다.
+        def _valid_target(trg):
+            ev_id, _, sig = trg.rpartition(".signals.")
+            owner = next((e for e in evidence if e.get("id") == ev_id), None)
+            return owner is not None and sig in (owner.get("signals") or {})
+
+        unmeasured_warned = {w["trigger"] for w in warnings_
+                             if w["code"] == "SIGNAL_UNMEASURED" and _valid_target(w["trigger"])}
         for miss in sorted(null_signals - unmeasured_warned):
             errs.append(f"A17: {miss} 가 null 인데 SIGNAL_UNMEASURED 경고 없음")
         for extra in sorted(unmeasured_warned - null_signals):

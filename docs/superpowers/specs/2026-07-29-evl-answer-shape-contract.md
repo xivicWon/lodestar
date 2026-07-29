@@ -141,7 +141,7 @@ L0 수집(#88) → L1 사실(#89) → L2 관계(#90) → L3 지식·이력(#91) 
 - `evidenceIds` — 번들에 포함된 **전체 후보** id. 응답에 실린 `evidence[].id`의 **상위집합**이며(A13은 `⊆`이지 `=`가 아니다), **탈락한 후보를 일부러 남긴다** — 왜 그것이 안 쓰였는지 역추적하기 위해서다. 따라서 `evidence[]`에 없는 id가 여기 있는 것은 **정상이며 위반이 아니다**.
   - **탈락 후보의 `confidence`·`signals`는 응답에 싣지 않는다.** 응답은 *제시한 근거*를 담는 자리이지 후보 전체를 담는 자리가 아니며, 싣는 순간 랭킹의 의미가 사라진다.
   - 그 값들은 **번들 로그에 있다**(`bundleId`로 조회 — §3.3의 원자료, 소유 **C5**). 따라서 calibration은 두 모집단으로 나뉜다: **제시된 증거**(응답만으로 산출 가능)와 **후보 전체**(번들 로그 조회 필요). 어느 모집단으로 산출했는지를 Run Quality Report에 **명시**한다 — 섞으면 곡선이 달라진다(**C1**).
-- `ceilingReasons` — 상한 사유를 **코드로 명시**하고 실제 `warnings`와 대조한다(A15). `ceilingApplied=false`면 이 필드를 두지 않는다 — 적용하지 않은 상한의 사유는 사유가 아니다.
+- `ceilingReasons` — 상한 사유를 **코드로 명시**하고 실제 `warnings`와 대조한다(A15). **`DEGRADED_SOURCE`(하위 레이어 실패 전파)와 `CONFLICT_UNRESOLVED`(미해결 충돌)는 상한을 강제**한다 — 이 둘은 I1 §3.3이 직접 지목한 전파 대상이라 "경고만 하고 상한은 안 걸기"가 허용되지 않는다. 반면 커버리지 부재(`NO_*`·`NOT_COLLECTED`)는 경고 대상이되 상한을 강제하지 않는다 — 강제하면 사실상 모든 응답이 상한이 되어 구분이 사라진다. `ceilingApplied=false`면 이 필드를 두지 않는다 — 적용하지 않은 상한의 사유는 사유가 아니다.
 - `ceilingApplied` — 상한 적용 **사실**의 기록. **선택이 아니라 필수**다: 선택으로 두면 필드를 생략하는 것만으로 상한 적용을 은폐할 수 있고, 그러면 A15가 무력화된다. 상한 수치는 미확정이나 기록 자체는 I1 §3.3의 게이트다.
 
 ---
@@ -207,7 +207,7 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 | **A12** | `audit` 6개 필드(`ceilingApplied` 포함) 전부 존재 + 모든 `warnings` 항목이 `code`·`message`·`trigger`를 갖는다 | schema | 역추적 불가 · 경고 대상 불명 |
 | **A13** | `evidence[].id` **⊆** `audit.evidenceIds` (등호 아님 — 탈락 후보가 더 있는 것은 정상, §2.7) | validator | 감사 로그 불완전 |
 | **A14** | 모든 `contradicts` 증거는 **자기 자신이** 어떤 `conflicts[].between`에 들어 있고, 그 충돌이 `supports` 증거도 함께 참조한다. "충돌이 하나라도 있으면 통과"가 아니다 | validator | **충돌 미탐지 = 거짓 확신** · 반대 증거가 어디에도 연결되지 않음 |
-| **A15** | `ceilingApplied=true` ⟺ `ceilingReasons`가 비어있지 않고, 그 모든 코드가 **상한 사유 통제어휘**(`DEGRADED_SOURCE`·`CONFLICT_UNRESOLVED`·`NOT_COLLECTED`·`NO_*`)에 속하며 **실제 `warnings`에 존재**한다. `false`면 필드를 두지 않는다 | schema + validator | 상한 은폐 · 사유를 사후에 지어냄 (I1 §3.3) |
+| **A15** | 상한 기록이 사실과 **양방향으로** 일치한다 — `ceilingApplied=true` ⟺ `ceilingReasons`가 비어있지 않고 그 코드가 상한 사유 통제어휘에 속하며 실제 `warnings`에 존재한다. 또한 **`DEGRADED_SOURCE`·`CONFLICT_UNRESOLVED` 경고가 있으면 상한 적용은 선택이 아니다**(`ceilingApplied=true` + 해당 코드가 `ceilingReasons`에 포함). `false`면 `ceilingReasons`를 두지 않는다 | schema + validator | 상한 은폐 · 사유를 사후에 지어냄 · **상한 전파를 조용히 생략**(I1 §3.3) |
 | **A16** | §6.2의 abstention 조건 1~3(근거 0건 · 핵심 클래스 부재 · 미해결 충돌 존재) 중 하나라도 성립하면 `ABSTAIN` 경고가 존재하고, 그 **`trigger`가 성립한 조건을 실제로 가리킨다**(§2.6) | validator | 근거 없이 단정 · 보류 사유를 기계적으로 집계할 수 없음 |
 | **A17** | `signals`의 값이 `null`(미측정)이면 `SIGNAL_UNMEASURED` 경고가 `trigger="<evidenceId>.signals.<name>"` 로 존재하고, 그 역도 성립한다 | validator | 미측정을 조용히 숨김 |
 | **A18** | 모든 `warnings[].trigger`가 실재 대상을 가리킨다 — `coverage.<key>`는 해당 키, 그 외는 실재하는 `evidence[].id`·`conflicts[].id`·`<evidenceId>.signals.<name>`. **예약 리터럴 `evidence`는 항상 유효**하다(근거 0건 abstention은 가리킬 개별 증거가 없으므로 배열 자체를 가리킨다) | validator | 경고가 아무것도 가리키지 않음 |
@@ -362,6 +362,8 @@ I1 §7과 동일하며, 추가로:
 | `trigger` 형식 | 느슨한 정규식(`foo` 허용) | code별 형식 고정 | 임의 문자열을 허용하면 `trigger` 필수화의 의미가 사라진다 |
 | A16 표 렌더링 | 빈 줄로 표 밖에 표시 | 표 내부 행 | 서식 오류 |
 | abstention 조건 3 | "충돌이 `evidence[0]`을 포함" | **"`NEEDS_CHECK` 충돌 존재"** | 랭킹이 중요도의 대리값이 되지 못했다 — 자체 정상 픽스처에서 질문 자체를 다투는 충돌이 하위 순위라는 이유로 비보류 판정됐다. 비보류 경로는 `RESOLVED`/`COEXIST`로 이미 존재한다 |
+| A15 방향 | `ceilingApplied=true` 일 때만 검사 | **양방향** | 상한 사유가 있는데 적용하지 않아도 통과해 상한 전파가 조용히 생략될 수 있었다 |
+| A18 신호 trigger | evidence id 만 확인 | **신호명·대상 실재까지** | 신호명 오류는 스키마가 잡지만 교차 검사만 이식하면 구멍이었다 |
 | 탈락 후보의 calibration 원자료 | 미정의 | **번들 로그(C5) + 모집단 명시(C1)** | 응답에 없는 후보의 confidence·signals 를 어디서 재현하는지 계약에 없었다 |
 | 규칙 커버리지 | 검사 없음 | **A1~A19 음성 픽스처 필수** | A2 처럼 픽스처 없는 규칙이 생겨도 스위트가 통과했다 |
 | id 네임스페이스 | 배열별 검사만 | **evidence·conflicts 교집합도 금지** | 두 컬렉션이 같은 id 를 써도 통과해 trigger 참조가 모호해졌다 |
@@ -406,8 +408,8 @@ I1 §7과 동일하며, 추가로:
 - [x] abstention 형식·발동 조건 확정, 임계값은 비준으로 위임 → §6
 - [x] 게이트 / 잠정 지표 분리 → §7
 - [x] #99(I2)에 추가 요구되는 gold 케이스 명시 → §8
-- [x] 검증 픽스처(정상 3 + 위반 32) 커밋 + **규칙 커버리지 검사**(A1~A19 전부 음성 픽스처 보유) + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
-- [x] 픽스처 적합성 확인기 커밋(35/35 재현 가능, 규칙 동일성·검출 계층·기대 메시지까지 대조) → `schemas/validate.py`
+- [x] 검증 픽스처(정상 3 + 위반 34) 커밋 + **규칙 커버리지 검사**(A1~A19 전부 음성 픽스처 보유) + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
+- [x] 픽스처 적합성 확인기 커밋(37/37 재현 가능, 규칙 동일성·검출 계층·기대 메시지까지 대조) → `schemas/validate.py`
 - [x] 하위 이슈 분할안 → §9
 
 **다음 착수: C0 검증기 (§9)** — 픽스처 스위트와 참조 규칙 구현이 이미 있으므로 실패 테스트부터 시작할 수 있다.
