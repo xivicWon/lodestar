@@ -300,6 +300,14 @@
       "rule": "A16",
       "expectedError": "보류 조건이 하나도 성립하지 않는데 ABSTAIN",
       "note": "A16 역방향 — 허위 보류. 정상 답변이 차단되고 baseline 의 보류율·오경고율이 왜곡된다"
+    },
+    {
+      "file": "invalid.trigger-wrong-scope.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A12",
+      "expectedError": "does not match",
+      "note": "DEGRADED_SOURCE 는 증거를 가리켜야 하는데 coverage 키를 가리킴 — code 와 trigger 대상 종류의 관계를 강제한다"
     }
   ]
 }

@@ -215,24 +215,38 @@ def cross_field_errors(d):
             errs.append(f"A17: SIGNAL_UNMEASURED({extra}) 인데 해당 신호가 null 이 아님")
     rule(_a17)
 
-    # A18 — trigger 가 실재 대상을 가리키는가
+    # A18 — trigger 가 실재 대상을 가리키는가.
+    #       **코드 기준으로 분기**한다. 예전에는 'coverage.' 접두사를 먼저 보고 통과시켜
+    #       DEGRADED_SOURCE 같은 증거 참조 코드가 coverage.* 를 가리켜도 승인됐다.
+    #       형식 자체가 code 계약(§2.6)과 어긋나는 경우는 스키마(A12)의 몫이므로 여기서는
+    #       형식이 맞는 trigger 의 '대상 실재'만 본다 — 이중 보고를 피하기 위해서다.
     def _a18():
         conflict_ids = {c["id"] for c in conflicts}
+        cov_codes = set(WARN_FOR_ABSENT.values()) | {"NOT_COLLECTED"}
+        ev_scoped = {"LOW_CORROBORATION", "STALE_EVIDENCE", "DEGRADED_SOURCE"}
         for w in warnings_:
             code, trg = w["code"], w["trigger"]
-            if trg.startswith("coverage."):
+            if code in cov_codes:
+                if not trg.startswith("coverage."):
+                    continue  # 형식 위반 — A12(스키마)
                 ok = trg.split(".", 1)[1] in coverage
             elif code == "SIGNAL_UNMEASURED":
-                # evidence 실재와 신호명 소속을 모두 확인한다. 스키마 pattern 이
-                # 신호명을 5종으로 제한하므로 스키마 통과 문서에서는 도달하지 않지만,
-                # C0 가 교차 규칙만 이식해도 구멍이 없어야 한다(LOD-010 과 동형).
+                if ".signals." not in trg:
+                    continue
                 ev_id, _, sig = trg.rpartition(".signals.")
                 owner = next((e for e in evidence if e.get("id") == ev_id), None)
                 ok = owner is not None and sig in (owner.get("signals") or {})
             elif code == "CONFLICT_UNRESOLVED":
                 ok = trg in conflict_ids
+            elif code in ev_scoped:
+                if trg.startswith("coverage."):
+                    continue  # 형식 위반 — A12(스키마)
+                ok = trg in ev_ids
             elif code == "ABSTAIN":
-                ok = trg in {"evidence", "coverage"} or trg in ev_ids or trg in conflict_ids
+                # 보류 '사유'로서 유효한지는 A16 이 본다. 여기서는 대상 실재만.
+                ok = (trg == "evidence"
+                      or (trg.startswith("coverage.") and trg.split(".", 1)[1] in coverage)
+                      or trg in ev_ids or trg in conflict_ids)
             else:
                 ok = trg in ev_ids or trg in conflict_ids
             if not ok:

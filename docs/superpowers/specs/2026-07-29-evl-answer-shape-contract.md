@@ -116,7 +116,7 @@ L0 수집(#88) → L1 사실(#89) → L2 관계(#90) → L3 지식·이력(#91) 
 
 `{code, message, trigger}` — **세 필드 모두 필수**. `code`는 통제어휘다 — **자유 문장은 "경고했는가"를 측정할 수 없다.**
 
-`trigger`가 필수인 이유: 여러 클래스가 동시에 `not_collected`일 때 공통 코드 하나만으로는 **어느 클래스에 경고했는지 판정할 수 없다.** `trigger`로 대상을 못박아야 A11이 결정론이 된다.
+`trigger`가 필수인 이유: 여러 클래스가 동시에 `not_collected`일 때 공통 코드 하나만으로는 **어느 클래스에 경고했는지 판정할 수 없다.** `trigger`로 대상을 못박아야 A11이 결정론이 된다. 또한 **code마다 가리킬 수 있는 대상의 종류가 다르다** — `DEGRADED_SOURCE`가 `coverage.adr`를 가리키면 "어느 증거가 degraded인지"를 잃는다. 형식은 스키마가(A12), 대상 실재는 검증기가(A18) 본다.
 
 형식은 **code별로 스키마가 고정**한다(아래 표) — 임의 문자열을 허용하면 `trigger`를 필수로 만든 의미가 사라진다. 가리키는 대상이 실재하는지는 검증기가 확인한다(A18).
 
@@ -210,7 +210,7 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 | **A15** | 상한 기록이 사실과 **양방향으로** 일치한다 — `ceilingApplied=true` ⟺ `ceilingReasons`가 비어있지 않고 그 코드가 상한 사유 통제어휘에 속하며 실제 `warnings`에 존재한다. 또한 **`DEGRADED_SOURCE`·`CONFLICT_UNRESOLVED` 경고가 있으면 상한 적용은 선택이 아니다**(`ceilingApplied=true` + 해당 코드가 `ceilingReasons`에 포함). `false`면 `ceilingReasons`를 두지 않는다 | schema + validator | 상한 은폐 · 사유를 사후에 지어냄 · **상한 전파를 조용히 생략**(I1 §3.3) |
 | **A16** | abstention 이 **양방향**으로 사실과 일치한다 — §6.2 조건 1~3(근거 0건 · 핵심 클래스 전면 부재 · 미해결 충돌) 중 하나라도 성립하면 `ABSTAIN`이 있고 그 `trigger`가 **성립한 조건을 실제로 가리키며**, 반대로 **조건이 하나도 성립하지 않으면 `ABSTAIN`이 있어서는 안 된다** | validator | 근거 없이 단정 · 보류 사유 집계 불가 · **허위 보류**(정상 답변 차단, 보류율 왜곡) |
 | **A17** | `signals`의 값이 `null`(미측정)이면 `SIGNAL_UNMEASURED` 경고가 `trigger="<evidenceId>.signals.<name>"` 로 존재하고, 그 역도 성립한다 | validator | 미측정을 조용히 숨김 |
-| **A18** | 모든 `warnings[].trigger`가 실재 대상을 가리킨다 — `coverage.<key>`는 해당 키, 그 외는 실재하는 `evidence[].id`·`conflicts[].id`·`<evidenceId>.signals.<name>`. **예약 리터럴 `evidence`는 항상 유효**하다(근거 0건 abstention은 가리킬 개별 증거가 없으므로 배열 자체를 가리킨다) | validator | 경고가 아무것도 가리키지 않음 |
+| **A18** | 모든 `warnings[].trigger`가 **그 `code`가 가리키도록 정해진 종류의 대상을**(§2.6) 실제로 가리킨다 — 커버리지 코드는 실재 `coverage` 키, `CONFLICT_UNRESOLVED`는 실재 충돌, `LOW_CORROBORATION`·`STALE_EVIDENCE`·`DEGRADED_SOURCE`는 실재 증거(커버리지 키 금지), `SIGNAL_UNMEASURED`는 실재 증거의 실재 신호. 예약 리터럴 `evidence`는 항상 유효 | validator | 경고가 아무것도 가리키지 않음 · **코드와 대상 종류가 어긋남** |
 | **A19** | `id`는 **응답 전체에서 단일 네임스페이스**다 — `evidence[].id`·`conflicts[].id`가 각각 유일하고, 두 집합이 **서로 겹치지도 않는다** | validator | 중복·충돌 id 로 `trigger` 하나가 무엇을 가리키는지 모호해짐 — A11·A16·A18 집계가 무너짐 |
 
 > **A14는 gold 대조 없이도 검사 가능한 하한선**이다. 실제 충돌 탐지 성능은 §5의 precision/recall로 별도 측정한다.
@@ -364,6 +364,7 @@ I1 §7과 동일하며, 추가로:
 | `trigger` 형식 | 느슨한 정규식(`foo` 허용) | code별 형식 고정 | 임의 문자열을 허용하면 `trigger` 필수화의 의미가 사라진다 |
 | A16 표 렌더링 | 빈 줄로 표 밖에 표시 | 표 내부 행 | 서식 오류 |
 | abstention 조건 3 | "충돌이 `evidence[0]`을 포함" | **"`NEEDS_CHECK` 충돌 존재"** | 랭킹이 중요도의 대리값이 되지 못했다 — 자체 정상 픽스처에서 질문 자체를 다투는 충돌이 하위 순위라는 이유로 비보류 판정됐다. 비보류 경로는 `RESOLVED`/`COEXIST`로 이미 존재한다 |
+| A18 대상 종류 | `coverage.` 접두사면 code 무관 통과 | **code 기준 분기** | `DEGRADED_SOURCE`가 커버리지 키를 가리켜도 두 계층 모두 통과했다 |
 | 규칙 라벨 검증 | `expectedError` 문자열만 대조 | **스키마 위반 위치까지 대조** | 잘못 라벨링된 픽스처가 다른 규칙의 실적으로 집계돼 커버리지가 과대 보고될 수 있었다 |
 | A16 방향 | 조건 성립 → ABSTAIN 만 | **양방향** | 조건이 하나도 성립하지 않는데 ABSTAIN 을 붙여도 통과했다(허위 보류) |
 | A18 신호 trigger | evidence id 만 | **신호명 소속까지** | 13차에 고쳤다고 했으나 편집이 실제로 적용되지 않았다 — 재확인 후 수정 |
@@ -413,8 +414,8 @@ I1 §7과 동일하며, 추가로:
 - [x] abstention 형식·발동 조건 확정, 임계값은 비준으로 위임 → §6
 - [x] 게이트 / 잠정 지표 분리 → §7
 - [x] #99(I2)에 추가 요구되는 gold 케이스 명시 → §8
-- [x] 검증 픽스처(정상 3 + 위반 35) 커밋 + **규칙 커버리지 검사**(A1~A19 전부 음성 픽스처 보유) + **규칙 라벨 검증** + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
-- [x] 픽스처 적합성 확인기 커밋(38/38 재현 가능, 규칙 동일성·검출 계층·기대 메시지까지 대조) → `schemas/validate.py`
+- [x] 검증 픽스처(정상 3 + 위반 36) 커밋 + **규칙 커버리지 검사**(A1~A19 전부 음성 픽스처 보유) + **규칙 라벨 검증** + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
+- [x] 픽스처 적합성 확인기 커밋(39/39 재현 가능, 규칙 동일성·검출 계층·기대 메시지까지 대조) → `schemas/validate.py`
 - [x] 하위 이슈 분할안 → §9
 
 **다음 착수: C0 검증기 (§9)** — 픽스처 스위트와 참조 규칙 구현이 이미 있으므로 실패 테스트부터 시작할 수 있다.
