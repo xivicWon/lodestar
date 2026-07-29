@@ -151,6 +151,17 @@ def cross_field_errors(d):
                     errs.append(f"A6: conflict {c['id']} 가 없는 증거 {ref} 를 참조")
     rule(_a6)
 
+    # A7 — status=RESOLVED ⟺ resolvedBy. 스키마도 강제하지만 교차 계층에서도
+    #      완결적으로 검사한다 — C0 가 교차 규칙만 이식해도 구멍이 없어야 한다.
+    def _a7():
+        for c in conflicts:
+            has = "resolvedBy" in c
+            if c.get("status") == "RESOLVED" and not has:
+                errs.append(f"A7: 충돌 {c.get('id')} 가 RESOLVED 인데 resolvedBy 가 없음")
+            if c.get("status") != "RESOLVED" and has:
+                errs.append(f"A7: 충돌 {c.get('id')} 는 {c.get('status')} 인데 resolvedBy 가 붙어 있음")
+    rule(_a7)
+
     # A11 — 부재·미수집 클래스마다, 미해결 충돌마다 대응 경고(+trigger)
     def _a11():
         for cls, state in coverage.items():

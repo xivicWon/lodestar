@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "answer-shape/v0",
+  "task": {
+    "intent": "LOCATE",
+    "target": {
+      "kind": "METHOD",
+      "ref": "RelationService.suffixes",
+      "raw": "이름 규칙 접미사 목록은 어디에 있나?"
+    }
+  },
+  "evidence": [
+    {
+      "id": "ev-1",
+      "source": "code",
+      "ref": {
+        "sourceId": "src-backend-kotlin",
+        "locator": "backend/src/main/kotlin/com/ontostudio/rel/RelationService.kt#L50",
+        "revision": "3c27259",
+        "contentHash": "git-blob:5e04dfea8d978c5af59f52e4261e77cb49c294c0"
+      },
+      "confidence": 0.92,
+      "signals": {
+        "finality": 0.95,
+        "freshness": 0.95,
+        "authority": 0.9,
+        "corroboration": 0.8,
+        "contradicted": 0.05
+      },
+      "reason": [
+        {
+          "text": "스템 접미사 목록이 이 행에 선언돼 있다",
+          "basis": [
+            {
+              "layer": "L1",
+              "id": "obs-code-suffixes"
+            }
+          ]
+        }
+      ],
+      "stance": "supports"
+    },
+    {
+      "id": "ev-2",
+      "source": "test",
+      "ref": {
+        "sourceId": "src-backend-kotlin-test",
+        "locator": "backend/src/test/kotlin/com/ontostudio/rel/RelationJudgeTest.kt#L36-L57",
+        "revision": "3c27259",
+        "contentHash": "git-blob:62aecd9ca649cf4c2ab56ee521b57e8dcac8e97c"
+      },
+      "confidence": 0.7,
+      "signals": {
+        "finality": 0.8,
+        "freshness": 0.95,
+        "authority": 0.6,
+        "corroboration": 0.6,
+        "contradicted": 0.1
+      },
+      "reason": [
+        {
+          "text": "이 목록에 의존하는 후보 생성 경로가 테스트로 고정돼 있다",
+          "basis": [
+            {
+              "layer": "L1",
+              "id": "obs-test-relationjudge"
+            }
+          ]
+        }
+      ],
+      "stance": "supports"
+    }
+  ],
+  "conflicts": [],
+  "coverage": {
+    "code": "present",
+    "issue": "absent",
+    "adr": "absent",
+    "test": "present",
+    "runtime": "not_collected"
+  },
+  "confidence_overall": 0.86,
+  "warnings": [
+    {
+      "code": "NO_ISSUE",
+      "message": "관련 이슈 없음",
+      "trigger": "coverage.issue"
+    },
+    {
+      "code": "NO_ADR",
+      "message": "관련 ADR 없음",
+      "trigger": "coverage.adr"
+    },
+    {
+      "code": "NOT_COLLECTED",
+      "message": "런타임 로그 미수집",
+      "trigger": "coverage.runtime"
+    }
+  ],
+  "audit": {
+    "bundleId": "bnd-2026-07-29-0013",
+    "promptHash": "sha256:7ea6d23e01f68f972e3c11745636d3c5825aaccd4a56d615d101c705a16fc086",
+    "evidenceIds": [
+      "ev-1",
+      "ev-2",
+      "ev-90",
+      "ev-91"
+    ],
+    "revision": "3c27259",
+    "createdAt": "2026-07-29T03:10:00Z",
+    "ceilingApplied": false
+  }
+}
