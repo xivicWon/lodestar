@@ -1,0 +1,130 @@
+{
+  "schemaVersion": "run-quality-report/v0",
+  "run": {
+    "runId": "<run-...>",
+    "projectId": "<프로젝트 식별자>",
+    "layer": "<L0|L1|L2|L3>",
+    "track": "<db|code>",
+    "reportKind": "<BASELINE|EXAMPLE>",
+    "sourceRevision": "<7~40자리 커밋 해시 — I1 §1.3 이 고정한 값>",
+    "fixtureHash": "<sha256:... | UNPINNED>",
+    "startedAt": "<YYYY-MM-DDThh:mm:ssZ>",
+    "completedAt": "<YYYY-MM-DDThh:mm:ssZ>",
+    "executedBy": "<실행 주체>"
+  },
+  "versions": {
+    "collector": "<수집기 버전 | null>",
+    "extractor": "<추출기 버전 | null>",
+    "model": "<모델 식별자+버전 | null>",
+    "prompt": "<프롬프트 버전 | null>"
+  },
+  "counts": {
+    "input": null,
+    "output": null,
+    "failed": null,
+    "excluded": null
+  },
+  "exclusions": [
+    {
+      "reason": "<제외 사유 — '조용한 스킵' 금지>",
+      "count": null,
+      "examples": ["<원본 좌표>"]
+    }
+  ],
+  "failures": [
+    {
+      "id": "<fail-...>",
+      "summary": "<무엇이 실패했는가>",
+      "link": "<원본 좌표 또는 이슈/로그 링크>",
+      "fixture": "<재현 fixture 경로>"
+    }
+  ],
+  "metrics": {
+    "precision": { "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>", "value": null, "note": "<측정 방법 또는 미측정 사유>" },
+    "recall": { "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>", "value": null, "note": "<측정 방법 또는 미측정 사유>" },
+    "coverage": { "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>", "value": null, "note": "<측정 방법 또는 미측정 사유>" },
+    "determinism": { "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>", "value": null, "note": "<동일 revision 3회 실행 일치율>" },
+    "provenanceCompleteness": { "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>", "value": null, "note": "<필수 provenance 필드 연결률>" }
+  },
+  "evl": {
+    "confidenceCalibration": {
+      "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>",
+      "population": "<presented|candidates|null>",
+      "ece": null,
+      "bins": [
+        {
+          "lowerBound": "<0.0>",
+          "upperBound": "<0.2>",
+          "claimed": "<주장한 평균 confidence>",
+          "observed": "<실제 적중률>",
+          "sampleCount": null
+        }
+      ],
+      "sampleCount": null,
+      "missingRawCount": null
+    },
+    "conflictDetection": {
+      "precision": { "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>", "value": null, "note": "<gold 충돌셋 대조 결과>" },
+      "recall": { "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>", "value": null, "note": "<gold 충돌셋 대조 결과>" },
+      "goldSetId": "<#99 gold 충돌셋 식별자 | null>"
+    },
+    "coverageClasses": [
+      { "class": "code", "state": "<present|absent|not_collected>", "deterministic": false, "warned": false },
+      { "class": "issue", "state": "<present|absent|not_collected>", "deterministic": false, "warned": false },
+      { "class": "adr", "state": "<present|absent|not_collected>", "deterministic": false, "warned": false },
+      { "class": "test", "state": "<present|absent|not_collected>", "deterministic": false, "warned": false },
+      { "class": "runtime", "state": "<present|absent|not_collected>", "deterministic": false, "warned": false }
+    ]
+  },
+  "gates": [
+    {
+      "id": "<gate-...>",
+      "name": "<I1 §4.1 무조건 게이트 이름>",
+      "required": "<기준값>",
+      "observed": "<실측값>",
+      "status": "<PASS|FAIL|NOT_MEASURED>"
+    }
+  ],
+  "baseline": {
+    "previousRunId": "<run-... | null>",
+    "comparable": false,
+    "reason": "<비교 가능/불가의 근거>",
+    "eligibleAsBaseline": false,
+    "deltas": [
+      {
+        "metric": "<metrics.precision 등>",
+        "previous": null,
+        "current": null,
+        "delta": null
+      }
+    ]
+  },
+  "verdict": {
+    "value": "<PASS|PASS_RESTRICTED|BLOCKED>",
+    "haltRules": [],
+    "restrictions": [
+      {
+        "rule": "<H4>",
+        "reason": "<제한 사유 — I1 §3.2>",
+        "closedPaths": ["<닫힌 경로>"]
+      }
+    ]
+  },
+  "featureJudgments": [
+    {
+      "featureId": "<기능 식별자>",
+      "judgment": "<Core|Lab|Parked|Retire>",
+      "measured": false,
+      "rationale": "<판정 근거>",
+      "evidenceRefs": ["<이 실행의 runId 또는 report:run-...>"]
+    }
+  ],
+  "warnings": [
+    {
+      "code": "<UNPINNED_FIXTURE|VERSION_UNPINNED|METRIC_UNMEASURED|CALIBRATION_RAW_MISSING|GATE_FAILED|BASELINE_NOT_COMPARABLE|PATH_RESTRICTED>",
+      "message": "<사람이 읽는 설명>",
+      "trigger": "<경고 대상 — 계약 §3.6 의 code별 형식>"
+    }
+  ],
+  "notes": "<선택. 위 필드로 표현되지 않는 맥락>"
+}

@@ -1,0 +1,188 @@
+{
+  "$comment": "Run Quality Report v0 검증 픽스처. 계약 §4(R1~R19)의 규칙 ID 로 연결한다. invalid 픽스처는 정상 픽스처에서 **단일 규칙만** 위반하도록 순수 파생했다 — 복수 위반이면 목표 규칙의 검사 누락을 다른 오류가 가린다. 생성·검사: python3 ../validate_rqr.py",
+  "cases": [
+    {
+      "file": "template.blank.json",
+      "expect": "template",
+      "note": "빈 템플릿. 스키마 필수 경로가 전부 있고 값은 placeholder 여야 한다(#100 산출물)."
+    },
+    {
+      "file": "valid.l1-db-example.json",
+      "expect": "valid",
+      "note": "작성 예시 1건 — L1 DB 트랙, fixture 미고정(UNPINNED) 상태의 PASS."
+    },
+    {
+      "file": "valid.l3-restricted-example.json",
+      "expect": "valid",
+      "note": "제한 판정 예시 — H4 RESTRICT, 닫힌 경로·미측정 지표·기준선 비교 포함."
+    },
+    {
+      "file": "invalid.additional-property.json",
+      "expect": "invalid",
+      "rule": "R1",
+      "enforcedBy": "schema",
+      "expectedError": "Additional properties are not allowed",
+      "note": "계약에 없는 필드를 추가하면 보고서마다 형식이 갈린다"
+    },
+    {
+      "file": "invalid.impossible-date.json",
+      "expect": "invalid",
+      "rule": "R1",
+      "enforcedBy": "validator",
+      "expectedError": "실재하지 않는 시각",
+      "note": "pattern 은 2026-02-30 을 통과시킨다 — 달력 유효성은 검증기가 본다"
+    },
+    {
+      "file": "invalid.completed-before-started.json",
+      "expect": "invalid",
+      "rule": "R1",
+      "enforcedBy": "validator",
+      "expectedError": "completedAt 이 startedAt 보다 이르다",
+      "note": "실행 시각이 거꾸로면 소요시간·동시성 해석이 전부 무너진다"
+    },
+    {
+      "file": "invalid.counts-mismatch.json",
+      "expect": "invalid",
+      "rule": "R2",
+      "enforcedBy": "validator",
+      "expectedError": "counts.input",
+      "note": "input != output+failed+excluded — 어딘가를 세지 않았다"
+    },
+    {
+      "file": "invalid.exclusion-sum-mismatch.json",
+      "expect": "invalid",
+      "rule": "R3",
+      "enforcedBy": "validator",
+      "expectedError": "exclusions 합",
+      "note": "제외 사유 집계가 총계와 다르면 '조용한 스킵' 이 숨는다"
+    },
+    {
+      "file": "invalid.failed-without-cases.json",
+      "expect": "invalid",
+      "rule": "R4",
+      "enforcedBy": "validator",
+      "expectedError": "failures 가 비어 있음",
+      "note": "실패 건수만 세고 사례를 남기지 않으면 재현·회귀가 불가능하다"
+    },
+    {
+      "file": "invalid.verdict-vocabulary.json",
+      "expect": "invalid",
+      "rule": "R5",
+      "enforcedBy": "schema",
+      "expectedError": "is not one of",
+      "note": "판정은 3값뿐이다 — 자유 문자열이면 게이트 집계가 무너진다"
+    },
+    {
+      "file": "invalid.blocked-without-halt.json",
+      "expect": "invalid",
+      "rule": "R6",
+      "enforcedBy": "validator",
+      "expectedError": "BLOCKED 인데 haltRules 가 비어 있음",
+      "note": "중단 근거 없는 BLOCKED 는 재실행 조건을 알 수 없다"
+    },
+    {
+      "file": "invalid.restricted-without-warning.json",
+      "expect": "invalid",
+      "rule": "R7",
+      "enforcedBy": "validator",
+      "expectedError": "PATH_RESTRICTED 경고가 없음",
+      "note": "제한 사실을 보고서에 명시하지 않으면 그 자체가 실패다(I1 §3.2)"
+    },
+    {
+      "file": "invalid.determinism-without-h1.json",
+      "expect": "invalid",
+      "rule": "R8",
+      "enforcedBy": "validator",
+      "expectedError": "haltRules 에 H1 이 없음",
+      "note": "결정성 실패는 협상 불가 게이트다(I1 H1)"
+    },
+    {
+      "file": "invalid.gate-failed-unwarned.json",
+      "expect": "invalid",
+      "rule": "R9",
+      "enforcedBy": "validator",
+      "expectedError": "GATE_FAILED 경고 없음",
+      "note": "게이트 실패가 경고 없이 지나가면 판정 근거가 사라진다"
+    },
+    {
+      "file": "invalid.unmeasured-metric-unwarned.json",
+      "expect": "invalid",
+      "rule": "R10",
+      "enforcedBy": "validator",
+      "expectedError": "METRIC_UNMEASURED 경고 없음",
+      "note": "미측정을 조용히 남기면 0과 구분되지 않는다"
+    },
+    {
+      "file": "invalid.version-warning-mismatch.json",
+      "expect": "invalid",
+      "rule": "R11",
+      "enforcedBy": "validator",
+      "expectedError": "VERSION_UNPINNED(versions.model) 인데 그 버전은 null 이 아님",
+      "note": "경고와 실제 상태가 어긋나면 버전 추적이 거짓이 된다"
+    },
+    {
+      "file": "invalid.unpinned-eligible-baseline.json",
+      "expect": "invalid",
+      "rule": "R12",
+      "enforcedBy": "validator",
+      "expectedError": "eligibleAsBaseline=True",
+      "note": "fixture 미고정 실행을 기준선으로 인정하면 I1 §1.3 이 무력화된다"
+    },
+    {
+      "file": "invalid.calibration-raw-missing-unwarned.json",
+      "expect": "invalid",
+      "rule": "R13",
+      "enforcedBy": "validator",
+      "expectedError": "CALIBRATION_RAW_MISSING 경고 없음",
+      "note": "원자료 누락을 알리지 않으면 인용 금지 규칙(EVL §3.3)이 작동하지 않는다"
+    },
+    {
+      "file": "invalid.conflict-measured-without-gold.json",
+      "expect": "invalid",
+      "rule": "R14",
+      "enforcedBy": "validator",
+      "expectedError": "goldSetId 가 없음",
+      "note": "gold 충돌셋 없이 나온 precision 은 대조 대상이 없다(EVL §8)"
+    },
+    {
+      "file": "invalid.coverage-class-missing.json",
+      "expect": "invalid",
+      "rule": "R15",
+      "enforcedBy": "validator",
+      "expectedError": "adr 항목이 0개",
+      "note": "클래스를 빼면 '안 본 클래스' 가 조용히 사라진다"
+    },
+    {
+      "file": "invalid.unmeasured-feature-core.json",
+      "expect": "invalid",
+      "rule": "R16",
+      "enforcedBy": "validator",
+      "expectedError": "measured=false 인데 Core 로 판정됨",
+      "note": "측정하지 않은 기능의 Core 판정 금지(I1 §5.3)"
+    },
+    {
+      "file": "invalid.comparable-without-deltas.json",
+      "expect": "invalid",
+      "rule": "R17",
+      "enforcedBy": "validator",
+      "expectedError": "comparable=true 인데 deltas 가 비어 있음",
+      "note": "비교 가능하다면서 변화량이 없으면 '변화 없음' 과 구분되지 않는다"
+    },
+    {
+      "file": "invalid.trigger-wrong-kind.json",
+      "expect": "invalid",
+      "rule": "R18",
+      "enforcedBy": "validator",
+      "expectedError": "trigger 'baseline' 가 실재 대상을 가리키지 않음",
+      "note": "code 와 대상 종류가 어긋나면 경고가 무엇을 가리키는지 잃는다"
+    },
+    {
+      "file": "invalid.duplicate-gate-id.json",
+      "expect": "invalid",
+      "rule": "R19",
+      "enforcedBy": "validator",
+      "expectedError": "gates[].id 가 보고서 안에서 중복됨",
+      "note": "id 중복이면 경고 하나가 여러 대상을 충족한 것처럼 보인다"
+    }
+  ]
+}
