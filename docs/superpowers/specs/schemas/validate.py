@@ -82,11 +82,16 @@ def cross_field_errors(d):
     #       어디서도 강제하지 않았다. 중복 id 는 경고 하나가 여러 대상을 충족시키는
     #       것처럼 보이게 만들어 A11·A16·A18 의 집계를 통째로 무너뜨린다.
     def _a19():
-        for label, ids in (("evidence", ev_ids),
-                           ("conflicts", [c["id"] for c in conflicts if "id" in c])):
+        cf_ids = [c["id"] for c in conflicts if "id" in c]
+        for label, ids in (("evidence", ev_ids), ("conflicts", cf_ids)):
             dup = sorted({i for i in ids if ids.count(i) > 1})
             if dup:
                 errs.append(f"A19: {label}[].id 가 응답 내에서 중복됨 {dup}")
+        # id 는 단일 네임스페이스다 — trigger 하나가 증거와 충돌 중 무엇을 가리키는지
+        # 모호해지면 A16·A18 의 참조 검사가 잘못 통과한다.
+        collision = sorted(set(ev_ids) & set(cf_ids))
+        if collision:
+            errs.append(f"A19: 같은 id 를 evidence 와 conflicts 가 함께 사용함 {collision}")
     rule(_a19)
 
     # A6 — conflicts[].between ⊆ evidence[].id

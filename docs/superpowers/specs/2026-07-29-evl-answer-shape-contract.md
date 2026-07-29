@@ -208,7 +208,7 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 | **A16** | §6.2의 abstention 조건 1~3(근거 0건 · 핵심 클래스 부재 · 미해결 충돌 존재) 중 하나라도 성립하면 `ABSTAIN` 경고가 존재하고, 그 **`trigger`가 성립한 조건을 실제로 가리킨다**(§2.6) | validator | 근거 없이 단정 · 보류 사유를 기계적으로 집계할 수 없음 |
 | **A17** | `signals`의 값이 `null`(미측정)이면 `SIGNAL_UNMEASURED` 경고가 `trigger="<evidenceId>.signals.<name>"` 로 존재하고, 그 역도 성립한다 | validator | 미측정을 조용히 숨김 |
 | **A18** | 모든 `warnings[].trigger`가 실재 대상을 가리킨다 — `coverage.<key>`는 해당 키, 그 외는 실재하는 `evidence[].id`·`conflicts[].id`·`<evidenceId>.signals.<name>`. **예약 리터럴 `evidence`는 항상 유효**하다(근거 0건 abstention은 가리킬 개별 증거가 없으므로 배열 자체를 가리킨다) | validator | 경고가 아무것도 가리키지 않음 |
-| **A19** | `evidence[].id`와 `conflicts[].id`가 각각 **응답 내에서 유일**하다 | validator | 중복 id 로 경고 하나가 여러 대상을 충족한 것처럼 보임 — A11·A16·A18 집계가 무너짐 |
+| **A19** | `id`는 **응답 전체에서 단일 네임스페이스**다 — `evidence[].id`·`conflicts[].id`가 각각 유일하고, 두 집합이 **서로 겹치지도 않는다** | validator | 중복·충돌 id 로 `trigger` 하나가 무엇을 가리키는지 모호해짐 — A11·A16·A18 집계가 무너짐 |
 
 > **A14는 gold 대조 없이도 검사 가능한 하한선**이다. 실제 충돌 탐지 성능은 §5의 precision/recall로 별도 측정한다.
 
@@ -359,6 +359,7 @@ I1 §7과 동일하며, 추가로:
 | `trigger` 형식 | 느슨한 정규식(`foo` 허용) | code별 형식 고정 | 임의 문자열을 허용하면 `trigger` 필수화의 의미가 사라진다 |
 | A16 표 렌더링 | 빈 줄로 표 밖에 표시 | 표 내부 행 | 서식 오류 |
 | abstention 조건 3 | "충돌이 `evidence[0]`을 포함" | **"`NEEDS_CHECK` 충돌 존재"** | 랭킹이 중요도의 대리값이 되지 못했다 — 자체 정상 픽스처에서 질문 자체를 다투는 충돌이 하위 순위라는 이유로 비보류 판정됐다. 비보류 경로는 `RESOLVED`/`COEXIST`로 이미 존재한다 |
+| id 네임스페이스 | 배열별 검사만 | **evidence·conflicts 교집합도 금지** | 두 컬렉션이 같은 id 를 써도 통과해 trigger 참조가 모호해졌다 |
 | id 유일성 | §2.3 문장만 존재 | **A19 로 강제** | "응답 내 유일"이라 적어두고 어디서도 검사하지 않아 중복 id 가 통과했다 |
 | abstention 조건 2 문언 | "핵심 클래스가 전부 부재" | "후보군에 present 가 하나도 없음"(+OR 관계 명시) | 필수 목록(AND)으로 오독될 수 있었다 |
 | `ABSTAIN` trigger | `evidence` 또는 `<conflictId>` | **성립한 조건을 가리킬 것**(+`coverage.<key>`) | 핵심 클래스 부재로 보류할 때 원인을 가리킬 어휘가 없었고, 무관한 증거 id 로도 통과했다 |
@@ -384,7 +385,7 @@ I1 §7과 동일하며, 추가로:
 | A11 `CONFLICT_UNRESOLVED` | 단방향(미해결 → 경고) | **양방향** | 해결된 충돌에 경고가 남아 있어도 통과했다 |
 | A5·A11 음성 픽스처 | 한 방향만 | 양방향 모두 | evidence 를 숨기는 coverage, `not_collected` 경고 누락을 검사하지 않았다 |
 | `validate.py` 스키마 케이스 | 첫 오류만 대조 | **오류 1건** + 메시지 대조 | 복수 스키마 위반 픽스처가 단일 위반으로 승인될 수 있었다 |
-| C0 이식 목록 | A5~A16 | A5~A18 | A17·A18 이 빠져 참조 검증기와 제품 검증기가 분화될 수 있었다 |
+| C0 이식 목록 | A5~A16 | A5~A18 → (A19 신설 후) **A5~A19** | A17·A18 이 빠져 참조 검증기와 제품 검증기가 분화될 수 있었다 |
 | 정상 픽스처 reason 좌표 | `ev-1`의 reason 이 다른 행(L80-L87)을 인용 | 별도 evidence 로 분리 | 그 증거의 `locator` 로 재확인할 수 없는 문장이었다 |
 | 정상 픽스처 좌표 | 가공 예시(`payment_tx`·존재하지 않는 코드 행) | 리포 실좌표(`legacy-sample.sql`·`RelationService.kt`·`RelationJudgeTest.kt` @`3c27259`) | 계약이 "재확인 가능한 좌표"를 요구하는데 예제가 그것을 어겼다 — P1 자기적용 |
 
@@ -400,8 +401,8 @@ I1 §7과 동일하며, 추가로:
 - [x] abstention 형식·발동 조건 확정, 임계값은 비준으로 위임 → §6
 - [x] 게이트 / 잠정 지표 분리 → §7
 - [x] #99(I2)에 추가 요구되는 gold 케이스 명시 → §8
-- [x] 검증 픽스처(정상 3 + 위반 30) 커밋 + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
-- [x] 픽스처 적합성 확인기 커밋(33/33 재현 가능, 규칙 동일성·검출 계층·기대 메시지까지 대조) → `schemas/validate.py`
+- [x] 검증 픽스처(정상 3 + 위반 31) 커밋 + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
+- [x] 픽스처 적합성 확인기 커밋(34/34 재현 가능, 규칙 동일성·검출 계층·기대 메시지까지 대조) → `schemas/validate.py`
 - [x] 하위 이슈 분할안 → §9
 
 **다음 착수: C0 검증기 (§9)** — 픽스처 스위트와 참조 규칙 구현이 이미 있으므로 실패 테스트부터 시작할 수 있다.
