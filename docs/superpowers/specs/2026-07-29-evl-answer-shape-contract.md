@@ -136,6 +136,7 @@ L0 수집(#88) → L1 사실(#89) → L2 관계(#90) → L3 지식·이력(#91) 
 `{bundleId, promptHash, evidenceIds[], revision, createdAt, ceilingApplied}` **전부 필수** + `ceilingReasons`(`ceilingApplied=true`일 때 필수).
 
 - **재현의 정의:** `audit`만으로 응답 본문을 복원한다는 뜻이 아니다. `bundleId`로 저장된 번들을 조회하고 `revision`·`promptHash`로 **같은 입력이었음을 확인한 뒤 재실행해 같은 결과가 나오는지** 보는 것이다(결정성 — I1 H1). 복원에 필요한 것은 좌표이지 본문 사본이 아니다.
+- **시각 필드(`createdAt`·`observedAt`)**: `format: date-time` 과 함께 RFC 3339 `pattern` 을 병기한다. draft 2020-12 의 `format` 은 기본이 annotation 이라 검증기 설정에 따라 통과가 갈리기 때문이다. 다만 정규식은 **자릿수와 범위까지만** 막는다(`2026-13-01` 거부, `2026-02-30` 통과) — 달력 유효성까지 요구하므로 **계약 검증기는 `format` assertion 을 반드시 켠다**(C0 요구사항).
 - `promptHash` — 프롬프트 **원문 대신 해시**. 원문 저장은 PII·시크릿 유출 경로다(I1 §4.1 보안 게이트). 형식을 `sha256:` + hex 64자로 **고정**한다 — 임의 문자열을 허용하면 원문을 그대로 넣어도 통과해 이 계약이 무너진다.
 - `evidenceIds` — 번들에 포함된 **전체 후보**. 응답에 실린 `evidence[].id`의 **상위집합**이며(A13은 `⊆`이지 `=`가 아니다), **탈락한 후보를 일부러 남긴다** — 왜 그것이 안 쓰였는지 역추적하기 위해서다. 따라서 `evidence[]`에 없는 id가 여기 있는 것은 **정상이며 위반이 아니다**.
 - `ceilingReasons` — 상한 사유를 **코드로 명시**하고 실제 `warnings`와 대조한다(A15). `ceilingApplied=false`면 이 필드를 두지 않는다 — 적용하지 않은 상한의 사유는 사유가 아니다.
@@ -186,7 +187,7 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 | **A6** | `conflicts[].between` ⊆ `evidence[].id` | validator | 유령 충돌 |
 | **A7** | `status=RESOLVED` **⟺** `resolvedBy` 존재 (비-RESOLVED에 붙는 것도 위반) | schema | 근거 없는 해소 = 덮어쓰기(I1 P4) · 상태와 근거의 모순 |
 | **A8** | `signals` 5개 전부 존재 | schema | 근거 없는 스칼라 |
-| **A9** | 모든 `confidence`·신호값이 0.0~1.0 | schema | 범위 이탈 |
+| **A9** | 모든 `confidence` 값과 **`null`이 아닌** 신호값이 0.0~1.0 (`null`은 미측정을 뜻하는 합법 값 — A17) | schema | 범위 이탈 |
 | **A10** | 모든 증거가 `stance`를 명시 | schema | 반대 증거 은폐 |
 | **A11** | `absent`/`not_collected` 클래스마다 `trigger="coverage.<key>"` 인 대응 경고가 존재하고, `CONFLICT_UNRESOLVED` 경고와 `NEEDS_CHECK` 충돌이 **양방향으로 일치**한다(미해결인데 경고 없음도, 해결됐는데 경고가 남은 것도 위반). `trigger`가 필수(A12)이므로 **클래스별 대응이 결정론적으로 판정된다** | validator | **경고 안 함** · 상태와 경고의 불일치 |
 | **A12** | `audit` 6개 필드(`ceilingApplied` 포함) 전부 존재 + 모든 `warnings` 항목이 `code`·`message`·`trigger`를 갖는다 | schema | 역추적 불가 · 경고 대상 불명 |
@@ -195,7 +196,7 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 | **A15** | `ceilingApplied=true` ⟺ `ceilingReasons`가 비어있지 않고, 그 모든 코드가 **상한 사유 통제어휘**(`DEGRADED_SOURCE`·`CONFLICT_UNRESOLVED`·`NOT_COLLECTED`·`NO_*`)에 속하며 **실제 `warnings`에 존재**한다. `false`면 필드를 두지 않는다 | schema + validator | 상한 은폐 · 사유를 사후에 지어냄 (I1 §3.3) |
 | **A16** | §6.2의 abstention 조건 1~3(근거 0건 · 핵심 클래스 부재 · **미해결 충돌 존재**) 중 하나라도 성립하면 `ABSTAIN` 경고가 존재한다 | validator | 근거 없이 단정 |
 | **A17** | `signals`의 값이 `null`(미측정)이면 `SIGNAL_UNMEASURED` 경고가 `trigger="<evidenceId>.signals.<name>"` 로 존재하고, 그 역도 성립한다 | validator | 미측정을 조용히 숨김 |
-| **A18** | 모든 `warnings[].trigger`가 실재 대상을 가리킨다 — `coverage.<key>`는 해당 키, 그 외는 실재하는 `evidence[].id`·`conflicts[].id`·`<evidenceId>.signals.<name>` | validator | 경고가 아무것도 가리키지 않음 |
+| **A18** | 모든 `warnings[].trigger`가 실재 대상을 가리킨다 — `coverage.<key>`는 해당 키, 그 외는 실재하는 `evidence[].id`·`conflicts[].id`·`<evidenceId>.signals.<name>`. **예약 리터럴 `evidence`는 항상 유효**하다(근거 0건 abstention은 가리킬 개별 증거가 없으므로 배열 자체를 가리킨다) | validator | 경고가 아무것도 가리키지 않음 |
 
 > **A14는 gold 대조 없이도 검사 가능한 하한선**이다. 실제 충돌 탐지 성능은 §5의 precision/recall로 별도 측정한다.
 
@@ -343,6 +344,10 @@ I1 §7과 동일하며, 추가로:
 | `trigger` 형식 | 느슨한 정규식(`foo` 허용) | code별 형식 고정 | 임의 문자열을 허용하면 `trigger` 필수화의 의미가 사라진다 |
 | A16 표 렌더링 | 빈 줄로 표 밖에 표시 | 표 내부 행 | 서식 오류 |
 | abstention 조건 3 | "충돌이 `evidence[0]`을 포함" | **"`NEEDS_CHECK` 충돌 존재"** | 랭킹이 중요도의 대리값이 되지 못했다 — 자체 정상 픽스처에서 질문 자체를 다투는 충돌이 하위 순위라는 이유로 비보류 판정됐다. 비보류 경로는 `RESOLVED`/`COEXIST`로 이미 존재한다 |
+| A9 문언 | 모든 신호값 0.0~1.0 | `null` 제외 | A17·스키마가 허용하는 미측정 응답을 A9 가 거부하는 모순이었다 |
+| A18 유효 대상 | id·coverage 키만 | + 예약 리터럴 `evidence` | 근거 0건 abstention 을 표현할 방법이 문언상 없었다 |
+| 시각 `pattern` | 자릿수만 | 범위까지 + `format` assertion 의무화 | `2026-99-99T99:99:99Z` 가 통과했다 |
+| `validate.py` 계층 대조 | 없음 | `enforcedBy` 와 실제 검출 계층 일치 요구 | 선언과 다른 계층에서 걸려도 통과했다 |
 | `promptHash` | 임의 문자열 | `sha256:` + hex 64자 | 원문을 그대로 넣어도 통과해 '원문을 남기지 않는다'는 계약을 스키마가 보장하지 못했다 |
 | `ceilingReasons` 어휘 | 모든 warning code | **상한 사유 8종** | 아무 경고나 사유로 끌어다 쓸 수 있었다 |
 | `ceilingApplied=false` + 사유 | 스키마 허용 / 검증기 거부 | **양쪽 금지** | 스키마와 검증기가 상반된 판정을 했다 |

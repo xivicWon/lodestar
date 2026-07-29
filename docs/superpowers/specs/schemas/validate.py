@@ -170,7 +170,14 @@ def main():
             # 같은 규칙이 스키마·교차 두 계층에서 함께 잡히는 것은 정상(의도된 이중 방어)이다.
             # 막아야 하는 것은 '다른 규칙'이 섞여 목표 검사의 누락을 가리는 경우다.
             cross_rules = {e.split(":", 1)[0] for e in cross_errs}
-            if cross_rules - {case["rule"]}:
+            layer = case["enforcedBy"]
+            if layer == "schema" and not schema_errs:
+                ok, detail = False, "enforcedBy=schema 인데 스키마가 잡지 못함 (교차 검사에만 걸림)"
+            elif layer == "validator" and schema_errs:
+                ok, detail = False, f"enforcedBy=validator 인데 스키마가 먼저 잡음: {schema_errs[0].message}"
+            elif layer == "validator" and not cross_errs:
+                ok, detail = False, "enforcedBy=validator 인데 교차 검사가 잡지 못함"
+            elif cross_rules - {case["rule"]}:
                 ok, detail = False, (f"다른 규칙 위반이 섞임 — 기대 {case['rule']}, "
                                      f"실제 {sorted(cross_rules)}: {cross_errs}")
             elif len(schema_errs) > 1:
