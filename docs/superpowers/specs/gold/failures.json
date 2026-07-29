@@ -1,0 +1,103 @@
+{
+  "goldSetVersion": "gold-set/v0",
+  "scope": {
+    "track": "mixed",
+    "closed": true,
+    "note": "실패 재현 fixture 의 기대 결과다. 여기서 재는 것은 정확도가 아니라 **정직성**이다 — I1 §4.1 의 'L0 오류 가시성(실패·제외 보고율) 100%' 와 'L1 무보고 파싱 실패 0건' 이 무조건 게이트이기 때문이다. 파싱을 못 하는 것은 baseline 이고, 못 했다는 사실을 말하지 않는 것이 실격이다."
+  },
+  "rules": {
+    "R-F-1": "`extracted` 는 그 입력에서 산출되어야 하는 사실의 전부다. 더 나오면 오탐, 덜 나오면 누락이다.",
+    "R-F-2": "`reported` 는 실행 결과에 **사유와 함께** 나타나야 하는 실패·제외 항목이다. 사유 없이 건수만 세거나, 로그에만 남기고 결과 산출물에 싣지 않으면 미보고로 집계한다.",
+    "R-F-3": "`silentSkipIsFailure` 가 true 인 항목을 조용히 건너뛰면 그 실행은 정확도와 무관하게 실패다.",
+    "R-F-4": "실패 건수의 **세는 단위**는 입력 문장(statement) 또는 파일이다. 전처리 분할로 한 문장이 여러 조각이 되어도 실패 1건으로 센다 — 분할 방식에 따라 실패율이 달라지면 실행 간 비교가 불가능해진다."
+  },
+  "counts": { "FIXTURE": 6 },
+  "fixtures": [
+    {
+      "id": "F.DB.BROKEN_SYNTAX",
+      "kind": "파싱 실패",
+      "layer": ["L0", "L1"],
+      "path": "docs/superpowers/specs/gold/fixtures/failure/db-broken-syntax.sql",
+      "contentHash": "sha256:02d70b3b484efa646d87ee5d21241d65c04710ad4ad60e012bdb83e5cd3c6141",
+      "extracted": [],
+      "reported": [
+        { "kind": "PARSE_ERROR", "target": "CREATE TABLE TB_BROKEN", "locator": "#L3-L8", "reasonRequired": true }
+      ],
+      "silentSkipIsFailure": true,
+      "notes": "현 DdlParser.parse 는 파싱 실패를 `catch (e: Exception) { null } ?: continue` 로 삼킨다(DdlParser.kt#L18). 이 픽스처는 그 경로를 정면으로 친다 — 결과는 '테이블 0건'이고 실패 보고가 없다. 그것이 곧 이 픽스처가 존재하는 이유이며, L0/L1 벤치에서 여기가 붉게 나오는 것은 예상된 결과지 픽스처의 오류가 아니다."
+    },
+    {
+      "id": "F.DB.UNSUPPORTED_TRIGGER",
+      "kind": "미지원 문법",
+      "layer": ["L0", "L1"],
+      "path": "docs/superpowers/specs/gold/fixtures/failure/db-unsupported-trigger.sql",
+      "contentHash": "sha256:3af6b2868f273f88ecc024aacd58fc3b653c9f133e11aee8b60e5846317e9b38",
+      "extracted": [],
+      "reported": [
+        { "kind": "UNSUPPORTED_STATEMENT", "target": "CREATE TRIGGER TRG_ORD_AUDIT", "locator": "#L6-L9", "reasonRequired": true },
+        { "kind": "UNSUPPORTED_STATEMENT", "target": "CREATE OR REPLACE FUNCTION FN_ORD_AUDIT", "locator": "#L11-L18", "reasonRequired": true }
+      ],
+      "silentSkipIsFailure": true,
+      "notes": "PL/pgSQL 본문 안의 ';' 때문에 ';' 단순 분할은 두 번째 문장을 여러 조각으로 쪼갠다. R-F-4 에 따라 정답은 2건이며, 조각 수만큼(5~6건) 보고하면 과대 집계로 별도 표기한다. 문장 경계를 세는 방식이 실행마다 다르면 그 자체로 결정성(H1) 위험 신호다."
+    },
+    {
+      "id": "F.DB.PARTIAL_EXTRACT",
+      "kind": "부분 추출",
+      "layer": ["L0", "L1"],
+      "path": "docs/superpowers/specs/gold/fixtures/failure/db-partial-extract.sql",
+      "contentHash": "sha256:e5847ac537d55cd16e1dacce8503f31f1ade7a505fea26cad243d3926a229d80",
+      "extracted": [
+        { "type": "TABLE", "name": "TB_OK_ONE", "columns": ["ONE_ID", "ONE_NM"], "primaryKey": ["ONE_ID"] },
+        { "type": "TABLE", "name": "TB_OK_TWO", "columns": ["TWO_ID", "TWO_SEQ", "TWO_AMT"], "primaryKey": ["TWO_ID", "TWO_SEQ"] }
+      ],
+      "reported": [
+        { "kind": "PARSE_ERROR", "target": "CREATE TABLE TB_BAD_MIDDLE", "locator": "#L11-L14", "reasonRequired": true },
+        { "kind": "UNSUPPORTED_STATEMENT", "target": "CREATE INDEX IX_OK_ONE_NM", "locator": "#L16", "reasonRequired": true }
+      ],
+      "silentSkipIsFailure": true,
+      "notes": "가장 중요한 픽스처다. 성공 2건이 실제로 나오기 때문에 결과가 '정상'처럼 보이고, 나머지 2건을 말하지 않으면 부분 성공이 완전 성공으로 위장된다. 실패한 TB_BAD_MIDDLE 을 부분 복구해 컬럼 하나짜리 테이블로 추출하는 것도 오답이다 — 조용한 부분 복구는 조용한 스킵과 같은 종류의 거짓말이다."
+    },
+    {
+      "id": "F.CODE.BROKEN_SYNTAX",
+      "kind": "파싱 실패",
+      "layer": ["L0", "L1"],
+      "path": "docs/superpowers/specs/gold/fixtures/failure/code-broken-syntax.kt",
+      "contentHash": "sha256:ae95bcf8a7c71837c9c99d95a683ce753ca2fc7c65b0a6975f1ff775753a9ae9",
+      "extracted": [],
+      "reported": [
+        { "kind": "PARSE_ERROR", "target": "fixtures/failure/code-broken-syntax.kt", "locator": "#L6-L12", "reasonRequired": true }
+      ],
+      "silentSkipIsFailure": true,
+      "notes": "tree-sitter 는 오류 복구 파서라 깨진 입력에서도 부분 트리를 만든다. 그 부분 트리에서 심볼을 건져 성공으로 표시하면 이 픽스처는 실패다 — ERROR 노드의 존재를 결과에 실어야 한다."
+    },
+    {
+      "id": "F.CODE.PARTIAL_EXTRACT",
+      "kind": "부분 추출",
+      "layer": ["L0", "L1"],
+      "path": "docs/superpowers/specs/gold/fixtures/failure/code-partial-extract.kt",
+      "contentHash": "sha256:54c8e89ffcdf010212309c552eb6e9b96643163d4a266435ff4403f1025c9290",
+      "extracted": [
+        { "type": "TYPE", "fqn": "fixture.failure.GoodOne", "kind": "CLASS" },
+        { "type": "METHOD", "owner": "fixture.failure.GoodOne", "name": "ok" }
+      ],
+      "reported": [
+        { "kind": "PARSE_ERROR", "target": "fixture.failure.TailBroken", "locator": "#L12-L14", "reasonRequired": true }
+      ],
+      "silentSkipIsFailure": true,
+      "notes": "앞부분이 온전하므로 GoodOne 은 추출해도 된다. 판정 지점은 '파일 파싱 성공' 으로 표시하느냐다 — 부분 성공은 부분 성공으로 표시해야 하고, 이 파일에서 나온 사실의 confidence 에는 상한이 걸려야 한다(I1 §3.3)."
+    },
+    {
+      "id": "F.CODE.UNSUPPORTED_LANG",
+      "kind": "미지원 문법",
+      "layer": ["L0"],
+      "path": "docs/superpowers/specs/gold/fixtures/failure/code-unsupported-lang.scala",
+      "contentHash": "sha256:faed82281908dc3626f00f2350f098bef6d62c13d2109991c888966b8e8fbaa8",
+      "extracted": [],
+      "reported": [
+        { "kind": "UNSUPPORTED_LANGUAGE", "target": "fixtures/failure/code-unsupported-lang.scala", "locator": "#L1", "reasonRequired": true }
+      ],
+      "silentSkipIsFailure": true,
+      "notes": "확장자 필터로 조용히 거르는 것이 가장 흔한 구현이다. 그러면 '수집 범위 밖'과 '수집했는데 없음'이 구분되지 않는다 — answer-shape 의 `not_collected` 대 `absent` 구분(EVL 계약 §2.5)이 L0 에서부터 무너지는 지점이다."
+    }
+  ]
+}

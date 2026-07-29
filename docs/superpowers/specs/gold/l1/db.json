@@ -1,0 +1,3548 @@
+{
+  "goldSetVersion": "gold-set/v0",
+  "scope": {
+    "track": "db",
+    "closed": true,
+    "sourceId": "db:legacy-sample",
+    "path": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql",
+    "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+    "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+    "note": "이 파일 전체가 닫힌 범위다 — 여기 없는 L1 DB 사실은 오탐(false positive)으로 집계한다."
+  },
+  "counts": {
+    "TABLE": 27,
+    "COLUMN": 119,
+    "PRIMARY_KEY": 27,
+    "FOREIGN_KEY": 1,
+    "VIEW": 1,
+    "negatives": 3
+  },
+  "items": [
+    {
+      "id": "L1.DB.TABLE.TB_CUST_MST",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_CUST_MST"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L7-L15",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_CUST_MST.CUST_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_CUST_MST",
+        "name": "CUST_NO",
+        "sqlType": "CHAR(10)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L8",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_CUST_MST.CUST_NM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_CUST_MST",
+        "name": "CUST_NM",
+        "sqlType": "VARCHAR(100)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L9",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_CUST_MST.BIZ_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_CUST_MST",
+        "name": "BIZ_NO",
+        "sqlType": "VARCHAR(20)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L10",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_CUST_MST.RPRS_NM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_CUST_MST",
+        "name": "RPRS_NM",
+        "sqlType": "VARCHAR(50)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L11",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_CUST_MST.TEL_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_CUST_MST",
+        "name": "TEL_NO",
+        "sqlType": "VARCHAR(20)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L12",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_CUST_MST.REG_DT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_CUST_MST",
+        "name": "REG_DT",
+        "sqlType": "TIMESTAMP",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L13",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_CUST_MST.USE_YN",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_CUST_MST",
+        "name": "USE_YN",
+        "sqlType": "CHAR(1)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L14",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_CUST_MST",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_CUST_MST",
+        "columns": [
+          "CUST_NO"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L8",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_CUST_ADDR",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_CUST_ADDR"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L17-L24",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_CUST_ADDR.CUST_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_CUST_ADDR",
+        "name": "CUST_NO",
+        "sqlType": "CHAR(10)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L18",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_CUST_ADDR.ADDR_SEQ",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_CUST_ADDR",
+        "name": "ADDR_SEQ",
+        "sqlType": "INTEGER",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L19",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_CUST_ADDR.ZIP_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_CUST_ADDR",
+        "name": "ZIP_CD",
+        "sqlType": "VARCHAR(10)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L20",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_CUST_ADDR.ADDR1",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_CUST_ADDR",
+        "name": "ADDR1",
+        "sqlType": "VARCHAR(200)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L21",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_CUST_ADDR.ADDR2",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_CUST_ADDR",
+        "name": "ADDR2",
+        "sqlType": "VARCHAR(200)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L22",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_CUST_ADDR",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_CUST_ADDR",
+        "columns": [
+          "CUST_NO",
+          "ADDR_SEQ"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L23",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_VNDR_MST",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_VNDR_MST"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L26-L31",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_VNDR_MST.VNDR_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_VNDR_MST",
+        "name": "VNDR_CD",
+        "sqlType": "CHAR(8)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L27",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_VNDR_MST.VNDR_NM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_VNDR_MST",
+        "name": "VNDR_NM",
+        "sqlType": "VARCHAR(100)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L28",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_VNDR_MST.PAY_TERM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_VNDR_MST",
+        "name": "PAY_TERM",
+        "sqlType": "VARCHAR(20)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L29",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_VNDR_MST.USE_YN",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_VNDR_MST",
+        "name": "USE_YN",
+        "sqlType": "CHAR(1)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L30",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_VNDR_MST",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_VNDR_MST",
+        "columns": [
+          "VNDR_CD"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L27",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_ITEM_MST",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_ITEM_MST"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L34-L42",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ITEM_MST.ITEM_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ITEM_MST",
+        "name": "ITEM_CD",
+        "sqlType": "CHAR(12)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L35",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ITEM_MST.ITEM_NM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ITEM_MST",
+        "name": "ITEM_NM",
+        "sqlType": "VARCHAR(150)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L36",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ITEM_MST.ITEM_GBN",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ITEM_MST",
+        "name": "ITEM_GBN",
+        "sqlType": "CHAR(2)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L37",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ITEM_MST.UNIT_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ITEM_MST",
+        "name": "UNIT_CD",
+        "sqlType": "CHAR(3)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L38",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ITEM_MST.STD_PRC",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ITEM_MST",
+        "name": "STD_PRC",
+        "sqlType": "NUMERIC(15,2)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L39",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ITEM_MST.VNDR_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ITEM_MST",
+        "name": "VNDR_CD",
+        "sqlType": "CHAR(8)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L40",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ITEM_MST.USE_YN",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ITEM_MST",
+        "name": "USE_YN",
+        "sqlType": "CHAR(1)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L41",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_ITEM_MST",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ITEM_MST",
+        "columns": [
+          "ITEM_CD"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L35",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_ITEM_GRP",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_ITEM_GRP"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L44-L48",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ITEM_GRP.GRP_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ITEM_GRP",
+        "name": "GRP_CD",
+        "sqlType": "CHAR(4)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L45",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ITEM_GRP.GRP_NM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ITEM_GRP",
+        "name": "GRP_NM",
+        "sqlType": "VARCHAR(80)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L46",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ITEM_GRP.UP_GRP_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ITEM_GRP",
+        "name": "UP_GRP_CD",
+        "sqlType": "CHAR(4)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L47",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_ITEM_GRP",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ITEM_GRP",
+        "columns": [
+          "GRP_CD"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L45",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_ITEM_GRP_MAP",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_ITEM_GRP_MAP"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L50-L54",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ITEM_GRP_MAP.ITEM_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ITEM_GRP_MAP",
+        "name": "ITEM_CD",
+        "sqlType": "CHAR(12)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L51",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ITEM_GRP_MAP.GRP_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ITEM_GRP_MAP",
+        "name": "GRP_CD",
+        "sqlType": "CHAR(4)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L52",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.PK.TB_ITEM_GRP_MAP",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ITEM_GRP_MAP",
+        "columns": [
+          "ITEM_CD",
+          "GRP_CD"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L53",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_STOK_QTY",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_STOK_QTY"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L56-L62",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_STOK_QTY.WH_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_STOK_QTY",
+        "name": "WH_CD",
+        "sqlType": "CHAR(4)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L57",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_STOK_QTY.ITEM_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_STOK_QTY",
+        "name": "ITEM_CD",
+        "sqlType": "CHAR(12)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L58",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_STOK_QTY.STOK_QTY",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_STOK_QTY",
+        "name": "STOK_QTY",
+        "sqlType": "NUMERIC(15,3)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L59",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_STOK_QTY.UPD_DT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_STOK_QTY",
+        "name": "UPD_DT",
+        "sqlType": "TIMESTAMP",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L60",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_STOK_QTY",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_STOK_QTY",
+        "columns": [
+          "WH_CD",
+          "ITEM_CD"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L61",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_WH_MST",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_WH_MST"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L64-L68",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_WH_MST.WH_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_WH_MST",
+        "name": "WH_CD",
+        "sqlType": "CHAR(4)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L65",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_WH_MST.WH_NM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_WH_MST",
+        "name": "WH_NM",
+        "sqlType": "VARCHAR(80)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L66",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_WH_MST.LOC_NM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_WH_MST",
+        "name": "LOC_NM",
+        "sqlType": "VARCHAR(100)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L67",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_WH_MST",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_WH_MST",
+        "columns": [
+          "WH_CD"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L65",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_STOK_MOV",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_STOK_MOV"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L70-L77",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_STOK_MOV.MOV_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_STOK_MOV",
+        "name": "MOV_NO",
+        "sqlType": "CHAR(15)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L71",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_STOK_MOV.MOV_GBN",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_STOK_MOV",
+        "name": "MOV_GBN",
+        "sqlType": "CHAR(2)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L72",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_STOK_MOV.WH_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_STOK_MOV",
+        "name": "WH_CD",
+        "sqlType": "CHAR(4)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L73",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_STOK_MOV.ITEM_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_STOK_MOV",
+        "name": "ITEM_CD",
+        "sqlType": "CHAR(12)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L74",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_STOK_MOV.MOV_QTY",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_STOK_MOV",
+        "name": "MOV_QTY",
+        "sqlType": "NUMERIC(15,3)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L75",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_STOK_MOV.MOV_DT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_STOK_MOV",
+        "name": "MOV_DT",
+        "sqlType": "TIMESTAMP",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L76",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_STOK_MOV",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_STOK_MOV",
+        "columns": [
+          "MOV_NO"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L71",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_ORD_HD",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_ORD_HD"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L80-L87",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ORD_HD.ORD_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_HD",
+        "name": "ORD_NO",
+        "sqlType": "CHAR(15)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L81",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ORD_HD.CUST_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_HD",
+        "name": "CUST_NO",
+        "sqlType": "CHAR(10)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L82",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ORD_HD.ORD_DT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_HD",
+        "name": "ORD_DT",
+        "sqlType": "TIMESTAMP",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L83",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ORD_HD.ORD_STAT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_HD",
+        "name": "ORD_STAT",
+        "sqlType": "CHAR(2)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L84",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ORD_HD.TOT_AMT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_HD",
+        "name": "TOT_AMT",
+        "sqlType": "NUMERIC(18,2)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L85",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ORD_HD.EMP_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_HD",
+        "name": "EMP_NO",
+        "sqlType": "CHAR(8)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L86",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_ORD_HD",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_HD",
+        "columns": [
+          "ORD_NO"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L81",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_ORD_DTL",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_ORD_DTL"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L89-L97",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ORD_DTL.ORD_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_DTL",
+        "name": "ORD_NO",
+        "sqlType": "CHAR(15)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L90",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ORD_DTL.ORD_SEQ",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_DTL",
+        "name": "ORD_SEQ",
+        "sqlType": "INTEGER",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L91",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ORD_DTL.ITEM_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_DTL",
+        "name": "ITEM_CD",
+        "sqlType": "CHAR(12)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L92",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ORD_DTL.ORD_QTY",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_DTL",
+        "name": "ORD_QTY",
+        "sqlType": "NUMERIC(15,3)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L93",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ORD_DTL.UNIT_PRC",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_DTL",
+        "name": "UNIT_PRC",
+        "sqlType": "NUMERIC(15,2)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L94",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ORD_DTL.AMT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_DTL",
+        "name": "AMT",
+        "sqlType": "NUMERIC(18,2)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L95",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_ORD_DTL",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_DTL",
+        "columns": [
+          "ORD_NO",
+          "ORD_SEQ"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L96",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_DLVR_HD",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_DLVR_HD"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L99-L104",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_DLVR_HD.DLVR_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_DLVR_HD",
+        "name": "DLVR_NO",
+        "sqlType": "CHAR(15)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L100",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_DLVR_HD.ORD_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_DLVR_HD",
+        "name": "ORD_NO",
+        "sqlType": "CHAR(15)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L101",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_DLVR_HD.DLVR_DT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_DLVR_HD",
+        "name": "DLVR_DT",
+        "sqlType": "TIMESTAMP",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L102",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_DLVR_HD.DLVR_STAT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_DLVR_HD",
+        "name": "DLVR_STAT",
+        "sqlType": "CHAR(2)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L103",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_DLVR_HD",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_DLVR_HD",
+        "columns": [
+          "DLVR_NO"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L100",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_DLVR_DTL",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_DLVR_DTL"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L106-L112",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_DLVR_DTL.DLVR_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_DLVR_DTL",
+        "name": "DLVR_NO",
+        "sqlType": "CHAR(15)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L107",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_DLVR_DTL.DLVR_SEQ",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_DLVR_DTL",
+        "name": "DLVR_SEQ",
+        "sqlType": "INTEGER",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L108",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_DLVR_DTL.ITEM_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_DLVR_DTL",
+        "name": "ITEM_CD",
+        "sqlType": "CHAR(12)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L109",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_DLVR_DTL.DLVR_QTY",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_DLVR_DTL",
+        "name": "DLVR_QTY",
+        "sqlType": "NUMERIC(15,3)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L110",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_DLVR_DTL",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_DLVR_DTL",
+        "columns": [
+          "DLVR_NO",
+          "DLVR_SEQ"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L111",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_RTN_HD",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_RTN_HD"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L114-L119",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_RTN_HD.RTN_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_RTN_HD",
+        "name": "RTN_NO",
+        "sqlType": "CHAR(15)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L115",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_RTN_HD.ORD_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_RTN_HD",
+        "name": "ORD_NO",
+        "sqlType": "CHAR(15)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L116",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_RTN_HD.RTN_DT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_RTN_HD",
+        "name": "RTN_DT",
+        "sqlType": "TIMESTAMP",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L117",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_RTN_HD.RTN_RSN",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_RTN_HD",
+        "name": "RTN_RSN",
+        "sqlType": "VARCHAR(200)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L118",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_RTN_HD",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_RTN_HD",
+        "columns": [
+          "RTN_NO"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L115",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_PAY_MST",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_PAY_MST"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L122-L128",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_PAY_MST.PAY_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_PAY_MST",
+        "name": "PAY_NO",
+        "sqlType": "CHAR(15)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L123",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_PAY_MST.ORD_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_PAY_MST",
+        "name": "ORD_NO",
+        "sqlType": "CHAR(15)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L124",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_PAY_MST.PAY_MTHD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_PAY_MST",
+        "name": "PAY_MTHD",
+        "sqlType": "CHAR(2)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L125",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_PAY_MST.PAY_AMT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_PAY_MST",
+        "name": "PAY_AMT",
+        "sqlType": "NUMERIC(18,2)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L126",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_PAY_MST.PAY_DT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_PAY_MST",
+        "name": "PAY_DT",
+        "sqlType": "TIMESTAMP",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L127",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_PAY_MST",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_PAY_MST",
+        "columns": [
+          "PAY_NO"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L123",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_ACCT_SLIP",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_ACCT_SLIP"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L130-L137",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ACCT_SLIP.SLIP_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ACCT_SLIP",
+        "name": "SLIP_NO",
+        "sqlType": "CHAR(15)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L131",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ACCT_SLIP.SLIP_DT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ACCT_SLIP",
+        "name": "SLIP_DT",
+        "sqlType": "TIMESTAMP",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L132",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ACCT_SLIP.ACCT_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ACCT_SLIP",
+        "name": "ACCT_CD",
+        "sqlType": "CHAR(6)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L133",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ACCT_SLIP.DR_AMT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ACCT_SLIP",
+        "name": "DR_AMT",
+        "sqlType": "NUMERIC(18,2)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L134",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ACCT_SLIP.CR_AMT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ACCT_SLIP",
+        "name": "CR_AMT",
+        "sqlType": "NUMERIC(18,2)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L135",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ACCT_SLIP.RMK",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ACCT_SLIP",
+        "name": "RMK",
+        "sqlType": "VARCHAR(300)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L136",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_ACCT_SLIP",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ACCT_SLIP",
+        "columns": [
+          "SLIP_NO"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L131",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_ACCT_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_ACCT_CD"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L139-L143",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ACCT_CD.ACCT_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ACCT_CD",
+        "name": "ACCT_CD",
+        "sqlType": "CHAR(6)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L140",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ACCT_CD.ACCT_NM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ACCT_CD",
+        "name": "ACCT_NM",
+        "sqlType": "VARCHAR(100)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L141",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ACCT_CD.ACCT_GBN",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ACCT_CD",
+        "name": "ACCT_GBN",
+        "sqlType": "CHAR(1)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L142",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_ACCT_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ACCT_CD",
+        "columns": [
+          "ACCT_CD"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L140",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_TAX_INV",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_TAX_INV"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L145-L151",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_TAX_INV.TAX_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_TAX_INV",
+        "name": "TAX_NO",
+        "sqlType": "CHAR(18)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L146",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_TAX_INV.CUST_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_TAX_INV",
+        "name": "CUST_NO",
+        "sqlType": "CHAR(10)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L147",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_TAX_INV.ISU_DT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_TAX_INV",
+        "name": "ISU_DT",
+        "sqlType": "TIMESTAMP",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L148",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_TAX_INV.SUP_AMT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_TAX_INV",
+        "name": "SUP_AMT",
+        "sqlType": "NUMERIC(18,2)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L149",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_TAX_INV.VAT_AMT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_TAX_INV",
+        "name": "VAT_AMT",
+        "sqlType": "NUMERIC(18,2)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L150",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_TAX_INV",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_TAX_INV",
+        "columns": [
+          "TAX_NO"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L146",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_EMP_MST",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_EMP_MST"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L154-L162",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_EMP_MST.EMP_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_EMP_MST",
+        "name": "EMP_NO",
+        "sqlType": "CHAR(8)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L155",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_EMP_MST.EMP_NM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_EMP_MST",
+        "name": "EMP_NM",
+        "sqlType": "VARCHAR(50)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L156",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_EMP_MST.DEPT_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_EMP_MST",
+        "name": "DEPT_CD",
+        "sqlType": "CHAR(5)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L157",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_EMP_MST.JOB_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_EMP_MST",
+        "name": "JOB_CD",
+        "sqlType": "CHAR(4)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L158",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_EMP_MST.HIRE_DT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_EMP_MST",
+        "name": "HIRE_DT",
+        "sqlType": "TIMESTAMP",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L159",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_EMP_MST.MGR_EMP_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_EMP_MST",
+        "name": "MGR_EMP_NO",
+        "sqlType": "CHAR(8)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L160",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_EMP_MST.RETIR_YN",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_EMP_MST",
+        "name": "RETIR_YN",
+        "sqlType": "CHAR(1)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L161",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_EMP_MST",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_EMP_MST",
+        "columns": [
+          "EMP_NO"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L155",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_DEPT_MST",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_DEPT_MST"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L164-L169",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_DEPT_MST.DEPT_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_DEPT_MST",
+        "name": "DEPT_CD",
+        "sqlType": "CHAR(5)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L165",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_DEPT_MST.DEPT_NM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_DEPT_MST",
+        "name": "DEPT_NM",
+        "sqlType": "VARCHAR(80)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L166",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_DEPT_MST.UP_DEPT_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_DEPT_MST",
+        "name": "UP_DEPT_CD",
+        "sqlType": "CHAR(5)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L167",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_DEPT_MST.USE_YN",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_DEPT_MST",
+        "name": "USE_YN",
+        "sqlType": "CHAR(1)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L168",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_DEPT_MST",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_DEPT_MST",
+        "columns": [
+          "DEPT_CD"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L165",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_JOB_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_JOB_CD"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L171-L174",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_JOB_CD.JOB_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_JOB_CD",
+        "name": "JOB_CD",
+        "sqlType": "CHAR(4)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L172",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_JOB_CD.JOB_NM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_JOB_CD",
+        "name": "JOB_NM",
+        "sqlType": "VARCHAR(50)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L173",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_JOB_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_JOB_CD",
+        "columns": [
+          "JOB_CD"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L172",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_ATTND",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_ATTND"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L176-L182",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ATTND.EMP_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ATTND",
+        "name": "EMP_NO",
+        "sqlType": "CHAR(8)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L177",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ATTND.WRK_DT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ATTND",
+        "name": "WRK_DT",
+        "sqlType": "CHAR(8)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L178",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ATTND.IN_TM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ATTND",
+        "name": "IN_TM",
+        "sqlType": "CHAR(4)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L179",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ATTND.OUT_TM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ATTND",
+        "name": "OUT_TM",
+        "sqlType": "CHAR(4)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L180",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_ATTND",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ATTND",
+        "columns": [
+          "EMP_NO",
+          "WRK_DT"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L181",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_SAL_MST",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_SAL_MST"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L184-L190",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_SAL_MST.EMP_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_SAL_MST",
+        "name": "EMP_NO",
+        "sqlType": "CHAR(8)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L185",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_SAL_MST.PAY_YM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_SAL_MST",
+        "name": "PAY_YM",
+        "sqlType": "CHAR(6)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L186",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_SAL_MST.BASE_SAL",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_SAL_MST",
+        "name": "BASE_SAL",
+        "sqlType": "NUMERIC(15,0)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L187",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_SAL_MST.BONUS",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_SAL_MST",
+        "name": "BONUS",
+        "sqlType": "NUMERIC(15,0)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L188",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_SAL_MST",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_SAL_MST",
+        "columns": [
+          "EMP_NO",
+          "PAY_YM"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L189",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_COMM_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_COMM_CD"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L193-L199",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_COMM_CD.GRP_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_COMM_CD",
+        "name": "GRP_CD",
+        "sqlType": "CHAR(4)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L194",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_COMM_CD.CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_COMM_CD",
+        "name": "CD",
+        "sqlType": "CHAR(4)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L195",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_COMM_CD.CD_NM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_COMM_CD",
+        "name": "CD_NM",
+        "sqlType": "VARCHAR(100)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L196",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_COMM_CD.SORT_ORD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_COMM_CD",
+        "name": "SORT_ORD",
+        "sqlType": "INTEGER",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L197",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_COMM_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_COMM_CD",
+        "columns": [
+          "GRP_CD",
+          "CD"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L198",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_UNIT_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_UNIT_CD"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L201-L204",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_UNIT_CD.UNIT_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_UNIT_CD",
+        "name": "UNIT_CD",
+        "sqlType": "CHAR(3)",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L202",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_UNIT_CD.UNIT_NM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_UNIT_CD",
+        "name": "UNIT_NM",
+        "sqlType": "VARCHAR(30)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L203",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_UNIT_CD",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_UNIT_CD",
+        "columns": [
+          "UNIT_CD"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L202",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_LOG_HIST",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_LOG_HIST"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L206-L212",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_LOG_HIST.LOG_SEQ",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_LOG_HIST",
+        "name": "LOG_SEQ",
+        "sqlType": "INTEGER",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L207",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_LOG_HIST.TBL_NM",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_LOG_HIST",
+        "name": "TBL_NM",
+        "sqlType": "VARCHAR(50)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L208",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_LOG_HIST.ACT_GBN",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_LOG_HIST",
+        "name": "ACT_GBN",
+        "sqlType": "CHAR(1)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L209",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_LOG_HIST.ACT_EMP_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_LOG_HIST",
+        "name": "ACT_EMP_NO",
+        "sqlType": "CHAR(8)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L210",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_LOG_HIST.ACT_DT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_LOG_HIST",
+        "name": "ACT_DT",
+        "sqlType": "TIMESTAMP",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L211",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_LOG_HIST",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_LOG_HIST",
+        "columns": [
+          "LOG_SEQ"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L207",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.TABLE.TB_ORD_MEMO",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "PRESENT",
+      "value": {
+        "name": "TB_ORD_MEMO"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L215-L220",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.FK.TB_ORD_MEMO.FK_ORD_MEMO",
+      "layer": "L1",
+      "track": "db",
+      "type": "FOREIGN_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "constraintName": "FK_ORD_MEMO",
+        "table": "TB_ORD_MEMO",
+        "fkColumns": [
+          "ORD_NO"
+        ],
+        "refTable": "TB_ORD_HD",
+        "refColumns": [
+          "ORD_NO"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L219",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ORD_MEMO.MEMO_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_MEMO",
+        "name": "MEMO_NO",
+        "sqlType": "INTEGER",
+        "nullable": false
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L216",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "PK 구성 컬럼 — SQL 의미상 NOT NULL(gold 규칙 R-DB-3)."
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ORD_MEMO.ORD_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_MEMO",
+        "name": "ORD_NO",
+        "sqlType": "CHAR(15)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L217",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.COLUMN.TB_ORD_MEMO.MEMO_TXT",
+      "layer": "L1",
+      "track": "db",
+      "type": "COLUMN",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_MEMO",
+        "name": "MEMO_TXT",
+        "sqlType": "VARCHAR(500)",
+        "nullable": true
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L218",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.PK.TB_ORD_MEMO",
+      "layer": "L1",
+      "track": "db",
+      "type": "PRIMARY_KEY",
+      "expect": "PRESENT",
+      "value": {
+        "table": "TB_ORD_MEMO",
+        "columns": [
+          "MEMO_NO"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L216",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.DB.VIEW.VW_ORD_SUMMARY",
+      "layer": "L1",
+      "track": "db",
+      "type": "VIEW",
+      "expect": "REPORTED_EXCLUDED",
+      "value": {
+        "name": "VW_ORD_SUMMARY"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L221-L224",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "현 DdlParser 는 CREATE TABLE 만 처리한다. 뷰를 테이블로 추출해도 실패이고, 아무 말 없이 건너뛰어도 실패다 — 제외 사유와 함께 보고해야 통과(I1 §4.1 오류 가시성)."
+    },
+    {
+      "id": "L1.DB.TABLE.NEG.만",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "ABSENT",
+      "value": {
+        "name": "만"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L221",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "한국어 주석 'CREATE TABLE 만 처리하므로...' 를 문장으로 오인해 추출하면 오탐. I1 §1.1 의 'CREATE TABLE 28' 이 바로 이 줄을 센 결과다(본 계약 §8 불일치 기록)."
+    },
+    {
+      "id": "L1.DB.TABLE.NEG.TB_ORD_SUMMARY",
+      "layer": "L1",
+      "track": "db",
+      "type": "TABLE",
+      "expect": "ABSENT",
+      "value": {
+        "name": "TB_ORD_SUMMARY"
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L221-L224",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "존재하지 않는 이름. 뷰 이름(VW_ORD_SUMMARY)의 접두사를 테이블 규칙으로 정규화해 만들어내면 유령 사실."
+    },
+    {
+      "id": "L1.DB.FK.NEG.TB_ORD_HD.CUST_NO",
+      "layer": "L1",
+      "track": "db",
+      "type": "FOREIGN_KEY",
+      "expect": "ABSENT",
+      "value": {
+        "table": "TB_ORD_HD",
+        "fkColumns": [
+          "CUST_NO"
+        ],
+        "refTable": "TB_CUST_MST",
+        "refColumns": [
+          "CUST_NO"
+        ]
+      },
+      "ref": {
+        "sourceId": "db:legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L80",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "origin": "repo",
+      "notes": "관계는 실재하지만 DDL 에 선언되지 않았다. L1(명시 사실)에서 FK 로 잡으면 추론을 명시로 승격한 것 = I1 P2 위반. 이 쌍의 정답 자리는 L2 INFERRED 링크(L2.DB.INF.ORD_HD.CUST_NO)다."
+    }
+  ]
+}

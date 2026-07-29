@@ -1,0 +1,277 @@
+{
+  "goldSetVersion": "gold-set/v0",
+  "issue": 99,
+  "status": "DRAFT — 에이전트 초안. 리뷰어(@xivicWon) 승인 전까지 정답으로 사용할 수 없다(I1 §1.2).",
+  "sourceRevision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+  "docsRevision": "2157134453c1875d8cd55a3042cc3eb541073451",
+  "note": "코드·DB 원본은 sourceRevision 에, 계약 문서(ADR)는 docsRevision 에 고정한다 — I1·EVL 계약은 3c27259 이후에 작성돼 sourceRevision 에 존재하지 않기 때문이다. 한 revision 으로 우겨넣으면 그 좌표는 조회되지 않는 유령 좌표가 된다.",
+  "pinnedSources": [
+    {
+      "sourceId": "db:legacy-sample",
+      "path": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql",
+      "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+      "origin": "repo",
+      "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+      "lines": 262
+    },
+    {
+      "sourceId": "code:provenance/ProvenanceVocab.kt",
+      "path": "backend/src/main/kotlin/com/ontostudio/provenance/ProvenanceVocab.kt",
+      "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+      "origin": "repo",
+      "contentHash": "sha256:cc4b53b0df762e10a8ed73065460e960195e279e1d7b1de5406d6fbd6ba11aab",
+      "lines": 22
+    },
+    {
+      "sourceId": "code:rdb/SchemaModel.kt",
+      "path": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaModel.kt",
+      "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+      "origin": "repo",
+      "contentHash": "sha256:1d1f3796ac738470c618a91491deb31152c350178193a7ffcd045b6f28feaf73",
+      "lines": 20
+    },
+    {
+      "sourceId": "code:rdb/SchemaSource.kt",
+      "path": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt",
+      "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+      "origin": "repo",
+      "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+      "lines": 44
+    },
+    {
+      "sourceId": "code:rdb/SqlTypeMapping.kt",
+      "path": "backend/src/main/kotlin/com/ontostudio/rdb/SqlTypeMapping.kt",
+      "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+      "origin": "repo",
+      "contentHash": "sha256:2d4e082071042d625a2a1cf8bae72d92a8ffbce89be1a2e449dc078eca24f9b9",
+      "lines": 19
+    },
+    {
+      "sourceId": "code:rdb/DdlParser.kt",
+      "path": "backend/src/main/kotlin/com/ontostudio/rdb/DdlParser.kt",
+      "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+      "origin": "repo",
+      "contentHash": "sha256:0f052080a26277ce86f43219d8e4eb17a69ceeef9cbf9f719062fef73d97440b",
+      "lines": 64
+    },
+    {
+      "sourceId": "code:rdb/SampleLegacyDb.kt",
+      "path": "backend/src/main/kotlin/com/ontostudio/rdb/SampleLegacyDb.kt",
+      "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+      "origin": "repo",
+      "contentHash": "sha256:ad73e8b8c69c0fd8ab450c114294df7b86bb6cb45330bb5f8e47ffa3dfee9a03",
+      "lines": 31
+    },
+    {
+      "sourceId": "test:rdb/DdlParserTest.kt",
+      "path": "backend/src/test/kotlin/com/ontostudio/rdb/DdlParserTest.kt",
+      "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+      "origin": "repo",
+      "contentHash": "sha256:de03001d0536ac98c33e4f8a35c426184565e0bdb12ee3f613952e0926380846",
+      "lines": 52
+    },
+    {
+      "sourceId": "test:rdb/LegacySampleFixtureTest.kt",
+      "path": "backend/src/test/kotlin/com/ontostudio/rdb/LegacySampleFixtureTest.kt",
+      "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+      "origin": "repo",
+      "contentHash": "sha256:68b186b628452344e7f7d7073822c09b9352f336c6f09cbf6c8743a78a5a5b6a",
+      "lines": 39
+    },
+    {
+      "sourceId": "code:codegraph/README.md",
+      "path": "codegraph/README.md",
+      "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+      "origin": "repo",
+      "contentHash": "sha256:ec14a9f29efac78b7e0dc5e83353cb7dbe94be1bef4308e41e738be359ede777",
+      "lines": 16
+    },
+    {
+      "sourceId": "adr:e17-code-source-collector",
+      "path": "docs/superpowers/specs/2026-07-07-e17-code-source-collector-design.md",
+      "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+      "origin": "repo",
+      "contentHash": "sha256:f1b73a4ca7b5870ad602d7d72405144d20d1eafabd249a1493a2adf4d5b0942c",
+      "lines": 206
+    },
+    {
+      "sourceId": "adr:m0-i1-baseline-contract",
+      "path": "docs/superpowers/specs/2026-07-29-m0-i1-baseline-contract.md",
+      "revision": "2157134453c1875d8cd55a3042cc3eb541073451",
+      "origin": "repo",
+      "contentHash": "sha256:94b3cb45df238760b625576724d83349ca31e3b78b33364ba7ac2aa6e144886f",
+      "lines": 291
+    },
+    {
+      "sourceId": "adr:evl-answer-shape-contract",
+      "path": "docs/superpowers/specs/2026-07-29-evl-answer-shape-contract.md",
+      "revision": "2157134453c1875d8cd55a3042cc3eb541073451",
+      "origin": "repo",
+      "contentHash": "sha256:cf4c5441ebd9a564b4e0004d590b4263694be525361f1fde4497720a065f644b",
+      "lines": 480
+    },
+    {
+      "sourceId": "fixture:l2-drift/revA/OrderService.kt",
+      "path": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt",
+      "origin": "fixture",
+      "contentHash": "sha256:c8cdd4904f33dc75f7373a3dc4764efe1512197e424887a518585395d7d89962",
+      "lines": 15
+    },
+    {
+      "sourceId": "fixture:l2-drift/revA/PriceCalc.kt",
+      "path": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/PriceCalc.kt",
+      "origin": "fixture",
+      "contentHash": "sha256:f80ea3ea2e1ea75fe87b2fdb97fa6ec6e60db7451c19ae19c6ccefdb87e16683",
+      "lines": 6
+    },
+    {
+      "sourceId": "fixture:l2-drift/revB/OrderService.kt",
+      "path": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt",
+      "origin": "fixture",
+      "contentHash": "sha256:694ae81780ad24085a73c843eb890493a3ce3c0a70a66f708e97393fead34227",
+      "lines": 23
+    },
+    {
+      "sourceId": "fixture:l2-drift/revB/PricingCalculator.kt",
+      "path": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/PricingCalculator.kt",
+      "origin": "fixture",
+      "contentHash": "sha256:5671f972d86530ef9ed69e2de45c9d19ec9ae7c10cc3279066c85487373ccef0",
+      "lines": 6
+    },
+    {
+      "sourceId": "fixture:l2-drift/revC/OrderService.kt",
+      "path": "docs/superpowers/specs/gold/fixtures/l2-drift/revC/OrderService.kt",
+      "origin": "fixture",
+      "contentHash": "sha256:4500b2b5ea31c3f32ab17711421c05e51557f976ffd3e2783aa7319856b73eb5",
+      "lines": 24
+    },
+    {
+      "sourceId": "fixture:l2-drift/revC/PriceCalc.kt",
+      "path": "docs/superpowers/specs/gold/fixtures/l2-drift/revC/PriceCalc.kt",
+      "origin": "fixture",
+      "contentHash": "sha256:3d3bc53b980111a24a472c8ccea8958a3cfdbc56fc6c940757a87ffd17e47e46",
+      "lines": 10
+    },
+    {
+      "sourceId": "pii:corpus.log",
+      "path": "docs/superpowers/specs/gold/fixtures/pii/corpus.log",
+      "origin": "fixture",
+      "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c",
+      "lines": 15
+    },
+    {
+      "sourceId": "pii:corpus.properties",
+      "path": "docs/superpowers/specs/gold/fixtures/pii/corpus.properties",
+      "origin": "fixture",
+      "contentHash": "sha256:fd8929c2ba121c907ffc3377b0e35e3aeed286f346ea75c8b6c4cbef82e14152",
+      "lines": 18
+    },
+    {
+      "sourceId": "pii:corpus.sql",
+      "path": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql",
+      "origin": "fixture",
+      "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046",
+      "lines": 28
+    }
+  ],
+  "goldFiles": [
+    {
+      "path": "gold.v0.schema.json",
+      "sha256": "sha256:4246fbc041e2895f45a33b04bdb57a4099d906903650bd5160ce8bc87560e4c1"
+    },
+    {
+      "path": "l1/db.json",
+      "sha256": "sha256:b6bfad274d85c5c73a4f52d855de6c0338468f38244b50dced1c6e4ce710d55b"
+    },
+    {
+      "path": "l1/code.json",
+      "sha256": "sha256:70e66a721541e585dbc72970cb6b82b97ce8821e45e383e9ab93504470a0f504"
+    },
+    {
+      "path": "l2/links.json",
+      "sha256": "sha256:f1b665c4136e90d8ce8802a8853ec3f29275f4a6d4a25b5ae0c47cf87ec05380"
+    },
+    {
+      "path": "l3/claims.json",
+      "sha256": "sha256:d349a688377bdfc0fd71c6dbbcfd00a65c5cfafa3bc5665ae4d4251dfbfdfb16"
+    },
+    {
+      "path": "evl/questions.json",
+      "sha256": "sha256:813d7e22be1ee754f38afe86670fa13303ccfbec159f2f082b4ee27a5c6ff7a2"
+    },
+    {
+      "path": "pii.json",
+      "sha256": "sha256:b6a3fcadd2f588c9b41223f755c9452d0ab104a3092349b6c20c51a248200d49"
+    },
+    {
+      "path": "failures.json",
+      "sha256": "sha256:8e52b4b058b6d7b62ae49db7a8b2d134a9ee8bc97219ac2d3d61ce3ae532fb55"
+    },
+    {
+      "path": "validate_gold.py",
+      "sha256": "sha256:af6701c2a512b26fceb4d3e5df17b64b1ae5992e6939bdb83c90c901e3118b46"
+    }
+  ],
+  "fixtures": [
+    {
+      "path": "fixtures/failure/code-broken-syntax.kt",
+      "sha256": "sha256:ae95bcf8a7c71837c9c99d95a683ce753ca2fc7c65b0a6975f1ff775753a9ae9"
+    },
+    {
+      "path": "fixtures/failure/code-partial-extract.kt",
+      "sha256": "sha256:54c8e89ffcdf010212309c552eb6e9b96643163d4a266435ff4403f1025c9290"
+    },
+    {
+      "path": "fixtures/failure/code-unsupported-lang.scala",
+      "sha256": "sha256:faed82281908dc3626f00f2350f098bef6d62c13d2109991c888966b8e8fbaa8"
+    },
+    {
+      "path": "fixtures/failure/db-broken-syntax.sql",
+      "sha256": "sha256:02d70b3b484efa646d87ee5d21241d65c04710ad4ad60e012bdb83e5cd3c6141"
+    },
+    {
+      "path": "fixtures/failure/db-partial-extract.sql",
+      "sha256": "sha256:e5847ac537d55cd16e1dacce8503f31f1ade7a505fea26cad243d3926a229d80"
+    },
+    {
+      "path": "fixtures/failure/db-unsupported-trigger.sql",
+      "sha256": "sha256:3af6b2868f273f88ecc024aacd58fc3b653c9f133e11aee8b60e5846317e9b38"
+    },
+    {
+      "path": "fixtures/l2-drift/revA/OrderService.kt",
+      "sha256": "sha256:c8cdd4904f33dc75f7373a3dc4764efe1512197e424887a518585395d7d89962"
+    },
+    {
+      "path": "fixtures/l2-drift/revA/PriceCalc.kt",
+      "sha256": "sha256:f80ea3ea2e1ea75fe87b2fdb97fa6ec6e60db7451c19ae19c6ccefdb87e16683"
+    },
+    {
+      "path": "fixtures/l2-drift/revB/OrderService.kt",
+      "sha256": "sha256:694ae81780ad24085a73c843eb890493a3ce3c0a70a66f708e97393fead34227"
+    },
+    {
+      "path": "fixtures/l2-drift/revB/PricingCalculator.kt",
+      "sha256": "sha256:5671f972d86530ef9ed69e2de45c9d19ec9ae7c10cc3279066c85487373ccef0"
+    },
+    {
+      "path": "fixtures/l2-drift/revC/OrderService.kt",
+      "sha256": "sha256:4500b2b5ea31c3f32ab17711421c05e51557f976ffd3e2783aa7319856b73eb5"
+    },
+    {
+      "path": "fixtures/l2-drift/revC/PriceCalc.kt",
+      "sha256": "sha256:3d3bc53b980111a24a472c8ccea8958a3cfdbc56fc6c940757a87ffd17e47e46"
+    },
+    {
+      "path": "fixtures/pii/corpus.log",
+      "sha256": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+    },
+    {
+      "path": "fixtures/pii/corpus.properties",
+      "sha256": "sha256:fd8929c2ba121c907ffc3377b0e35e3aeed286f346ea75c8b6c4cbef82e14152"
+    },
+    {
+      "path": "fixtures/pii/corpus.sql",
+      "sha256": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+    }
+  ]
+}

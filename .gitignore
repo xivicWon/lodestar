@@ -7,6 +7,10 @@ build/
 .superpowers/
 data/
 
+# Gold Set 픽스처는 *.log 규칙보다 우선한다 — 로그 형태의 PII 코퍼스는
+# 산출물이 아니라 해시로 고정된 정답셋의 일부다(I2 계약 §6).
+!docs/superpowers/specs/gold/fixtures/**/*.log
+
 # Python 바이트코드 (참조 확인기 실행 시 생성)
 __pycache__/
 *.pyc
