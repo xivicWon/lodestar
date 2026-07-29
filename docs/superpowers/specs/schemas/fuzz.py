@@ -253,6 +253,34 @@ def must_accept(base):
         yield from m(lbl, fn)
 
 
+def pairwise(base, cap=60):
+    """두 위반을 동시에 가한 문서 — **여전히 거부돼야 한다**.
+
+    각각은 걸리는데 둘을 합치면 통과하는 조합이 있으면(= 서로를 상쇄하면)
+    '두 번 틀리면 맞는' 구멍이다. 예: 경고를 지우고(A11) 커버리지도 함께
+    바꿔(A5) 두 규칙이 서로의 전제를 없애는 경우.
+    """
+    muts = [(l, d) for l, d, _ in must_reject(base)][:cap]
+    seen = set()
+    for i in range(len(muts)):
+        for j in range(i + 1, len(muts)):
+            (l1, d1), (l2, d2) = muts[i], muts[j]
+            merged = copy.deepcopy(base)
+            # 두 변이를 원본 대비 차이로 다시 적용한다
+            for src in (d1, d2):
+                for k, v in src.items():
+                    if base.get(k) != v:
+                        merged[k] = copy.deepcopy(v)
+                for k in list(merged):
+                    if k in base and k not in src:
+                        merged.pop(k, None)
+            key = json.dumps(merged, sort_keys=True, ensure_ascii=False)
+            if key in seen:
+                continue
+            seen.add(key)
+            yield f"{l1} + {l2}", merged
+
+
 def main():
     bases = {p.name: json.loads(p.read_text())
              for p in sorted(EX.glob("valid.*.json"))}
@@ -280,7 +308,20 @@ def main():
             if not accepted:
                 false_alarms.append((name, label, why[0]))
 
-    print(f"변이 {n}건 · 기준 픽스처 {len(bases)}종\n")
+    # 2중 변이 — 서로 상쇄해 통과하는 조합이 있는가
+    pair_n, pair_bad = 0, []
+    for name, base in bases.items():
+        for label, doc in pairwise(base):
+            pair_n += 1
+            if judge(doc)[0]:
+                pair_bad.append((name, label))
+
+    print(f"단일 변이 {n}건 · 2중 변이 {pair_n}건 · 기준 픽스처 {len(bases)}종\n")
+    if pair_bad:
+        print(f"★ 상쇄(둘 다 위반인데 합치면 통과) {len(pair_bad)}건")
+        for f, l in pair_bad[:10]:
+            print(f"    {f:30} {l}")
+    survivors += [(f, l, "2중") for f, l in pair_bad]
     if survivors:
         print(f"★ 미검출(통과해서는 안 되는데 통과) {len(survivors)}건")
         for f, l, scope in survivors:

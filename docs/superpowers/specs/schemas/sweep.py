@@ -11,6 +11,8 @@ manifest 픽스처는 "이 규칙이 걸리는가", fuzz.py 는 "안 걸리는 �
                 랭킹은 의미를 갖지만 **어떤 규칙도 순서에 의존해서는 안 된다**.
   4) 경계값      수치·식별자 경계에서 스키마가 의도대로 갈리는가.
   5) 결손 내성   한 곳이 깨져도 독립적인 다른 위반이 그대로 보고되는가.
+  6) 충돌 상태   NEEDS_CHECK·COEXIST·RESOLVED 세 상태가 모두 표현 가능한가.
+  7) 무작위      임의 변형에 예외로 죽지 않고 같은 입력에 같은 판정을 내는가.
 
 여기서 만드는 문서는 **규칙 검사용 입력**이지 예제 픽스처가 아니다. 그래서
 리포에 실재하지 않는 소스 클래스(issue·adr·runtime)에는 합성 좌표를 쓴다 —
@@ -21,6 +23,7 @@ manifest 픽스처는 "이 규칙이 걸리는가", fuzz.py 는 "안 걸리는 �
 import copy
 import itertools
 import json
+import random
 import pathlib
 import sys
 
@@ -66,7 +69,8 @@ def evidence(i, cls, stance="supports"):
     }
 
 
-def build(intent, present, absent_state="absent", with_conflict=False):
+def build(intent, present, absent_state="absent", with_conflict=False,
+          conflict_status="NEEDS_CHECK"):
     """(intent, present 클래스 집합) 에 대해 계약을 만족하는 응답을 구성한다."""
     evs, warns = [], []
     for n, cls in enumerate(sorted(present), start=1):
@@ -85,16 +89,20 @@ def build(intent, present, absent_state="absent", with_conflict=False):
 
     conflicts, ceiling_reasons = [], []
     if with_conflict and len(evs) >= 2:
-        conflicts = [{"id": "cf-1", "between": [evs[0]["id"], evs[-1]["id"]],
-                      "claim": "상충", "status": "NEEDS_CHECK"}]
-        warns.append({"code": "CONFLICT_UNRESOLVED", "message": "미해결", "trigger": "cf-1"})
-        ceiling_reasons = ["CONFLICT_UNRESOLVED"]
+        c = {"id": "cf-1", "between": [evs[0]["id"], evs[-1]["id"]],
+             "claim": "상충", "status": conflict_status}
+        if conflict_status == "RESOLVED":
+            c["resolvedBy"] = {"layer": "L3", "id": "claim-confirmed"}
+        conflicts = [c]
+        if conflict_status == "NEEDS_CHECK":
+            warns.append({"code": "CONFLICT_UNRESOLVED", "message": "미해결", "trigger": "cf-1"})
+            ceiling_reasons = ["CONFLICT_UNRESOLVED"]
 
     # 보류 조건 (§6.2) — 성립하면 ABSTAIN 과 그 사유를 가리키는 trigger 가 필요하다
     core = CORE_CLASSES[intent]
     cond1 = not evs
     cond2 = all(cov[c] != "present" for c in core)
-    cond3 = bool(conflicts)
+    cond3 = any(c["status"] == "NEEDS_CHECK" for c in conflicts)
     if cond1 or cond2 or cond3:
         if cond3:
             trg = "cf-1"
@@ -248,6 +256,91 @@ def sweep_partial_damage():
     return len(probes), bad
 
 
+def sweep_conflict_states():
+    """intent × 충돌 상태 전수 — 세 상태 모두 표현 가능해야 한다.
+
+    NEEDS_CHECK 는 보류를 부르고, COEXIST·RESOLVED 는 '충돌을 닫는' 비보류
+    경로다(§6.2). 이 경로가 실제로 열려 있지 않으면 A16 은 사실상
+    '충돌이 있으면 영원히 보류'가 되어 답할 수 있는 질문을 막는다.
+    """
+    bad, n = [], 0
+    for intent in CORE_CLASSES:
+        for present in (("code", "test"), ("code", "issue"), ("adr", "issue"),
+                        ("code", "issue", "adr", "test", "runtime")):
+            for status in ("NEEDS_CHECK", "COEXIST", "RESOLVED"):
+                for absent_state in ("absent", "not_collected"):
+                    doc = build(intent, set(present), absent_state, True, status)
+                    n += 1
+                    ok, why = judge(doc)
+                    if not ok:
+                        bad.append((intent, present, status, why[0]))
+                    # COEXIST·RESOLVED 는 그 충돌만으로 보류를 부르지 않아야 한다
+                    core_ok = any(doc["coverage"][c] == "present" for c in CORE_CLASSES[intent])
+                    abstained = any(w["code"] == "ABSTAIN" for w in doc["warnings"])
+                    if status != "NEEDS_CHECK" and core_ok and abstained:
+                        bad.append((intent, present, status, "충돌을 닫았는데도 보류가 필요해짐"))
+    return n, bad
+
+
+def sweep_random(seed=20260729, rounds=3000):
+    """무작위 변형 — 판정이 죽지 않고, 같은 입력에 같은 결과를 내는가.
+
+    임의 입력에 대한 적합/부적합은 단정할 수 없다. 여기서 요구하는 것은 두 가지다:
+    **예외로 죽지 않을 것**, 그리고 **같은 입력에 같은 판정을 낼 것**(I1 H1).
+    seed 를 고정해 실패를 재현할 수 있게 한다.
+    """
+    rnd = random.Random(seed)
+    bases = [json.loads(p.read_text()) for p in sorted((HERE / "examples").glob("valid.*.json"))]
+    VALUES = [None, True, False, 0, 1, -1, 2.5, "", "x", [], {}, [1, 2], {"a": 1},
+              "1990-12-31T23:59:60Z", "present", "ABSTAIN", "ev-1", 1e309]
+
+    def walk(o, path=None):
+        path = path or []
+        out = [(path, o)]
+        if isinstance(o, dict):
+            for k, v in o.items():
+                out += walk(v, path + [k])
+        elif isinstance(o, list):
+            for i, v in enumerate(o):
+                out += walk(v, path + [i])
+        return out
+
+    def setp(doc, path, val, delete=False):
+        cur = doc
+        for k in path[:-1]:
+            cur = cur[k]
+        if delete:
+            if isinstance(cur, dict):
+                cur.pop(path[-1], None)
+            elif isinstance(cur, list) and isinstance(path[-1], int) and path[-1] < len(cur):
+                cur.pop(path[-1])
+        else:
+            cur[path[-1]] = val
+
+    crashes, flaky = [], []
+    for _ in range(rounds):
+        d = copy.deepcopy(rnd.choice(bases))
+        for _ in range(rnd.randint(1, 3)):
+            paths = [p for p, _ in walk(d) if p]
+            path = rnd.choice(paths)
+            try:
+                if rnd.random() < 0.25:
+                    setp(d, path, None, delete=True)
+                else:
+                    setp(d, path, rnd.choice(VALUES))
+            except (KeyError, IndexError, TypeError):
+                break
+        try:
+            v1 = sorted(judge(d)[1])
+            v2 = sorted(judge(copy.deepcopy(d))[1])
+        except Exception as exc:
+            crashes.append((type(exc).__name__, str(exc)[:70], json.dumps(d)[:120]))
+            continue
+        if v1 != v2:
+            flaky.append(json.dumps(d)[:120])
+    return rounds, crashes, flaky
+
+
 def main():
     fails = 0
     n, bad = sweep_satisfiable()
@@ -281,6 +374,21 @@ def main():
     for b in bad:
         print(f"     {b[0]} (기대 {b[1]}) -> {b[2]}")
     fails += len(bad)
+
+    n, bad = sweep_conflict_states()
+    print(f"6) 충돌 상태   {n:>5}건 — {'세 상태 모두 표현 가능' if not bad else f'★문제 {len(bad)}건'}")
+    for b in bad[:6]:
+        print(f"     intent={b[0]} present={b[1]} status={b[2]} -> {b[3]}")
+    fails += len(bad)
+
+    n, crashes, flaky = sweep_random()
+    msg = "예외 0 · 흔들림 0" if not crashes and not flaky else f"★예외 {len(crashes)} · 흔들림 {len(flaky)}"
+    print(f"7) 무작위      {n:>5}건 — {msg}")
+    for c in crashes[:6]:
+        print(f"     {c[0]}: {c[1]}\n       입력 {c[2]}")
+    for f in flaky[:3]:
+        print(f"     비결정: {f}")
+    fails += len(crashes) + len(flaky)
 
     print()
     print("스윕 통과" if not fails else f"스윕 실패 {fails}건")

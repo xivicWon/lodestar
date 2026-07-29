@@ -83,9 +83,16 @@ def cross_field_errors(d):
 
     # 파생값 구성도 방어적으로 — 여기서 예외가 나면 규칙 격리가 무의미해지고
     # 실행 전체가 죽어 나머지 픽스처까지 검증할 수 없게 된다.
-    evidence = [e for e in d.get("evidence", []) if isinstance(e, dict)]
-    warnings_ = [w for w in d.get("warnings", []) if isinstance(w, dict)]
-    conflicts = [c for c in d.get("conflicts", []) if isinstance(c, dict)]
+    def _objs(key):
+        """배열이 아니거나 원소가 객체가 아니면 그 부분만 버린다.
+        타입 위반은 스키마(A1)의 몫이고, 여기서 예외로 죽으면 나머지 규칙과
+        나머지 픽스처를 전부 놓친다."""
+        v = d.get(key)
+        return [x for x in v if isinstance(x, dict)] if isinstance(v, list) else []
+
+    evidence = _objs("evidence")
+    warnings_ = _objs("warnings")
+    conflicts = _objs("conflicts")
     coverage = d.get("coverage") if isinstance(d.get("coverage"), dict) else {}
     audit = d.get("audit") if isinstance(d.get("audit"), dict) else {}
 
