@@ -22,6 +22,7 @@ HERE = pathlib.Path(__file__).parent
 REPO = HERE.parents[3]
 SCHEMA = json.loads((HERE / "gold.v0.schema.json").read_text())
 MANIFEST = json.loads((HERE / "manifest.json").read_text())
+CONTRACT_DOC = (HERE.parent / "2026-07-29-m0-i2-gold-set.md").read_text()
 
 ITEM_FILES = ["l1/db.json", "l1/code.json", "l2/links.json", "pii.json"]
 OTHER_FILES = ["l3/claims.json", "evl/questions.json", "failures.json"]
@@ -58,6 +59,39 @@ def sha(path):
 
 def load(rel):
     return json.loads((HERE / rel).read_text())
+
+
+def _digest(lines):
+    return hashlib.sha256(("\n".join(sorted(lines)) + "\n").encode()).hexdigest()
+
+
+def derive_fixture_hash(m):
+    """I3 계약 `run.fixtureHash` 가 요구하는 **단일 값**.
+
+    I3 는 실행 하나당 해시 하나를 적게 돼 있는데(sha256:<64hex> 또는 UNPINNED),
+    I2 가 고정하는 것은 픽스처 15개의 개별 해시다. 그 사이를 잇는 집계 규칙이
+    없으면 각 실행이 제멋대로 대표값을 골라 적게 되고, 그러면 `fixtureHash` 가
+    같다는 것이 같은 입력이었음을 보장하지 못한다(I3 §비교가능성 조건 2).
+
+    규칙: `"<경로> <sha256:...>"` 줄을 **경로 사전순**으로 정렬해 개행으로 잇고
+    마지막에 개행 하나를 붙인 뒤 sha256. 정렬을 못박는 이유는 파일 열거 순서가
+    파일시스템마다 다르기 때문이다 — 순서가 흔들리면 같은 픽스처가 다른 해시를 낸다.
+    """
+    return "sha256:" + _digest(f"{e['path']} {e['sha256']}" for e in m["fixtures"])
+
+
+def derive_gold_set_id(m):
+    """I3 계약 `evl.conflictDetection.goldSetId` 가 요구하는 정답셋 신원.
+
+    정답 데이터뿐 아니라 **판정 규칙(스키마·확인기)까지** 포함해 계산한다.
+    같은 데이터라도 판정 규칙이 바뀌면 같은 산출물의 정오가 뒤집히므로,
+    규칙 변경이 신원에 드러나지 않으면 서로 다른 기준으로 잰 수치가 같은
+    goldSetId 아래 비교된다.
+    """
+    parts = [f"gold {e['path']} {e['sha256']}" for e in m["goldFiles"]]
+    parts += [f"fixture {e['path']} {e['sha256']}" for e in m["fixtures"]]
+    parts += [f"source {e['sourceId']} {e['contentHash']}" for e in m["pinnedSources"]]
+    return f"{m['goldSetVersion']}+{_digest(parts)[:12]}"
 
 
 DOCS = {rel: load(rel) for rel in ITEM_FILES + OTHER_FILES}
@@ -129,6 +163,20 @@ def _g4():
     for rel in ITEM_FILES + OTHER_FILES + ["gold.v0.schema.json"]:
         if rel not in listed:
             yield f"매니페스트 goldFiles 에서 누락: {rel}"
+    # I3 로 넘기는 파생값은 **재계산 가능해야** 한다. 손으로 적어 둔 값이 내용과
+    # 어긋나면 Run Quality Report 가 실제와 다른 입력을 가리키게 되고, 그 보고서끼리의
+    # 비교가 성립하지 않는다(I3 §비교가능성).
+    for key, fn in (("fixtureHash", derive_fixture_hash), ("goldSetId", derive_gold_set_id)):
+        want = fn(MANIFEST)
+        if key not in MANIFEST:
+            yield f"매니페스트에 {key} 가 없다 — I3 계약이 요구하는 값이다 (기대: {want})"
+        elif MANIFEST[key] != want:
+            yield f"{key} 가 내용과 어긋난다 (선언 {MANIFEST[key]}, 재계산 {want})"
+        # 계약 문서가 이 값들을 본문에 적어 두므로(§6.1) 문서도 함께 검사한다.
+        # 파생값은 내용이 바뀔 때마다 달라지는데, 문서에 옛 값이 남아 있으면
+        # 보고서 작성자가 그것을 그대로 인용해 존재하지 않는 입력을 가리키게 된다.
+        elif want not in CONTRACT_DOC:
+            yield f"계약 문서 §6.1 의 {key} 가 낡았다 — 현재 값 {want} 로 갱신할 것"
 
 
 # --- G5 고정 revision 의 실제 원본과 대조 -----------------------------------
@@ -420,6 +468,9 @@ def rehash():
             p = REPO / s["path"]
             s["contentHash"] = sha(p)
             s["lines"] = len(p.read_text().splitlines())
+    # 파생값은 파일 해시가 갱신된 **뒤에** 계산한다.
+    m["fixtureHash"] = derive_fixture_hash(m)
+    m["goldSetId"] = derive_gold_set_id(m)
     (HERE / "manifest.json").write_text(json.dumps(m, ensure_ascii=False, indent=2) + "\n")
     print("manifest 재고정 완료 — validate_gold.py 를 다시 실행하고 리뷰어 승인을 받을 것")
     return 0
@@ -443,6 +494,9 @@ def main():
           f"L3 시나리오 {n_s} · 실패 픽스처 {n_f}")
     print(f"     고정 revision {MANIFEST['sourceRevision'][:7]} · "
           f"픽스처 {len(MANIFEST['fixtures'])}개 해시 고정")
+    # Run Quality Report(#100) 작성자가 그대로 인용할 값이다.
+    print(f"     run.fixtureHash = {MANIFEST['fixtureHash']}")
+    print(f"     goldSetId       = {MANIFEST['goldSetId']}")
     return 0
 
 

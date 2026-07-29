@@ -3,8 +3,8 @@
   "issue": 99,
   "status": "DRAFT — 에이전트 초안. 리뷰어(@xivicWon) 승인 전까지 정답으로 사용할 수 없다(I1 §1.2).",
   "sourceRevision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
-  "docsRevision": "2157134453c1875d8cd55a3042cc3eb541073451",
-  "note": "코드·DB 원본은 sourceRevision 에, 계약 문서(ADR)는 docsRevision 에 고정한다 — I1·EVL 계약은 3c27259 이후에 작성돼 sourceRevision 에 존재하지 않기 때문이다. 한 revision 으로 우겨넣으면 그 좌표는 조회되지 않는 유령 좌표가 된다.",
+  "docsRevision": "7d3db3ed77803c5603137e28a8d9069254db2771",
+  "note": "코드·DB 원본은 sourceRevision 에, 계약 문서(ADR)는 docsRevision 에 고정한다 — I1·EVL 계약은 3c27259 이후에 작성돼 sourceRevision 에 존재하지 않기 때문이다. 한 revision 으로 우겨넣으면 그 좌표는 조회되지 않는 유령 좌표가 된다. I3(#100) 계약이 요구하는 두 값을 여기서 제공한다: `fixtureHash`(실행 하나가 인용할 단일 집계 해시)와 `goldSetId`(판정 규칙까지 포함한 정답셋 신원). 둘 다 파생값이며 validate_gold.py 가 재계산해 대조한다 — 손으로 적은 값은 내용과 어긋날 수 있다.",
   "pinnedSources": [
     {
       "sourceId": "db:legacy-sample",
@@ -97,7 +97,7 @@
     {
       "sourceId": "adr:m0-i1-baseline-contract",
       "path": "docs/superpowers/specs/2026-07-29-m0-i1-baseline-contract.md",
-      "revision": "2157134453c1875d8cd55a3042cc3eb541073451",
+      "revision": "7d3db3ed77803c5603137e28a8d9069254db2771",
       "origin": "repo",
       "contentHash": "sha256:94b3cb45df238760b625576724d83349ca31e3b78b33364ba7ac2aa6e144886f",
       "lines": 291
@@ -105,7 +105,7 @@
     {
       "sourceId": "adr:evl-answer-shape-contract",
       "path": "docs/superpowers/specs/2026-07-29-evl-answer-shape-contract.md",
-      "revision": "2157134453c1875d8cd55a3042cc3eb541073451",
+      "revision": "7d3db3ed77803c5603137e28a8d9069254db2771",
       "origin": "repo",
       "contentHash": "sha256:cf4c5441ebd9a564b4e0004d590b4263694be525361f1fde4497720a065f644b",
       "lines": 480
@@ -209,7 +209,7 @@
     },
     {
       "path": "validate_gold.py",
-      "sha256": "sha256:ede397ce97dc73ba55e56df68b19ab505993fd5165fb1455df1b0df95fd191aa"
+      "sha256": "sha256:030f90d3f05428b81fd862614729c986b7b73ee1d161c93df5d6516b24cb0f87"
     }
   ],
   "fixtures": [
@@ -273,5 +273,7 @@
       "path": "fixtures/pii/corpus.sql",
       "sha256": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
     }
-  ]
+  ],
+  "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
+  "goldSetId": "gold-set/v0+f342e9fa8fc7"
 }
