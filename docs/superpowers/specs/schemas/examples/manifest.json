@@ -291,7 +291,15 @@
       "enforcedBy": "validator",
       "rule": "A18",
       "expectedError": "trigger 'ev-99.signals.corroboration'",
-      "note": "SIGNAL_UNMEASURED 의 trigger 가 실재하지 않는 대상을 가리킴. 신호명 오류는 스키마 pattern 이 잡지만, 대상 실재 여부는 교차 검사(A18)의 몫이다 — C0 가 교차 규칙만 이식해도 구멍이 없어야 하므로 A18 이 evidence id·신호명을 모두 확인한다"
+      "note": "SIGNAL_UNMEASURED 의 trigger 가 실재하지 않는 대상을 가리킴. A18 은 evidence 실재와 신호명 소속을 모두 확인하지만, **신호명 오류는 스키마 pattern 이 5종으로 제한**하므로 스키마 통과 문서에서는 그 분기에 도달하지 않는다(교차 계층 전용 픽스처를 만들 수 없는 이유). 따라서 이 픽스처는 대상 실재 쪽을 검증하고, 신호명 형식은 A12 의 invalid.trigger-wrong-form 계열이 담당한다"
+    },
+    {
+      "file": "invalid.false-abstain.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A16",
+      "expectedError": "보류 조건이 하나도 성립하지 않는데 ABSTAIN",
+      "note": "A16 역방향 — 허위 보류. 정상 답변이 차단되고 baseline 의 보류율·오경고율이 왜곡된다"
     }
   ]
 }

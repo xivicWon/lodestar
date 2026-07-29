@@ -206,7 +206,12 @@ def cross_field_errors(d):
             if trg.startswith("coverage."):
                 ok = trg.split(".", 1)[1] in coverage
             elif code == "SIGNAL_UNMEASURED":
-                ok = trg.rsplit(".signals.", 1)[0] in ev_ids
+                # evidence 실재와 신호명 소속을 모두 확인한다. 스키마 pattern 이
+                # 신호명을 5종으로 제한하므로 스키마 통과 문서에서는 도달하지 않지만,
+                # C0 가 교차 규칙만 이식해도 구멍이 없어야 한다(LOD-010 과 동형).
+                ev_id, _, sig = trg.rpartition(".signals.")
+                owner = next((e for e in evidence if e.get("id") == ev_id), None)
+                ok = owner is not None and sig in (owner.get("signals") or {})
             elif code == "CONFLICT_UNRESOLVED":
                 ok = trg in conflict_ids
             elif code == "ABSTAIN":
@@ -242,6 +247,8 @@ def cross_field_errors(d):
             if not (got & valid_targets):
                 errs.append(f"A16: ABSTAIN 의 trigger {sorted(got)} 가 성립한 조건 {fired} "
                             f"중 무엇도 가리키지 않음 (유효: {sorted(valid_targets)})")
+        elif "ABSTAIN" in codes:
+            errs.append("A16: 보류 조건이 하나도 성립하지 않는데 ABSTAIN 경고가 있음 (허위 보류)")
 
     rule(_a16)
 
