@@ -11,6 +11,7 @@
 """
 import json
 import pathlib
+import re
 import sys
 from datetime import datetime
 
@@ -116,8 +117,12 @@ def cross_field_errors(d):
         for label, v in spots:
             if not isinstance(v, str):
                 continue
+            # 윤초(:60)는 RFC 3339 와 스키마가 허용하지만 표준 라이브러리는 파싱하지 못한다.
+            # :59 로 치환해 '달력상 실재하는 날짜인가'만 판정한다 — 두 계층의 판정이
+            # 어긋나지 않게 하려는 것이며, C0 도 같은 정책을 쓴다.
+            probe = re.sub(r"(T\d{2}:\d{2}:)60", r"\g<1>59", v).replace("Z", "+00:00")
             try:
-                datetime.fromisoformat(v.replace("Z", "+00:00"))
+                datetime.fromisoformat(probe)
             except ValueError:
                 errs.append(f"A1: {label} 이 실재하지 않는 시각 '{v}'")
     rule(_a1_dates)
@@ -149,8 +154,8 @@ def cross_field_errors(d):
     # A11 — 부재·미수집 클래스마다, 미해결 충돌마다 대응 경고(+trigger)
     def _a11():
         for cls, state in coverage.items():
-            if state not in ("present", "absent", "not_collected"):
-                continue  # 구조적으로 잘못된 값은 스키마(A4)의 몫 — 여기서 이중 보고하지 않는다
+            if cls not in WARN_FOR_ABSENT or state not in ("present", "absent", "not_collected"):
+                continue  # 알 수 없는 키·값은 스키마(A4)의 몫. 여기서 멈추면 나머지 키를 못 본다
             absent_warned = (WARN_FOR_ABSENT[cls], f"coverage.{cls}") in warns
             nc_warned = ("NOT_COLLECTED", f"coverage.{cls}") in warns
             if state == "absent" and not absent_warned:
