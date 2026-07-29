@@ -133,8 +133,9 @@ L0 수집(#88) → L1 사실(#89) → L2 관계(#90) → L3 지식·이력(#91) 
 
 ### 2.7 `audit`
 
-`{bundleId, promptHash, evidenceIds[], revision, createdAt, ceilingApplied}` **전부 필수**.
+`{bundleId, promptHash, evidenceIds[], revision, createdAt, ceilingApplied}` **전부 필수** + `ceilingReasons`(`ceilingApplied=true`일 때 필수).
 
+- **재현의 정의:** `audit`만으로 응답 본문을 복원한다는 뜻이 아니다. `bundleId`로 저장된 번들을 조회하고 `revision`·`promptHash`로 **같은 입력이었음을 확인한 뒤 재실행해 같은 결과가 나오는지** 보는 것이다(결정성 — I1 H1). 복원에 필요한 것은 좌표이지 본문 사본이 아니다.
 - `promptHash` — 프롬프트 **원문 대신 해시**. 원문 저장은 PII·시크릿 유출 경로다(I1 §4.1 보안 게이트).
 - `evidenceIds` — 번들에 포함된 **전체 후보**. 응답에 실린 `evidence[].id`의 **상위집합**이며(A13은 `⊆`이지 `=`가 아니다), **탈락한 후보를 일부러 남긴다** — 왜 그것이 안 쓰였는지 역추적하기 위해서다. 따라서 `evidence[]`에 없는 id가 여기 있는 것은 **정상이며 위반이 아니다**.
 - `ceilingApplied` — 상한 적용 **사실**의 기록. **선택이 아니라 필수**다: 선택으로 두면 필드를 생략하는 것만으로 상한 적용을 은폐할 수 있고, 그러면 A15가 무력화된다. 상한 수치는 미확정이나 기록 자체는 I1 §3.3의 게이트다.
@@ -190,8 +191,8 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 | **A12** | `audit` 6개 필드(`ceilingApplied` 포함) 전부 존재 + 모든 `warnings` 항목이 `code`·`message`·`trigger`를 갖는다 | schema | 역추적 불가 · 경고 대상 불명 |
 | **A13** | `evidence[].id` **⊆** `audit.evidenceIds` (등호 아님 — 탈락 후보가 더 있는 것은 정상, §2.7) | validator | 감사 로그 불완전 |
 | **A14** | 동일 대상에 `supports`와 `contradicts`가 공존하면 `conflicts` 항목이 있어야 한다 | validator | **충돌 미탐지 = 거짓 확신** |
-| **A15** | `audit.ceilingApplied=true`인 응답은 **상한 사유를 나타내는 경고를 최소 1개** 갖는다(`DEGRADED_SOURCE`·`CONFLICT_UNRESOLVED`·`NO_*`·`NOT_COLLECTED` 중). 사유가 하위 레이어 실패 전파면 `DEGRADED_SOURCE`가 **필수**다 | validator | 상한 은폐 (I1 §3.3) |
-| **A16** | §6.2의 abstention 조건 1~3 중 하나라도 성립하면 `ABSTAIN` 경고가 존재한다 | validator | 근거 없이 단정 |
+| **A15** | `ceilingApplied=true` ⟺ `audit.ceilingReasons`가 비어있지 않고, 그 **모든 코드가 실제 `warnings`에 존재**한다 | validator | 상한 은폐 · 사유를 사후에 지어냄 (I1 §3.3) |
+| **A16** | §6.2의 abstention 조건 1~3(근거 0건 · 핵심 클래스 부재 · **미해결 충돌 존재**) 중 하나라도 성립하면 `ABSTAIN` 경고가 존재한다 | validator | 근거 없이 단정 |
 | **A17** | `signals`의 값이 `null`(미측정)이면 `SIGNAL_UNMEASURED` 경고가 `trigger="<evidenceId>.signals.<name>"` 로 존재하고, 그 역도 성립한다 | validator | 미측정을 조용히 숨김 |
 | **A18** | 모든 `warnings[].trigger`가 실재 대상을 가리킨다 — `coverage.<key>`는 해당 키, 그 외는 실재하는 `evidence[].id`·`conflicts[].id`·`<evidenceId>.signals.<name>` | validator | 경고가 아무것도 가리키지 않음 |
 
@@ -230,14 +231,14 @@ abstention은 별도 필드가 아니라 **`warnings`에 `code: "ABSTAIN"`이 �
 1. `evidence`가 비어 있다.
 2. 질문 intent가 요구하는 **핵심 클래스**가 전부 `absent`/`not_collected`다.
    (v0 매핑: `EXPLAIN`→`adr`·`issue` · `VERIFY`→`test`·`runtime` · `IMPACT`·`LOCATE`→`code` · `HISTORY`→`issue`)
-3. `NEEDS_CHECK` 충돌의 `between`에 **`evidence[0]`(랭킹 1위 증거)이 포함**된다.
+3. **`NEEDS_CHECK` 충돌이 하나라도 존재**한다.
 4. `confidence_overall`이 임계값 미만이다.
 
 **조건 1~3은 지금 확정**된다(현재 필드만으로 결정론적 판정 가능). **조건 4의 임계값은 §6.3**.
 
-> **미해결 충돌이 있다는 사실만으로는 보류하지 않는다.** 조건 3은 그 충돌이 **`evidence[0]`을 포함할 때**만 성립한다. 하위 순위 증거끼리의 다툼은 `CONFLICT_UNRESOLVED` 경고로 드러내되 답변은 한다 — 모든 충돌에 보류하면 abstention은 경보 피로가 되어 아무도 보지 않게 되고, 그러면 정작 보류해야 할 때 신호가 묻힌다. `valid.full.json`(충돌은 `ev-3`↔`ev-4`, 랭킹 1위는 `ev-1`)이 **보류하지 않는 정상 사례**이고, `invalid.abstain-missing-on-top-conflict.json`(충돌이 `ev-1` 포함)이 **보류해야 하는 위반 사례**다.
->
-> **조건 3을 "핵심 주장"이 아니라 "랭킹 1위 증거"로 정의한 이유:** "핵심 주장"은 응답 필드로 표현되지 않으므로 검증기 구현마다 판정이 갈린다 — 그것 자체가 이 계약이 없애려는 모호함이다. `evidence` 배열의 **순서가 곧 랭킹**(§2.1)이므로 `evidence[0]`은 추가 필드 없이 결정된다. 랭킹 1위가 반박당한 상태에서 단정하지 않는 것이 이 층의 취지이며, 하위 순위 증거만 다투는 경우는 `CONFLICT_UNRESOLVED` 경고로 드러내되 보류까지는 가지 않는다(`valid.full.json`이 그 경계 사례다).
+> **조건 3이 "미해결 충돌 전부"인 이유:** `NEEDS_CHECK`는 문자 그대로 **"아직 모른다"** 는 뜻이다. 모른다고 기록해두고 확신에 찬 답을 내놓는 것이 이 층이 죽이려는 거짓 확신 그 자체다.
+> 보류하지 않고 답하려면 충돌을 **닫아야** 한다 — 근거를 갖춰 `RESOLVED`로 만들거나(§2.4 `resolvedBy` 필수), 둘 다 참인 경우 `COEXIST`로 선언하면 된다. 즉 **비보류 경로는 이미 계약 안에 있고**, 그 경로를 쓰지 않은 채 답하는 것만 막는다.
+> *(v0 초안은 "충돌이 랭킹 1위 증거를 포함할 때"로 좁혔으나 폐기했다 — 자체 정상 픽스처에서 질문 자체를 다투는 충돌이 하위 순위에 걸려 "주변부"로 오판정됐다. 랭킹은 중요도의 대리값이 되지 못한다. §11)*
 
 ### 6.3 임계값은 지금 정하지 않는다
 
@@ -340,6 +341,10 @@ I1 §7과 동일하며, 추가로:
 | A17·A18 | 없음 | 추가 | null 신호를 조용히 숨기는 경로, trigger 가 아무것도 안 가리키는 경로가 열려 있었다 |
 | `trigger` 형식 | 느슨한 정규식(`foo` 허용) | code별 형식 고정 | 임의 문자열을 허용하면 `trigger` 필수화의 의미가 사라진다 |
 | A16 표 렌더링 | 빈 줄로 표 밖에 표시 | 표 내부 행 | 서식 오류 |
+| abstention 조건 3 | "충돌이 `evidence[0]`을 포함" | **"`NEEDS_CHECK` 충돌 존재"** | 랭킹이 중요도의 대리값이 되지 못했다 — 자체 정상 픽스처에서 질문 자체를 다투는 충돌이 하위 순위라는 이유로 비보류 판정됐다. 비보류 경로는 `RESOLVED`/`COEXIST`로 이미 존재한다 |
+| A15 | "상한 사유 경고가 1개 이상 존재" | `audit.ceilingReasons` **명시 + 실제 경고와 대조** | 사유 집합이 넓어 사실상 위반이 불가능했고, 회귀 테스트로 고정되지 않았다 |
+| `createdAt`·`observedAt` | `format` only | `format` + `pattern` | draft 2020-12의 `format`은 기본이 annotation이라 검증기 설정에 따라 통과가 갈렸다 |
+| `validate.py` 교차 검사 | 스키마 오류 시 생략 | 가능한 한 **항상 실행** | 스키마 위반 픽스처에 숨은 2차 위반이 있어도 드러나지 않았다(실제로 2건 발견) |
 | `resolvedBy` | `RESOLVED`일 때 필수(그 외 무제한) | `RESOLVED` **⟺** `resolvedBy` | 비-RESOLVED 에 해소 근거가 붙어도 통과해, 상태와 근거가 모순된 응답이 승인됐다 |
 | A11 `CONFLICT_UNRESOLVED` | 단방향(미해결 → 경고) | **양방향** | 해결된 충돌에 경고가 남아 있어도 통과했다 |
 | A5·A11 음성 픽스처 | 한 방향만 | 양방향 모두 | evidence 를 숨기는 coverage, `not_collected` 경고 누락을 검사하지 않았다 |
@@ -354,14 +359,14 @@ I1 §7과 동일하며, 추가로:
 
 - [x] answer-shape v0 필드·타입·통제어휘 확정 → §2 + JSON Schema
 - [x] 기계 판독 스키마 커밋 → `schemas/answer-shape.v0.schema.json`
-- [x] 구조 불변식 A1~A15 확정 + 스키마/검증기 강제 위치 구분 → §4
+- [x] 구조 불변식 A1~A18 확정 + 스키마/검증기 강제 위치 구분 → §4
 - [x] 필드별 검증 계약(검증 방법·지표·"실패 = ") 확정 → §5
 - [x] confidence를 함수로 취급하는 계약(신호 노출 의무·계수 미확정 명시) → §3
 - [x] abstention 형식·발동 조건 확정, 임계값은 비준으로 위임 → §6
 - [x] 게이트 / 잠정 지표 분리 → §7
 - [x] #99(I2)에 추가 요구되는 gold 케이스 명시 → §8
-- [x] 검증 픽스처(정상 3 + 위반 21) 커밋 + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
-- [x] 픽스처 적합성 확인기 커밋(24/24 재현 가능, 규칙 동일성·단일 위반까지 대조) → `schemas/validate.py`
+- [x] 검증 픽스처(정상 3 + 위반 22) 커밋 + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
+- [x] 픽스처 적합성 확인기 커밋(25/25 재현 가능, 규칙 동일성·단일 위반까지 대조) → `schemas/validate.py`
 - [x] 하위 이슈 분할안 → §9
 
 **다음 착수: C0 검증기 (§9)** — 픽스처 스위트와 참조 규칙 구현이 이미 있으므로 실패 테스트부터 시작할 수 있다.

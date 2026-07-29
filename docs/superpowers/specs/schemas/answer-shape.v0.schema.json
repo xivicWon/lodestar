@@ -200,7 +200,8 @@
         },
         "observedAt": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
         }
       }
     },
@@ -654,13 +655,55 @@
         },
         "createdAt": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
         },
         "ceilingApplied": {
           "description": "confidence 상한이 적용되었는지. 필수다 — 선택 필드로 두면 필드를 생략하는 것만으로 상한 적용을 은폐할 수 있다. 상한 수치는 미확정이나 '적용 사실 기록'은 I1 §3.3의 게이트다(A15).",
           "type": "boolean"
+        },
+        "ceilingReasons": {
+          "description": "상한을 적용한 사유 — 대응하는 warnings[].code 목록. ceilingApplied=true 면 필수·비어있지 않아야 하고, 각 코드는 실제 warnings 에 존재해야 한다(A15). '경고가 하나라도 있으면 통과'로는 상한 은폐를 잡을 수 없다.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "NO_CODE",
+              "NO_ISSUE",
+              "NO_ADR",
+              "NO_TEST",
+              "NO_RUNTIME",
+              "NOT_COLLECTED",
+              "CONFLICT_UNRESOLVED",
+              "LOW_CORROBORATION",
+              "STALE_EVIDENCE",
+              "SIGNAL_UNMEASURED",
+              "DEGRADED_SOURCE",
+              "ABSTAIN"
+            ]
+          }
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "ceilingApplied": {
+                "const": true
+              }
+            },
+            "required": [
+              "ceilingApplied"
+            ]
+          },
+          "then": {
+            "required": [
+              "ceilingReasons"
+            ]
+          }
+        }
+      ]
     },
     "unitIntervalOrNull": {
       "description": "0.0~1.0 또는 null. null 은 '측정하지 못함'이며, 0('측정했고 낮다')과 구분된다. null 을 쓰면 SIGNAL_UNMEASURED 경고가 반드시 동반돼야 한다(A17).",

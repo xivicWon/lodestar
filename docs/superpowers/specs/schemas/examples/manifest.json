@@ -9,7 +9,7 @@
     {
       "file": "valid.full.json",
       "expect": "valid",
-      "note": "증거 5건·충돌·부재 경고·상한 적용이 모두 살아있는 정상 응답. 충돌이 랭킹 1위(ev-1)를 건드리지 않으므로 CONFLICT_UNRESOLVED 는 내되 ABSTAIN 까지는 가지 않는 경계 사례(§6.2 조건 3)"
+      "note": "증거 5건·미해결 충돌·부재 경고·상한이 모두 살아있는 정상 응답. NEEDS_CHECK 충돌이 있으므로 ABSTAIN 을 내고, 상한 사유를 audit.ceilingReasons 에 명시한다"
     },
     {
       "file": "valid.abstention.json",
@@ -19,7 +19,7 @@
     {
       "file": "valid.unmeasured-signal.json",
       "expect": "valid",
-      "note": "측정하지 못한 신호를 0으로 위장하지 않고 null + SIGNAL_UNMEASURED 로 정직하게 표현한 응답(A17 양성)"
+      "note": "측정하지 못한 신호를 0으로 위장하지 않고 null + SIGNAL_UNMEASURED 로 표현한 응답(A17 양성)"
     },
     {
       "file": "invalid.reason-no-basis.json",
@@ -158,11 +158,11 @@
       "note": "§6.2 조건 2 — intent(VERIFY)의 핵심 클래스 test·runtime 이 모두 non-present 인데 보류하지 않음"
     },
     {
-      "file": "invalid.abstain-missing-on-top-conflict.json",
+      "file": "invalid.abstain-missing-on-conflict.json",
       "expect": "invalid",
       "enforcedBy": "validator",
       "rule": "A16",
-      "note": "§6.2 조건 3 — 랭킹 1위 증거가 미해결 충돌에 걸렸는데 보류하지 않음"
+      "note": "§6.2 조건 3 — 미해결(NEEDS_CHECK) 충돌이 있는데 보류하지 않음"
     },
     {
       "file": "invalid.signal-null-without-warning.json",
@@ -177,6 +177,13 @@
       "enforcedBy": "validator",
       "rule": "A18",
       "note": "경고 trigger 가 존재하지 않는 evidence id 를 가리킴"
+    },
+    {
+      "file": "invalid.ceiling-reason-not-warned.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A15",
+      "note": "상한 사유로 DEGRADED_SOURCE 를 적었지만 그런 경고가 실제로는 없음 — 상한 사유를 사후에 지어낸 경우"
     }
   ]
 }

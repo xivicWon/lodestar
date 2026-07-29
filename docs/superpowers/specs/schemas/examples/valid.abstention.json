@@ -2,7 +2,10 @@
   "schemaVersion": "answer-shape/v0",
   "task": {
     "intent": "VERIFY",
-    "target": { "kind": "CLAIM", "ref": "claim-2201" }
+    "target": {
+      "kind": "CLAIM",
+      "ref": "claim-2201"
+    }
   },
   "evidence": [],
   "conflicts": [],
@@ -20,10 +23,26 @@
       "message": "근거를 하나도 찾지 못했습니다. 답변하지 않습니다.",
       "trigger": "evidence"
     },
-    { "code": "NO_CODE", "message": "코드 근거 없음", "trigger": "coverage.code" },
-    { "code": "NO_ISSUE", "message": "이슈 근거 없음", "trigger": "coverage.issue" },
-    { "code": "NO_ADR", "message": "ADR 없음", "trigger": "coverage.adr" },
-    { "code": "NO_TEST", "message": "테스트 없음", "trigger": "coverage.test" },
+    {
+      "code": "NO_CODE",
+      "message": "코드 근거 없음",
+      "trigger": "coverage.code"
+    },
+    {
+      "code": "NO_ISSUE",
+      "message": "이슈 근거 없음",
+      "trigger": "coverage.issue"
+    },
+    {
+      "code": "NO_ADR",
+      "message": "ADR 없음",
+      "trigger": "coverage.adr"
+    },
+    {
+      "code": "NO_TEST",
+      "message": "테스트 없음",
+      "trigger": "coverage.test"
+    },
     {
       "code": "NOT_COLLECTED",
       "message": "런타임 로그 미수집",

@@ -83,9 +83,14 @@ def cross_field_errors(d):
     if {"supports", "contradicts"} <= stances and not d["conflicts"]:
         errs.append("A14: 반대 증거가 있는데 conflicts 가 비어 있음")
 
-    # A15 — 상한 적용 시 사유 경고 필수
-    if d["audit"]["ceilingApplied"] and not (codes & CEILING_REASONS):
-        errs.append("A15: ceilingApplied=true 인데 상한 사유 경고 없음")
+    # A15 — 상한 적용 시 사유를 audit 에 명시하고, 그 사유가 실제 경고로 존재해야 한다
+    reasons = d["audit"].get("ceilingReasons", [])
+    if d["audit"]["ceilingApplied"]:
+        for r in reasons:
+            if r not in codes:
+                errs.append(f"A15: ceilingReasons 의 {r} 가 실제 warnings 에 없음")
+    elif reasons:
+        errs.append("A15: ceilingApplied=false 인데 ceilingReasons 가 비어있지 않음")
 
     # A17 — null 신호 ⟺ SIGNAL_UNMEASURED 경고 (양방향)
     null_signals = {
@@ -122,10 +127,7 @@ def cross_field_errors(d):
     triggers = [
         not d["evidence"],
         all(d["coverage"][c] != "present" for c in core),
-        any(
-            c["status"] == "NEEDS_CHECK" and ev_ids and ev_ids[0] in c["between"]
-            for c in d["conflicts"]
-        ),
+        any(c["status"] == "NEEDS_CHECK" for c in d["conflicts"]),
     ]
     if any(triggers) and "ABSTAIN" not in codes:
         fired = [i + 1 for i, t in enumerate(triggers) if t]
@@ -142,8 +144,13 @@ def main():
     for case in MANIFEST["cases"]:
         doc = json.loads((HERE / "examples" / case["file"]).read_text())
         schema_errs = sorted(validator.iter_errors(doc), key=lambda e: list(e.path))
-        cross_errs = [] if schema_errs else cross_field_errors(doc)
+        try:
+            cross_errs = cross_field_errors(doc)
+        except (KeyError, TypeError, AttributeError):
+            # 구조가 결손된 문서(필수 필드 누락 등)는 교차 검사가 정의되지 않는다.
+            cross_errs = []
         accepted = not schema_errs and not cross_errs
+        total = len(schema_errs) + len(cross_errs)
         expected = case["expect"] == "valid"
 
         ok = accepted == expected
@@ -156,8 +163,9 @@ def main():
         # 승인 여부만 비교하면 '다른 오류' 때문에 목표 규칙 검사가 누락돼도 통과한다.
         # invalid 픽스처는 manifest 가 선언한 규칙 하나만, 그 이유로 걸려야 한다.
         if ok and not expected:
-            if len(cross_errs) > 1:
-                ok, detail = False, f"교차 위반 {len(cross_errs)}건 — 단일 위반이어야 함: {cross_errs}"
+            if total > 1:
+                ok, detail = False, (f"위반 {total}건 — 단일 위반이어야 함: "
+                                     f"{[e.message for e in schema_errs] + cross_errs}")
             elif cross_errs and not cross_errs[0].startswith(case["rule"] + ":"):
                 ok, detail = False, f"규칙 불일치: 기대 {case['rule']}, 실제 {cross_errs[0]}"
             elif len(schema_errs) > 1:
