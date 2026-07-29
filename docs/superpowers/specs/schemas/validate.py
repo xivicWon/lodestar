@@ -288,28 +288,38 @@ def cross_field_errors(d):
 
 def manifest_errors():
     """manifest 자체의 무결성. 통제값이 아닌 expect/enforcedBy 는 오타여도
-    우연히 실제 결과와 맞아떨어져 통과할 수 있으므로 먼저 거른다."""
-    errs = []
+    우연히 실제 결과와 맞아떨어져 통과할 수 있으므로 먼저 거른다.
+
+    반환: (오류 메시지 목록, 무결성 실패한 case 인덱스 집합).
+    실패한 case 는 본 검증에서 건너뛴다 — 거기서 죽으면 나머지 case 의
+    회귀를 전부 놓친다(집계 후 계속이 이 확인기의 계약이다).
+    """
+    errs, bad = [], set()
     seen = set()
     for i, c in enumerate(MANIFEST["cases"]):
         where = c.get("file", f"[{i}]")
         if c.get("expect") not in ("valid", "invalid"):
             errs.append(f"{where}: expect 는 valid|invalid 여야 함 (실제 {c.get('expect')!r})")
+            bad.add(i)
         if c.get("file") in seen:
             errs.append(f"{where}: 중복 등록")
         seen.add(c.get("file"))
         if not (HERE / "examples" / str(c.get("file"))).exists():
             errs.append(f"{where}: 파일이 존재하지 않음")
+            bad.add(i)
         if c.get("expect") == "invalid":
             if c.get("enforcedBy") not in ("schema", "validator"):
                 errs.append(f"{where}: enforcedBy 는 schema|validator 여야 함 (실제 {c.get('enforcedBy')!r})")
+                bad.add(i)
             rule = c.get("rule", "")
             if not (isinstance(rule, str) and rule.startswith("A")
                     and rule[1:].isdigit() and 1 <= int(rule[1:]) <= MAX_RULE):
                 errs.append(f"{where}: rule 은 A1~A{MAX_RULE} 여야 함 (실제 {rule!r})")
+                bad.add(i)
             if not c.get("expectedError"):
                 errs.append(f"{where}: expectedError 가 비어 있음")
-    return errs
+                bad.add(i)
+    return errs, bad
 
 
 def main():
@@ -317,15 +327,15 @@ def main():
     validator = Draft202012Validator(SCHEMA)
     mismatches = 0
 
-    for e in manifest_errors():
+    man_errs, bad_cases = manifest_errors()
+    for e in man_errs:
         mismatches += 1
         print(f"FAIL manifest 무결성 — {e}")
 
-    for case in MANIFEST["cases"]:
-        path = HERE / "examples" / str(case.get("file"))
-        if not path.exists():
-            continue  # manifest 무결성에서 이미 보고했다. 여기서 죽으면 나머지 case 를 못 본다.
-        doc = json.loads(path.read_text())
+    for i, case in enumerate(MANIFEST["cases"]):
+        if i in bad_cases:
+            continue  # 무결성에서 이미 보고했다. 여기서 죽으면 나머지 case 를 못 본다.
+        doc = json.loads((HERE / "examples" / case["file"]).read_text())
         schema_errs = sorted(validator.iter_errors(doc), key=lambda e: list(e.path))
         cross_errs = cross_field_errors(doc)
         accepted = not schema_errs and not cross_errs
@@ -376,7 +386,8 @@ def main():
 
     # 규칙 커버리지 — 불변식이 하나라도 음성 픽스처 없이 남으면 그 규칙은
     # 구현되지 않거나 나중에 제거돼도 이 스위트가 통과한다.
-    covered = {c["rule"] for c in MANIFEST["cases"] if c["expect"] == "invalid"}
+    covered = {c.get("rule") for i, c in enumerate(MANIFEST["cases"])
+               if i not in bad_cases and c.get("expect") == "invalid"}
     uncovered = [f"A{i}" for i in range(1, MAX_RULE + 1) if f"A{i}" not in covered]
     if uncovered:
         mismatches += 1
