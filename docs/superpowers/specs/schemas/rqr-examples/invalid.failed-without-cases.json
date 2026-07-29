@@ -31,9 +31,9 @@
     }
   },
   "counts": {
-    "input": 390,
+    "input": 384,
     "output": 380,
-    "failed": 7,
+    "failed": 1,
     "excluded": 3
   },
   "exclusions": [
@@ -67,8 +67,8 @@
     },
     "coverage": {
       "status": "MEASURED",
-      "value": 0.92,
-      "note": "380/390"
+      "value": 0.9896,
+      "note": "counts.output/counts.input = 380/384"
     },
     "determinism": {
       "status": "MEASURED",
@@ -78,7 +78,7 @@
     "provenanceCompleteness": {
       "status": "MEASURED",
       "value": 1.0,
-      "note": "무효 처리한 7건을 제외한 모든 Claim 이 근거를 가진다"
+      "note": "무효 처리한 1건을 제외한 모든 Claim 이 근거를 가진다"
     }
   },
   "evl": {

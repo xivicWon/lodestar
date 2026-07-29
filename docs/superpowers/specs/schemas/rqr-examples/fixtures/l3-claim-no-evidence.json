@@ -43,8 +43,8 @@
         "problem": "evidenceIds 가 비어 있는데 Claim 이 생성됐다"
       }
     ],
-    "claimCount": 7,
-    "note": "실행에서는 같은 형태의 Claim 이 7건 생성됐다. 위 1건이 최소 재현 형태다."
+    "claimCount": 1,
+    "note": "이 실행에서 근거 없이 생성된 Claim 은 1건이며, 위가 그 최소 재현 형태다."
   },
   "expected": {
     "rule": "I1 P1 (무근거 Claim 금지)",

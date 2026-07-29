@@ -23,7 +23,9 @@ REPO = HERE.parents[3]  # docs/superpowers/specs/schemas -> 리포 루트
 SCHEMA = json.loads((HERE / "run-quality-report.v0.schema.json").read_text())
 MANIFEST = json.loads((EX / "manifest.json").read_text())
 # 계약 §4 가 정의한 불변식 개수 — 규칙이 늘면 여기도 올린다(커버리지 검사에 쓰인다).
-MAX_RULE = 19
+MAX_RULE = 20
+# coverage 산식 대조 허용 오차 — 소수 4자리 반올림까지만 허용한다(R20).
+COVERAGE_TOLERANCE = 0.00005
 
 # 규칙 -> 그 규칙이 스키마에서 강제되는 위치의 표지. schema 계층 픽스처는
 # expectedError 문자열뿐 아니라 **실제 위반 위치가 선언된 rule 과 맞는지**까지 대조한다.
@@ -140,12 +142,12 @@ def cross_field_errors(d):
             errs.append(f"R3: 같은 제외 사유가 여러 항목으로 흩어짐 {dup}")
     rule(_r3)
 
-    # R4 — 실패 건수와 실패 사례의 존재가 일치한다(양방향).
+    # R4 — 실패 건수와 실패 사례의 수가 **정확히** 일치한다. R3(제외 좌표)과 같은 원칙이다:
+    #      집계만 남기고 사례를 일부만 적으면 나머지 실패는 재현도 회귀 검증도 되지 않는다.
     def _r4():
-        if counts["failed"] > 0 and not failures:
-            errs.append(f"R4: counts.failed={counts['failed']} 인데 failures 가 비어 있음")
-        if counts["failed"] == 0 and failures:
-            errs.append("R4: counts.failed=0 인데 failures 에 사례가 있음")
+        if counts["failed"] != len(failures):
+            errs.append(f"R4: counts.failed={counts['failed']} != failures 사례 수 {len(failures)} "
+                        f"(실패는 전부 사례와 재현 fixture 를 남긴다)")
     rule(_r4)
 
     # R6 — BLOCKED ⟺ haltRules 가 비어있지 않다.
@@ -237,12 +239,18 @@ def cross_field_errors(d):
             errs.append("R12: fixtureHash=UNPINNED 인데 UNPINNED_FIXTURE 경고 없음")
         if not unpinned and warned:
             errs.append("R12: UNPINNED_FIXTURE 경고가 있는데 fixtureHash 는 고정돼 있음")
-        eligible = (not unpinned) and run["reportKind"] == "BASELINE"
+        # 적용 대상 버전이 하나라도 미고정이면 그 실행은 재현할 수 없고, 재현할 수 없는
+        # 실행은 기준선이 아니다. NOT_APPLICABLE(그 레이어가 안 쓰는 요소)은 대상이 아니다.
+        unpinned_versions = sorted(k for k, v in versions.items()
+                                   if isinstance(v, dict) and v.get("status") == "UNPINNED")
+        eligible = ((not unpinned) and run["reportKind"] == "BASELINE"
+                    and not unpinned_versions)
         if baseline["eligibleAsBaseline"] != eligible:
             errs.append(
                 f"R12: eligibleAsBaseline={baseline['eligibleAsBaseline']} 인데 "
                 f"fixtureHash={'UNPINNED' if unpinned else 'pinned'} · "
-                f"reportKind={run['reportKind']} (기대 {eligible})")
+                f"reportKind={run['reportKind']} · "
+                f"미고정 버전={unpinned_versions or '없음'} (기대 {eligible})")
     rule(_r12)
 
     # R13 — calibration 은 원자료가 완전할 때만 수치를 인용한다(EVL §3.3).
@@ -372,6 +380,18 @@ def cross_field_errors(d):
             if dup:
                 errs.append(f"R19: {label} 가 보고서 안에서 중복됨 {dup}")
     rule(_r19)
+
+    # R20 — coverage 는 산식이 있는 값이다: counts.output / counts.input (소수 4자리 반올림 허용).
+    #       정의 없이 적힌 비율은 보고서마다 분모가 달라져 비교가 성립하지 않는다.
+    def _r20():
+        cov = metrics["coverage"]
+        if cov["status"] != "MEASURED" or counts["input"] == 0:
+            return
+        expected = counts["output"] / counts["input"]
+        if abs(cov["value"] - expected) > COVERAGE_TOLERANCE:
+            errs.append(f"R20: coverage={cov['value']} 가 산식 output/input "
+                        f"({counts['output']}/{counts['input']} = {expected:.4f}) 과 다름")
+    rule(_r20)
 
     return errs
 
@@ -521,6 +541,11 @@ def manifest_errors():
                 bad.add(i)
     if not any(c.get("expect") == "template" for c in MANIFEST["cases"]):
         errs.append("manifest: 빈 템플릿 케이스가 없다 (#100 산출물 요구사항)")
+    # 총계를 manifest 안에 못박는다 — 계약 문서의 완료조건("N cases")이 인용하는 수이며,
+    # 픽스처가 늘거나 줄었는데 문서의 N 이 그대로면 완료조건이 실제와 어긋난다.
+    if MANIFEST.get("caseCount") != len(MANIFEST["cases"]):
+        errs.append(f"manifest: caseCount {MANIFEST.get('caseCount')!r} 가 실제 케이스 수 "
+                    f"{len(MANIFEST['cases'])} 와 다름 (계약 §4.1·§8 의 'N cases' 도 함께 갱신할 것)")
     return errs, bad
 
 

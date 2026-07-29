@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/xivicWon/lodestar/schemas/run-quality-report.v0.schema.json",
   "title": "Lodestar Run Quality Report v0",
-  "description": "M0 L0~L3 벤치 실행 하나가 남기는 표준 보고서. 규범 문서: docs/superpowers/specs/2026-07-29-m0-i3-run-quality-report-contract.md (이슈 #100). 이 스키마는 구조 불변식만 강제한다. 교차 필드 불변식(R2~R19)은 검증기 책임이며 규범 문서 §4에 정의한다.",
+  "description": "M0 L0~L3 벤치 실행 하나가 남기는 표준 보고서. 규범 문서: docs/superpowers/specs/2026-07-29-m0-i3-run-quality-report-contract.md (이슈 #100). 이 스키마는 구조 불변식만 강제한다. 교차 필드 불변식(R2~R20)은 검증기 책임이며 규범 문서 §4에 정의한다.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -116,7 +116,7 @@
       }
     },
     "exclusions": {
-      "description": "제외 사유별 집계. '조용한 스킵' 을 막는 자리다(I1 §4.1 오류 가시성). 합계는 counts.excluded 와 일치해야 한다(R3).",
+      "description": "제외 사유별 집계. '조용한 스킵' 을 막는 자리다(I1 §4.1 오류 가시성). 합계는 counts.excluded 와 일치하고, 사유별 count 는 examples 의 좌표 수와도 일치해야 한다(R3).",
       "type": "array",
       "items": {
         "type": "object",
@@ -133,13 +133,13 @@
             "type": "array",
             "minItems": 1,
             "items": { "type": "string", "minLength": 1 },
-            "description": "원본 좌표. 사유만 적고 대상을 안 적으면 재확인이 불가능하다."
+            "description": "제외된 대상 전부의 원본 좌표 — 길이가 count 와 같아야 한다(R3). 사유만 적고 대상을 안 적으면 재확인이 불가능하다."
           }
         }
       }
     },
     "failures": {
-      "description": "실패 사례. counts.failed > 0 이면 비어 있을 수 없다(R4). 각 사례는 재현 fixture 를 가리켜야 한다 — 재현 불가한 실패 보고는 다음 실행에서 검증되지 않는다.",
+      "description": "실패 사례. 항목 수는 counts.failed 와 정확히 같아야 한다(R4) — 집계만 남기고 사례를 일부만 적으면 나머지는 재현·회귀 검증이 되지 않는다. 각 사례는 실재하는 재현 fixture 를 가리켜야 한다.",
       "type": "array",
       "items": {
         "type": "object",
@@ -171,7 +171,7 @@
         "recall": { "$ref": "#/$defs/measurement" },
         "coverage": {
           "$ref": "#/$defs/measurement",
-          "description": "Gold Set 대비 대상 커버 비율. EVL coverage(클래스 존재/부재)와 다른 값이며 섞지 않는다."
+          "description": "산식 고정: counts.output / counts.input (소수 4자리 반올림 허용 — R20). 실패·제외는 분자에서 빠지고 분모에는 남는다. EVL coverage(클래스 존재/부재)와 다른 값이며 섞지 않는다."
         },
         "determinism": {
           "$ref": "#/$defs/measurement",
@@ -315,7 +315,7 @@
         },
         "eligibleAsBaseline": {
           "type": "boolean",
-          "description": "이 보고서가 다음 실행의 비교 기준선이 될 수 있는가. fixtureHash 미고정이거나 reportKind=EXAMPLE 이면 false 다(R12)."
+          "description": "이 보고서가 다음 실행의 비교 기준선이 될 수 있는가. fixtureHash 미고정 · reportKind=EXAMPLE · 적용 대상 버전 중 하나라도 UNPINNED 이면 false 다(R12) — 재현할 수 없는 실행은 기준선이 아니다."
         },
         "deltas": {
           "type": "array",

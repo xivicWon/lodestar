@@ -18,7 +18,7 @@
 | | 내용 | 소유 |
 |---|---|---|
 | ✅ 확정 | 보고서 필드·타입·통제어휘 | 본 문서 §2·§3 + `schemas/run-quality-report.v0.schema.json` |
-| ✅ 확정 | 구조 불변식 R1~R19와 강제 위치(schema / validator) | §4 |
+| ✅ 확정 | 구조 불변식 R1~R20과 강제 위치(schema / validator) | §4 |
 | ✅ 확정 | 빈 템플릿 + 작성 예시 fixture | `schemas/rqr-examples/` |
 | ✅ 확정 | 판정 3값 + 제한 등급·사유·닫힌 경로 기록 형식 | §3.7 (I1 §2.2 요구사항 충족) |
 | ✅ 확정 | EVL 지표(칼리브레이션·충돌 precision/recall·커버리지 클래스) 편입 형식 | §3.5 (#104 요구사항 충족) |
@@ -109,7 +109,7 @@ collector·extractor·model·prompt **4개 전부 필수 키**이며 각각 `{st
 - `exclusions[].count` 의 합 = `counts.excluded`(R3). **사유별로 한 항목**이며 같은 사유를 여러 항목으로 흩지 않는다.
 - 제외에는 **제외된 대상 전부의 원본 좌표**를 남긴다 — `count` 와 `examples` 의 길이가 같아야 한다(R3). 사유만 적고 대상을 안 적으면 재확인이 불가능하고, 일부만 적으면 나머지는 "몇 건 있었다"로만 남아 다음 실행에서 대조할 수 없다. 제외가 많아 좌표를 다 적기 어렵다면 **사유를 더 잘게 나눈다**(그것이 실제 사유 구분이다).
   → 이것이 I1 §4.1 "L0 오류 가시성 100%"가 보고서에서 드러나는 자리다. 뷰 스킵을 조용히 무시하는 경로가 여기서 막힌다(I1 §1.1).
-- `counts.failed > 0` ⟺ `failures` 가 비어있지 않다(R4). 실패마다 **재현 fixture 경로**가 필수다 — 재현 불가한 실패 보고는 다음 실행에서 검증되지 않으므로 회귀로 고정되지 않는다.
+- **`counts.failed` = `failures` 사례 수**(R4). 집계만 남기고 사례를 일부만 적으면 나머지 실패는 재현도 회귀 검증도 되지 않는다 — 제외 좌표(R3)와 같은 원칙이다. 실패가 많아 전부 적기 어렵다면 그것은 **보고를 줄일 이유가 아니라 그 레이어를 통과시키지 않을 이유**다. 실패마다 사례(`summary`·`link`)와 **재현 fixture 경로**가 필수다.
 - **경로 문자열만으로는 부족하다.** 보고서가 가리키는 재현 fixture는 **리포에 실재해야 하고**, `schemas/rqr-examples/manifest.json` 에 등록돼야 하며, 최소한 `{fixtureId, reproduces{runId, failureId}, layer, input, expected}` 를 갖춰야 한다(§4.1). 무엇을 재현하는지·무엇이 기대값인지 적히지 않은 파일은 다음 실행에서 회귀 판정의 기준이 되지 못한다. 예: [`fixtures/l3-claim-no-evidence.json`](schemas/rqr-examples/fixtures/l3-claim-no-evidence.json).
 
 ### 3.4 `metrics` — 지표
@@ -123,7 +123,8 @@ collector·extractor·model·prompt **4개 전부 필수 키**이며 각각 `{st
 | `NOT_APPLICABLE` | 이 레이어에 해당 없음. `value` 는 `null`, `note` 에 사유 |
 
 **미측정을 0으로 채우는 것은 금지**다 — 0은 "측정했고 0"이라는 뜻이다(EVL §3.2의 자기적용).
-`metrics.coverage`(Gold 대비 대상 커버 비율)와 `evl.coverageClasses`(클래스 존재/부재)는 **다른 값**이며 섞어 쓰지 않는다.
+**`metrics.coverage` 의 산식은 `counts.output / counts.input` 으로 고정한다**(R20, 소수 4자리 반올림 허용). 분모를 보고서마다 다르게 잡으면(입력 전체 / Gold 대상 / 성공 건수) 같은 이름의 값이 서로 다른 것을 뜻하게 되어 레이어 간·기준선 대비 비교가 성립하지 않는다. 실패·제외는 분자에서 빠지고 분모에는 남는다 — 그래야 '못 만든 것' 이 커버리지에 드러난다.
+`metrics.coverage` 와 `evl.coverageClasses`(클래스 존재/부재)는 **다른 값**이며 섞어 쓰지 않는다.
 `determinism` 이 1.0 미만이면 H1이 발동하며 판정은 BLOCKED 다(R8·R6 — I1 §3.2).
 
 ### 3.5 `evl` — EVL(#104) 편입 지표
@@ -180,7 +181,9 @@ runId 만 적으면 "같은 것을 잰 실행인가"를 보고서만으로 판�
 
 **`comparable=false`** → `deltas` 는 **비어 있고**, `reason` 이 필수이며, `BASELINE_NOT_COMPARABLE` 경고를 낸다. **비교 불가를 "변화 없음"으로 표기하지 않는다.**
 
-`eligibleAsBaseline` = (`fixtureHash` 고정) AND (`reportKind = BASELINE`)(R12). 이 값이 `false` 인 보고서는 **다음 실행의 비교 대상이 되지 않는다**(I1 §1.3·§7.4).
+**`eligibleAsBaseline` = (`fixtureHash` 고정) ∧ (`reportKind = BASELINE`) ∧ (적용 대상 버전이 전부 `PINNED`)**(R12).
+세 번째 조건이 있는 이유: fixture 만 고정하고 모델·추출기 버전을 모르면 **같은 입력을 재현할 수 없고**, 재현할 수 없는 실행은 기준선이 아니다. `NOT_APPLICABLE`(그 레이어가 쓰지 않는 요소)은 조건에서 제외된다 — 안 쓰는 것의 버전은 재현에 영향이 없다.
+이 값이 `false` 인 보고서는 **다음 실행의 비교 대상이 되지 않는다**(I1 §1.3·§7.4).
 
 > **현재 상태:** #99(I2)가 fixture hash 를 고정하기 전이므로 **모든 실행이 `fixtureHash: UNPINNED`** 이고, 따라서 `comparable=true` 인 정상 예시는 아직 만들 수 없다(가공 해시로 만들면 그 자체가 이 계약이 막으려는 것이다). 커밋된 정상 예시 2건은 모두 비교 불가 상태이며, `comparable=true` 경로는 **음성 픽스처 3건**(deltas 누락 · revision 불일치 · fixture 미고정)으로 검사한다. 정상 예시는 #99 이후 실 해시로 추가한다.
 
@@ -192,7 +195,7 @@ runId 만 적으면 "같은 것을 잰 실행인가"를 보고서만으로 판�
 
 ---
 
-## 4. 구조 불변식 (R1~R19)
+## 4. 구조 불변식 (R1~R20)
 
 **R1은 메타 규칙이다** — 스키마가 거는 제약 전부가 R1이며, 그중 다른 R규칙이 지목하지 않는 위반(`additionalProperties`, 시각의 달력 유효성, 시각 순서 등)이 R1로 귀속된다.
 
@@ -204,7 +207,7 @@ runId 만 적으면 "같은 것을 잰 실행인가"를 보고서만으로 판�
 | **R1** | 스키마를 통과하고, 시각이 **실재하는 날짜**이며 `completedAt ≥ startedAt` | schema + validator | 형식 위반 — 비교 대상 제외 |
 | **R2** | `input = output + failed + excluded` | validator | 세지 않은 건이 있다 |
 | **R3** | `exclusions` 합 = `counts.excluded`, **사유별 `count` = 좌표 수**, 사유 중복 없음 | validator | **조용한 스킵** · 일부만 좌표를 남겨 나머지가 대조 불가 |
-| **R4** | `counts.failed > 0` ⟺ `failures` 비어있지 않음 (양방향) | validator | 실패 은폐 · 유령 실패 |
+| **R4** | `counts.failed` = `failures` 사례 수 (정확히 일치) | validator | **일부 실패만 기록** · 유령 실패 |
 | **R5** | `verdict.value` 는 3값 통제어휘 | schema | 판정 집계 불가 |
 | **R6** | `BLOCKED` ⟺ `haltRules` 비어있지 않음 (양방향) | validator | 중단 근거 없음 · 근거만 있고 판정이 다름 |
 | **R7** | `PASS_RESTRICTED` ⟺ `restrictions` + `PATH_RESTRICTED` 경고 (양방향) | validator | **제한 은폐**(I1 §3.2) · 허위 제한 |
@@ -212,7 +215,7 @@ runId 만 적으면 "같은 것을 잰 실행인가"를 보고서만으로 판�
 | **R9** | 게이트 `FAIL` ⟺ `GATE_FAILED` 경고, 그리고 `FAIL` 이 있으면 판정 ≠ `PASS` | validator | 게이트 무력화(I1 G4) |
 | **R10** | 지표·**게이트** `NOT_MEASURED` ⟺ `METRIC_UNMEASURED` 경고 (양방향) | validator | 미측정을 0과 섞음 · 미측정 게이트가 통과처럼 읽힘 |
 | **R11** | 버전 `UNPINNED` ⟺ `VERSION_UNPINNED` 경고 (양방향). `NOT_APPLICABLE` 은 경고 대상 아님 | validator | 버전 추적 거짓 · '안 씀' 과 '모름' 을 섞음 |
-| **R12** | `fixtureHash=UNPINNED` ⟺ `UNPINNED_FIXTURE` 경고 · `eligibleAsBaseline` = (고정 ∧ `BASELINE`) | validator | **미고정 실행이 기준선이 됨**(I1 §1.3) |
+| **R12** | `fixtureHash=UNPINNED` ⟺ `UNPINNED_FIXTURE` 경고 · `eligibleAsBaseline` = (fixture 고정 ∧ `BASELINE` ∧ **적용 대상 버전 전부 PINNED**) | validator | **재현 불가한 실행이 기준선이 됨**(I1 §1.3) |
 | **R13** | calibration `MEASURED` → 모집단·ece·bins 존재 + bins 표본합 일치 · `missingRawCount>0` → `MEASURED` 불가 + 경고 (양방향) | validator | **미보정 수치 인용**(EVL §3.3) |
 | **R14** | conflict precision/recall `MEASURED` → `goldSetId` 존재 | validator | 대조 대상 없는 성능 주장 |
 | **R15** | coverage 5클래스가 정확히 한 번씩 · `state≠present` ⟺ `warned` | validator | 안 본 클래스가 사라짐 |
@@ -220,20 +223,23 @@ runId 만 적으면 "같은 것을 잰 실행인가"를 보고서만으로 판�
 | **R17** | `comparable=true` → `previous` 신원 일치(project·layer·track·revision·schemaVersion) + **양쪽 fixture 고정·동일** + `deltas` 존재 / `false` → `deltas` 비어있고 `reason`+경고 | validator | 다른 것을 잰 실행끼리 비교 · 비교 불가를 "변화 없음"으로 위장 |
 | **R18** | 모든 `warnings[].trigger` 가 그 `code` 가 가리키도록 정해진 종류의 대상을 **실제로** 가리킴 | validator | 경고가 아무것도 가리키지 않음 |
 | **R19** | `failures[].id`·`gates[].id`·`featureJudgments[].featureId` 가 각각 유일 | validator | 경고 하나가 여러 대상을 충족한 것처럼 보임 |
+| **R20** | `metrics.coverage` = `counts.output / counts.input` (4자리 반올림 허용) | validator | 분모가 보고서마다 달라져 **비교 불가** |
 
 ### 4.1 검사 재현
 
 ```bash
 pip install jsonschema
 cd docs/superpowers/specs/schemas && python3 validate_rqr.py
-# 30 cases, 0 mismatches
+# 33 cases, 0 mismatches   (= manifest.json 의 caseCount)
 ```
 
 확인기는 네 가지를 본다: ① 정상/위반 픽스처의 승인 여부, ② **위반 픽스처가 선언된 규칙으로·선언된 계층에서** 걸리는지(라벨 오류로 커버리지가 과대 보고되는 것을 막는다), ③ **빈 템플릿이 스키마의 모든 필수 경로를 갖고 값이 전부 placeholder 인지**, ④ **정상 픽스처가 가리키는 재현 fixture 가 실재하고 manifest 에 등록됐으며 최소 형식을 갖췄는지**.
 ③이 있는 이유: 스키마에 필드가 추가됐는데 템플릿에 자리가 없으면 작성자는 그 필드의 존재를 영원히 모른다.
 ④가 있는 이유: 경로 문자열은 파일이 없어도 그럴듯해 보인다 — 실재 검사가 없으면 '재현 fixture 기록' 은 형식만 남는다.
 
-**R1~R19 전부 음성 픽스처를 가져야** 스위트가 통과한다. 규칙만 문서에 적고 검사가 없는 상태를 막는 장치다.
+**R1~R20 전부 음성 픽스처를 가져야** 스위트가 통과한다. 규칙만 문서에 적고 검사가 없는 상태를 막는 장치다.
+
+케이스 총계는 `manifest.json` 의 `caseCount` 에 못박혀 있고 확인기가 실제 개수와 대조한다 — 픽스처가 늘었는데 아래 완료조건의 수가 그대로면 그 자체로 실패한다.
 
 ---
 
@@ -282,6 +288,6 @@ I1 §7·EVL §10과 동일하며, 추가로:
 - [x] EVL 편입: confidence calibration · conflict precision/recall · coverage 클래스 체크리스트 → §3.5 (R13·R14·R15)
 - [x] 판정 3값 + 제한 사유·닫힌 경로 필드 유지 → §3.7 (R5·R6·R7)
 - [x] 기계 판독 스키마 커밋 → `schemas/run-quality-report.v0.schema.json`
-- [x] 구조 불변식 R1~R19 + 규칙별 음성 픽스처 + 확인기 커밋 (30 cases, 0 mismatches) → §4, `schemas/validate_rqr.py`
+- [x] 구조 불변식 R1~R20 + 규칙별 음성 픽스처 + 확인기 커밋 (33 cases, 0 mismatches — `manifest.caseCount` 와 일치) → §4, `schemas/validate_rqr.py`
 
 **다음 착수: #99(I2) Gold Set & 실패 fixture — 그 뒤 G2가 열려 L0(#88)이 착수 가능해진다(I1 §2.1).**
