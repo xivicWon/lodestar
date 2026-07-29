@@ -71,16 +71,22 @@ def _apply(base, label, fn):
     '통과해서는 안 되는데 통과'로 세면 하네스가 스스로 거짓 결함을 만든다.
     """
     d = copy.deepcopy(base)
-    fn(d)
+    try:
+        fn(d)
+    except (KeyError, IndexError, TypeError, AttributeError):
+        return None
     return (label, d) if d != base else None
 
 
-def must_reject(base):
-    """계약상 위반이 되는 변이."""
+def _mutators(base):
+    """(라벨, 변이함수, 계층) 을 내놓는다.
+
+    문서가 아니라 **함수**를 내놓는 이유: 2중 변이를 만들 때 문서를 병합하면
+    같은 최상위 키를 건드린 두 변이 중 하나가 덮어써져 라벨과 실제 내용이
+    달라진다. 함수를 순차 적용해야 두 변이가 모두 살아 있는 문서가 된다.
+    """
     def m(label, fn):
-        r = _apply(base, label, fn)
-        if r:
-            yield r
+        yield label, fn, "any"
 
     # 1) 필수 필드 삭제 — 스키마가 required 로 지정한 것 전부
     def required_paths(doc, schema, path=""):
@@ -94,27 +100,32 @@ def must_reject(base):
                 sub = SCHEMA["$defs"][ref.split("/")[-1]] if ref else sub
                 yield from required_paths(doc[k], sub, f"{path}.{k}")
 
+    def _del_path(keys):
+        def f(d):
+            cur = d
+            for k in keys[:-1]:
+                cur = cur.get(k) if isinstance(cur, dict) else None
+                if cur is None:
+                    return
+            if isinstance(cur, dict):
+                cur.pop(keys[-1], None)
+        return f
+
     for rp in dict.fromkeys(required_paths(base, SCHEMA)):
         keys = [k for k in rp.split(".") if k]
-        d = copy.deepcopy(base)
-        cur = d
-        for k in keys[:-1]:
-            cur = cur.get(k) if isinstance(cur, dict) else None
-            if cur is None:
-                break
-        if isinstance(cur, dict) and keys[-1] in cur:
-            cur.pop(keys[-1])
-            yield f"필수필드 삭제 {rp}", d, "any"
+        yield f"필수필드 삭제 {rp}", _del_path(keys), "any"
 
     # 배열 원소 안의 필수 필드도 삭제해 본다
     for arr, fields in (("evidence", ["id", "source", "ref", "confidence", "signals", "reason", "stance"]),
                         ("warnings", ["code", "message", "trigger"]),
                         ("conflicts", ["id", "between", "claim", "status"])):
         for f in fields:
-            d = copy.deepcopy(base)
-            if d.get(arr) and f in d[arr][0]:
-                d[arr][0].pop(f)
-                yield f"필수필드 삭제 {arr}[0].{f}", d, "any"
+            def _del_item(a=arr, key=f):
+                def g(d):
+                    if d.get(a) and isinstance(d[a], list) and d[a] and isinstance(d[a][0], dict):
+                        d[a][0].pop(key, None)
+                return g
+            yield f"필수필드 삭제 {arr}[0].{f}", _del_item(), "any"
 
     # 2) 타입·범위 위반
     for lbl, fn in [
@@ -147,10 +158,22 @@ def must_reject(base):
         ("between 1개", lambda d: d["conflicts"] and d["conflicts"][0].__setitem__("between", ["ev-1"])),
         ("between 중복", lambda d: d["conflicts"] and d["conflicts"][0].__setitem__("between", ["ev-1", "ev-1"])),
     ]:
-        for label, doc in m(lbl, fn):
-            yield label, doc, "any"
+        yield lbl, fn, "any"
 
     # 3) 교차 필드 관계 파괴
+    def _inject_false_abstain(d):
+        """조건 1~3 을 모두 끄고 ABSTAIN 만 남긴다 -> A16 역방향에 걸려야 한다."""
+        if any(w["code"] == "ABSTAIN" for w in d["warnings"]):
+            for c in d["conflicts"]:                 # 미해결 충돌을 닫는다
+                if c["status"] == "NEEDS_CHECK":
+                    c["status"] = "COEXIST"
+            d["warnings"] = [w for w in d["warnings"] if w["code"] != "CONFLICT_UNRESOLVED"]
+            d["audit"]["ceilingApplied"] = False
+            d["audit"].pop("ceilingReasons", None)
+            return
+        d["warnings"].append({"code": "ABSTAIN", "message": "근거 없는 보류",
+                              "trigger": "evidence"})
+
     def _drop_sole_source(d):
         counts = {}
         for e in d["evidence"]:
@@ -199,8 +222,9 @@ def must_reject(base):
         ("반대 증거로 뒤집기", lambda d: d["evidence"] and d["evidence"][0].__setitem__("stance", "contradicts")),
         ("미해결 충돌인데 보류 안 함", lambda d: any(c["status"] == "NEEDS_CHECK" for c in d["conflicts"])
             and d.__setitem__("warnings", [w for w in d["warnings"] if w["code"] != "ABSTAIN"])),
-        ("충돌 없는데 보류", lambda d: not d["conflicts"] and d["evidence"] and all(
-            v == "present" for v in d["coverage"].values()) or False),
+        # 보류 조건이 하나도 성립하지 않는 문서에 ABSTAIN 을 끼워 넣는다(허위 보류).
+        # 이전 구현은 조건식의 boolean 만 반환해 문서를 바꾸지 않는 죽은 항목이었다.
+        ("허위 보류(ABSTAIN 과잉)", _inject_false_abstain),
         ("충돌 해소 근거 없이 RESOLVED", lambda d: d["conflicts"] and d["conflicts"][0].__setitem__("status", "RESOLVED")),
         ("미해결에 해소 근거 부착", lambda d: d["conflicts"] and d["conflicts"][0].__setitem__(
             "resolvedBy", {"layer": "L3", "id": "x"})),
@@ -208,20 +232,29 @@ def must_reject(base):
         # 그 클래스의 **유일한** 증거를 빼야 coverage 가 거짓이 된다.
         ("유일 소스 증거 제거", _drop_sole_source),
     ]:
-        for label, doc in m(lbl, fn):
-            yield label, doc, "cross"   # 교차 계층 단독으로도 잡아야 한다
-        continue
+        yield lbl, fn, "cross"          # 교차 계층 단독으로도 잡아야 한다
 
     # 4) 신호별 개별 파괴
+    def _sig(name, val=None, drop=False):
+        def f(d):
+            if d.get("evidence") and isinstance(d["evidence"][0].get("signals"), dict):
+                if drop:
+                    d["evidence"][0]["signals"].pop(name, None)
+                else:
+                    d["evidence"][0]["signals"][name] = val
+        return f
+
     for s in SIGNALS:
-        d = copy.deepcopy(base)
-        if d["evidence"]:
-            d["evidence"][0]["signals"].pop(s)
-            yield f"신호 {s} 누락", d, "any"
-        d2 = copy.deepcopy(base)
-        if d2["evidence"]:
-            d2["evidence"][0]["signals"][s] = 2.0
-            yield f"신호 {s} 범위 초과", d2, "any"
+        yield f"신호 {s} 누락", _sig(s, drop=True), "any"
+        yield f"신호 {s} 범위 초과", _sig(s, 2.0), "any"
+
+
+def must_reject(base):
+    """변이를 실제로 적용해 (라벨, 문서, 계층) 으로 내놓는다."""
+    for label, fn, layer in _mutators(base):
+        r = _apply(base, label, fn)
+        if r:
+            yield r[0], r[1], layer
 
 
 def must_accept(base):
@@ -254,31 +287,31 @@ def must_accept(base):
 
 
 def pairwise(base, cap=60):
-    """두 위반을 동시에 가한 문서 — **여전히 거부돼야 한다**.
+    """두 위반을 **함수로 순차 적용**한 문서 — 여전히 거부돼야 한다.
 
-    각각은 걸리는데 둘을 합치면 통과하는 조합이 있으면(= 서로를 상쇄하면)
-    '두 번 틀리면 맞는' 구멍이다. 예: 경고를 지우고(A11) 커버리지도 함께
-    바꿔(A5) 두 규칙이 서로의 전제를 없애는 경우.
+    각각은 걸리는데 둘을 합치면 통과하는 조합이 있으면(= 서로의 전제를 없애
+    상쇄하면) '두 번 틀리면 맞는' 구멍이다. 문서 병합이 아니라 순차 적용이라
+    같은 최상위 키를 건드리는 두 변이도 온전히 합성된다.
     """
-    muts = [(l, d) for l, d, _ in must_reject(base)][:cap]
+    muts = list(_mutators(base))[:cap]
     seen = set()
     for i in range(len(muts)):
         for j in range(i + 1, len(muts)):
-            (l1, d1), (l2, d2) = muts[i], muts[j]
-            merged = copy.deepcopy(base)
-            # 두 변이를 원본 대비 차이로 다시 적용한다
-            for src in (d1, d2):
-                for k, v in src.items():
-                    if base.get(k) != v:
-                        merged[k] = copy.deepcopy(v)
-                for k in list(merged):
-                    if k in base and k not in src:
-                        merged.pop(k, None)
-            key = json.dumps(merged, sort_keys=True, ensure_ascii=False)
+            (l1, f1, _), (l2, f2, _) = muts[i], muts[j]
+            d = copy.deepcopy(base)
+            try:
+                f1(d)
+                after1 = copy.deepcopy(d)
+                f2(d)
+            except (KeyError, IndexError, TypeError, AttributeError):
+                continue  # 앞 변이가 지운 자리를 뒤 변이가 건드린 경우 — 그 쌍만 건너뛴다
+            if d == base or d == after1:      # 둘째 변이가 실제로 먹지 않았다
+                continue
+            key = json.dumps(d, sort_keys=True, ensure_ascii=False, default=str)
             if key in seen:
                 continue
             seen.add(key)
-            yield f"{l1} + {l2}", merged
+            yield f"{l1} + {l2}", d
 
 
 def main():

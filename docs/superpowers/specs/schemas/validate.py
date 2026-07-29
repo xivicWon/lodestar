@@ -419,10 +419,13 @@ def main():
                 mk in "/".join(map(str, se.absolute_schema_path)) or mk in se.message
                 for se in schema_errs for mk in RULE_SCHEMA_MARKERS[case["rule"]]
             ):
+                # 규칙의 정체는 '어느 스키마 제약이 걸렸나'(absolute_schema_path)다.
+                # 인스턴스 경로(absolute_path)는 '문서의 어디서'라 진단용으로만 보고한다.
                 ok, detail = False, (
                     f"규칙 라벨 불일치 — {case['rule']} 의 표지 "
                     f"{RULE_SCHEMA_MARKERS[case['rule']]} 가 실제 위반 위치 "
-                    f"{['/'.join(map(str, se.absolute_schema_path)) for se in schema_errs]} 에 없음")
+                    f"{['/'.join(map(str, se.absolute_schema_path)) for se in schema_errs]} 에 없음 "
+                    f"(문서 위치: {['/'.join(map(str, se.absolute_path)) or '<root>' for se in schema_errs]})")
             elif len(schema_errs) > 1:
                 ok, detail = False, (f"스키마 위반 {len(schema_errs)}건 — 단일 위반이어야 함: "
                                      f"{[e.message for e in schema_errs]}")

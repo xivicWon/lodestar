@@ -4,7 +4,7 @@
 manifest 픽스처는 "이 규칙이 걸리는가", fuzz.py 는 "안 걸리는 게 있는가"를 본다.
 이 스크립트는 셋째 질문을 본다: **"규칙들이 서로 모순되지 않는가"**.
 
-  1) 충족가능성  intent × 소스 클래스 조합마다 **적합한 응답이 존재하는가**.
+  1) 충족가능성  intent × **클래스별 상태 전조합**마다 적합한 응답이 존재하는가.
                 존재하지 않으면 규칙끼리 충돌해 그 상황을 표현할 방법이 없다는 뜻이다.
   2) 결정성      같은 입력을 여러 번 판정해도 같은 결과인가 (I1 H1 의 자기적용).
   3) 순서 무관   배열·키 순서를 바꿔도 판정이 같은가.
@@ -70,15 +70,22 @@ def evidence(i, cls, stance="supports"):
 
 
 def build(intent, present, absent_state="absent", with_conflict=False,
-          conflict_status="NEEDS_CHECK"):
-    """(intent, present 클래스 집합) 에 대해 계약을 만족하는 응답을 구성한다."""
+          conflict_status="NEEDS_CHECK", states=None):
+    """계약을 만족하는 응답을 구성한다.
+
+    states 를 주면 클래스별 상태를 그대로 쓴다(present/absent/not_collected 혼합).
+    주지 않으면 present 집합 + 나머지는 absent_state 로 채운다.
+    """
+    if states is not None:
+        present = {c for c, s in states.items() if s == "present"}
     evs, warns = [], []
     for n, cls in enumerate(sorted(present), start=1):
         evs.append(evidence(n, cls))
     if with_conflict and len(evs) >= 2:
         evs[-1]["stance"] = "contradicts"
 
-    cov = {c: ("present" if c in present else absent_state) for c in CLASSES}
+    cov = dict(states) if states is not None else {
+        c: ("present" if c in present else absent_state) for c in CLASSES}
     for c in CLASSES:
         if cov[c] == "absent":
             warns.append({"code": WARN_FOR_ABSENT[c], "message": f"{c} 없음",
@@ -128,20 +135,26 @@ def build(intent, present, absent_state="absent", with_conflict=False,
 
 
 def sweep_satisfiable():
-    """intent × 소스 조합마다 적합한 응답이 존재해야 한다."""
+    """intent × **클래스별 상태 전조합**마다 적합한 응답이 존재해야 한다.
+
+    비-present 클래스에 하나의 상태를 일괄 적용하면 absent 와 not_collected 가
+    섞인 커버리지를 한 번도 만들지 못한다 — 혼합에서만 드러나는 경고·보류
+    규칙의 모순을 놓치게 된다. 그래서 클래스마다 독립적으로 상태를 조합한다.
+    """
     bad, n = [], 0
+    STATES = ("present", "absent", "not_collected")
     for intent in CORE_CLASSES:
-        for k in range(0, len(CLASSES) + 1):
-            for present in itertools.combinations(CLASSES, k):
-                for absent_state in ("absent", "not_collected"):
-                    for wc in (False, True):
-                        if wc and len(present) < 2:
-                            continue
-                        doc = build(intent, set(present), absent_state, wc)
-                        n += 1
-                        ok, why = judge(doc)
-                        if not ok:
-                            bad.append((intent, present, absent_state, wc, why[0]))
+        for combo in itertools.product(STATES, repeat=len(CLASSES)):
+            states = dict(zip(CLASSES, combo))
+            npresent = sum(1 for s in combo if s == "present")
+            for wc in (False, True):
+                if wc and npresent < 2:
+                    continue
+                doc = build(intent, None, None, wc, states=states)
+                n += 1
+                ok, why = judge(doc)
+                if not ok:
+                    bad.append((intent, states, wc, why[0]))
     return n, bad
 
 
@@ -346,7 +359,8 @@ def main():
     n, bad = sweep_satisfiable()
     print(f"1) 충족가능성  {n:>5}건 — {'전부 표현 가능' if not bad else f'★표현 불가 {len(bad)}건'}")
     for b in bad[:8]:
-        print(f"     intent={b[0]} present={b[1]} 부재상태={b[2]} 충돌={b[3]}\n       -> {b[4]}")
+        mixed = {c: s for c, s in b[1].items() if s != "present"}
+        print(f"     intent={b[0]} 상태={b[1]} 충돌={b[2]}\n       -> {b[3]}")
     fails += len(bad)
 
     docs = [(p.name, json.loads(p.read_text())) for p in sorted((HERE / "examples").glob("valid.*.json"))]
