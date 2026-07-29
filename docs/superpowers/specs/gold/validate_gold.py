@@ -367,12 +367,24 @@ def _g10():
             yield f"{where}: 존재하지 않는 gold id 참조 '{ident}'"
 
     for it in DOCS["l2/links.json"]["items"]:
-        for key in ("left", "right"):
-            v = it["value"].get(key)
-            if isinstance(v, str):
-                yield from check(it["id"], v)
-        for c in it["value"].get("candidates", []):
-            yield from check(it["id"], c)
+        ends = [v for k in ("left", "right") if isinstance(v := it["value"].get(k), str)]
+        ends += it["value"].get("candidates", [])
+        for v in ends:
+            yield from check(it["id"], v)
+        # L2 좌표는 **L1 gold 에서 유도**되어야 한다. 손으로 적으면 L1 이 정정돼도
+        # 따라가지 않아 조용히 어긋나고, G7 은 범위만 보므로 잡히지 않는다.
+        for i, r in enumerate(it["refs"]):
+            ep = r.get("endpoint")
+            if ep is None:
+                if i < len(ends) and ends[i] in ITEM_BY_ID:
+                    yield f"{it['id']}: refs[{i}] 에 endpoint 가 없다 (대상 {ends[i]})"
+                continue
+            if i < len(ends) and ep != ends[i]:
+                yield f"{it['id']}: refs[{i}].endpoint '{ep}' 가 value 의 대상 '{ends[i]}' 와 다르다"
+            g = ITEM_BY_ID.get(ep)
+            if g and g["ref"]["locator"] != r["locator"]:
+                yield (f"{it['id']}: refs[{i}] 좌표가 {ep} 의 좌표와 다르다 "
+                       f"({r['locator'].split('#')[-1]} ≠ {g['ref']['locator'].split('#')[-1]})")
     for tier in DOCS["evl/questions.json"]["calibrationPool"]["tiers"]:
         for m in tier["members"]:
             if m not in ITEM_BY_ID:

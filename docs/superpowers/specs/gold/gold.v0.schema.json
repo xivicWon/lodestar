@@ -146,6 +146,11 @@
         },
         "contentHash": {
           "$ref": "#/$defs/contentHash"
+        },
+        "endpoint": {
+          "type": "string",
+          "minLength": 1,
+          "description": "이 좌표가 가리키는 대상. gold 항목 id 이면 **그 항목의 locator 와 같아야 한다**(G10). L2 좌표를 손으로 적으면 L1 이 정정돼도 따라가지 않아 조용히 어긋난다 — 실제로 65개 중 42개가 그렇게 어긋나 있었다."
         }
       }
     },

@@ -34,11 +34,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L219"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L217",
+          "endpoint": "L1.DB.COLUMN.TB_ORD_MEMO.ORD_NO"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L79"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L81",
+          "endpoint": "L1.DB.COLUMN.TB_ORD_HD.ORD_NO"
         }
       ],
       "origin": "repo",
@@ -59,11 +61,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L80"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L82",
+          "endpoint": "L1.DB.COLUMN.TB_ORD_HD.CUST_NO"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L8"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L8",
+          "endpoint": "L1.DB.COLUMN.TB_CUST_MST.CUST_NO"
         }
       ],
       "origin": "repo",
@@ -84,11 +88,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L90"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L90",
+          "endpoint": "L1.DB.COLUMN.TB_ORD_DTL.ORD_NO"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L79"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L81",
+          "endpoint": "L1.DB.COLUMN.TB_ORD_HD.ORD_NO"
         }
       ],
       "origin": "repo",
@@ -109,11 +115,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L92"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L92",
+          "endpoint": "L1.DB.COLUMN.TB_ORD_DTL.ITEM_CD"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L34"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L35",
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_MST.ITEM_CD"
         }
       ],
       "origin": "repo"
@@ -133,11 +141,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L55"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L57",
+          "endpoint": "L1.DB.COLUMN.TB_STOK_QTY.WH_CD"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L63"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L65",
+          "endpoint": "L1.DB.COLUMN.TB_WH_MST.WH_CD"
         }
       ],
       "origin": "repo",
@@ -158,11 +168,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L56"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L58",
+          "endpoint": "L1.DB.COLUMN.TB_STOK_QTY.ITEM_CD"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L34"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L35",
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_MST.ITEM_CD"
         }
       ],
       "origin": "repo"
@@ -182,11 +194,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L39"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L40",
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_MST.VNDR_CD"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L28"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L27",
+          "endpoint": "L1.DB.COLUMN.TB_VNDR_MST.VNDR_CD"
         }
       ],
       "origin": "repo"
@@ -206,11 +220,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L37"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L38",
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_MST.UNIT_CD"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L201"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L202",
+          "endpoint": "L1.DB.COLUMN.TB_UNIT_CD.UNIT_CD"
         }
       ],
       "origin": "repo",
@@ -231,11 +247,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L129"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L133",
+          "endpoint": "L1.DB.COLUMN.TB_ACCT_SLIP.ACCT_CD"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L135"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L140",
+          "endpoint": "L1.DB.COLUMN.TB_ACCT_CD.ACCT_CD"
         }
       ],
       "origin": "repo"
@@ -255,11 +273,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L160"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L167",
+          "endpoint": "L1.DB.COLUMN.TB_DEPT_MST.UP_DEPT_CD"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L158"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L165",
+          "endpoint": "L1.DB.COLUMN.TB_DEPT_MST.DEPT_CD"
         }
       ],
       "origin": "repo",
@@ -280,11 +300,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L46"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L47",
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_GRP.UP_GRP_CD"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L44"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L45",
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_GRP.GRP_CD"
         }
       ],
       "origin": "repo"
@@ -304,11 +326,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L152"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L160",
+          "endpoint": "L1.DB.COLUMN.TB_EMP_MST.MGR_EMP_NO"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L147"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L155",
+          "endpoint": "L1.DB.COLUMN.TB_EMP_MST.EMP_NO"
         }
       ],
       "origin": "repo"
@@ -328,11 +352,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L208"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L210",
+          "endpoint": "L1.DB.COLUMN.TB_LOG_HIST.ACT_EMP_NO"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L147"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L155",
+          "endpoint": "L1.DB.COLUMN.TB_EMP_MST.EMP_NO"
         }
       ],
       "origin": "repo",
@@ -356,15 +382,18 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L51"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L52",
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_GRP_MAP.GRP_CD"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L44"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L45",
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_GRP.GRP_CD"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L195"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L194",
+          "endpoint": "L1.DB.COLUMN.TB_COMM_CD.GRP_CD"
         }
       ],
       "origin": "repo",
@@ -383,11 +412,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L13"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L14",
+          "endpoint": "L1.DB.COLUMN.TB_CUST_MST.USE_YN"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L30"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L30",
+          "endpoint": "L1.DB.COLUMN.TB_VNDR_MST.USE_YN"
         }
       ],
       "origin": "repo",
@@ -406,11 +437,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L19"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L19",
+          "endpoint": "L1.DB.COLUMN.TB_CUST_ADDR.ADDR_SEQ"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L89"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L91",
+          "endpoint": "L1.DB.COLUMN.TB_ORD_DTL.ORD_SEQ"
         }
       ],
       "origin": "repo",
@@ -429,11 +462,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L82"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L84",
+          "endpoint": "L1.DB.COLUMN.TB_ORD_HD.ORD_STAT"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L101"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L103",
+          "endpoint": "L1.DB.COLUMN.TB_DLVR_HD.DLVR_STAT"
         }
       ],
       "origin": "repo",
@@ -452,11 +487,13 @@
       "refs": [
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L206"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L208",
+          "endpoint": "L1.DB.COLUMN.TB_LOG_HIST.TBL_NM"
         },
         {
           "sourceId": "db:legacy-sample",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L78"
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L80-L87",
+          "endpoint": "L1.DB.TABLE.TB_ORD_HD"
         }
       ],
       "origin": "repo",
@@ -478,11 +515,13 @@
       "refs": [
         {
           "sourceId": "code:rdb/SchemaSource.kt",
-          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L22"
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L22",
+          "endpoint": "L1.CODE.METHOD.DdlSource.extract"
         },
         {
           "sourceId": "code:rdb/SchemaSource.kt",
-          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L12"
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L12",
+          "endpoint": "L1.CODE.METHOD.SchemaSource.extract"
         }
       ],
       "origin": "repo",
@@ -504,11 +543,13 @@
       "refs": [
         {
           "sourceId": "code:rdb/SchemaSource.kt",
-          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L32"
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L32-L33",
+          "endpoint": "L1.CODE.METHOD.LiveJdbcSource.extract"
         },
         {
           "sourceId": "code:rdb/SchemaSource.kt",
-          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L12"
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L12",
+          "endpoint": "L1.CODE.METHOD.SchemaSource.extract"
         }
       ],
       "origin": "repo"
@@ -529,11 +570,13 @@
       "refs": [
         {
           "sourceId": "code:rdb/SchemaSource.kt",
-          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L42"
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L42-L43",
+          "endpoint": "L1.CODE.METHOD.SampleSource.extract"
         },
         {
           "sourceId": "code:rdb/SchemaSource.kt",
-          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L12"
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L12",
+          "endpoint": "L1.CODE.METHOD.SchemaSource.extract"
         }
       ],
       "origin": "repo"
@@ -554,11 +597,13 @@
       "refs": [
         {
           "sourceId": "code:rdb/SchemaSource.kt",
-          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L21"
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L21",
+          "endpoint": "L1.CODE.PROPERTY.DdlSource.name"
         },
         {
           "sourceId": "code:rdb/SchemaSource.kt",
-          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L11"
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L11",
+          "endpoint": "L1.CODE.PROPERTY.SchemaSource.name"
         }
       ],
       "origin": "repo",
@@ -577,11 +622,13 @@
       "refs": [
         {
           "sourceId": "code:rdb/SchemaSource.kt",
-          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L22"
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L22",
+          "endpoint": "L1.CODE.METHOD.DdlSource.extract"
         },
         {
           "sourceId": "code:rdb/SchemaSource.kt",
-          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L42"
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L42-L43",
+          "endpoint": "L1.CODE.METHOD.SampleSource.extract"
         }
       ],
       "origin": "repo",
@@ -600,11 +647,13 @@
       "refs": [
         {
           "sourceId": "code:rdb/SchemaSource.kt",
-          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L33"
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L33",
+          "endpoint": "com.ontostudio.rdb.MetadataService.extract"
         },
         {
           "sourceId": "code:rdb/SchemaSource.kt",
-          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L12"
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L12",
+          "endpoint": "L1.CODE.METHOD.SchemaSource.extract"
         }
       ],
       "origin": "repo",
@@ -623,11 +672,13 @@
       "refs": [
         {
           "sourceId": "code:provenance/ProvenanceVocab.kt",
-          "locator": "backend/src/main/kotlin/com/ontostudio/provenance/ProvenanceVocab.kt#L1"
+          "locator": "backend/src/main/kotlin/com/ontostudio/provenance/ProvenanceVocab.kt#L1",
+          "endpoint": "L1.CODE.FILE.ProvenanceVocab"
         },
         {
           "sourceId": "code:provenance/ProvenanceVocab.kt",
-          "locator": "backend/src/main/kotlin/com/ontostudio/provenance/ProvenanceVocab.kt#L12"
+          "locator": "backend/src/main/kotlin/com/ontostudio/provenance/ProvenanceVocab.kt#L12-L22",
+          "endpoint": "L1.CODE.TYPE.ProvenanceVocab"
         }
       ],
       "origin": "repo",
@@ -649,11 +700,13 @@
       "refs": [
         {
           "sourceId": "fixture:l2-drift/revA/OrderService.kt",
-          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt#L4"
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt#L4",
+          "endpoint": "fixture.alpha.OrderService@revA"
         },
         {
           "sourceId": "fixture:l2-drift/revB/OrderService.kt",
-          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L11"
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L10",
+          "endpoint": "fixture.beta.OrderService@revB"
         }
       ],
       "origin": "fixture",
@@ -675,11 +728,13 @@
       "refs": [
         {
           "sourceId": "fixture:l2-drift/revA/PriceCalc.kt",
-          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/PriceCalc.kt#L4"
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/PriceCalc.kt#L4",
+          "endpoint": "fixture.alpha.PriceCalc@revA"
         },
         {
           "sourceId": "fixture:l2-drift/revB/PricingCalculator.kt",
-          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/PricingCalculator.kt#L4"
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/PricingCalculator.kt#L4",
+          "endpoint": "fixture.beta.PricingCalculator@revB"
         }
       ],
       "origin": "fixture",
@@ -701,11 +756,13 @@
       "refs": [
         {
           "sourceId": "fixture:l2-drift/revA/OrderService.kt",
-          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt#L6"
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt#L6",
+          "endpoint": "fixture.alpha.OrderService.placeOrder(String)@revA"
         },
         {
           "sourceId": "fixture:l2-drift/revB/OrderService.kt",
-          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L13"
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L12",
+          "endpoint": "fixture.beta.OrderService.placeOrder(String)@revB"
         }
       ],
       "origin": "fixture",
@@ -727,7 +784,8 @@
       "refs": [
         {
           "sourceId": "fixture:l2-drift/revB/OrderService.kt",
-          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L18"
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L17",
+          "endpoint": "fixture.beta.OrderService.placeOrder(String,String)@revB"
         }
       ],
       "origin": "fixture",
@@ -749,7 +807,8 @@
       "refs": [
         {
           "sourceId": "fixture:l2-drift/revA/OrderService.kt",
-          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt#L14"
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt#L14",
+          "endpoint": "fixture.alpha.OrderService.legacyReport()@revA"
         }
       ],
       "origin": "fixture",
@@ -773,11 +832,13 @@
       "refs": [
         {
           "sourceId": "fixture:l2-drift/revA/OrderService.kt",
-          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt#L14"
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt#L14",
+          "endpoint": "fixture.alpha.OrderService.legacyReport()@revA"
         },
         {
           "sourceId": "fixture:l2-drift/revC/OrderService.kt",
-          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revC/OrderService.kt#L23"
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revC/OrderService.kt#L23",
+          "endpoint": "fixture.beta.OrderService.legacyReport()@revC"
         }
       ],
       "origin": "fixture",
@@ -796,11 +857,13 @@
       "refs": [
         {
           "sourceId": "fixture:l2-drift/revB/OrderService.kt",
-          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L13"
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L12",
+          "endpoint": "fixture.beta.OrderService.placeOrder(String)@revB"
         },
         {
           "sourceId": "fixture:l2-drift/revB/OrderService.kt",
-          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L18"
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L17",
+          "endpoint": "fixture.beta.OrderService.placeOrder(String,String)@revB"
         }
       ],
       "origin": "fixture",
@@ -819,11 +882,13 @@
       "refs": [
         {
           "sourceId": "fixture:l2-drift/revA/PriceCalc.kt",
-          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/PriceCalc.kt#L4"
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/PriceCalc.kt#L4",
+          "endpoint": "fixture.alpha.PriceCalc@revA"
         },
         {
           "sourceId": "fixture:l2-drift/revC/PriceCalc.kt",
-          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revC/PriceCalc.kt#L9"
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revC/PriceCalc.kt#L8",
+          "endpoint": "fixture.gamma.PriceCalc@revC"
         }
       ],
       "origin": "fixture",

@@ -189,7 +189,7 @@
     },
     {
       "path": "gold.v0.schema.json",
-      "sha256": "sha256:34e4103f0a44cee7153280d249e67aa53fad19deba8ff1973372deb4b334c474"
+      "sha256": "sha256:0b400b525fae1e72c1a1bd1d4c0462d170f90834a28f6248faa05b64fe220591"
     },
     {
       "path": "l1/code.json",
@@ -201,7 +201,7 @@
     },
     {
       "path": "l2/links.json",
-      "sha256": "sha256:2860a3f7b1a6dd5f366c9a6d6d513851a3a12fa2fded00f4cdba60bd894020b7"
+      "sha256": "sha256:9e11b9bf9df7b2dee7a121d09c368a7a4b79ff8bdbe4c36d36ba24f9926ab334"
     },
     {
       "path": "l3/claims.json",
@@ -213,7 +213,7 @@
     },
     {
       "path": "validate_gold.py",
-      "sha256": "sha256:1ccade91fe0ce833ff7d96b02f0860d69212048453d4f278e02e80bb3a12578e"
+      "sha256": "sha256:d0fbdbe9a6cd4c6035b3cced75e98b5175cbff03068628da200dbba198468710"
     }
   ],
   "fixtures": [
@@ -279,5 +279,5 @@
     }
   ],
   "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
-  "goldSetId": "gold-set/v0+35a80e1e29e7"
+  "goldSetId": "gold-set/v0+a1a6d3dca210"
 }
