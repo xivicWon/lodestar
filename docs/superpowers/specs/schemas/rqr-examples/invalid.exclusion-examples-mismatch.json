@@ -1,0 +1,219 @@
+{
+  "schemaVersion": "run-quality-report/v0",
+  "run": {
+    "runId": "run-l1-db-example-0001",
+    "projectId": "lodestar",
+    "layer": "L1",
+    "track": "db",
+    "reportKind": "EXAMPLE",
+    "sourceRevision": "3c27259",
+    "fixtureHash": "UNPINNED",
+    "startedAt": "2026-07-29T04:10:00Z",
+    "completedAt": "2026-07-29T04:12:31Z",
+    "executedBy": "example@lodestar (작성 예시 — 실측 아님)"
+  },
+  "versions": {
+    "collector": {
+      "status": "PINNED",
+      "value": "rdb-collector@3c27259"
+    },
+    "extractor": {
+      "status": "PINNED",
+      "value": "DdlParser@3c27259"
+    },
+    "model": {
+      "status": "NOT_APPLICABLE",
+      "value": null
+    },
+    "prompt": {
+      "status": "NOT_APPLICABLE",
+      "value": null
+    }
+  },
+  "counts": {
+    "input": 29,
+    "output": 28,
+    "failed": 0,
+    "excluded": 1
+  },
+  "exclusions": [
+    {
+      "reason": "CREATE VIEW 미지원 — DdlParser 는 CREATE TABLE 만 처리한다",
+      "count": 1,
+      "examples": [
+        "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#VW_ORD_SUMMARY",
+        "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#TB_ORD_HD"
+      ]
+    }
+  ],
+  "failures": [],
+  "metrics": {
+    "precision": {
+      "status": "MEASURED",
+      "value": 0.98,
+      "note": "Gold Set(#99 미확정 — 예시값) 대비 명시 사실 정확도"
+    },
+    "recall": {
+      "status": "MEASURED",
+      "value": 0.93,
+      "note": "Gold Set 대비 명시 사실 재현율"
+    },
+    "coverage": {
+      "status": "MEASURED",
+      "value": 0.97,
+      "note": "28/29 — 뷰 1건 제외"
+    },
+    "determinism": {
+      "status": "MEASURED",
+      "value": 1.0,
+      "note": "동일 revision 3회 실행 결과 동일"
+    },
+    "provenanceCompleteness": {
+      "status": "MEASURED",
+      "value": 1.0,
+      "note": "sourceLocation·revision·contentHash·extractorVersion 연결률"
+    }
+  },
+  "evl": {
+    "confidenceCalibration": {
+      "status": "NOT_APPLICABLE",
+      "population": null,
+      "ece": null,
+      "bins": [],
+      "sampleCount": 0,
+      "missingRawCount": 0
+    },
+    "conflictDetection": {
+      "precision": {
+        "status": "NOT_APPLICABLE",
+        "value": null,
+        "note": "L1 은 충돌 판정을 만들지 않는다"
+      },
+      "recall": {
+        "status": "NOT_APPLICABLE",
+        "value": null,
+        "note": "L1 은 충돌 판정을 만들지 않는다"
+      },
+      "goldSetId": null
+    },
+    "coverageClasses": [
+      {
+        "class": "code",
+        "state": "present",
+        "deterministic": true,
+        "warned": false
+      },
+      {
+        "class": "issue",
+        "state": "not_collected",
+        "deterministic": true,
+        "warned": true
+      },
+      {
+        "class": "adr",
+        "state": "not_collected",
+        "deterministic": true,
+        "warned": true
+      },
+      {
+        "class": "test",
+        "state": "absent",
+        "deterministic": true,
+        "warned": true
+      },
+      {
+        "class": "runtime",
+        "state": "not_collected",
+        "deterministic": true,
+        "warned": true
+      }
+    ]
+  },
+  "gates": [
+    {
+      "id": "gate-determinism",
+      "name": "결정성 (동일 입력 3회 일치율)",
+      "required": 1.0,
+      "observed": 1.0,
+      "status": "PASS"
+    },
+    {
+      "id": "gate-l1-source-location",
+      "name": "L1 sourceLocation·revision 연결률",
+      "required": 1.0,
+      "observed": 1.0,
+      "status": "PASS"
+    },
+    {
+      "id": "gate-l1-unreported-parse-failure",
+      "name": "L1 무보고 파싱 실패",
+      "required": "0건",
+      "observed": "0건",
+      "status": "PASS"
+    },
+    {
+      "id": "gate-error-visibility",
+      "name": "오류 가시성 (실패·제외 보고율)",
+      "required": 1.0,
+      "observed": 1.0,
+      "status": "PASS"
+    },
+    {
+      "id": "gate-security-masking",
+      "name": "보안 (테스트 시크릿 미마스킹)",
+      "required": "0건",
+      "observed": null,
+      "status": "NOT_MEASURED"
+    }
+  ],
+  "baseline": {
+    "previous": null,
+    "comparable": false,
+    "reason": "첫 실행이라 비교 대상이 없다. fixtureHash 가 #99 이전이라 미고정이며, 이 보고서는 이후 실행의 기준선으로도 쓰지 않는다(I1 §1.3).",
+    "eligibleAsBaseline": false,
+    "deltas": []
+  },
+  "verdict": {
+    "value": "PASS",
+    "haltRules": [],
+    "restrictions": []
+  },
+  "featureJudgments": [
+    {
+      "featureId": "P-ddl-parser",
+      "judgment": "Core",
+      "measured": true,
+      "rationale": "28개 테이블의 PK·컬럼을 좌표와 함께 추출했고, 미지원 뷰 1건을 제외 사유로 보고했다(조용한 스킵 없음).",
+      "evidenceRefs": [
+        "run-l1-db-example-0001"
+      ]
+    },
+    {
+      "featureId": "E14",
+      "judgment": "Parked",
+      "measured": false,
+      "rationale": "화면 재설계는 M0 비범위라 측정하지 않았다. 측정하지 않았으므로 Core 판정은 불가하며 Parked 만 가능하다(I1 §5.3).",
+      "evidenceRefs": [
+        "run-l1-db-example-0001"
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "code": "UNPINNED_FIXTURE",
+      "message": "fixture hash 가 #99 에서 고정되기 전이라 baseline 으로 인정되지 않는다",
+      "trigger": "run.fixtureHash"
+    },
+    {
+      "code": "METRIC_UNMEASURED",
+      "message": "시크릿 마스킹 게이트를 이번 실행에서 측정하지 않았다 — 통과로 읽지 말 것",
+      "trigger": "gates.gate-security-masking"
+    },
+    {
+      "code": "BASELINE_NOT_COMPARABLE",
+      "message": "이전 기준선이 없어 변화량을 산출하지 않았다",
+      "trigger": "baseline"
+    }
+  ],
+  "notes": "작성 예시. 지표 수치는 가공값이며 어떤 문서·PR·발표에서도 달성 기준으로 인용하지 않는다(I1 §4.2)."
+}

@@ -57,7 +57,7 @@
 |---|---|---|
 | `schemaVersion` | ✅ | `"run-quality-report/v0"` 고정. 버전이 다른 보고서의 수치는 직접 비교하지 않는다(§7) |
 | `run` | ✅ | 실행 식별 — runId·projectId·layer·track·reportKind·sourceRevision·fixtureHash·시각·실행자 |
-| `versions` | ✅ | collector / extractor / model / prompt |
+| `versions` | ✅ | collector / extractor / model / prompt — 각각 `{status, value}` |
 | `counts` | ✅ | 입력·출력·실패·제외 건수 |
 | `exclusions` | ✅ | 제외 **사유별** 집계 + 원본 좌표. 빈 배열도 명시 |
 | `failures` | ✅ | 실패 사례 + **재현 fixture** 링크. 빈 배열도 명시 |
@@ -91,17 +91,26 @@
 
 ### 3.2 `versions` — 무엇으로 만든 결과인가
 
-collector·extractor·model·prompt **4개 전부 필수 키**다. 값을 모르면 `null` 로 두고 `VERSION_UNPINNED` 경고를 낸다(R11).
+collector·extractor·model·prompt **4개 전부 필수 키**이며 각각 `{status, value}` 다.
+
+| status | 뜻 | value | 경고 |
+|---|---|---|---|
+| `PINNED` | 버전을 안다 | 문자열 | — |
+| `UNPINNED` | **이 레이어가 쓰는데 버전을 모른다** | `null` | `VERSION_UNPINNED` 필수(R11) |
+| `NOT_APPLICABLE` | **이 레이어가 그 요소를 쓰지 않는다** | `null` | 경고 대상 아님 |
+
 `"unknown"`·`""` 로 채우는 것은 금지다 — 문자열이 들어가는 순간 "버전을 안다"는 뜻이 되어 재현 실패의 원인을 잃는다.
-그 레이어가 모델을 쓰지 않으면 `null` + 경고가 **정상 경로**다(예시 픽스처 참조).
+
+**`UNPINNED` 와 `NOT_APPLICABLE` 을 합치지 않는 이유:** DDL 파서 실행에 모델이 없는 것(정상)과, AI 추정 실행인데 모델 버전을 못 알아낸 것(재현 위험)은 전혀 다른 상태다. 하나로 뭉치면 `VERSION_UNPINNED` 경고가 상시 발생해 신호로서 죽고, "이 실행을 재현할 수 있는가"의 답을 잃는다. R11은 **UNPINNED 에만** 양방향으로 걸린다.
 
 ### 3.3 `counts` · `exclusions` · `failures` — 몇 건을 어떻게 했는가
 
 - `input = output + failed + excluded` 가 **성립해야 한다**(R2). 성립하지 않는 보고서는 어딘가를 세지 않은 것이다.
 - `exclusions[].count` 의 합 = `counts.excluded`(R3). **사유별로 한 항목**이며 같은 사유를 여러 항목으로 흩지 않는다.
-- 제외에는 **원본 좌표(`examples`)를 최소 1건** 붙인다. 사유만 적고 대상을 안 적으면 재확인이 불가능하다.
+- 제외에는 **제외된 대상 전부의 원본 좌표**를 남긴다 — `count` 와 `examples` 의 길이가 같아야 한다(R3). 사유만 적고 대상을 안 적으면 재확인이 불가능하고, 일부만 적으면 나머지는 "몇 건 있었다"로만 남아 다음 실행에서 대조할 수 없다. 제외가 많아 좌표를 다 적기 어렵다면 **사유를 더 잘게 나눈다**(그것이 실제 사유 구분이다).
   → 이것이 I1 §4.1 "L0 오류 가시성 100%"가 보고서에서 드러나는 자리다. 뷰 스킵을 조용히 무시하는 경로가 여기서 막힌다(I1 §1.1).
 - `counts.failed > 0` ⟺ `failures` 가 비어있지 않다(R4). 실패마다 **재현 fixture 경로**가 필수다 — 재현 불가한 실패 보고는 다음 실행에서 검증되지 않으므로 회귀로 고정되지 않는다.
+- **경로 문자열만으로는 부족하다.** 보고서가 가리키는 재현 fixture는 **리포에 실재해야 하고**, `schemas/rqr-examples/manifest.json` 에 등록돼야 하며, 최소한 `{fixtureId, reproduces{runId, failureId}, layer, input, expected}` 를 갖춰야 한다(§4.1). 무엇을 재현하는지·무엇이 기대값인지 적히지 않은 파일은 다음 실행에서 회귀 판정의 기준이 되지 못한다. 예: [`fixtures/l3-claim-no-evidence.json`](schemas/rqr-examples/fixtures/l3-claim-no-evidence.json).
 
 ### 3.4 `metrics` — 지표
 
@@ -131,13 +140,14 @@ collector·extractor·model·prompt **4개 전부 필수 키**다. 값을 모르
 
 - `gates[]` 는 I1 §4.1 무조건 게이트의 실행별 결과다. **잠정 수치(I1 §4.2)는 게이트가 아니므로 여기에 적지 않는다.**
 - `status=FAIL` 이 하나라도 있으면 `GATE_FAILED` 경고가 필요하고 **판정 PASS 가 불가능**하다(R9 — I1 G4).
+- `status=NOT_MEASURED` 인 게이트도 **`METRIC_UNMEASURED` 경고를 낸다**(R10, `trigger: gates.<gateId>`). 지표의 미측정과 같은 원칙이다 — 측정하지 않은 게이트가 조용히 지나가면 보고서를 읽는 쪽에서 **통과한 게이트와 구분되지 않는다.**
 - 경고 `code` 는 **통제어휘 7종**이며 `trigger` 로 대상을 못박는다. 자유 문장은 "경고했는가"를 측정할 수 없다(EVL §2.6과 같은 원칙).
 
 | code | 발동 조건 | `trigger` |
 |---|---|---|
 | `UNPINNED_FIXTURE` | `fixtureHash = UNPINNED` | `run.fixtureHash` |
-| `VERSION_UNPINNED` | 버전이 `null` — 필드마다 한 건 | `versions.<name>` |
-| `METRIC_UNMEASURED` | 지표가 `NOT_MEASURED` — 지표마다 한 건 | `metrics.<name>` \| `evl.confidenceCalibration` \| `evl.conflictDetection.<precision\|recall>` |
+| `VERSION_UNPINNED` | 버전 status 가 `UNPINNED` — 필드마다 한 건. `NOT_APPLICABLE` 은 대상이 아니다 | `versions.<name>` |
+| `METRIC_UNMEASURED` | 지표 또는 **게이트**가 `NOT_MEASURED` — 대상마다 한 건 | `metrics.<name>` \| `evl.confidenceCalibration` \| `evl.conflictDetection.<precision\|recall>` \| `gates.<gateId>` |
 | `CALIBRATION_RAW_MISSING` | `missingRawCount > 0` | `evl.confidenceCalibration` |
 | `GATE_FAILED` | 게이트 `FAIL` — 게이트마다 한 건 | `gates.<gateId>` |
 | `BASELINE_NOT_COMPARABLE` | `baseline.comparable = false` | `baseline` |
@@ -159,9 +169,20 @@ collector·extractor·model·prompt **4개 전부 필수 키**다. 값을 모르
 
 ### 3.8 `baseline` — 이전 기준선 대비 변화
 
-- `comparable=true` → `previousRunId` 와 `deltas`(≥1)가 있어야 한다(R17).
-- `comparable=false` → `deltas` 는 비어 있고 `reason` 이 필수이며 `BASELINE_NOT_COMPARABLE` 경고를 낸다. **비교 불가를 "변화 없음"으로 표기하지 않는다.**
-- `eligibleAsBaseline` = (`fixtureHash` 고정) AND (`reportKind = BASELINE`)(R12). 이 값이 `false` 인 보고서는 **다음 실행의 비교 대상이 되지 않는다**(I1 §1.3·§7.4).
+`previous` 는 runId 하나가 아니라 **비교 대상의 신원 전체**다: `{runId, projectId, layer, track, sourceRevision, fixtureHash, schemaVersion}`.
+runId 만 적으면 "같은 것을 잰 실행인가"를 보고서만으로 판정할 수 없고, 판정할 수 없는 비교는 비교가 아니다.
+
+**`comparable=true` 의 조건(R17) — 전부 충족해야 한다:**
+
+1. `previous` 가 있고, `projectId`·`layer`·`track`·`sourceRevision`·`schemaVersion` 이 현재 실행과 **같다**
+2. 양쪽 `fixtureHash` 가 **고정(pinned)** 돼 있고 서로 **같다** — 미고정 실행끼리는 같은 입력이었음을 보장할 수 없다(I1 §1.3)
+3. `deltas` 가 1건 이상 있고, `BASELINE_NOT_COMPARABLE` 경고가 없다
+
+**`comparable=false`** → `deltas` 는 **비어 있고**, `reason` 이 필수이며, `BASELINE_NOT_COMPARABLE` 경고를 낸다. **비교 불가를 "변화 없음"으로 표기하지 않는다.**
+
+`eligibleAsBaseline` = (`fixtureHash` 고정) AND (`reportKind = BASELINE`)(R12). 이 값이 `false` 인 보고서는 **다음 실행의 비교 대상이 되지 않는다**(I1 §1.3·§7.4).
+
+> **현재 상태:** #99(I2)가 fixture hash 를 고정하기 전이므로 **모든 실행이 `fixtureHash: UNPINNED`** 이고, 따라서 `comparable=true` 인 정상 예시는 아직 만들 수 없다(가공 해시로 만들면 그 자체가 이 계약이 막으려는 것이다). 커밋된 정상 예시 2건은 모두 비교 불가 상태이며, `comparable=true` 경로는 **음성 픽스처 3건**(deltas 누락 · revision 불일치 · fixture 미고정)으로 검사한다. 정상 예시는 #99 이후 실 해시로 추가한다.
 
 ### 3.9 `featureJudgments` — Core / Lab / Parked / Retire (I4 입력)
 
@@ -182,21 +203,21 @@ collector·extractor·model·prompt **4개 전부 필수 키**다. 값을 모르
 |---|---|---|---|
 | **R1** | 스키마를 통과하고, 시각이 **실재하는 날짜**이며 `completedAt ≥ startedAt` | schema + validator | 형식 위반 — 비교 대상 제외 |
 | **R2** | `input = output + failed + excluded` | validator | 세지 않은 건이 있다 |
-| **R3** | `exclusions` 합 = `counts.excluded`, 사유 중복 없음 | validator | **조용한 스킵** |
+| **R3** | `exclusions` 합 = `counts.excluded`, **사유별 `count` = 좌표 수**, 사유 중복 없음 | validator | **조용한 스킵** · 일부만 좌표를 남겨 나머지가 대조 불가 |
 | **R4** | `counts.failed > 0` ⟺ `failures` 비어있지 않음 (양방향) | validator | 실패 은폐 · 유령 실패 |
 | **R5** | `verdict.value` 는 3값 통제어휘 | schema | 판정 집계 불가 |
 | **R6** | `BLOCKED` ⟺ `haltRules` 비어있지 않음 (양방향) | validator | 중단 근거 없음 · 근거만 있고 판정이 다름 |
 | **R7** | `PASS_RESTRICTED` ⟺ `restrictions` + `PATH_RESTRICTED` 경고 (양방향) | validator | **제한 은폐**(I1 §3.2) · 허위 제한 |
 | **R8** | `determinism < 1.0` → `haltRules` 에 `H1` (역방향 포함) | validator | **결정성 실패를 통과로 처리** |
 | **R9** | 게이트 `FAIL` ⟺ `GATE_FAILED` 경고, 그리고 `FAIL` 이 있으면 판정 ≠ `PASS` | validator | 게이트 무력화(I1 G4) |
-| **R10** | 지표 `NOT_MEASURED` ⟺ `METRIC_UNMEASURED` 경고 (양방향) | validator | 미측정을 0과 섞음 |
-| **R11** | 버전 `null` ⟺ `VERSION_UNPINNED` 경고 (양방향) | validator | 버전 추적 거짓 |
+| **R10** | 지표·**게이트** `NOT_MEASURED` ⟺ `METRIC_UNMEASURED` 경고 (양방향) | validator | 미측정을 0과 섞음 · 미측정 게이트가 통과처럼 읽힘 |
+| **R11** | 버전 `UNPINNED` ⟺ `VERSION_UNPINNED` 경고 (양방향). `NOT_APPLICABLE` 은 경고 대상 아님 | validator | 버전 추적 거짓 · '안 씀' 과 '모름' 을 섞음 |
 | **R12** | `fixtureHash=UNPINNED` ⟺ `UNPINNED_FIXTURE` 경고 · `eligibleAsBaseline` = (고정 ∧ `BASELINE`) | validator | **미고정 실행이 기준선이 됨**(I1 §1.3) |
 | **R13** | calibration `MEASURED` → 모집단·ece·bins 존재 + bins 표본합 일치 · `missingRawCount>0` → `MEASURED` 불가 + 경고 (양방향) | validator | **미보정 수치 인용**(EVL §3.3) |
 | **R14** | conflict precision/recall `MEASURED` → `goldSetId` 존재 | validator | 대조 대상 없는 성능 주장 |
 | **R15** | coverage 5클래스가 정확히 한 번씩 · `state≠present` ⟺ `warned` | validator | 안 본 클래스가 사라짐 |
 | **R16** | `measured=false` → `Core` 판정 금지 · `evidenceRefs` 가 실행 보고서를 가리킴 | validator | **측정 안 한 기능의 Core 판정**(I1 §5.3·G5) |
-| **R17** | `comparable=true` → `previousRunId`·`deltas` 존재 / `false` → `deltas` 비어있고 `reason`+경고 | validator | 비교 불가를 "변화 없음"으로 위장 |
+| **R17** | `comparable=true` → `previous` 신원 일치(project·layer·track·revision·schemaVersion) + **양쪽 fixture 고정·동일** + `deltas` 존재 / `false` → `deltas` 비어있고 `reason`+경고 | validator | 다른 것을 잰 실행끼리 비교 · 비교 불가를 "변화 없음"으로 위장 |
 | **R18** | 모든 `warnings[].trigger` 가 그 `code` 가 가리키도록 정해진 종류의 대상을 **실제로** 가리킴 | validator | 경고가 아무것도 가리키지 않음 |
 | **R19** | `failures[].id`·`gates[].id`·`featureJudgments[].featureId` 가 각각 유일 | validator | 경고 하나가 여러 대상을 충족한 것처럼 보임 |
 
@@ -205,11 +226,12 @@ collector·extractor·model·prompt **4개 전부 필수 키**다. 값을 모르
 ```bash
 pip install jsonschema
 cd docs/superpowers/specs/schemas && python3 validate_rqr.py
-# 24 cases, 0 mismatches
+# 30 cases, 0 mismatches
 ```
 
-확인기는 세 가지를 본다: ① 정상/위반 픽스처의 승인 여부, ② **위반 픽스처가 선언된 규칙으로·선언된 계층에서** 걸리는지(라벨 오류로 커버리지가 과대 보고되는 것을 막는다), ③ **빈 템플릿이 스키마의 모든 필수 경로를 갖고 값이 전부 placeholder 인지**.
+확인기는 네 가지를 본다: ① 정상/위반 픽스처의 승인 여부, ② **위반 픽스처가 선언된 규칙으로·선언된 계층에서** 걸리는지(라벨 오류로 커버리지가 과대 보고되는 것을 막는다), ③ **빈 템플릿이 스키마의 모든 필수 경로를 갖고 값이 전부 placeholder 인지**, ④ **정상 픽스처가 가리키는 재현 fixture 가 실재하고 manifest 에 등록됐으며 최소 형식을 갖췄는지**.
 ③이 있는 이유: 스키마에 필드가 추가됐는데 템플릿에 자리가 없으면 작성자는 그 필드의 존재를 영원히 모른다.
+④가 있는 이유: 경로 문자열은 파일이 없어도 그럴듯해 보인다 — 실재 검사가 없으면 '재현 fixture 기록' 은 형식만 남는다.
 
 **R1~R19 전부 음성 픽스처를 가져야** 스위트가 통과한다. 규칙만 문서에 적고 검사가 없는 상태를 막는 장치다.
 
@@ -254,12 +276,12 @@ I1 §7·EVL §10과 동일하며, 추가로:
 - [x] 버전: collector / extractor / model / prompt → §3.2
 - [x] 레이어별 입력·출력·실패·제외 건수 → §3.3
 - [x] 지표: precision · recall · coverage · determinism · provenance completeness → §3.4
-- [x] 실패 사례 링크 + 재현 fixture → §3.3 (`failures[].link`·`failures[].fixture`, R4)
+- [x] 실패 사례 링크 + 재현 fixture → §3.3 (`failures[].link`·`failures[].fixture`, R4) + 실재하는 재현 fixture `schemas/rqr-examples/fixtures/l3-claim-no-evidence.json`
 - [x] 이전 기준선 대비 변화 → §3.8 (R12·R17)
 - [x] 기능별 Core/Lab/Parked/Retire 판정과 근거 필드 → §3.9 (R16)
 - [x] EVL 편입: confidence calibration · conflict precision/recall · coverage 클래스 체크리스트 → §3.5 (R13·R14·R15)
 - [x] 판정 3값 + 제한 사유·닫힌 경로 필드 유지 → §3.7 (R5·R6·R7)
 - [x] 기계 판독 스키마 커밋 → `schemas/run-quality-report.v0.schema.json`
-- [x] 구조 불변식 R1~R19 + 규칙별 음성 픽스처 + 확인기 커밋 (24 cases, 0 mismatches) → §4, `schemas/validate_rqr.py`
+- [x] 구조 불변식 R1~R19 + 규칙별 음성 픽스처 + 확인기 커밋 (30 cases, 0 mismatches) → §4, `schemas/validate_rqr.py`
 
 **다음 착수: #99(I2) Gold Set & 실패 fixture — 그 뒤 G2가 열려 L0(#88)이 착수 가능해진다(I1 §2.1).**

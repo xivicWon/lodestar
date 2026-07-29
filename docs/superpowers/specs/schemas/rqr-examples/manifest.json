@@ -1,5 +1,5 @@
 {
-  "$comment": "Run Quality Report v0 검증 픽스처. 계약 §4(R1~R19)의 규칙 ID 로 연결한다. invalid 픽스처는 정상 픽스처에서 **단일 규칙만** 위반하도록 순수 파생했다 — 복수 위반이면 목표 규칙의 검사 누락을 다른 오류가 가린다. 생성·검사: python3 ../validate_rqr.py",
+  "$comment": "Run Quality Report v0 검증 픽스처. 계약 §4(R1~R19)의 규칙 ID 로 연결한다. invalid 픽스처는 정상 픽스처에서 **단일 규칙만** 위반하도록 순수 파생했다 — 복수 위반이면 목표 규칙의 검사 누락을 다른 오류가 가린다. 검사: python3 ../validate_rqr.py",
   "cases": [
     {
       "file": "template.blank.json",
@@ -9,12 +9,17 @@
     {
       "file": "valid.l1-db-example.json",
       "expect": "valid",
-      "note": "작성 예시 1건 — L1 DB 트랙, fixture 미고정(UNPINNED) 상태의 PASS."
+      "note": "작성 예시 1건 — L1 DB 트랙, fixture 미고정(UNPINNED) 상태의 PASS. 미측정 게이트 경고 포함."
     },
     {
       "file": "valid.l3-restricted-example.json",
       "expect": "valid",
-      "note": "제한 판정 예시 — H4 RESTRICT, 닫힌 경로·미측정 지표·기준선 비교 포함."
+      "note": "제한 판정 예시 — H4 RESTRICT, 닫힌 경로·미측정 지표·버전 미고정·비교 불가."
+    },
+    {
+      "file": "fixtures/l3-claim-no-evidence.json",
+      "expect": "fixture",
+      "note": "valid.l3-restricted-example.json 의 failures[0] 이 가리키는 재현 fixture."
     },
     {
       "file": "invalid.additional-property.json",
@@ -57,6 +62,14 @@
       "note": "제외 사유 집계가 총계와 다르면 '조용한 스킵' 이 숨는다"
     },
     {
+      "file": "invalid.exclusion-examples-mismatch.json",
+      "expect": "invalid",
+      "rule": "R3",
+      "enforcedBy": "validator",
+      "expectedError": "좌표 수",
+      "note": "건수만 세고 좌표를 일부만 남기면 나머지 제외 대상은 재확인할 수 없다"
+    },
+    {
       "file": "invalid.failed-without-cases.json",
       "expect": "invalid",
       "rule": "R4",
@@ -94,7 +107,7 @@
       "rule": "R8",
       "enforcedBy": "validator",
       "expectedError": "haltRules 에 H1 이 없음",
-      "note": "결정성 실패는 협상 불가 게이트다(I1 H1)"
+      "note": "결정성 실패는 협상 불가 게이트다(I1 H1) — 다른 중단 사유로 대체할 수 없다"
     },
     {
       "file": "invalid.gate-failed-unwarned.json",
@@ -109,16 +122,32 @@
       "expect": "invalid",
       "rule": "R10",
       "enforcedBy": "validator",
-      "expectedError": "METRIC_UNMEASURED 경고 없음",
+      "expectedError": "metrics.recall 가 NOT_MEASURED 인데 METRIC_UNMEASURED 경고 없음",
       "note": "미측정을 조용히 남기면 0과 구분되지 않는다"
+    },
+    {
+      "file": "invalid.unmeasured-gate-unwarned.json",
+      "expect": "invalid",
+      "rule": "R10",
+      "enforcedBy": "validator",
+      "expectedError": "gates.gate-security-masking 가 NOT_MEASURED 인데 METRIC_UNMEASURED 경고 없음",
+      "note": "측정하지 않은 게이트가 조용히 지나가면 '통과한 게이트' 와 구분되지 않는다"
     },
     {
       "file": "invalid.version-warning-mismatch.json",
       "expect": "invalid",
       "rule": "R11",
       "enforcedBy": "validator",
-      "expectedError": "VERSION_UNPINNED(versions.model) 인데 그 버전은 null 이 아님",
+      "expectedError": "VERSION_UNPINNED(versions.model) 인데 그 버전은 UNPINNED 가 아님",
       "note": "경고와 실제 상태가 어긋나면 버전 추적이 거짓이 된다"
+    },
+    {
+      "file": "invalid.not-applicable-warned.json",
+      "expect": "invalid",
+      "rule": "R11",
+      "enforcedBy": "validator",
+      "expectedError": "VERSION_UNPINNED(versions.model) 인데 그 버전은 UNPINNED 가 아님",
+      "note": "'이 레이어가 쓰지 않음'(NOT_APPLICABLE)을 '버전 미고정'으로 보고하면 재현 실패의 원인이 흐려진다"
     },
     {
       "file": "invalid.unpinned-eligible-baseline.json",
@@ -167,6 +196,22 @@
       "enforcedBy": "validator",
       "expectedError": "comparable=true 인데 deltas 가 비어 있음",
       "note": "비교 가능하다면서 변화량이 없으면 '변화 없음' 과 구분되지 않는다"
+    },
+    {
+      "file": "invalid.comparable-revision-mismatch.json",
+      "expect": "invalid",
+      "rule": "R17",
+      "enforcedBy": "validator",
+      "expectedError": "sourceRevision 가 다름",
+      "note": "revision 이 다르면 같은 것을 잰 것이 아니다 — runId 만으로는 비교 가능성을 판정할 수 없다(I1 §7.4)"
+    },
+    {
+      "file": "invalid.comparable-unpinned-fixture.json",
+      "expect": "invalid",
+      "rule": "R17",
+      "enforcedBy": "validator",
+      "expectedError": "fixture 가 고정돼 있지 않음",
+      "note": "미고정 실행끼리는 같은 입력이었음을 보장할 수 없으므로 비교 대상이 아니다(I1 §1.3)"
     },
     {
       "file": "invalid.trigger-wrong-kind.json",

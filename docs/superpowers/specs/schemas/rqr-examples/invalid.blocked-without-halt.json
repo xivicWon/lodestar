@@ -13,10 +13,22 @@
     "executedBy": "example@lodestar (작성 예시 — 실측 아님)"
   },
   "versions": {
-    "collector": "rdb-collector@3c27259",
-    "extractor": "DdlParser@3c27259",
-    "model": null,
-    "prompt": null
+    "collector": {
+      "status": "PINNED",
+      "value": "rdb-collector@3c27259"
+    },
+    "extractor": {
+      "status": "PINNED",
+      "value": "DdlParser@3c27259"
+    },
+    "model": {
+      "status": "NOT_APPLICABLE",
+      "value": null
+    },
+    "prompt": {
+      "status": "NOT_APPLICABLE",
+      "value": null
+    }
   },
   "counts": {
     "input": 29,
@@ -154,7 +166,7 @@
     }
   ],
   "baseline": {
-    "previousRunId": null,
+    "previous": null,
     "comparable": false,
     "reason": "첫 실행이라 비교 대상이 없다. fixtureHash 가 #99 이전이라 미고정이며, 이 보고서는 이후 실행의 기준선으로도 쓰지 않는다(I1 §1.3).",
     "eligibleAsBaseline": false,
@@ -187,19 +199,14 @@
   ],
   "warnings": [
     {
-      "code": "VERSION_UNPINNED",
-      "message": "이 레이어는 모델을 쓰지 않아 model 버전이 없다",
-      "trigger": "versions.model"
-    },
-    {
-      "code": "VERSION_UNPINNED",
-      "message": "이 레이어는 프롬프트를 쓰지 않아 prompt 버전이 없다",
-      "trigger": "versions.prompt"
-    },
-    {
       "code": "UNPINNED_FIXTURE",
       "message": "fixture hash 가 #99 에서 고정되기 전이라 baseline 으로 인정되지 않는다",
       "trigger": "run.fixtureHash"
+    },
+    {
+      "code": "METRIC_UNMEASURED",
+      "message": "시크릿 마스킹 게이트를 이번 실행에서 측정하지 않았다 — 통과로 읽지 말 것",
+      "trigger": "gates.gate-security-masking"
     },
     {
       "code": "BASELINE_NOT_COMPARABLE",

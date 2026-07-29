@@ -19,6 +19,7 @@ from jsonschema import Draft202012Validator
 
 HERE = pathlib.Path(__file__).parent
 EX = HERE / "rqr-examples"
+REPO = HERE.parents[3]  # docs/superpowers/specs/schemas -> 리포 루트
 SCHEMA = json.loads((HERE / "run-quality-report.v0.schema.json").read_text())
 MANIFEST = json.loads((EX / "manifest.json").read_text())
 # 계약 §4 가 정의한 불변식 개수 — 규칙이 늘면 여기도 올린다(커버리지 검사에 쓰인다).
@@ -122,11 +123,17 @@ def cross_field_errors(d):
             errs.append(f"R2: counts.input {counts['input']} != output+failed+excluded {total}")
     rule(_r2)
 
-    # R3 — 제외 사유 집계가 counts.excluded 와 일치하고, 같은 사유가 두 번 나오지 않는다.
+    # R3 — 제외 사유 집계가 counts.excluded 와 일치하고, 사유마다 제외된 **모든** 대상의
+    #      좌표가 남으며, 같은 사유가 두 번 나오지 않는다.
     def _r3():
         s = sum(e["count"] for e in exclusions)
         if s != counts["excluded"]:
             errs.append(f"R3: exclusions 합 {s} != counts.excluded {counts['excluded']}")
+        for e in exclusions:
+            n = len(e["examples"])
+            if n != e["count"]:
+                errs.append(f"R3: 제외 사유 '{e['reason']}' 의 count {e['count']} != 좌표 수 {n} "
+                            f"(제외된 대상은 전부 좌표를 남긴다)")
         reasons = [e["reason"] for e in exclusions]
         dup = sorted({r for r in reasons if reasons.count(r) > 1})
         if dup:
@@ -191,7 +198,8 @@ def cross_field_errors(d):
             errs.append(f"R9: 무조건 게이트 {sorted(failed)} 실패인데 판정이 PASS")
     rule(_r9)
 
-    # R10 — 미측정 지표는 0으로 채우지 않고 경고로 드러낸다(양방향).
+    # R10 — 미측정은 0으로 채우지 않고 경고로 드러낸다(양방향). **게이트의 미측정도 같다** —
+    #       측정하지 않은 게이트가 조용히 지나가면 '통과한 게이트' 와 구분되지 않는다.
     def _r10():
         unmeasured = {f"metrics.{k}" for k in METRIC_KEYS
                       if _status(metrics.get(k)) == "NOT_MEASURED"}
@@ -200,6 +208,7 @@ def cross_field_errors(d):
         for k in ("precision", "recall"):
             if _status(conflict.get(k)) == "NOT_MEASURED":
                 unmeasured.add(f"evl.conflictDetection.{k}")
+        unmeasured |= {f"gates.{g['id']}" for g in gates if g.get("status") == "NOT_MEASURED"}
         warned = {w["trigger"] for w in warnings_ if w["code"] == "METRIC_UNMEASURED"}
         for miss in sorted(unmeasured - warned):
             errs.append(f"R10: {miss} 가 NOT_MEASURED 인데 METRIC_UNMEASURED 경고 없음")
@@ -207,14 +216,17 @@ def cross_field_errors(d):
             errs.append(f"R10: METRIC_UNMEASURED({extra}) 인데 그 지표는 NOT_MEASURED 가 아님")
     rule(_r10)
 
-    # R11 — 버전 미확정은 null + 경고로만 표현한다(양방향).
+    # R11 — 버전 미확정(UNPINNED)만 경고 대상이다(양방향). 그 레이어가 쓰지 않는 요소는
+    #       NOT_APPLICABLE 이며 경고 대상이 아니다 — 둘을 합치면 '버전을 모르는 상태' 가
+    #       '해당 없음' 에 섞여 재현 실패의 원인을 잃는다.
     def _r11():
-        nulls = {f"versions.{k}" for k, v in versions.items() if v is None}
+        unpinned = {f"versions.{k}" for k, v in versions.items()
+                    if isinstance(v, dict) and v.get("status") == "UNPINNED"}
         warned = {w["trigger"] for w in warnings_ if w["code"] == "VERSION_UNPINNED"}
-        for miss in sorted(nulls - warned):
-            errs.append(f"R11: {miss} 가 null 인데 VERSION_UNPINNED 경고 없음")
-        for extra in sorted(warned - nulls):
-            errs.append(f"R11: VERSION_UNPINNED({extra}) 인데 그 버전은 null 이 아님")
+        for miss in sorted(unpinned - warned):
+            errs.append(f"R11: {miss} 가 UNPINNED 인데 VERSION_UNPINNED 경고 없음")
+        for extra in sorted(warned - unpinned):
+            errs.append(f"R11: VERSION_UNPINNED({extra}) 인데 그 버전은 UNPINNED 가 아님")
     rule(_r11)
 
     # R12 — fixture 미고정·예시 보고서는 baseline 이 될 수 없다(I1 §1.3).
@@ -285,13 +297,29 @@ def cross_field_errors(d):
                     errs.append(f"R16: {j['featureId']} 의 근거 '{ref}' 가 실행 보고서를 가리키지 않음")
     rule(_r16)
 
-    # R17 — 비교 불가를 '변화 없음' 으로 표기하지 않는다(I1 §7.4).
+    # R17 — 비교 가능성은 신원이 같을 때만 성립하고, 비교 불가를 '변화 없음' 으로
+    #       표기하지 않는다(I1 §7.4). runId 만으로는 '같은 것을 쟀는지' 판정할 수 없다.
     def _r17():
         comparable = baseline["comparable"]
         warned = ("BASELINE_NOT_COMPARABLE", "baseline") in warns
+        prev = baseline["previous"]
         if comparable:
-            if baseline["previousRunId"] is None:
-                errs.append("R17: comparable=true 인데 previousRunId 가 없음")
+            if prev is None:
+                errs.append("R17: comparable=true 인데 previous 가 없음")
+            else:
+                for f in ("projectId", "layer", "track", "sourceRevision"):
+                    if prev[f] != run[f]:
+                        errs.append(f"R17: comparable=true 인데 {f} 가 다름 "
+                                    f"(이전 {prev[f]!r} / 현재 {run[f]!r})")
+                if prev["schemaVersion"] != d["schemaVersion"]:
+                    errs.append(f"R17: comparable=true 인데 schemaVersion 이 다름 "
+                                f"(이전 {prev['schemaVersion']!r} / 현재 {d['schemaVersion']!r})")
+                if run["fixtureHash"] == "UNPINNED" or prev["fixtureHash"] == "UNPINNED":
+                    errs.append("R17: comparable=true 인데 fixture 가 고정돼 있지 않음 "
+                                "(미고정 실행은 비교 기준선이 아니다 — I1 §1.3)")
+                elif prev["fixtureHash"] != run["fixtureHash"]:
+                    errs.append("R17: comparable=true 인데 fixtureHash 가 다름 "
+                                "(다른 fixture 의 수치는 직접 비교하지 않는다 — I1 §7.4)")
             if not baseline["deltas"]:
                 errs.append("R17: comparable=true 인데 deltas 가 비어 있음")
             if warned:
@@ -320,7 +348,9 @@ def cross_field_errors(d):
             elif kind == "metric":
                 ok = (trg in {f"metrics.{k}" for k in METRIC_KEYS}
                       or trg == "evl.confidenceCalibration"
-                      or trg in {"evl.conflictDetection.precision", "evl.conflictDetection.recall"})
+                      or trg in {"evl.conflictDetection.precision", "evl.conflictDetection.recall"}
+                      # 게이트의 미측정도 같은 코드로 보고한다(R10) — 대상은 실재 게이트여야 한다.
+                      or (trg.startswith("gates.") and trg.split(".", 1)[1] in gate_ids))
             elif kind == "calibration":
                 ok = trg == "evl.confidenceCalibration"
             elif kind == "gate":
@@ -408,6 +438,52 @@ def template_errors(doc):
     return errs
 
 
+def fixture_errors(doc):
+    """재현 fixture 파일 자체의 최소 계약.
+
+    보고서가 실패를 '재현 fixture' 로 가리키는데 그 파일이 무엇을 재현하는지 적혀 있지
+    않으면, 다음 실행에서 그것이 회귀했는지 판정할 수 없다 — 경로 문자열만으로는
+    #100 의 '실패 사례 링크 + 재현 fixture' 수용기준을 충족하지 않는다.
+    """
+    errs = []
+    for k in ("fixtureId", "reproduces", "layer", "input", "expected"):
+        if k not in doc:
+            errs.append(f"재현 fixture: 필수 키 {k} 가 없음")
+    rep = doc.get("reproduces")
+    if isinstance(rep, dict):
+        for k in ("runId", "failureId"):
+            if not rep.get(k):
+                errs.append(f"재현 fixture: reproduces.{k} 가 없음 (어느 실행의 어느 실패인지 불명)")
+    elif "reproduces" in doc:
+        errs.append("재현 fixture: reproduces 는 {runId, failureId} 객체여야 함")
+    exp = doc.get("expected")
+    if isinstance(exp, dict) and not exp.get("rule"):
+        errs.append("재현 fixture: expected.rule 이 없음 (어느 계약 규칙의 위반인지 불명)")
+    return errs
+
+
+def referenced_fixture_errors(registered):
+    """정상 픽스처가 가리키는 재현 fixture 가 실재하고 manifest 에 등록돼 있는가.
+
+    경로만 적고 파일이 없으면 그 실패는 재현 불가이며, manifest 에 없으면 이 스위트가
+    그 파일의 형식 붕괴를 잡지 못한다.
+    """
+    errs = []
+    for case in MANIFEST["cases"]:
+        if case.get("expect") != "valid":
+            continue
+        doc = json.loads((EX / case["file"]).read_text())
+        for f in doc.get("failures", []):
+            path = f.get("fixture")
+            if not isinstance(path, str):
+                continue
+            if not (REPO / path).exists():
+                errs.append(f"{case['file']}: 재현 fixture '{path}' 가 실재하지 않음")
+            elif path not in registered:
+                errs.append(f"{case['file']}: 재현 fixture '{path}' 가 manifest 에 등록되지 않음")
+    return errs
+
+
 def manifest_errors():
     """manifest 자체의 무결성. 통제값이 아닌 expect/enforcedBy 는 오타여도 우연히 실제
     결과와 맞아떨어져 통과할 수 있으므로 먼저 거른다.
@@ -418,8 +494,8 @@ def manifest_errors():
     seen = set()
     for i, c in enumerate(MANIFEST["cases"]):
         where = c.get("file", f"[{i}]")
-        if c.get("expect") not in ("valid", "invalid", "template"):
-            errs.append(f"{where}: expect 는 valid|invalid|template 여야 함 (실제 {c.get('expect')!r})")
+        if c.get("expect") not in ("valid", "invalid", "template", "fixture"):
+            errs.append(f"{where}: expect 는 valid|invalid|template|fixture 여야 함 (실제 {c.get('expect')!r})")
             bad.add(i)
         if c.get("file") in seen:
             errs.append(f"{where}: 중복 등록")
@@ -464,12 +540,12 @@ def main():
             continue
         doc = json.loads((EX / case["file"]).read_text())
 
-        if case["expect"] == "template":
-            tmpl_errs = template_errors(doc)
-            ok = not tmpl_errs
+        if case["expect"] in ("template", "fixture"):
+            sub = template_errors(doc) if case["expect"] == "template" else fixture_errors(doc)
+            ok = not sub
             mismatches += not ok
             print(f"{'OK  ' if ok else 'FAIL'} {case['file']:<44} "
-                  f"{'' if ok else tmpl_errs[0]}")
+                  f"{'' if ok else sub[0]}")
             continue
 
         schema_errs = sorted(validator.iter_errors(doc), key=lambda e: list(e.path))
@@ -517,6 +593,12 @@ def main():
             verified_rules.add(case["rule"])
         mismatches += not ok
         print(f"{'OK  ' if ok else 'FAIL'} {case['file']:<44} {detail}")
+
+    registered = {f"docs/superpowers/specs/schemas/rqr-examples/{c['file']}"
+                  for c in MANIFEST["cases"] if c.get("expect") == "fixture"}
+    for e in referenced_fixture_errors(registered):
+        mismatches += 1
+        print(f"FAIL 재현 fixture 참조 — {e}")
 
     uncovered = [f"R{i}" for i in range(1, MAX_RULE + 1) if f"R{i}" not in verified_rules]
     if uncovered:

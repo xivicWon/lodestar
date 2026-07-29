@@ -7,27 +7,39 @@
     "track": "db",
     "reportKind": "EXAMPLE",
     "sourceRevision": "3c27259",
-    "fixtureHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "fixtureHash": "UNPINNED",
     "startedAt": "2026-07-29T06:00:00Z",
     "completedAt": "2026-07-29T06:31:04Z",
     "executedBy": "example@lodestar (작성 예시 — 실측 아님)"
   },
   "versions": {
-    "collector": "rdb-collector@3c27259",
-    "extractor": "SchemaToOwlMapper@3c27259",
-    "model": "claude-example@0",
-    "prompt": "enrich-prompt@v3"
+    "collector": {
+      "status": "PINNED",
+      "value": "rdb-collector@3c27259"
+    },
+    "extractor": {
+      "status": "PINNED",
+      "value": "SchemaToOwlMapper@3c27259"
+    },
+    "model": {
+      "status": "UNPINNED",
+      "value": null
+    },
+    "prompt": {
+      "status": "PINNED",
+      "value": "enrich-prompt@v3"
+    }
   },
   "counts": {
-    "input": 412,
+    "input": 390,
     "output": 380,
     "failed": 7,
-    "excluded": 25
+    "excluded": 3
   },
   "exclusions": [
     {
       "reason": "L2 링크가 AMBIGUOUS 라 자동 확정 경로가 닫혀 Claim 을 만들지 않음 (H4 제한)",
-      "count": 22,
+      "count": 2,
       "examples": [
         "link:TB_ORD_DTL.ITEM_CD~TB_ITEM_MST.ITEM_CD",
         "link:TB_STOK_QTY.WH_CD~TB_WH_MST.WH_CD"
@@ -35,7 +47,7 @@
     },
     {
       "reason": "근거가 되는 L1 Observation 이 degraded 로 표시되어 상한이 걸림 (I1 §3.3)",
-      "count": 3,
+      "count": 1,
       "examples": [
         "obs:VW_ORD_SUMMARY.*"
       ]
@@ -56,7 +68,7 @@
     "coverage": {
       "status": "MEASURED",
       "value": 0.92,
-      "note": "380/412"
+      "note": "380/390"
     },
     "determinism": {
       "status": "MEASURED",
@@ -155,24 +167,11 @@
     }
   ],
   "baseline": {
-    "previousRunId": "run-l3-db-example-0001",
-    "comparable": true,
-    "reason": "같은 sourceRevision·fixtureHash·schemaVersion 이라 직접 비교한다",
+    "previous": null,
+    "comparable": false,
+    "reason": "fixture hash 가 #99 이전이라 미고정이다. 미고정 실행끼리는 같은 입력이었음을 보장할 수 없으므로 비교하지 않는다(I1 §1.3·§7.4).",
     "eligibleAsBaseline": false,
-    "deltas": [
-      {
-        "metric": "metrics.precision",
-        "previous": 0.88,
-        "current": 0.91,
-        "delta": 0.03
-      },
-      {
-        "metric": "metrics.coverage",
-        "previous": 0.94,
-        "current": 0.92,
-        "delta": -0.02
-      }
-    ]
+    "deltas": []
   },
   "verdict": {
     "value": "PASS_RESTRICTED",
@@ -211,6 +210,16 @@
   ],
   "warnings": [
     {
+      "code": "UNPINNED_FIXTURE",
+      "message": "fixture hash 가 #99 에서 고정되기 전이라 baseline 으로 인정되지 않는다",
+      "trigger": "run.fixtureHash"
+    },
+    {
+      "code": "VERSION_UNPINNED",
+      "message": "모델 API 가 정확한 버전 문자열을 돌려주지 않아 model 버전을 고정하지 못했다",
+      "trigger": "versions.model"
+    },
+    {
       "code": "METRIC_UNMEASURED",
       "message": "Gold Set 미확정으로 재현율 미측정",
       "trigger": "metrics.recall"
@@ -239,7 +248,12 @@
       "code": "PATH_RESTRICTED",
       "message": "H4 — 자동 승격 경로가 닫힌 상태의 측정이다",
       "trigger": "verdict"
+    },
+    {
+      "code": "BASELINE_NOT_COMPARABLE",
+      "message": "fixture 미고정으로 이전 실행과 비교하지 않았다",
+      "trigger": "baseline"
     }
   ],
-  "notes": "제한(RESTRICTED) 판정 예시. reportKind=EXAMPLE 이므로 fixtureHash 가 고정돼 있어도 baseline 으로 인정되지 않는다(R12). failures[].fixture 의 경로와 fixtureHash 값은 예시 표기이며 실재 파일은 #99(I2) 이후에 생긴다."
+  "notes": "제한(RESTRICTED) 판정 예시. fixture hash 는 #99(I2) 이전이라 미고정이며, 그 때문에 이 보고서는 baseline 도 비교 대상도 되지 않는다(R12·R17). 지표 수치는 가공값이다."
 }

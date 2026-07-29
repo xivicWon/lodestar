@@ -13,10 +13,22 @@
     "executedBy": "<실행 주체>"
   },
   "versions": {
-    "collector": "<수집기 버전 | null>",
-    "extractor": "<추출기 버전 | null>",
-    "model": "<모델 식별자+버전 | null>",
-    "prompt": "<프롬프트 버전 | null>"
+    "collector": {
+      "status": "<PINNED|UNPINNED|NOT_APPLICABLE>",
+      "value": "<수집기 버전 — PINNED 일 때만>"
+    },
+    "extractor": {
+      "status": "<PINNED|UNPINNED|NOT_APPLICABLE>",
+      "value": "<추출기 버전 — PINNED 일 때만>"
+    },
+    "model": {
+      "status": "<PINNED|UNPINNED|NOT_APPLICABLE>",
+      "value": "<모델 식별자+버전 — PINNED 일 때만>"
+    },
+    "prompt": {
+      "status": "<PINNED|UNPINNED|NOT_APPLICABLE>",
+      "value": "<프롬프트 버전 — PINNED 일 때만>"
+    }
   },
   "counts": {
     "input": null,
@@ -28,7 +40,9 @@
     {
       "reason": "<제외 사유 — '조용한 스킵' 금지>",
       "count": null,
-      "examples": ["<원본 좌표>"]
+      "examples": [
+        "<원본 좌표>"
+      ]
     }
   ],
   "failures": [
@@ -40,11 +54,31 @@
     }
   ],
   "metrics": {
-    "precision": { "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>", "value": null, "note": "<측정 방법 또는 미측정 사유>" },
-    "recall": { "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>", "value": null, "note": "<측정 방법 또는 미측정 사유>" },
-    "coverage": { "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>", "value": null, "note": "<측정 방법 또는 미측정 사유>" },
-    "determinism": { "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>", "value": null, "note": "<동일 revision 3회 실행 일치율>" },
-    "provenanceCompleteness": { "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>", "value": null, "note": "<필수 provenance 필드 연결률>" }
+    "precision": {
+      "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>",
+      "value": null,
+      "note": "<측정 방법 또는 미측정 사유>"
+    },
+    "recall": {
+      "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>",
+      "value": null,
+      "note": "<측정 방법 또는 미측정 사유>"
+    },
+    "coverage": {
+      "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>",
+      "value": null,
+      "note": "<측정 방법 또는 미측정 사유>"
+    },
+    "determinism": {
+      "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>",
+      "value": null,
+      "note": "<동일 revision 3회 실행 일치율>"
+    },
+    "provenanceCompleteness": {
+      "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>",
+      "value": null,
+      "note": "<필수 provenance 필드 연결률>"
+    }
   },
   "evl": {
     "confidenceCalibration": {
@@ -64,16 +98,49 @@
       "missingRawCount": null
     },
     "conflictDetection": {
-      "precision": { "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>", "value": null, "note": "<gold 충돌셋 대조 결과>" },
-      "recall": { "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>", "value": null, "note": "<gold 충돌셋 대조 결과>" },
+      "precision": {
+        "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>",
+        "value": null,
+        "note": "<gold 충돌셋 대조 결과>"
+      },
+      "recall": {
+        "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>",
+        "value": null,
+        "note": "<gold 충돌셋 대조 결과>"
+      },
       "goldSetId": "<#99 gold 충돌셋 식별자 | null>"
     },
     "coverageClasses": [
-      { "class": "code", "state": "<present|absent|not_collected>", "deterministic": false, "warned": false },
-      { "class": "issue", "state": "<present|absent|not_collected>", "deterministic": false, "warned": false },
-      { "class": "adr", "state": "<present|absent|not_collected>", "deterministic": false, "warned": false },
-      { "class": "test", "state": "<present|absent|not_collected>", "deterministic": false, "warned": false },
-      { "class": "runtime", "state": "<present|absent|not_collected>", "deterministic": false, "warned": false }
+      {
+        "class": "code",
+        "state": "<present|absent|not_collected>",
+        "deterministic": "<true|false — 동일 입력 3회 같은 state 인가>",
+        "warned": "<true|false — present 가 아니면 true 여야 한다>"
+      },
+      {
+        "class": "issue",
+        "state": "<present|absent|not_collected>",
+        "deterministic": "<true|false — 동일 입력 3회 같은 state 인가>",
+        "warned": "<true|false — present 가 아니면 true 여야 한다>"
+      },
+      {
+        "class": "adr",
+        "state": "<present|absent|not_collected>",
+        "deterministic": "<true|false — 동일 입력 3회 같은 state 인가>",
+        "warned": "<true|false — present 가 아니면 true 여야 한다>"
+      },
+      {
+        "class": "test",
+        "state": "<present|absent|not_collected>",
+        "deterministic": "<true|false — 동일 입력 3회 같은 state 인가>",
+        "warned": "<true|false — present 가 아니면 true 여야 한다>"
+      },
+      {
+        "class": "runtime",
+        "state": "<present|absent|not_collected>",
+        "deterministic": "<true|false — 동일 입력 3회 같은 state 인가>",
+        "warned": "<true|false — present 가 아니면 true 여야 한다>"
+      }
     ]
   },
   "gates": [
@@ -86,13 +153,21 @@
     }
   ],
   "baseline": {
-    "previousRunId": "<run-... | null>",
-    "comparable": false,
-    "reason": "<비교 가능/불가의 근거>",
-    "eligibleAsBaseline": false,
+    "previous": {
+      "runId": "<run-... | 전체를 null 로 두면 비교 대상 없음>",
+      "projectId": "<현재 실행과 같아야 comparable=true 가능>",
+      "layer": "<L0|L1|L2|L3>",
+      "track": "<db|code>",
+      "sourceRevision": "<이전 실행의 revision — 현재와 같아야 함>",
+      "fixtureHash": "<이전 실행의 fixture hash — 현재와 같고 고정돼 있어야 함>",
+      "schemaVersion": "<이전 보고서의 schemaVersion — 현재와 같아야 함>"
+    },
+    "comparable": "<true|false — 신원이 전부 같고 fixture 가 고정된 경우에만 true>",
+    "reason": "<비교 가능/불가의 근거. 불가면 필수>",
+    "eligibleAsBaseline": "<true|false — fixture 고정 ∧ reportKind=BASELINE 일 때만 true>",
     "deltas": [
       {
-        "metric": "<metrics.precision 등>",
+        "metric": "<metrics.precision 등 — comparable=false 면 이 배열을 비운다>",
         "previous": null,
         "current": null,
         "delta": null
@@ -106,7 +181,9 @@
       {
         "rule": "<H4>",
         "reason": "<제한 사유 — I1 §3.2>",
-        "closedPaths": ["<닫힌 경로>"]
+        "closedPaths": [
+          "<닫힌 경로>"
+        ]
       }
     ]
   },
@@ -114,9 +191,11 @@
     {
       "featureId": "<기능 식별자>",
       "judgment": "<Core|Lab|Parked|Retire>",
-      "measured": false,
+      "measured": "<true|false — false 면 Core 판정 불가>",
       "rationale": "<판정 근거>",
-      "evidenceRefs": ["<이 실행의 runId 또는 report:run-...>"]
+      "evidenceRefs": [
+        "<이 실행의 runId 또는 report:run-...>"
+      ]
     }
   ],
   "warnings": [
