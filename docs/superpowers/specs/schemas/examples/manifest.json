@@ -1,0 +1,341 @@
+{
+  "description": "answer-shape v0 검증 픽스처 목록. 하위 이슈 C0 검증기는 이 목록을 그대로 테스트 케이스로 사용한다. enforcedBy=schema 는 JSON Schema 만으로 걸러야 하고, enforcedBy=validator 는 스키마를 통과하지만 계약 §4 교차 필드 불변식에서 실패해야 한다. 각 invalid 픽스처는 정상 픽스처(valid.full.json, 근거 0건 사례는 valid.abstention.json)에서 파생하며 **위반하는 규칙이 정확히 하나**가 되도록 만든다 — 복합 위반은 목표 검사가 누락돼도 통과처럼 보이게 만든다. 이때 '변경 한 곳'이 아니라 '위반 하나'가 기준이다: 예컨대 증거 하나를 빼면 A5(커버리지)·A11(경고)·A15(상한 사유)를 계속 만족시키기 위한 부수 변경이 따라오며, 그 부수 변경은 새 위반을 만들지 않는다. validate.py 는 승인 여부뿐 아니라 **실제로 걸린 규칙이 rule 과 같은지**까지 대조한다 — 걸린 교차 규칙의 종류가 rule 하나여야 하고(같은 규칙이 스키마·교차 두 계층에서 함께 잡히는 것은 의도된 이중 방어라 허용), 스키마 오류는 1건이어야 하며, 어느 계층이든 실제 오류 메시지가 expectedError 를 포함해야 하고, 검출 계층이 enforcedBy 와 일치해야 한다. schema 계층은 여기에 더해 **실제 위반이 일어난 스키마 위치가 선언된 rule 과 맞는지**까지 대조한다(validate.py 의 RULE_SCHEMA_MARKERS) — 규칙의 정체는 '어느 스키마 제약이 걸렸나'이므로 absolute_schema_path 를 대조하고, 문서 내 위치(absolute_path)는 진단용으로만 출력한다 — 잘못 라벨링된 픽스처가 다른 규칙의 검증 실적으로 집계되면 규칙 커버리지가 과대 보고되기 때문이다. 시각 필드의 달력 유효성은 스키마 pattern 이 아니라 **확인기가 직접 강제**한다 (draft 2020-12 의 format 은 기본 assertion 이 아니므로 스키마만으로는 2026-02-30 을 막을 수 없다). C0 제품 검증기도 이 검사를 이식하거나 format assertion 을 켜야 한다. 정상 픽스처는 intent 5종(VERIFY·IMPACT·LOCATE·EXPLAIN·HISTORY)과 보류/비보류 두 갈래를 모두 포함한다 — 비보류 사례가 없으면 '보류만 하는 층'을 정상으로 고정해버린다.",
+  "schema": "../answer-shape.v0.schema.json",
+  "contract": "../../2026-07-29-evl-answer-shape-contract.md",
+  "checker": "../validate.py",
+  "fixtureSourceRevision": "3c27259",
+  "fixtureNote": "정상 픽스처의 evidence[].ref.locator 는 모두 이 리포에 실재하며 revision 3c27259 에서 재확인 가능한 좌표다(I1 §1.1 벤치 2트랙 = legacy-sample.sql · backend/src/main/kotlin). contentHash 는 해당 revision 의 git blob sha 다. 계약이 '재확인 가능한 좌표'를 요구하므로 예제 자체가 그 요구를 만족해야 한다(P1 자기적용). promptHash 는 실제 SHA-256 이다 — bnd-...0007 은 'lodestar/evl/v0 :: VERIFY :: TB_PAY_MST.ORD_NO -> TB_ORD_HD.ORD_NO @3c27259', bnd-...0008 은 'lodestar/evl/v0 :: VERIFY :: claim-2201 @3c27259' 의 해시다(재계산 가능).",
+  "cases": [
+    {
+      "file": "valid.full.json",
+      "expect": "valid",
+      "note": "증거 5건·미해결 충돌·부재 경고·상한이 모두 살아있는 정상 응답. NEEDS_CHECK 충돌이 있으므로 ABSTAIN 을 내고, 상한 사유를 audit.ceilingReasons 에 명시한다. audit.evidenceIds 의 ev-6·ev-7 은 번들에 있었으나 응답에 싣지 않은 탈락 후보다(§2.7 — 두 집합의 차로 결정된다)"
+    },
+    {
+      "file": "valid.abstention.json",
+      "expect": "valid",
+      "note": "근거 0건 → ABSTAIN(§6.2 조건 1). 빈 응답도 계약을 만족해야 한다"
+    },
+    {
+      "file": "valid.unmeasured-signal.json",
+      "expect": "valid",
+      "note": "측정하지 못한 신호를 0으로 위장하지 않고 null + SIGNAL_UNMEASURED 로 표현한 응답(A17 양성)"
+    },
+    {
+      "file": "valid.impact-no-abstention.json",
+      "expect": "valid",
+      "note": "IMPACT — 핵심 클래스(code)가 present 이고 미해결 충돌이 없어 **보류하지 않는** 정상 응답. 부재 클래스는 경고로만 드러낸다(§6.2 조건 2의 OR 관계)"
+    },
+    {
+      "file": "valid.locate-code-and-test.json",
+      "expect": "valid",
+      "note": "LOCATE — code·test 두 클래스가 present 인 고신뢰 응답. 보류 없음"
+    },
+    {
+      "file": "valid.explain-core-absent.json",
+      "expect": "valid",
+      "note": "EXPLAIN — 핵심 클래스 후보군(adr·issue)에 present 가 하나도 없어 §6.2 조건 2로 보류. trigger 가 coverage.adr 을 가리킨다"
+    },
+    {
+      "file": "valid.history-core-absent.json",
+      "expect": "valid",
+      "note": "HISTORY — 핵심 클래스(issue) 부재로 조건 2 보류. intent 별 핵심 클래스 매핑을 전부 소진한다"
+    },
+    {
+      "file": "invalid.wrong-schema-version.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A2",
+      "expectedError": "was expected",
+      "note": "다른 계약 버전을 v0 자리에 넣은 경우 — 버전이 맞지 않으면 그 응답을 어느 계약으로 평가할지 결정할 수 없다"
+    },
+    {
+      "file": "invalid.reason-no-basis.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A3",
+      "expectedError": "should be non-empty",
+      "note": "무근거 이유 = 산문"
+    },
+    {
+      "file": "invalid.missing-stance.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A10",
+      "expectedError": "'stance' is a required property",
+      "note": "supports/contradicts 는 기본값 없이 명시 필수"
+    },
+    {
+      "file": "invalid.coverage-percent.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A4",
+      "expectedError": "is not one of ['present', 'absent', 'not_collected']",
+      "note": "커버리지를 %로 위장"
+    },
+    {
+      "file": "invalid.signals-incomplete.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A8",
+      "expectedError": "'contradicted' is a required property",
+      "note": "signals 5개 미노출 = 근거 없는 스칼라"
+    },
+    {
+      "file": "invalid.confidence-out-of-range.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A9",
+      "expectedError": "greater than the maximum of 1.0",
+      "note": "0.0~1.0 범위 이탈"
+    },
+    {
+      "file": "invalid.conflict-resolved-without-basis.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A7",
+      "expectedError": "'resolvedBy' is a required property",
+      "note": "근거 없이 충돌을 해소 처리(덮어쓰기 — I1 P4). RESOLVED 로 바꾸면 CONFLICT_UNRESOLVED 경고가 상태와 모순되므로(A11 양방향) 그 경고를 함께 제거해 단일 위반으로 유지한다"
+    },
+    {
+      "file": "invalid.resolved-basis-on-unresolved.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A7",
+      "expectedError": "should not be valid under",
+      "note": "status=NEEDS_CHECK 인데 resolvedBy 가 붙음 — 상태와 해소 근거가 모순"
+    },
+    {
+      "file": "invalid.missing-audit.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A12",
+      "expectedError": "'audit' is a required property",
+      "note": "역추적 불가"
+    },
+    {
+      "file": "invalid.warning-without-trigger.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A12",
+      "expectedError": "'trigger' is a required property",
+      "note": "trigger 없는 경고 — 어느 대상에 경고했는지 판정 불가(A11 결정성의 전제). A11 이 요구하지 않는 경고(LOW_CORROBORATION)에서 빼 단일 위반으로 유지한다"
+    },
+    {
+      "file": "invalid.trigger-wrong-form.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A12",
+      "expectedError": "was expected",
+      "note": "NO_ISSUE 의 trigger 가 'foo' — code 별 trigger 형식 고정을 스키마가 강제한다"
+    },
+    {
+      "file": "invalid.conflict-dangling-ref.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A6",
+      "expectedError": "없는 증거 ev-99 를 참조",
+      "note": "존재하지 않는 evidence id 참조. 반대 증거(ev-4)는 충돌에 남겨 A14 와 겹치지 않게 한다"
+    },
+    {
+      "file": "invalid.contradicts-not-linked.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A14",
+      "expectedError": "반대 증거 ev-4 가 supports 증거와 함께 충돌로 연결되지 않음",
+      "note": "충돌이 존재하기만 하면 A14 를 통과하던 구멍 — 반대 증거 자신이 supports 증거와 함께 연결돼야 한다"
+    },
+    {
+      "file": "invalid.coverage-claims-absent-class.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A5",
+      "expectedError": "coverage.adr=present 인데 해당 소스 증거 존재=False",
+      "note": "adr 증거가 없는데 coverage.adr=present — 없는 걸 있다고 함"
+    },
+    {
+      "file": "invalid.coverage-hides-evidence.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A5",
+      "expectedError": "coverage.code=absent 인데 해당 소스 증거 존재=True",
+      "note": "A5 반대 방향 — code 증거가 실재하는데 coverage.code=absent. 있는 걸 없다고 하는 쪽도 똑같이 거짓이다"
+    },
+    {
+      "file": "invalid.missing-warning-for-absent-class.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A11",
+      "expectedError": "coverage.issue=absent 인데 NO_ISSUE 경고 없음",
+      "note": "issue=absent 인데 NO_ISSUE 경고 누락 — 경고 안 함"
+    },
+    {
+      "file": "invalid.missing-warning-for-not-collected.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A11",
+      "expectedError": "coverage.runtime=not_collected 인데 대응 경고 없음",
+      "note": "A11 의 not_collected 방향 — runtime 미수집인데 대응 경고 없음. '없음'과 '안 봄'의 구분이 경고 단계에서 무너진다"
+    },
+    {
+      "file": "invalid.warning-contradicts-coverage.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A11",
+      "expectedError": "NO_CODE 경고가 있는데 coverage.code=present",
+      "note": "A11 역방향 — coverage.code=present 인데 NO_CODE 경고가 붙음. 경고가 상태와 모순되면 '무엇을 못 찾았는지'가 거짓이 된다"
+    },
+    {
+      "file": "invalid.audit-missing-evidence-id.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A13",
+      "expectedError": "audit.evidenceIds 에 없는 증거",
+      "note": "응답에 쓴 증거가 audit.evidenceIds 에 없음. 반대로 탈락 후보가 더 들어있는 것은 정상이다(§2.7)"
+    },
+    {
+      "file": "invalid.abstain-missing-on-empty-evidence.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A16",
+      "expectedError": "ABSTAIN 경고 없음",
+      "note": "§6.2 조건 1 — 근거가 0건인데 보류하지 않음"
+    },
+    {
+      "file": "invalid.abstain-missing-on-core-class-absent.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A16",
+      "expectedError": "abstention 조건 [2] 성립인데 ABSTAIN 경고 없음",
+      "note": "§6.2 조건 2 — intent(VERIFY)의 핵심 클래스 test·runtime 이 모두 non-present 인데 보류하지 않음"
+    },
+    {
+      "file": "invalid.abstain-missing-on-conflict.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A16",
+      "expectedError": "abstention 조건 [3] 성립인데 ABSTAIN 경고 없음",
+      "note": "§6.2 조건 3 — 미해결(NEEDS_CHECK) 충돌이 있는데 보류하지 않음"
+    },
+    {
+      "file": "invalid.abstain-trigger-unrelated.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A16",
+      "expectedError": "가 성립한 조건",
+      "note": "ABSTAIN 의 trigger 가 실재하는 증거 id 라 A18 은 통과하지만 보류 사유를 가리키지 않는다 — 보류 원인이 기계적으로 집계되지 않는다"
+    },
+    {
+      "file": "invalid.signal-null-without-warning.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A17",
+      "expectedError": "가 null 인데 SIGNAL_UNMEASURED 경고 없음",
+      "note": "신호를 null 로 두고 SIGNAL_UNMEASURED 경고를 내지 않음. 미측정 신호에 LOW_CORROBORATION 을 함께 붙이면 '측정 못함'과 '측정했고 낮음'이 뒤섞이므로 제거했다"
+    },
+    {
+      "file": "invalid.trigger-dangling.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A18",
+      "expectedError": "trigger 'ev-99' 가 실재 대상을 가리키지 않음",
+      "note": "경고 trigger 가 존재하지 않는 evidence id 를 가리킴"
+    },
+    {
+      "file": "invalid.ceiling-reason-not-warned.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A15",
+      "expectedError": "ceilingReasons 의 DEGRADED_SOURCE 가 실제 warnings 에 없음",
+      "note": "상한 사유로 DEGRADED_SOURCE 를 적었지만 그런 경고가 실제로는 없음 — 상한 사유를 사후에 지어낸 경우"
+    },
+    {
+      "file": "invalid.ceiling-without-reasons.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A15",
+      "expectedError": "should be non-empty",
+      "note": "상한을 적용했다면서 사유를 비워둠. 교차 검사(validate.py)도 독립적으로 이 경우를 잡는다"
+    },
+    {
+      "file": "invalid.ceiling-reason-not-allowed.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A15",
+      "expectedError": "is not one of",
+      "note": "LOW_CORROBORATION 은 상한 사유 통제어휘 밖 — 아무 경고나 사유로 끌어다 쓰는 것을 막는다"
+    },
+    {
+      "file": "invalid.duplicate-conflict-id.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A19",
+      "expectedError": "conflicts[].id 가 응답 내에서 중복됨",
+      "note": "서로 다른 충돌이 같은 id 를 쓰면 경고 하나가 둘을 충족시킨 것처럼 보인다"
+    },
+    {
+      "file": "invalid.duplicate-evidence-id.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A19",
+      "expectedError": "evidence[].id 가 응답 내에서 중복됨",
+      "note": "§2.3 이 '응답 내 유일'이라 적어두었지만 어디서도 강제되지 않던 부분"
+    },
+    {
+      "file": "invalid.additional-property.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A1",
+      "expectedError": "Additional properties are not allowed",
+      "note": "스키마에 없는 필드 하나만 추가 — additionalProperties:false 회귀를 직접 검증한다"
+    },
+    {
+      "file": "invalid.id-namespace-collision.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A19",
+      "expectedError": "evidence 와 conflicts 가 함께 사용함",
+      "note": "evidence 와 conflicts 가 같은 id 를 씀 — 참조를 전부 정합하게 맞춰도 trigger 가 무엇을 가리키는지 모호해진다"
+    },
+    {
+      "file": "invalid.ceiling-not-applied.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A15",
+      "expectedError": "경고가 있는데 ceilingApplied=false",
+      "note": "A15 역방향 — 미해결 충돌이 있는데 상한을 적용하지 않음. 상한 전파(I1 §3.3)가 조용히 생략된다"
+    },
+    {
+      "file": "invalid.signal-trigger-dangling-evidence.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A18",
+      "expectedError": "trigger 'ev-99.signals.corroboration'",
+      "note": "SIGNAL_UNMEASURED 의 trigger 가 존재하지 않는 증거를 가리킴. **신호명 미지 값은 이 계층에서 픽스처로 만들 수 없다** — 스키마 pattern 이 신호명을 5종으로 제한하고 그 5종은 모두 required 라, '형식은 맞는데 그 증거에 없는 신호명'이 존재할 수 없기 때문이다. A18 은 신호명 소속도 확인하지만(C0 가 교차 규칙만 이식하는 경우 대비) 그 분기는 스키마 통과 문서에서 도달 불가다. 파일명도 검증 대상과 일치하도록 unknown-name -> dangling-evidence 로 바꿨다"
+    },
+    {
+      "file": "invalid.false-abstain.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A16",
+      "expectedError": "보류 조건이 하나도 성립하지 않는데 ABSTAIN",
+      "note": "A16 역방향 — 허위 보류. 정상 답변이 차단되고 baseline 의 보류율·오경고율이 왜곡된다"
+    },
+    {
+      "file": "invalid.trigger-wrong-scope.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A12",
+      "expectedError": "does not match",
+      "note": "DEGRADED_SOURCE 는 증거를 가리켜야 하는데 coverage 키를 가리킴 — code 와 trigger 대상 종류의 관계를 강제한다"
+    },
+    {
+      "file": "invalid.impossible-date.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A1",
+      "expectedError": "실재하지 않는 시각",
+      "note": "2026-02-30 은 스키마 pattern(자릿수·범위)을 통과한다. 달력 유효성은 확인기가 강제한다 — draft 2020-12 의 format 은 기본이 annotation 이라 검증기 설정에 따라 결과가 갈리기 때문"
+    }
+  ]
+}

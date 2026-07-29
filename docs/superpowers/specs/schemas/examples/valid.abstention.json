@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "answer-shape/v0",
+  "task": {
+    "intent": "VERIFY",
+    "target": {
+      "kind": "CLAIM",
+      "ref": "claim-2201"
+    }
+  },
+  "evidence": [],
+  "conflicts": [],
+  "coverage": {
+    "code": "absent",
+    "issue": "absent",
+    "adr": "absent",
+    "test": "absent",
+    "runtime": "not_collected"
+  },
+  "confidence_overall": 0.0,
+  "warnings": [
+    {
+      "code": "ABSTAIN",
+      "message": "근거를 하나도 찾지 못했습니다. 답변하지 않습니다.",
+      "trigger": "evidence"
+    },
+    {
+      "code": "NO_CODE",
+      "message": "코드 근거 없음",
+      "trigger": "coverage.code"
+    },
+    {
+      "code": "NO_ISSUE",
+      "message": "이슈 근거 없음",
+      "trigger": "coverage.issue"
+    },
+    {
+      "code": "NO_ADR",
+      "message": "ADR 없음",
+      "trigger": "coverage.adr"
+    },
+    {
+      "code": "NO_TEST",
+      "message": "테스트 없음",
+      "trigger": "coverage.test"
+    },
+    {
+      "code": "NOT_COLLECTED",
+      "message": "런타임 로그 미수집",
+      "trigger": "coverage.runtime"
+    }
+  ],
+  "audit": {
+    "bundleId": "bnd-2026-07-29-0008",
+    "promptHash": "sha256:2750f7a5f85a05c65130c6dde11eb15f6d0c04884a1657816e2b45164b3c93ec",
+    "evidenceIds": [],
+    "revision": "3c27259",
+    "createdAt": "2026-07-29T02:04:38Z",
+    "ceilingApplied": false
+  }
+}

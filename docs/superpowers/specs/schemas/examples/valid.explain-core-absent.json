@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "answer-shape/v0",
+  "task": {
+    "intent": "EXPLAIN",
+    "target": {
+      "kind": "TABLE",
+      "ref": "TB_PAY_MST",
+      "raw": "TB_PAY_MST 는 왜 FK 없이 설계됐나?"
+    }
+  },
+  "evidence": [
+    {
+      "id": "ev-1",
+      "source": "code",
+      "ref": {
+        "sourceId": "src-rdb-legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L122-L128",
+        "revision": "3c27259",
+        "contentHash": "git-blob:de7ba888f32e07a8a65770cf4161850ac650d36e"
+      },
+      "confidence": 0.55,
+      "signals": {
+        "finality": 0.9,
+        "freshness": 0.95,
+        "authority": 0.5,
+        "corroboration": 0.3,
+        "contradicted": 0.4
+      },
+      "reason": [
+        {
+          "text": "TB_PAY_MST 에 ORD_NO 가 있으나 FOREIGN KEY 선언이 없다는 사실만 확인된다",
+          "basis": [
+            {
+              "layer": "L1",
+              "id": "obs-ddl-tb_pay_mst"
+            }
+          ]
+        }
+      ],
+      "stance": "supports"
+    }
+  ],
+  "conflicts": [],
+  "coverage": {
+    "code": "present",
+    "issue": "absent",
+    "adr": "absent",
+    "test": "absent",
+    "runtime": "not_collected"
+  },
+  "confidence_overall": 0.18,
+  "warnings": [
+    {
+      "code": "NO_ISSUE",
+      "message": "설계 논의 이슈를 찾지 못했습니다.",
+      "trigger": "coverage.issue"
+    },
+    {
+      "code": "NO_ADR",
+      "message": "설계 결정 문서(ADR)가 없어 '왜'에 답할 근거가 없습니다.",
+      "trigger": "coverage.adr"
+    },
+    {
+      "code": "NO_TEST",
+      "message": "테스트 없음",
+      "trigger": "coverage.test"
+    },
+    {
+      "code": "NOT_COLLECTED",
+      "message": "런타임 로그 미수집",
+      "trigger": "coverage.runtime"
+    },
+    {
+      "code": "ABSTAIN",
+      "message": "설계 의도를 알 수 있는 클래스(ADR·이슈)가 하나도 없어 이유를 단정하지 않습니다.",
+      "trigger": "coverage.adr"
+    }
+  ],
+  "audit": {
+    "bundleId": "bnd-2026-07-29-0012",
+    "promptHash": "sha256:068ecc2553a6f55c333c0f8bbf5beead01243df3ad357ef842036cbc3bacbfdb",
+    "evidenceIds": [
+      "ev-1",
+      "ev-90",
+      "ev-91"
+    ],
+    "revision": "3c27259",
+    "createdAt": "2026-07-29T03:10:00Z",
+    "ceilingApplied": false
+  }
+}

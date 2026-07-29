@@ -1,0 +1,117 @@
+{
+  "schemaVersion": "answer-shape/v0",
+  "task": {
+    "intent": "IMPACT",
+    "target": {
+      "kind": "COLUMN",
+      "ref": "TB_ORD_HD.ORD_NO",
+      "raw": "TB_ORD_HD.ORD_NO 를 바꾸면 어디가 영향받나?"
+    }
+  },
+  "evidence": [
+    {
+      "id": "ev-1",
+      "source": "code",
+      "ref": {
+        "sourceId": "src-rdb-legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L214-L220",
+        "revision": "3c27259",
+        "contentHash": "git-blob:de7ba888f32e07a8a65770cf4161850ac650d36e"
+      },
+      "confidence": 0.88,
+      "signals": {
+        "finality": 0.95,
+        "freshness": 0.95,
+        "authority": 0.9,
+        "corroboration": 0.7,
+        "contradicted": 0.05
+      },
+      "reason": [
+        {
+          "text": "TB_ORD_MEMO 가 FOREIGN KEY 로 TB_ORD_HD(ORD_NO) 를 명시 참조한다",
+          "basis": [
+            {
+              "layer": "L1",
+              "id": "obs-ddl-fk_ord_memo"
+            }
+          ]
+        }
+      ],
+      "stance": "supports"
+    },
+    {
+      "id": "ev-2",
+      "source": "code",
+      "ref": {
+        "sourceId": "src-rdb-legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L122-L128",
+        "revision": "3c27259",
+        "contentHash": "git-blob:de7ba888f32e07a8a65770cf4161850ac650d36e"
+      },
+      "confidence": 0.61,
+      "signals": {
+        "finality": 0.9,
+        "freshness": 0.95,
+        "authority": 0.9,
+        "corroboration": 0.4,
+        "contradicted": 0.35
+      },
+      "reason": [
+        {
+          "text": "TB_PAY_MST 에 동명 컬럼 ORD_NO CHAR(15) 가 있어 이름 규칙 경로로도 영향 후보다",
+          "basis": [
+            {
+              "layer": "L2",
+              "id": "link-namepattern-ord_no"
+            }
+          ]
+        }
+      ],
+      "stance": "supports"
+    }
+  ],
+  "conflicts": [],
+  "coverage": {
+    "code": "present",
+    "issue": "absent",
+    "adr": "absent",
+    "test": "absent",
+    "runtime": "not_collected"
+  },
+  "confidence_overall": 0.74,
+  "warnings": [
+    {
+      "code": "NO_ISSUE",
+      "message": "이 변경을 논의한 이슈 기록을 찾지 못했습니다.",
+      "trigger": "coverage.issue"
+    },
+    {
+      "code": "NO_ADR",
+      "message": "영향 범위에 대한 설계 결정 문서가 없습니다.",
+      "trigger": "coverage.adr"
+    },
+    {
+      "code": "NO_TEST",
+      "message": "이 참조를 검증하는 테스트가 없습니다.",
+      "trigger": "coverage.test"
+    },
+    {
+      "code": "NOT_COLLECTED",
+      "message": "런타임 로그는 수집 대상에 포함되지 않았습니다.",
+      "trigger": "coverage.runtime"
+    }
+  ],
+  "audit": {
+    "bundleId": "bnd-2026-07-29-0011",
+    "promptHash": "sha256:dc184aba7954cdbc60f8042cca4a551349fc0c816f131d0c3066f0c2f2eb55b2",
+    "evidenceIds": [
+      "ev-1",
+      "ev-2",
+      "ev-90",
+      "ev-91"
+    ],
+    "revision": "3c27259",
+    "createdAt": "2026-07-29T03:10:00Z",
+    "ceilingApplied": false
+  }
+}

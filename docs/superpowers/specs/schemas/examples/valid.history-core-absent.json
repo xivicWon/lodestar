@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "answer-shape/v0",
+  "task": {
+    "intent": "HISTORY",
+    "target": {
+      "kind": "TABLE",
+      "ref": "TB_ORD_MEMO",
+      "raw": "TB_ORD_MEMO 의 FK 는 언제·왜 추가됐나?"
+    }
+  },
+  "evidence": [
+    {
+      "id": "ev-1",
+      "source": "code",
+      "ref": {
+        "sourceId": "src-rdb-legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L214-L220",
+        "revision": "3c27259",
+        "contentHash": "git-blob:de7ba888f32e07a8a65770cf4161850ac650d36e"
+      },
+      "confidence": 0.5,
+      "signals": {
+        "finality": 0.9,
+        "freshness": 0.95,
+        "authority": 0.4,
+        "corroboration": 0.2,
+        "contradicted": 0.3
+      },
+      "reason": [
+        {
+          "text": "현재 스키마에 FK_ORD_MEMO 가 존재한다는 사실만 확인된다 — 도입 시점은 알 수 없다",
+          "basis": [
+            {
+              "layer": "L1",
+              "id": "obs-ddl-fk_ord_memo"
+            }
+          ]
+        }
+      ],
+      "stance": "supports"
+    }
+  ],
+  "conflicts": [],
+  "coverage": {
+    "code": "present",
+    "issue": "absent",
+    "adr": "absent",
+    "test": "absent",
+    "runtime": "not_collected"
+  },
+  "confidence_overall": 0.15,
+  "warnings": [
+    {
+      "code": "NO_ISSUE",
+      "message": "도입 경위를 담은 이슈 기록이 없습니다.",
+      "trigger": "coverage.issue"
+    },
+    {
+      "code": "NO_ADR",
+      "message": "ADR 없음",
+      "trigger": "coverage.adr"
+    },
+    {
+      "code": "NO_TEST",
+      "message": "테스트 없음",
+      "trigger": "coverage.test"
+    },
+    {
+      "code": "NOT_COLLECTED",
+      "message": "런타임 로그 미수집",
+      "trigger": "coverage.runtime"
+    },
+    {
+      "code": "ABSTAIN",
+      "message": "이력을 알 수 있는 클래스(이슈)가 없어 시점·경위를 단정하지 않습니다.",
+      "trigger": "coverage.issue"
+    }
+  ],
+  "audit": {
+    "bundleId": "bnd-2026-07-29-0014",
+    "promptHash": "sha256:1541cfdd0d6bb3a112ecb9d33880c866dd3e1f020be75d906951b2c908c03a1f",
+    "evidenceIds": [
+      "ev-1",
+      "ev-90",
+      "ev-91"
+    ],
+    "revision": "3c27259",
+    "createdAt": "2026-07-29T03:10:00Z",
+    "ceilingApplied": false
+  }
+}

@@ -1,0 +1,724 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/xivicWon/lodestar/schemas/answer-shape.v0.schema.json",
+  "title": "Lodestar EVL Answer-Shape v0",
+  "description": "Evidence Validation Layer가 반환하는 형식화된 응답. 규범 문서: docs/superpowers/specs/2026-07-29-evl-answer-shape-contract.md (이슈 #103). 이 스키마는 구조 불변식만 강제한다. 교차 필드 불변식(A5·A7·A9 등)은 검증기 책임이며 규범 문서 §4에 정의한다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "task",
+    "evidence",
+    "conflicts",
+    "coverage",
+    "confidence_overall",
+    "warnings",
+    "audit"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "description": "이 응답이 따르는 answer-shape 계약 버전. 개정 전후 실행을 구분하기 위해 필수다(계약 §7).",
+      "const": "answer-shape/v0"
+    },
+    "task": {
+      "$ref": "#/$defs/task"
+    },
+    "evidence": {
+      "description": "랭킹된 증거. 배열 순서가 랭킹이다. 빈 배열은 허용되며(근거 없음), 이 경우 warnings에 ABSTAIN이 있어야 한다(A16).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "conflicts": {
+      "description": "탐지된 증거 간 모순. 없으면 빈 배열을 명시한다(필드 생략 금지 — '탐지 안 함'과 '없음'을 구분할 수 없게 된다).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/conflict"
+      }
+    },
+    "coverage": {
+      "$ref": "#/$defs/coverage"
+    },
+    "confidence_overall": {
+      "description": "응답 전체 신뢰도. evidence[].confidence의 단순 평균이 아니며, 미해결 conflict·커버리지 부재의 상한을 받는다(계약 §5.3).",
+      "$ref": "#/$defs/unitInterval"
+    },
+    "warnings": {
+      "description": "abstention 트리거. 자유 문장 금지 — code가 있어야 '경고했는가'를 측정할 수 있다.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/warning"
+      }
+    },
+    "audit": {
+      "$ref": "#/$defs/audit"
+    }
+  },
+  "$defs": {
+    "unitInterval": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "sourceClass": {
+      "description": "증거 소스 클래스. coverage의 키 집합과 정확히 일치한다(A4).",
+      "enum": [
+        "code",
+        "issue",
+        "adr",
+        "test",
+        "runtime"
+      ]
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "intent",
+        "target"
+      ],
+      "properties": {
+        "intent": {
+          "description": "질문 의도. v0 잠정 통제어휘 — #99 Gold Set의 실제 질문 유형으로 검증 후 확정한다. 목록 밖 의도는 문자열로 우겨넣지 않고 계약 개정(§7)으로 추가한다.",
+          "enum": [
+            "LOCATE",
+            "EXPLAIN",
+            "IMPACT",
+            "HISTORY",
+            "VERIFY"
+          ]
+        },
+        "target": {
+          "description": "질문 대상의 식별자. 자연어 질문 원문이 아니라 해석된 대상이다.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "ref"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "TABLE",
+                "COLUMN",
+                "CLASS",
+                "FILE",
+                "METHOD",
+                "RELATION",
+                "CLAIM"
+              ]
+            },
+            "ref": {
+              "type": "string",
+              "minLength": 1
+            },
+            "raw": {
+              "description": "사용자 질문 원문(선택). 감사·재현용이며 target 해석의 근거가 아니다.",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "source",
+        "ref",
+        "confidence",
+        "signals",
+        "reason",
+        "stance"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "source": {
+          "$ref": "#/$defs/sourceClass"
+        },
+        "ref": {
+          "$ref": "#/$defs/sourceRef"
+        },
+        "confidence": {
+          "description": "소스 타입 상수가 아니라 signals의 함수값이다(계약 §3). 함수 계수는 baseline 후 비준.",
+          "$ref": "#/$defs/unitInterval"
+        },
+        "signals": {
+          "$ref": "#/$defs/signals"
+        },
+        "reason": {
+          "description": "이 증거가 선정된 이유. 각 이유는 L1/L2/L3 근거로 뒷받침되어야 하며 산문은 금지한다.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/reason"
+          }
+        },
+        "stance": {
+          "description": "반대 증거는 1급이다. 기본값 없음 — 생산자가 명시해야 한다.",
+          "enum": [
+            "supports",
+            "contradicts"
+          ]
+        }
+      }
+    },
+    "sourceRef": {
+      "description": "원본에서 재확인 가능한 좌표. 인용만 있고 좌표가 없으면 증거가 아니다(I1 계약 §6.1 — L1 sourceLocation·sourceRevision 매핑).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceId",
+        "locator",
+        "revision"
+      ],
+      "properties": {
+        "sourceId": {
+          "$ref": "#/$defs/id"
+        },
+        "locator": {
+          "description": "소스 내 위치. 예: 'backend/src/main/kotlin/com/ontostudio/rel/RelationService.kt#L50', 'issue:432#comment-7'.",
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contentHash": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:([0-5]\\d|60)(\\.\\d+)?(Z|[+-]([01]\\d|2[0-3]):[0-5]\\d)$",
+          "description": "RFC 3339 date-time. **RFC 3339의 축소 프로파일**: 구분자 T와 UTC 표기 Z는 대문자만 허용한다 — RFC는 소문자도 허용하지만, 같은 시각이 두 문자열로 표기되면 해시·중복 제거·문자열 비교가 실행마다 갈려 결정성(I1 H1)을 해친다. 달력 유효성은 pattern 이 아니라 검증기가 확인한다(A1)."
+        }
+      }
+    },
+    "signals": {
+      "description": "confidence의 구성요소. 단일 스칼라로 뭉치지 않고 '왜 그 점수인지'를 노출한다. 5개 키 모두 필수. 측정하지 못한 신호는 0으로 채우지 말고 null 로 두고, warnings 에 code=SIGNAL_UNMEASURED, trigger='<evidenceId>.signals.<name>' 을 함께 낸다(A17).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "finality",
+        "freshness",
+        "authority",
+        "corroboration",
+        "contradicted"
+      ],
+      "properties": {
+        "finality": {
+          "description": "결정성 — 이 소스가 최종 결정을 담고 있는 정도(머지된 코드 > 논의 중 스레드).",
+          "$ref": "#/$defs/unitIntervalOrNull"
+        },
+        "freshness": {
+          "description": "최신성 — 현재 revision 기준 유효성. 오래되었어도 해당 모듈 무변경이면 높을 수 있다.",
+          "$ref": "#/$defs/unitIntervalOrNull"
+        },
+        "authority": {
+          "description": "권위 — 이 소스가 결정 출처인 정도. 소스 타입 고정 상수가 아니다(Slack이 결정 출처면 높다).",
+          "$ref": "#/$defs/unitIntervalOrNull"
+        },
+        "corroboration": {
+          "description": "교차확인 — 독립 소스에 의한 뒷받침 정도.",
+          "$ref": "#/$defs/unitIntervalOrNull"
+        },
+        "contradicted": {
+          "description": "반박 정도. 방향이 반대인 유일한 신호다 — 높을수록 confidence를 낮춘다.",
+          "$ref": "#/$defs/unitIntervalOrNull"
+        }
+      }
+    },
+    "reason": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "basis"
+      ],
+      "properties": {
+        "text": {
+          "description": "사람이 읽는 한 줄. '관련 있습니다' 같은 무내용 문구는 계약 위반이다.",
+          "type": "string",
+          "minLength": 1
+        },
+        "basis": {
+          "description": "이 이유를 뒷받침하는 하위 레이어 레코드. 빈 배열은 무근거 이유 = 실격(A3).",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "layer",
+              "id"
+            ],
+            "properties": {
+              "layer": {
+                "description": "L1 Observation(#89) / L2 IdentityLink(#90) / L3 Claim(#91).",
+                "enum": [
+                  "L1",
+                  "L2",
+                  "L3"
+                ]
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              }
+            }
+          }
+        }
+      }
+    },
+    "conflict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "between",
+        "claim",
+        "status"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "between": {
+          "description": "충돌하는 evidence id. 반드시 실재하는 id여야 한다(A2).",
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "claim": {
+          "description": "무엇이 충돌하는지. 예: 'JWT vs Session'.",
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "description": "NEEDS_CHECK=미해결(기본) · COEXIST=둘 다 참(예: 버전별 상이) · RESOLVED=해소됨(resolvedBy 필수). 덮어쓰기로 해소하는 것은 금지(I1 P4).",
+          "enum": [
+            "NEEDS_CHECK",
+            "COEXIST",
+            "RESOLVED"
+          ]
+        },
+        "resolvedBy": {
+          "description": "status=RESOLVED 일 때만 허용되며 그때는 필수다. 비-RESOLVED 상태에 해소 근거가 붙어 있으면 status 와 근거가 모순된 응답이므로 금지한다(A7).",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "layer",
+            "id"
+          ],
+          "properties": {
+            "layer": {
+              "enum": [
+                "L1",
+                "L2",
+                "L3"
+              ]
+            },
+            "id": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "status": {
+            "const": "RESOLVED"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "id",
+          "between",
+          "claim",
+          "status",
+          "resolvedBy"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "resolvedBy"
+          ]
+        }
+      }
+    },
+    "coverage": {
+      "description": "소스 클래스별 존재/부재. 퍼센트·점수 금지 — 미지 전체를 모르는 상태에서 %는 위장이다.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "issue",
+        "adr",
+        "test",
+        "runtime"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/coverageState"
+        },
+        "issue": {
+          "$ref": "#/$defs/coverageState"
+        },
+        "adr": {
+          "$ref": "#/$defs/coverageState"
+        },
+        "test": {
+          "$ref": "#/$defs/coverageState"
+        },
+        "runtime": {
+          "$ref": "#/$defs/coverageState"
+        }
+      }
+    },
+    "coverageState": {
+      "description": "present=찾았다 · absent=찾아봤는데 없다 · not_collected=수집 자체를 하지 않았다. absent와 not_collected를 합치면 '없음'과 '안 봄'이 구분되지 않는다.",
+      "enum": [
+        "present",
+        "absent",
+        "not_collected"
+      ]
+    },
+    "warning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "trigger"
+      ],
+      "properties": {
+        "code": {
+          "description": "측정 가능한 경고 코드. NO_ADR/NO_TEST/NO_RUNTIME/NO_ISSUE/NO_CODE=해당 클래스 absent · NOT_COLLECTED=수집 미실행 · CONFLICT_UNRESOLVED=NEEDS_CHECK 잔존 · LOW_CORROBORATION=교차확인 부족 · STALE_EVIDENCE=근거 노후 · SIGNAL_UNMEASURED=신호를 측정하지 못함(0으로 채우는 것의 대체) · DEGRADED_SOURCE=하위 레이어 실패 전파(I1 §3.3) · ABSTAIN=답변 보류.",
+          "enum": [
+            "NO_CODE",
+            "NO_ISSUE",
+            "NO_ADR",
+            "NO_TEST",
+            "NO_RUNTIME",
+            "NOT_COLLECTED",
+            "CONFLICT_UNRESOLVED",
+            "LOW_CORROBORATION",
+            "STALE_EVIDENCE",
+            "SIGNAL_UNMEASURED",
+            "DEGRADED_SOURCE",
+            "ABSTAIN"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trigger": {
+          "description": "이 경고를 발생시킨 대상. 필수이며 code 별로 형식이 고정된다(아래 allOf). 대상이 실재하는지는 검증기가 확인한다(A18).",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "NO_CODE"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "trigger": {
+                "const": "coverage.code"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "NO_ISSUE"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "trigger": {
+                "const": "coverage.issue"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "NO_ADR"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "trigger": {
+                "const": "coverage.adr"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "NO_TEST"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "trigger": {
+                "const": "coverage.test"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "NO_RUNTIME"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "trigger": {
+                "const": "coverage.runtime"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "NOT_COLLECTED"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "trigger": {
+                "enum": [
+                  "coverage.code",
+                  "coverage.issue",
+                  "coverage.adr",
+                  "coverage.test",
+                  "coverage.runtime"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "SIGNAL_UNMEASURED"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "trigger": {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*\\.signals\\.(finality|freshness|authority|corroboration|contradicted)$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "enum": [
+                  "CONFLICT_UNRESOLVED",
+                  "LOW_CORROBORATION",
+                  "STALE_EVIDENCE",
+                  "DEGRADED_SOURCE"
+                ]
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "trigger": {
+                "pattern": "^(?!coverage\\.)[A-Za-z0-9][A-Za-z0-9._:-]*$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "ABSTAIN"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "trigger": {
+                "pattern": "^(evidence|coverage|[A-Za-z0-9][A-Za-z0-9._:-]*)$"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "audit": {
+      "description": "역추적 로그. 이 블록만으로 동일 응답을 재구성할 수 있어야 한다.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bundleId",
+        "promptHash",
+        "evidenceIds",
+        "revision",
+        "createdAt",
+        "ceilingApplied"
+      ],
+      "properties": {
+        "bundleId": {
+          "$ref": "#/$defs/id"
+        },
+        "promptHash": {
+          "description": "AI 에 전달된 프롬프트의 SHA-256 — 'sha256:' + 소문자 hex 64자로 고정한다. 임의 문자열을 허용하면 원문을 그대로 넣어도 통과해 'PII·시크릿을 남기지 않는다'는 계약이 무너진다.",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "evidenceIds": {
+          "description": "번들에 포함된 전체 후보 id. 응답의 evidence[].id 를 모두 포함해야 하며(A13, ⊆ 이지 = 아님), 여기에만 있고 evidence[] 에 없는 id 는 '번들에 있었으나 응답에 싣지 않은 탈락 후보'로 정상이다 — 왜 안 쓰였는지 역추적하기 위해 일부러 남긴다(계약 §2.7). 탈락 사유 기록은 C5 범위.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "revision": {
+          "description": "응답 생성 시점의 source revision. I1 §1.3 고정 revision과 대조 가능해야 한다.",
+          "type": "string",
+          "minLength": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:([0-5]\\d|60)(\\.\\d+)?(Z|[+-]([01]\\d|2[0-3]):[0-5]\\d)$",
+          "description": "RFC 3339 date-time. **RFC 3339의 축소 프로파일**: 구분자 T와 UTC 표기 Z는 대문자만 허용한다 — RFC는 소문자도 허용하지만, 같은 시각이 두 문자열로 표기되면 해시·중복 제거·문자열 비교가 실행마다 갈려 결정성(I1 H1)을 해친다. 달력 유효성은 pattern 이 아니라 검증기가 확인한다(A1)."
+        },
+        "ceilingApplied": {
+          "description": "confidence 상한이 적용되었는지. 필수다 — 선택 필드로 두면 필드를 생략하는 것만으로 상한 적용을 은폐할 수 있다. 상한 수치는 미확정이나 '적용 사실 기록'은 I1 §3.3의 게이트다(A15).",
+          "type": "boolean"
+        },
+        "ceilingReasons": {
+          "description": "상한을 적용한 사유 — 대응하는 warnings[].code 목록. ceilingApplied=true 면 필수·비어있지 않아야 하고, 각 코드는 상한 사유 통제어휘에 속하며 실제 warnings 에 존재해야 한다(A15). ceilingApplied=false 면 이 필드를 두지 않는다 — 적용하지 않은 상한의 사유는 사유가 아니다.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "DEGRADED_SOURCE",
+              "CONFLICT_UNRESOLVED",
+              "NOT_COLLECTED",
+              "NO_CODE",
+              "NO_ISSUE",
+              "NO_ADR",
+              "NO_TEST",
+              "NO_RUNTIME"
+            ]
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "ceilingApplied": {
+                "const": true
+              }
+            },
+            "required": [
+              "ceilingApplied"
+            ]
+          },
+          "then": {
+            "required": [
+              "ceilingReasons"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "ceilingReasons"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "unitIntervalOrNull": {
+      "description": "0.0~1.0 또는 null. null 은 '측정하지 못함'이며, 0('측정했고 낮다')과 구분된다. null 을 쓰면 SIGNAL_UNMEASURED 경고가 반드시 동반돼야 한다(A17).",
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0.0,
+      "maximum": 1.0
+    }
+  }
+}
