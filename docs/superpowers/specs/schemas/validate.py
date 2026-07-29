@@ -83,11 +83,16 @@ def cross_field_errors(d):
     if {"supports", "contradicts"} <= stances and not d["conflicts"]:
         errs.append("A14: 반대 증거가 있는데 conflicts 가 비어 있음")
 
-    # A15 — 상한 적용 시 사유를 audit 에 명시하고, 그 사유가 실제 경고로 존재해야 한다
+    # A15 — 상한 적용 시 사유를 audit 에 명시하고, 그 사유가 통제어휘이며 실제 경고로 존재해야 한다.
+    #       스키마와 별개로 여기서도 완결적으로 검사한다 — C0 가 교차 규칙만 이식해도 구멍이 없어야 한다.
     reasons = d["audit"].get("ceilingReasons", [])
     if d["audit"]["ceilingApplied"]:
+        if not reasons:
+            errs.append("A15: ceilingApplied=true 인데 ceilingReasons 가 비어 있음")
         for r in reasons:
-            if r not in codes:
+            if r not in CEILING_REASONS:
+                errs.append(f"A15: {r} 는 상한 사유로 허용된 코드가 아님")
+            elif r not in codes:
                 errs.append(f"A15: ceilingReasons 의 {r} 가 실제 warnings 에 없음")
     elif reasons:
         errs.append("A15: ceilingApplied=false 인데 ceilingReasons 가 비어있지 않음")
@@ -150,7 +155,6 @@ def main():
             # 구조가 결손된 문서(필수 필드 누락 등)는 교차 검사가 정의되지 않는다.
             cross_errs = []
         accepted = not schema_errs and not cross_errs
-        total = len(schema_errs) + len(cross_errs)
         expected = case["expect"] == "valid"
 
         ok = accepted == expected
@@ -163,11 +167,12 @@ def main():
         # 승인 여부만 비교하면 '다른 오류' 때문에 목표 규칙 검사가 누락돼도 통과한다.
         # invalid 픽스처는 manifest 가 선언한 규칙 하나만, 그 이유로 걸려야 한다.
         if ok and not expected:
-            if total > 1:
-                ok, detail = False, (f"위반 {total}건 — 단일 위반이어야 함: "
-                                     f"{[e.message for e in schema_errs] + cross_errs}")
-            elif cross_errs and not cross_errs[0].startswith(case["rule"] + ":"):
-                ok, detail = False, f"규칙 불일치: 기대 {case['rule']}, 실제 {cross_errs[0]}"
+            # 같은 규칙이 스키마·교차 두 계층에서 함께 잡히는 것은 정상(의도된 이중 방어)이다.
+            # 막아야 하는 것은 '다른 규칙'이 섞여 목표 검사의 누락을 가리는 경우다.
+            cross_rules = {e.split(":", 1)[0] for e in cross_errs}
+            if cross_rules - {case["rule"]}:
+                ok, detail = False, (f"다른 규칙 위반이 섞임 — 기대 {case['rule']}, "
+                                     f"실제 {sorted(cross_rules)}: {cross_errs}")
             elif len(schema_errs) > 1:
                 ok, detail = False, (f"스키마 위반 {len(schema_errs)}건 — 단일 위반이어야 함: "
                                      f"{[e.message for e in schema_errs]}")

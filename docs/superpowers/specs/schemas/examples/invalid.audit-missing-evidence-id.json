@@ -143,7 +143,7 @@
       "source": "test",
       "ref": {
         "sourceId": "src-backend-kotlin-test",
-        "locator": "backend/src/test/kotlin/com/ontostudio/rel/RelationJudgeTest.kt#L36-L46",
+        "locator": "backend/src/test/kotlin/com/ontostudio/rel/RelationJudgeTest.kt#L36-L57",
         "revision": "3c27259",
         "contentHash": "git-blob:62aecd9ca649cf4c2ab56ee521b57e8dcac8e97c"
       },
@@ -157,7 +157,7 @@
       },
       "reason": [
         {
-          "text": "이름 규칙(CUST_NO)만으로 관계 후보를 내는 경로가 테스트로 고정돼 있다 — 다만 대상은 tbl_a 픽스처이지 TB_PAY_MST 가 아니다",
+          "text": "FK 가 없는 스키마에서 이름 규칙만으로 관계 후보가 나오는 경로가 테스트로 고정돼 있다(sampleSchema 는 FK 없음, suggest() 결과가 비어있지 않음을 단언) — 다만 대상은 tbl_a 픽스처이지 TB_PAY_MST 가 아니다",
           "basis": [
             {
               "layer": "L1",
@@ -222,7 +222,7 @@
   ],
   "audit": {
     "bundleId": "bnd-2026-07-29-0007",
-    "promptHash": "sha256:1a4d7e90",
+    "promptHash": "sha256:37e81f7994ca52d14f684f266a0a8aa381b45706b9836b1a43c0e66dba277d86",
     "evidenceIds": [
       "ev-1",
       "ev-2"

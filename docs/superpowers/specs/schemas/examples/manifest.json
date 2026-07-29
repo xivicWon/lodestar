@@ -1,15 +1,15 @@
 {
-  "description": "answer-shape v0 검증 픽스처 목록. 하위 이슈 C0 검증기는 이 목록을 그대로 테스트 케이스로 사용한다. enforcedBy=schema 는 JSON Schema 만으로 걸러야 하고, enforcedBy=validator 는 스키마를 통과하지만 계약 §4 교차 필드 불변식에서 실패해야 한다. 각 invalid 픽스처는 valid.full.json 에서 rule 하나만 어긋나도록 파생시킨다 — 복합 위반은 목표 검사가 누락돼도 통과처럼 보이게 만든다. validate.py 는 승인 여부뿐 아니라 **실제로 걸린 규칙이 rule 과 같은지**(validator 케이스는 위반 1건, schema 케이스는 expectedError 일치)까지 대조한다.",
+  "description": "answer-shape v0 검증 픽스처 목록. 하위 이슈 C0 검증기는 이 목록을 그대로 테스트 케이스로 사용한다. enforcedBy=schema 는 JSON Schema 만으로 걸러야 하고, enforcedBy=validator 는 스키마를 통과하지만 계약 §4 교차 필드 불변식에서 실패해야 한다. 각 invalid 픽스처는 valid.full.json 에서 rule 하나만 어긋나도록 파생시킨다 — 복합 위반은 목표 검사가 누락돼도 통과처럼 보이게 만든다. validate.py 는 승인 여부뿐 아니라 **실제로 걸린 규칙이 rule 과 같은지**까지 대조한다 — 걸린 교차 규칙의 종류가 rule 하나여야 하고(같은 규칙이 스키마·교차 두 계층에서 함께 잡히는 것은 의도된 이중 방어라 허용), 스키마 오류는 1건이며 expectedError 와 일치해야 한다.",
   "schema": "../answer-shape.v0.schema.json",
   "contract": "../../2026-07-29-evl-answer-shape-contract.md",
   "checker": "../validate.py",
   "fixtureSourceRevision": "3c27259",
-  "fixtureNote": "정상 픽스처의 evidence[].ref.locator 는 모두 이 리포에 실재하며 revision 3c27259 에서 재확인 가능한 좌표다(I1 §1.1 벤치 2트랙 = legacy-sample.sql · backend/src/main/kotlin). contentHash 는 해당 revision 의 git blob sha 다. 계약이 '재확인 가능한 좌표'를 요구하므로 예제 자체가 그 요구를 만족해야 한다(P1 자기적용).",
+  "fixtureNote": "정상 픽스처의 evidence[].ref.locator 는 모두 이 리포에 실재하며 revision 3c27259 에서 재확인 가능한 좌표다(I1 §1.1 벤치 2트랙 = legacy-sample.sql · backend/src/main/kotlin). contentHash 는 해당 revision 의 git blob sha 다. 계약이 '재확인 가능한 좌표'를 요구하므로 예제 자체가 그 요구를 만족해야 한다(P1 자기적용). promptHash 는 실제 SHA-256 이다 — bnd-...0007 은 'lodestar/evl/v0 :: VERIFY :: TB_PAY_MST.ORD_NO -> TB_ORD_HD.ORD_NO @3c27259', bnd-...0008 은 'lodestar/evl/v0 :: VERIFY :: claim-2201 @3c27259' 의 해시다(재계산 가능).",
   "cases": [
     {
       "file": "valid.full.json",
       "expect": "valid",
-      "note": "증거 5건·미해결 충돌·부재 경고·상한이 모두 살아있는 정상 응답. NEEDS_CHECK 충돌이 있으므로 ABSTAIN 을 내고, 상한 사유를 audit.ceilingReasons 에 명시한다"
+      "note": "증거 5건·미해결 충돌·부재 경고·상한이 모두 살아있는 정상 응답. NEEDS_CHECK 충돌이 있으므로 ABSTAIN 을 내고, 상한 사유를 audit.ceilingReasons 에 명시한다. audit.evidenceIds 의 ev-6·ev-7 은 번들에 있었으나 응답에 싣지 않은 탈락 후보다(§2.7 — 두 집합의 차로 결정된다)"
     },
     {
       "file": "valid.abstention.json",
@@ -184,6 +184,22 @@
       "enforcedBy": "validator",
       "rule": "A15",
       "note": "상한 사유로 DEGRADED_SOURCE 를 적었지만 그런 경고가 실제로는 없음 — 상한 사유를 사후에 지어낸 경우"
+    },
+    {
+      "file": "invalid.ceiling-without-reasons.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A15",
+      "expectedError": "should be non-empty",
+      "note": "상한을 적용했다면서 사유를 비워둠. 교차 검사(validate.py)도 독립적으로 이 경우를 잡는다"
+    },
+    {
+      "file": "invalid.ceiling-reason-not-allowed.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A15",
+      "expectedError": "is not one of",
+      "note": "LOW_CORROBORATION 은 상한 사유 통제어휘 밖 — 아무 경고나 사유로 끌어다 쓰는 것을 막는다"
     }
   ]
 }

@@ -136,8 +136,9 @@ L0 수집(#88) → L1 사실(#89) → L2 관계(#90) → L3 지식·이력(#91) 
 `{bundleId, promptHash, evidenceIds[], revision, createdAt, ceilingApplied}` **전부 필수** + `ceilingReasons`(`ceilingApplied=true`일 때 필수).
 
 - **재현의 정의:** `audit`만으로 응답 본문을 복원한다는 뜻이 아니다. `bundleId`로 저장된 번들을 조회하고 `revision`·`promptHash`로 **같은 입력이었음을 확인한 뒤 재실행해 같은 결과가 나오는지** 보는 것이다(결정성 — I1 H1). 복원에 필요한 것은 좌표이지 본문 사본이 아니다.
-- `promptHash` — 프롬프트 **원문 대신 해시**. 원문 저장은 PII·시크릿 유출 경로다(I1 §4.1 보안 게이트).
+- `promptHash` — 프롬프트 **원문 대신 해시**. 원문 저장은 PII·시크릿 유출 경로다(I1 §4.1 보안 게이트). 형식을 `sha256:` + hex 64자로 **고정**한다 — 임의 문자열을 허용하면 원문을 그대로 넣어도 통과해 이 계약이 무너진다.
 - `evidenceIds` — 번들에 포함된 **전체 후보**. 응답에 실린 `evidence[].id`의 **상위집합**이며(A13은 `⊆`이지 `=`가 아니다), **탈락한 후보를 일부러 남긴다** — 왜 그것이 안 쓰였는지 역추적하기 위해서다. 따라서 `evidence[]`에 없는 id가 여기 있는 것은 **정상이며 위반이 아니다**.
+- `ceilingReasons` — 상한 사유를 **코드로 명시**하고 실제 `warnings`와 대조한다(A15). `ceilingApplied=false`면 이 필드를 두지 않는다 — 적용하지 않은 상한의 사유는 사유가 아니다.
 - `ceilingApplied` — 상한 적용 **사실**의 기록. **선택이 아니라 필수**다: 선택으로 두면 필드를 생략하는 것만으로 상한 적용을 은폐할 수 있고, 그러면 A15가 무력화된다. 상한 수치는 미확정이나 기록 자체는 I1 §3.3의 게이트다.
 
 ---
@@ -191,7 +192,7 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 | **A12** | `audit` 6개 필드(`ceilingApplied` 포함) 전부 존재 + 모든 `warnings` 항목이 `code`·`message`·`trigger`를 갖는다 | schema | 역추적 불가 · 경고 대상 불명 |
 | **A13** | `evidence[].id` **⊆** `audit.evidenceIds` (등호 아님 — 탈락 후보가 더 있는 것은 정상, §2.7) | validator | 감사 로그 불완전 |
 | **A14** | 동일 대상에 `supports`와 `contradicts`가 공존하면 `conflicts` 항목이 있어야 한다 | validator | **충돌 미탐지 = 거짓 확신** |
-| **A15** | `ceilingApplied=true` ⟺ `audit.ceilingReasons`가 비어있지 않고, 그 **모든 코드가 실제 `warnings`에 존재**한다 | validator | 상한 은폐 · 사유를 사후에 지어냄 (I1 §3.3) |
+| **A15** | `ceilingApplied=true` ⟺ `ceilingReasons`가 비어있지 않고, 그 모든 코드가 **상한 사유 통제어휘**(`DEGRADED_SOURCE`·`CONFLICT_UNRESOLVED`·`NOT_COLLECTED`·`NO_*`)에 속하며 **실제 `warnings`에 존재**한다. `false`면 필드를 두지 않는다 | schema + validator | 상한 은폐 · 사유를 사후에 지어냄 (I1 §3.3) |
 | **A16** | §6.2의 abstention 조건 1~3(근거 0건 · 핵심 클래스 부재 · **미해결 충돌 존재**) 중 하나라도 성립하면 `ABSTAIN` 경고가 존재한다 | validator | 근거 없이 단정 |
 | **A17** | `signals`의 값이 `null`(미측정)이면 `SIGNAL_UNMEASURED` 경고가 `trigger="<evidenceId>.signals.<name>"` 로 존재하고, 그 역도 성립한다 | validator | 미측정을 조용히 숨김 |
 | **A18** | 모든 `warnings[].trigger`가 실재 대상을 가리킨다 — `coverage.<key>`는 해당 키, 그 외는 실재하는 `evidence[].id`·`conflicts[].id`·`<evidenceId>.signals.<name>` | validator | 경고가 아무것도 가리키지 않음 |
@@ -212,7 +213,7 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 | **conflicts** | gold 충돌셋과 대조한 **precision / recall** | precision, recall, 미탐지 목록, 과탐지 목록 | 미탐지 = 거짓 확신 / 과탐지 = 경보 피로. **둘 다 실패다** — 한쪽만 보고하는 것도 실패 | 하위 이슈 C3 |
 | **coverage** | 클래스 존재/부재의 **결정론 검증** — ADR·test·log를 실제로 찾았는지 gold와 1:1 대조. 동일 입력 3회 일치(I1 H1) | 클래스별 정오표(present/absent/not_collected 오분류 건수), 결정성 일치율 | **없는 걸 있다고 함.** %로 위장 | 하위 이슈 C4 |
 | **warnings / abstention** | 커버리지 미달·핵심 클래스 부재·미해결 충돌 시 **경고했는가**를 A11로, **보류했는가**를 A16으로 기계 검사 + gold의 "경고해야 하는 케이스" 재현율 | 경고 누락 건수, 경고 재현율, 오경고율 | **"찾았다"면서 30%만 찾음.** 경고 없이 자신 있게 틀리는 것이 최악 | 하위 이슈 C4 |
-| **audit** | 모든 번들이 로깅되고 `audit`만으로 **동일 응답 재구성** 가능한지(완전성·재현성) | 로깅 누락 건수, 재현 성공률 | **역추적 불가.** 틀렸을 때 왜 틀렸는지 말할 수 없음 | 하위 이슈 C5 |
+| **audit** | 모든 번들이 로깅되는지(완전성) + `bundleId`로 번들을 조회해 **같은 입력으로 재실행했을 때 같은 결과**가 나오는지(재현성 — §2.7의 정의) | 로깅 누락 건수, 재현 성공률 | **역추적 불가.** 틀렸을 때 왜 틀렸는지 말할 수 없음 | 하위 이슈 C5 |
 | **task.intent** | #99 실제 질문이 통제어휘로 **손실 없이** 분류되는지 | 미분류 질문 비율 | 어휘가 현실을 못 담음 → 개정 신호 | #99 + 본 계약 개정 |
 
 ---
@@ -342,6 +343,10 @@ I1 §7과 동일하며, 추가로:
 | `trigger` 형식 | 느슨한 정규식(`foo` 허용) | code별 형식 고정 | 임의 문자열을 허용하면 `trigger` 필수화의 의미가 사라진다 |
 | A16 표 렌더링 | 빈 줄로 표 밖에 표시 | 표 내부 행 | 서식 오류 |
 | abstention 조건 3 | "충돌이 `evidence[0]`을 포함" | **"`NEEDS_CHECK` 충돌 존재"** | 랭킹이 중요도의 대리값이 되지 못했다 — 자체 정상 픽스처에서 질문 자체를 다투는 충돌이 하위 순위라는 이유로 비보류 판정됐다. 비보류 경로는 `RESOLVED`/`COEXIST`로 이미 존재한다 |
+| `promptHash` | 임의 문자열 | `sha256:` + hex 64자 | 원문을 그대로 넣어도 통과해 '원문을 남기지 않는다'는 계약을 스키마가 보장하지 못했다 |
+| `ceilingReasons` 어휘 | 모든 warning code | **상한 사유 8종** | 아무 경고나 사유로 끌어다 쓸 수 있었다 |
+| `ceilingApplied=false` + 사유 | 스키마 허용 / 검증기 거부 | **양쪽 금지** | 스키마와 검증기가 상반된 판정을 했다 |
+| `validate.py` 단일 위반 | 오류 **건수** 1 | 규칙 **종류** 1 | 같은 규칙을 두 계층이 이중으로 잡는 정상 상황을 실패로 판정했다 |
 | A15 | "상한 사유 경고가 1개 이상 존재" | `audit.ceilingReasons` **명시 + 실제 경고와 대조** | 사유 집합이 넓어 사실상 위반이 불가능했고, 회귀 테스트로 고정되지 않았다 |
 | `createdAt`·`observedAt` | `format` only | `format` + `pattern` | draft 2020-12의 `format`은 기본이 annotation이라 검증기 설정에 따라 통과가 갈렸다 |
 | `validate.py` 교차 검사 | 스키마 오류 시 생략 | 가능한 한 **항상 실행** | 스키마 위반 픽스처에 숨은 2차 위반이 있어도 드러나지 않았다(실제로 2건 발견) |
@@ -365,8 +370,8 @@ I1 §7과 동일하며, 추가로:
 - [x] abstention 형식·발동 조건 확정, 임계값은 비준으로 위임 → §6
 - [x] 게이트 / 잠정 지표 분리 → §7
 - [x] #99(I2)에 추가 요구되는 gold 케이스 명시 → §8
-- [x] 검증 픽스처(정상 3 + 위반 22) 커밋 + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
-- [x] 픽스처 적합성 확인기 커밋(25/25 재현 가능, 규칙 동일성·단일 위반까지 대조) → `schemas/validate.py`
+- [x] 검증 픽스처(정상 3 + 위반 24) 커밋 + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
+- [x] 픽스처 적합성 확인기 커밋(27/27 재현 가능, 규칙 동일성·단일 규칙까지 대조) → `schemas/validate.py`
 - [x] 하위 이슈 분할안 → §9
 
 **다음 착수: C0 검증기 (§9)** — 픽스처 스위트와 참조 규칙 구현이 이미 있으므로 실패 테스트부터 시작할 수 있다.

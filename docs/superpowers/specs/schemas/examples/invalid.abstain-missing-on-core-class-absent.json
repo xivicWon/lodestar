@@ -191,15 +191,15 @@
   ],
   "audit": {
     "bundleId": "bnd-2026-07-29-0007",
-    "promptHash": "sha256:1a4d7e90",
+    "promptHash": "sha256:37e81f7994ca52d14f684f266a0a8aa381b45706b9836b1a43c0e66dba277d86",
     "evidenceIds": [
       "ev-1",
       "ev-2",
       "ev-3",
       "ev-4",
       "ev-5",
-      "ev-6-dropped-low-rank",
-      "ev-7-dropped-low-rank"
+      "ev-6",
+      "ev-7"
     ],
     "revision": "3c27259",
     "createdAt": "2026-07-29T02:00:11Z",
