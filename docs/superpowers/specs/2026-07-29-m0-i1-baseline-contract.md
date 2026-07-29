@@ -19,7 +19,7 @@ L0~L3 벤치를 실행하기 전에 **모든 고정 요소를 못박는 선행 �
 | ✅ 확정 | 승격/중단 규칙 | 본 문서 (§3) |
 | ✅ 확정 | 목표 수치 **정책**(무엇이 무조건 게이트이고 무엇이 잠정인지) | 본 문서 (§4) |
 | ✅ 확정 | 기능 인벤토리 초안 (E1~E17 → 레이어 매핑) | 본 문서 (§5) |
-| ✅ 확정 | aira 메커니즘 ↔ 레이어 계약 매핑 | 본 문서 (§6) |
+| ✅ 확정 | 참고자료 편입 — 이슈 지정 계약 요소 매핑 (aira POC 데이터는 폐기) | 본 문서 (§6) |
 | ⛔ 미확정 | Gold Set 내용, 실패 fixture, **fixture hash** | **#99 (I2)** |
 | ⛔ 미확정 | Run Quality Report 필드 스키마·템플릿 파일 | **#100 (I3)** |
 | ⛔ 미확정 | precision/recall 등 **목표 수치의 확정값** | #88·#89 1차 baseline 측정 후 비준 (§4) |
@@ -220,7 +220,8 @@ L2 AMBIGUOUS / 저신뢰   →  그 Link를 쓰는 L3 Claim은 자동 확정 불
 | Reasoner (HermiT) | `reasoner/` | **L3** (추론 Claim, INFERRED 표시) | Lab |
 | 클래스 편집 UI | frontend | **M0 비범위** | Parked 후보 |
 | 다중 벤더 커넥터 (MySQL 등) | `rdb/` | **신규 커넥터 — M0 비범위** | Parked 후보 |
-| Decision Ledger (aira) | `aira/` (§6 · **현재 리포 미추적**) | **참고 계약 소스** (측정 대상 아님) | Retire 후보(제품 범위 밖) |
+
+> **인벤토리에서 제외된 항목:** Decision Ledger(aira, 에픽 #87 / 이슈 #81~#86)는 리포에 코드가 존재하지 않고(로컬 POC 데이터는 2026-07-29 폐기 — §6), 제품 범위 밖이므로 **M0 판정 대상에서 제외**한다. #101(I4)에서도 다루지 않는다.
 
 ### 5.3 인벤토리 사용 규칙
 
@@ -230,31 +231,24 @@ L2 AMBIGUOUS / 저신뢰   →  그 Link를 쓰는 L3 Claim은 자동 확정 불
 
 ---
 
-## 6. 참고자료 편입 — aira(Decision Ledger) 메커니즘 → 레이어 계약 매핑
+## 6. 참고자료 편입 — 이슈 #94 지정 계약 요소 매핑
 
-aira는 **측정 대상이 아니라 계약 설계의 참고 구현**이다. 이미 결정론 엔진·근거 역추적·정정 링크를 갖고 있으므로, L1~L3 계약의 **선례**로 편입한다.
-
-> ⚠️ **현황 주의:** `aira/`는 **이 리포에 커밋되어 있지 않다**(로컬 워크스페이스 `Workspace/lodestar/aira/`에 untracked 상태로만 존재). 이슈 #81(spec 승격 + 리포 반영)은 CLOSED이나 revision `3c27259` 기준 `git ls-files aira` 결과는 비어 있다. 아래 매핑은 **로컬 POC 실물(schema_version 2, `workspace.json`)을 실측**해 작성했다. aira 자체를 M0에서 측정하려면 리포 반영이 선행되어야 하나, **본 계약은 aira를 측정 대상으로 삼지 않으므로 M0 진행의 블로커는 아니다.**
+> **폐기 기록 (2026-07-29, @xivicWon 지시):** 로컬에만 존재하던 `aira/` POC 데이터는 **임의 프로젝트 분석 산출물로 판정되어 폐기**했다(리포에 커밋된 적 없음 — `git ls-files aira` 공백). 따라서 그 폴더 실물을 근거로 삼았던 항목(anchor 문법, weight_formula·guard_gate, sync.py·ask.py 동작, source/generated 분리, schema_version)은 **본 계약에서 제외**한다.
+> 아래에 남는 것은 **이슈 #94 본문이 직접 지정한 매핑**과, **리포에 실재하는 코드**(`backend/src/main/kotlin/com/ontostudio/provenance/ProvenanceVocab.kt`)로 검증되는 매핑뿐이다.
 
 ### 6.1 핵심 매핑
 
-| aira 메커니즘 | 레이어 계약 대응 | 편입 내용 |
-|---|---|---|
-| `evidence[].uuid` / `sessionId` / `promptId` / `timestamp` / `quote` | **L1 `sourceLocation` + `sourceRevision`** | 근거는 **원본에서 재확인 가능한 좌표**를 가져야 한다. aira는 트랜스크립트 uuid로 원문을 역추적한다 → L1 Observation도 동일하게 "인용문 + 좌표"를 함께 보관한다. 인용만 있고 좌표가 없으면 Observation이 아니다. |
-| `supersedes` / `superseded_by` / `status`(`confirmed`/`candidate`/`superseded`) | **L3 `supersedes` · `status` · `validFrom`/`validTo`** | 정정은 **덮어쓰기가 아니라 링크**다. 이전 레코드는 남고 대체 관계로 연결되며, active와 이력이 분리 조회된다 → L3의 충돌 보존(P4)·시간 필드 계약과 동형. aira의 `confirmed`/`candidate` 구분은 L3 `HUMAN_CONFIRMED` vs `INFERRED` 구분에 대응한다. |
-| provenance `kind` (`FK`/`NAMEPATTERN`/`AI`/`MANUAL`) | **L2 `method`** | 링크를 만든 **방법**을 값으로 남긴다. `FK`=명시 키, `NAMEPATTERN`=휴리스틱, `AI`=모델 판단, `MANUAL`=사람. |
-| provenance `Provenance` (`EXTRACTED`/`INFERRED`/`AMBIGUOUS`) | **L2 `status`** | 방법과 **확실성 등급**을 분리해 기록한다. `AMBIGUOUS`는 실패가 아니라 **정직한 출력**(P3). `NAMEPATTERN`·`AI`로 만든 링크는 `EXTRACTED`가 될 수 없다(P2). |
-| anchor 문법 `file:` / `dir:` / `iri:` / `symbol:<path>#<name>` | **L1 `sourceLocation` 표기 문법** | M0의 `sourceLocation`은 이 타입 문법을 그대로 채택한다. 코드 트랙=`file:`/`symbol:`, DB 트랙=`iri:`(온톨로지) 또는 `file:`(DDL 라인). 문자열 자유형식 금지. |
-| `weight_formula` (6신호 가중) + `guard_gate`(hard_block/strong_warn/soft_note/info) | **L2/L3 `confidence` 및 §3.3 상한** | confidence는 단일 마법값이 아니라 **명시된 공식으로 산출된 값**이어야 하고, 임계값에 따라 **행동 등급**(자동 확정 / 경고 / 사람 확인)이 달라진다. 공식은 문서화되고 결정론적이어야 한다(§4.1 결정성). |
-| `sync.py` = 결정론 flush 엔진 (**LLM 0**) | **§4.1 결정성 100%** | 근거·정정·검증 경로에 LLM을 두지 않는다. 판단(AI)과 기록(결정론)을 분리한다 → 3회 실행 일치율 100%가 성립하는 구조. |
-| `ask.py`의 relevance floor · **GAP("기록 없음")** | **L2 abstention / L3 무근거 Claim 0건** | 임계 미만이면 **답을 만들지 않고 "없음"을 반환**한다. 지어내기보다 공백을 보고한다 → P1·P3와 동일 원칙. |
-| `source`(`decisions/`) vs `generated/` 분리 | **L0~L3 원본 read-only 원칙** | 진실의 원천은 손으로만 쓰고, 파생물은 언제든 재생성 가능해야 한다(gitignore). L0의 "원본은 read-only" 및 L3 read-model 투영과 같은 구조. |
-| `schema_version` + 마이그레이션(v1→v2) | **`collectorVersion`/`extractorVersion`** | 계약 변경 시 버전을 올리고, 이전 실행 결과와 비교 가능하게 남긴다. |
+| 계약 요소 | 레이어 계약 대응 | 편입 내용 | 출처 |
+|---|---|---|---|
+| `evidence[].uuid` (근거의 원본 좌표) | **L1 `sourceLocation` + `sourceRevision`** | 근거는 **원본에서 재확인 가능한 좌표**를 가져야 한다. L1 Observation은 "값 + 좌표"를 함께 보관한다. 인용만 있고 좌표가 없으면 Observation이 아니다. | 이슈 #94 지정 |
+| `supersedes` / `status` | **L3 `supersedes` · `status` · `validFrom`/`validTo`** | 정정은 **덮어쓰기가 아니라 링크**다. 이전 레코드는 남고 대체 관계로 연결되며 active와 이력이 분리 조회된다 → L3의 충돌 보존(P4)·시간 필드 계약. 사람이 확정한 것과 추정한 것은 status로 구분한다(`HUMAN_CONFIRMED` vs `INFERRED`). | 이슈 #94 지정 |
+| provenance `Provenance` (`EXTRACTED`/`INFERRED`/`AMBIGUOUS`) | **L2 `status`** | 확실성 등급을 값으로 남긴다. `AMBIGUOUS`는 실패가 아니라 **정직한 출력**(P3). 휴리스틱·AI로 만든 링크는 `EXTRACTED`가 될 수 없다(P2). | `ProvenanceVocab.kt` (실측) |
+| provenance `RelationKind` (`FK`/`NAMEPATTERN`/`AI`/`MANUAL`) | **L2 `method`** | 링크를 만든 **방법**을 등급과 분리해 기록한다. `FK`=명시 키, `NAMEPATTERN`=휴리스틱, `AI`=모델 판단, `MANUAL`=사람. | `ProvenanceVocab.kt` (실측) |
 
 ### 6.2 편입 결론
 
-- 위 매핑은 **L1~L3 계약의 참고 선례**로 확정한다. 새 계약 요소를 추가할 때 aira에 동일 개념이 있으면 **명명과 의미를 맞춘다**.
-- aira 자체의 품질 측정은 M0 범위 밖이다(§5.2 Retire 후보 — 제품 범위 밖이라는 뜻이며, 참고 가치와는 무관).
+- 위 4개 매핑은 **L1~L3 계약 요소로 확정**한다. E16-0에서 통일된 `kind`/`provenance`/`confidence` 어휘가 L2 계약의 뼈대이며, 벤치는 이 어휘를 그대로 측정한다.
+- 계약 요소를 새로 추가할 때는 **리포에 실재하는 코드 또는 이슈 본문**을 출처로 요구한다. 리포 밖 로컬 산출물은 계약 근거로 인정하지 않는다(이번 폐기 건의 교훈 — P1 "무근거 금지"의 자기적용).
 
 ---
 
@@ -276,7 +270,8 @@ aira는 **측정 대상이 아니라 계약 설계의 참고 구현**이다. 이
 - [x] 레이어 의존 순서(L0→L1→L2→L3)와 "통과=다음 착수" 게이트 규칙 확정 → §2
 - [x] 승격/중단 규칙 확정 (무근거 Claim 금지 / INFERRED↛EXTRACTED / 결정성 실패 시 상위 중단 / 하위 실패의 상위 confidence 제한) → §3
 - [x] 기능 인벤토리 초안: E1~E17 → 벤치 레이어 매핑 (판정은 #101) → §5
-- [x] aira 메커니즘 → 레이어 계약 매핑 편입 → §6
+- [x] 참고자료 편입: 이슈 지정 매핑(evidence.uuid↔L1 `sourceLocation`, supersedes/status↔L3 `supersedes`·`validFrom`/`validTo`, provenance↔L2 `status`) 확정 → §6
+      *(단, 로컬 `aira/` POC 데이터는 임의 분석 산출물로 폐기 — 그 실물을 근거로 한 항목은 계약에서 제외. §6 폐기 기록 참조)*
 - [x] 고정 요소가 전부 문서로 남음 → 본 문서
 - [x] 범위를 L0~L3로 축소, L4(#92)/L5(#93)는 M2/M3 상위 트래킹으로 이관 명시 → §2.1
 
