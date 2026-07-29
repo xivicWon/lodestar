@@ -62,10 +62,19 @@ def cross_field_errors(d):
 
     # A11 — 부재·미수집 클래스마다, 미해결 충돌마다 대응 경고(+trigger)
     for cls, state in d["coverage"].items():
-        if state == "absent" and (WARN_FOR_ABSENT[cls], f"coverage.{cls}") not in warns:
+        if state not in ("present", "absent", "not_collected"):
+            continue  # 구조적으로 잘못된 값은 스키마(A4)의 몫 — 여기서 이중 보고하지 않는다
+        absent_warned = (WARN_FOR_ABSENT[cls], f"coverage.{cls}") in warns
+        nc_warned = ("NOT_COLLECTED", f"coverage.{cls}") in warns
+        if state == "absent" and not absent_warned:
             errs.append(f"A11: coverage.{cls}=absent 인데 {WARN_FOR_ABSENT[cls]} 경고 없음")
-        if state == "not_collected" and ("NOT_COLLECTED", f"coverage.{cls}") not in warns:
+        if state == "not_collected" and not nc_warned:
             errs.append(f"A11: coverage.{cls}=not_collected 인데 대응 경고 없음")
+        # 역방향 — 경고가 상태와 모순되면 안 된다
+        if state != "absent" and absent_warned:
+            errs.append(f"A11: {WARN_FOR_ABSENT[cls]} 경고가 있는데 coverage.{cls}={state}")
+        if state != "not_collected" and nc_warned:
+            errs.append(f"A11: NOT_COLLECTED(coverage.{cls}) 경고가 있는데 coverage.{cls}={state}")
     needs_check = {c["id"] for c in d["conflicts"] if c["status"] == "NEEDS_CHECK"}
     warned_conflicts = {w["trigger"] for w in d["warnings"] if w["code"] == "CONFLICT_UNRESOLVED"}
     for cid in sorted(needs_check - warned_conflicts):
@@ -183,8 +192,10 @@ def main():
             elif len(schema_errs) > 1:
                 ok, detail = False, (f"스키마 위반 {len(schema_errs)}건 — 단일 위반이어야 함: "
                                      f"{[e.message for e in schema_errs]}")
-            elif schema_errs and case["expectedError"] not in schema_errs[0].message:
-                ok, detail = False, f"기대 오류 '{case['expectedError']}' 미검출: {schema_errs[0].message}"
+            else:
+                actual = [e.message for e in schema_errs] + cross_errs
+                if not any(case["expectedError"] in a for a in actual):
+                    ok, detail = False, f"기대 오류 '{case['expectedError']}' 미검출: {actual}"
 
         mismatches += not ok
         print(f"{'OK  ' if ok else 'FAIL'} {case['file']:<48} {detail}")

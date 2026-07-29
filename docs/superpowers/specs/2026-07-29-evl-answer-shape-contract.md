@@ -168,7 +168,18 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 
 1. `confidence` 값은 **기록·측정 대상**이지 게이트가 아니다.
 2. 어떤 문서·PR·발표에서도 "confidence 0.8 = 80% 정확"이라고 **인용하지 않는다**.
-3. 다만 **신뢰도 곡선(calibration curve)은 매 실행 기록**한다 — 비준의 재료다.
+3. 다만 **곡선의 원자료는 매 실행 남긴다** — 비준의 재료다.
+
+**"곡선을 매 실행 기록한다"는 표현은 폐기한다(§11).** 응답 시점에는 정답을 모르므로 곡선을 그릴 수 없다. 실제로 나뉘는 것은 다음 두 단계다.
+
+| 단계 | 무엇을 | 어디에 | 소유 |
+|---|---|---|---|
+| **실행 시점** | 곡선의 **원자료** — 응답별 `confidence`·`signals`·`evidence[].id`·`bundleId`·`revision`. **answer-shape 안에 이미 전부 있다** — 별도 형식을 새로 정의하지 않는다 | 번들 로그(`bundleId`로 조회) | **C5** (로깅 완전성·누락 검증) |
+| **사후 평가** | 원자료 × #99 Gold 정답 → **신뢰도 곡선·ECE** | Run Quality Report(#100 템플릿) | **C1** (산출 형식·누락 시 실패 판정) |
+
+- 연결 키는 **`bundleId`** 다. 곡선의 각 점은 그것을 만든 번들로 역추적 가능해야 하며, 역추적되지 않는 점은 곡선에서 제외하고 그 사실을 보고서에 남긴다.
+- **누락 검증:** 평가 대상 응답 중 원자료가 없는 건수를 Run Quality Report에 기록한다. 0건이 아니면 그 실행의 calibration 수치는 인용하지 않는다(§7.1 audit 완전성의 적용).
+- 즉 이 층이 지금 확정하는 것은 **원자료가 응답 안에 다 들어있다는 사실**이고, 곡선의 저장 형식은 #100 템플릿과 C1의 몫이다.
 
 ---
 
@@ -189,7 +200,7 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 | **A8** | `signals` 5개 전부 존재 | schema | 근거 없는 스칼라 |
 | **A9** | 모든 `confidence` 값과 **`null`이 아닌** 신호값이 0.0~1.0 (`null`은 미측정을 뜻하는 합법 값 — A17) | schema | 범위 이탈 |
 | **A10** | 모든 증거가 `stance`를 명시 | schema | 반대 증거 은폐 |
-| **A11** | `absent`/`not_collected` 클래스마다 `trigger="coverage.<key>"` 인 대응 경고가 존재하고, `CONFLICT_UNRESOLVED` 경고와 `NEEDS_CHECK` 충돌이 **양방향으로 일치**한다(미해결인데 경고 없음도, 해결됐는데 경고가 남은 것도 위반). `trigger`가 필수(A12)이므로 **클래스별 대응이 결정론적으로 판정된다** | validator | **경고 안 함** · 상태와 경고의 불일치 |
+| **A11** | coverage 경고와 상태가 **양방향 일치**한다(`absent`/`not_collected` 클래스마다 `trigger="coverage.<key>"` 인 대응 경고가 있고, 반대로 그 경고가 있으면 상태도 그래야 한다). `CONFLICT_UNRESOLVED` 경고와 `NEEDS_CHECK` 충돌도 마찬가지로 양방향 일치한다 | validator | **경고 안 함** · 경고가 상태와 모순(무엇을 못 찾았는지가 거짓이 됨) |
 | **A12** | `audit` 6개 필드(`ceilingApplied` 포함) 전부 존재 + 모든 `warnings` 항목이 `code`·`message`·`trigger`를 갖는다 | schema | 역추적 불가 · 경고 대상 불명 |
 | **A13** | `evidence[].id` **⊆** `audit.evidenceIds` (등호 아님 — 탈락 후보가 더 있는 것은 정상, §2.7) | validator | 감사 로그 불완전 |
 | **A14** | 동일 대상에 `supports`와 `contradicts`가 공존하면 `conflicts` 항목이 있어야 한다 | validator | **충돌 미탐지 = 거짓 확신** |
@@ -305,11 +316,11 @@ I1은 Gold Set을 "사실 추출" 중심으로 남겨두었다. 이 층을 측�
 | 하위 | 범위 | 계약 근거 | 선행 |
 |---|---|---|---|
 | **C0 검증기** | `validate.py`의 규칙(A5·A6·A11·A13·A14·A15·A16·A17·A18) **전부**를 백엔드 언어로 옮기고 실행 경로·CI에 연결, `examples/manifest.json`을 테스트 스위트로 사용 | §2·§4 | 없음 (지금 착수 가능) |
-| **C1 confidence / calibration** | `f(signals)` 구현 + 신뢰도 곡선 측정 + 계수 비준 | §3·§5 | #99, C0 |
+| **C1 confidence / calibration** | `f(signals)` 구현 + **곡선·ECE 산출 형식 확정**(#100 템플릿에 편입) + 원자료 누락 건수 보고 + 계수 비준 | §3.3·§5 | #99, C0, C5 |
 | **C2 reason 근거 연결** | `basis` 실재성 검증 + 산문 탐지 | §5 | C0 |
 | **C3 conflict 탐지** | 탐지기 + gold 대조 precision/recall | §5·§8 | #99, C0 |
 | **C4 coverage / abstention** | 클래스 존재/부재 결정론 판정 + 경고·보류 발동 | §2.5·§6 | #99, C0 |
-| **C5 audit log** | 번들 로깅 + 재현 검증 | §2.7·§5 | C0 |
+| **C5 audit log** | 번들 로깅 + 재현 검증 + **calibration 원자료 보존·누락 검증**(`bundleId` 연결) | §2.7·§3.3·§5 | C0 |
 | **C6 API / MCP 서빙** | answer-shape 반환 엔드포인트 | §2 전체 | C0~C5 |
 
 > **C0가 먼저다.** 검증기 없이 C1~C5를 만들면 각 하위가 자기 형식을 자기 기준으로 검사하게 되고, 계약이 코드마다 갈라진다.
@@ -344,6 +355,10 @@ I1 §7과 동일하며, 추가로:
 | `trigger` 형식 | 느슨한 정규식(`foo` 허용) | code별 형식 고정 | 임의 문자열을 허용하면 `trigger` 필수화의 의미가 사라진다 |
 | A16 표 렌더링 | 빈 줄로 표 밖에 표시 | 표 내부 행 | 서식 오류 |
 | abstention 조건 3 | "충돌이 `evidence[0]`을 포함" | **"`NEEDS_CHECK` 충돌 존재"** | 랭킹이 중요도의 대리값이 되지 못했다 — 자체 정상 픽스처에서 질문 자체를 다투는 충돌이 하위 순위라는 이유로 비보류 판정됐다. 비보류 경로는 `RESOLVED`/`COEXIST`로 이미 존재한다 |
+| §3.3 "곡선을 매 실행 기록" | 곡선 | **원자료(실행) / 곡선(사후 평가)** 2단계 | 응답 시점에는 정답을 몰라 곡선을 그릴 수 없다 — 기록 대상·시점·소유·누락 검증이 없어 적합성 판정이 불가능했다 |
+| 시각 초 범위 | `[0-5]\d` | `([0-5]\d\|60)` | RFC 3339 가 허용하는 윤초를 거부했다 |
+| A11 coverage 방향 | 단방향 | **양방향** | `coverage.code=present` 인데 `NO_CODE` 경고를 붙여도 통과했다 |
+| `expectedError` | schema 케이스만 | **모든 invalid 케이스** | validator 케이스는 메시지가 틀려도 통과했다 |
 | A9 문언 | 모든 신호값 0.0~1.0 | `null` 제외 | A17·스키마가 허용하는 미측정 응답을 A9 가 거부하는 모순이었다 |
 | A18 유효 대상 | id·coverage 키만 | + 예약 리터럴 `evidence` | 근거 0건 abstention 을 표현할 방법이 문언상 없었다 |
 | 시각 `pattern` | 자릿수만 | 범위까지 + `format` assertion 의무화 | `2026-99-99T99:99:99Z` 가 통과했다 |
