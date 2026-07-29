@@ -196,7 +196,8 @@
     },
     {
       "code": "NO_ISSUE",
-      "message": "이 관계를 논의한 이슈 기록을 찾지 못했습니다."
+      "message": "이 관계를 논의한 이슈 기록을 찾지 못했습니다.",
+      "trigger": "coverage.issue"
     },
     {
       "code": "NO_ADR",
@@ -210,8 +211,7 @@
     },
     {
       "code": "LOW_CORROBORATION",
-      "message": "관계를 뒷받침하는 증거가 모두 정적 소스이며 실행 기록으로 교차확인되지 않았습니다.",
-      "trigger": "ev-1"
+      "message": "관계를 뒷받침하는 증거가 모두 정적 소스이며 실행 기록으로 교차확인되지 않았습니다."
     },
     {
       "code": "ABSTAIN",
@@ -227,7 +227,9 @@
       "ev-2",
       "ev-3",
       "ev-4",
-      "ev-5"
+      "ev-5",
+      "ev-6",
+      "ev-7"
     ],
     "revision": "3c27259",
     "createdAt": "2026-07-29T02:00:11Z",

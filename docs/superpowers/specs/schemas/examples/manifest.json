@@ -91,7 +91,7 @@
       "enforcedBy": "schema",
       "rule": "A12",
       "expectedError": "'trigger' is a required property",
-      "note": "trigger 없는 경고 — 어느 클래스에 경고했는지 판정 불가(A11 결정성의 전제)"
+      "note": "trigger 없는 경고 — 어느 대상에 경고했는지 판정 불가(A11 결정성의 전제). A11 이 요구하지 않는 경고(LOW_CORROBORATION)에서 빼 단일 위반으로 유지한다"
     },
     {
       "file": "invalid.trigger-wrong-form.json",
@@ -107,7 +107,15 @@
       "enforcedBy": "validator",
       "rule": "A6",
       "expectedError": "없는 증거 ev-99 를 참조",
-      "note": "존재하지 않는 evidence id 참조"
+      "note": "존재하지 않는 evidence id 참조. 반대 증거(ev-4)는 충돌에 남겨 A14 와 겹치지 않게 한다"
+    },
+    {
+      "file": "invalid.contradicts-not-linked.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A14",
+      "expectedError": "반대 증거 ev-4 가 supports 증거와 함께 충돌로 연결되지 않음",
+      "note": "충돌이 존재하기만 하면 A14 를 통과하던 구멍 — 반대 증거 자신이 supports 증거와 함께 연결돼야 한다"
     },
     {
       "file": "invalid.coverage-claims-absent-class.json",

@@ -42,110 +42,150 @@ CEILING_REASONS = {"DEGRADED_SOURCE", "CONFLICT_UNRESOLVED", "NOT_COLLECTED"} | 
 
 
 def cross_field_errors(d):
-    """스키마로 표현할 수 없는 교차 필드 불변식. A5·A6·A11·A13·A14·A15·A16·A17·A18."""
+    """스키마로 표현할 수 없는 교차 필드 불변식. A5·A6·A11·A13·A14·A15·A16·A17·A18.
+
+    각 규칙은 **독립적으로** 실행한다. 한 규칙이 구조 결손(필수 필드 누락 등)으로
+    예외를 내도 이미 검출된 다른 규칙의 위반이 사라지면 안 된다 — 그러면 복수 위반
+    픽스처가 단일 위반으로 오인되고 manifest 의 단일 규칙 보장이 무너진다.
+    """
     errs = []
-    ev_ids = [e["id"] for e in d["evidence"]]
-    sources = {e["source"] for e in d["evidence"]}
-    warns = {(w["code"], w["trigger"]) for w in d["warnings"]}
-    codes = {w["code"] for w in d["warnings"]}
+
+    def rule(fn):
+        """규칙 하나를 격리 실행한다. 검사 불가(구조 결손)면 그 규칙만 건너뛴다."""
+        try:
+            fn()
+        except (KeyError, TypeError, AttributeError, IndexError):
+            pass  # 구조 자체의 결손은 스키마(A1)가 잡는다
+
+    ev_ids = [e["id"] for e in d.get("evidence", [])]
+    sources = {e["source"] for e in d.get("evidence", []) if "source" in e}
+    warns = {(w["code"], w["trigger"]) for w in d.get("warnings", [])
+             if "code" in w and "trigger" in w}
+    codes = {w["code"] for w in d.get("warnings", []) if "code" in w}
 
     # A5 — coverage[X]=present ⟺ source=X 증거가 존재
-    for cls, state in d["coverage"].items():
-        if (state == "present") != (cls in sources):
-            errs.append(f"A5: coverage.{cls}={state} 인데 해당 소스 증거 존재={cls in sources}")
+    def _a5():
+        for cls, state in d["coverage"].items():
+            if (state == "present") != (cls in sources):
+                errs.append(f"A5: coverage.{cls}={state} 인데 해당 소스 증거 존재={cls in sources}")
+    rule(_a5)
 
     # A6 — conflicts[].between ⊆ evidence[].id
-    for c in d["conflicts"]:
-        for ref in c["between"]:
-            if ref not in ev_ids:
-                errs.append(f"A6: conflict {c['id']} 가 없는 증거 {ref} 를 참조")
+    def _a6():
+        for c in d["conflicts"]:
+            for ref in c["between"]:
+                if ref not in ev_ids:
+                    errs.append(f"A6: conflict {c['id']} 가 없는 증거 {ref} 를 참조")
+    rule(_a6)
 
     # A11 — 부재·미수집 클래스마다, 미해결 충돌마다 대응 경고(+trigger)
-    for cls, state in d["coverage"].items():
-        if state not in ("present", "absent", "not_collected"):
-            continue  # 구조적으로 잘못된 값은 스키마(A4)의 몫 — 여기서 이중 보고하지 않는다
-        absent_warned = (WARN_FOR_ABSENT[cls], f"coverage.{cls}") in warns
-        nc_warned = ("NOT_COLLECTED", f"coverage.{cls}") in warns
-        if state == "absent" and not absent_warned:
-            errs.append(f"A11: coverage.{cls}=absent 인데 {WARN_FOR_ABSENT[cls]} 경고 없음")
-        if state == "not_collected" and not nc_warned:
-            errs.append(f"A11: coverage.{cls}=not_collected 인데 대응 경고 없음")
-        # 역방향 — 경고가 상태와 모순되면 안 된다
-        if state != "absent" and absent_warned:
-            errs.append(f"A11: {WARN_FOR_ABSENT[cls]} 경고가 있는데 coverage.{cls}={state}")
-        if state != "not_collected" and nc_warned:
-            errs.append(f"A11: NOT_COLLECTED(coverage.{cls}) 경고가 있는데 coverage.{cls}={state}")
-    needs_check = {c["id"] for c in d["conflicts"] if c["status"] == "NEEDS_CHECK"}
-    warned_conflicts = {w["trigger"] for w in d["warnings"] if w["code"] == "CONFLICT_UNRESOLVED"}
-    for cid in sorted(needs_check - warned_conflicts):
-        errs.append(f"A11: 미해결 충돌 {cid} 에 대한 경고 없음")
-    for cid in sorted(warned_conflicts - needs_check):
-        errs.append(f"A11: CONFLICT_UNRESOLVED({cid}) 인데 그 충돌은 NEEDS_CHECK 가 아님")
+    def _a11():
+        for cls, state in d["coverage"].items():
+            if state not in ("present", "absent", "not_collected"):
+                continue  # 구조적으로 잘못된 값은 스키마(A4)의 몫 — 여기서 이중 보고하지 않는다
+            absent_warned = (WARN_FOR_ABSENT[cls], f"coverage.{cls}") in warns
+            nc_warned = ("NOT_COLLECTED", f"coverage.{cls}") in warns
+            if state == "absent" and not absent_warned:
+                errs.append(f"A11: coverage.{cls}=absent 인데 {WARN_FOR_ABSENT[cls]} 경고 없음")
+            if state == "not_collected" and not nc_warned:
+                errs.append(f"A11: coverage.{cls}=not_collected 인데 대응 경고 없음")
+            # 역방향 — 경고가 상태와 모순되면 안 된다
+            if state != "absent" and absent_warned:
+                errs.append(f"A11: {WARN_FOR_ABSENT[cls]} 경고가 있는데 coverage.{cls}={state}")
+            if state != "not_collected" and nc_warned:
+                errs.append(f"A11: NOT_COLLECTED(coverage.{cls}) 경고가 있는데 coverage.{cls}={state}")
+        needs_check = {c["id"] for c in d["conflicts"] if c["status"] == "NEEDS_CHECK"}
+        warned_conflicts = {w["trigger"] for w in d["warnings"] if w["code"] == "CONFLICT_UNRESOLVED"}
+        for cid in sorted(needs_check - warned_conflicts):
+            errs.append(f"A11: 미해결 충돌 {cid} 에 대한 경고 없음")
+        for cid in sorted(warned_conflicts - needs_check):
+            errs.append(f"A11: CONFLICT_UNRESOLVED({cid}) 인데 그 충돌은 NEEDS_CHECK 가 아님")
+    rule(_a11)
 
     # A13 — evidence[].id ⊆ audit.evidenceIds (등호 아님: 탈락 후보는 정상)
-    missing = [i for i in ev_ids if i not in d["audit"]["evidenceIds"]]
-    if missing:
-        errs.append(f"A13: audit.evidenceIds 에 없는 증거 {missing}")
+    def _a13():
+        missing = [i for i in ev_ids if i not in d["audit"]["evidenceIds"]]
+        if missing:
+            errs.append(f"A13: audit.evidenceIds 에 없는 증거 {missing}")
+    rule(_a13)
 
-    # A14 — supports/contradicts 공존이면 충돌이 선언돼야 한다
-    stances = {e["stance"] for e in d["evidence"]}
-    if {"supports", "contradicts"} <= stances and not d["conflicts"]:
-        errs.append("A14: 반대 증거가 있는데 conflicts 가 비어 있음")
+    # A14 — 반대 증거는 '어떤 충돌이든 하나 있으면' 되는 게 아니라,
+    #       그 증거 자신이 supports 증거와 함께 충돌로 연결돼야 한다.
+    def _a14():
+        supports = {e["id"] for e in d["evidence"] if e["stance"] == "supports"}
+        for e in d["evidence"]:
+            if e["stance"] != "contradicts":
+                continue
+            linked = any(
+                e["id"] in c["between"] and (set(c["between"]) & supports)
+                for c in d["conflicts"]
+            )
+            if not linked:
+                errs.append(f"A14: 반대 증거 {e['id']} 가 supports 증거와 함께 충돌로 연결되지 않음")
+    rule(_a14)
 
     # A15 — 상한 적용 시 사유를 audit 에 명시하고, 그 사유가 통제어휘이며 실제 경고로 존재해야 한다.
     #       스키마와 별개로 여기서도 완결적으로 검사한다 — C0 가 교차 규칙만 이식해도 구멍이 없어야 한다.
-    reasons = d["audit"].get("ceilingReasons", [])
-    if d["audit"]["ceilingApplied"]:
-        if not reasons:
-            errs.append("A15: ceilingApplied=true 인데 ceilingReasons 가 비어 있음")
-        for r in reasons:
-            if r not in CEILING_REASONS:
-                errs.append(f"A15: {r} 는 상한 사유로 허용된 코드가 아님")
-            elif r not in codes:
-                errs.append(f"A15: ceilingReasons 의 {r} 가 실제 warnings 에 없음")
-    elif reasons:
-        errs.append("A15: ceilingApplied=false 인데 ceilingReasons 가 비어있지 않음")
+    def _a15():
+        reasons = d["audit"].get("ceilingReasons", [])
+        if d["audit"]["ceilingApplied"]:
+            if not reasons:
+                errs.append("A15: ceilingApplied=true 인데 ceilingReasons 가 비어 있음")
+            for r in reasons:
+                if r not in CEILING_REASONS:
+                    errs.append(f"A15: {r} 는 상한 사유로 허용된 코드가 아님")
+                elif r not in codes:
+                    errs.append(f"A15: ceilingReasons 의 {r} 가 실제 warnings 에 없음")
+        elif reasons:
+            errs.append("A15: ceilingApplied=false 인데 ceilingReasons 가 비어있지 않음")
+    rule(_a15)
 
     # A17 — null 신호 ⟺ SIGNAL_UNMEASURED 경고 (양방향)
-    null_signals = {
-        f"{e['id']}.signals.{name}"
-        for e in d["evidence"]
-        for name, v in e["signals"].items()
-        if v is None
-    }
-    unmeasured_warned = {w["trigger"] for w in d["warnings"] if w["code"] == "SIGNAL_UNMEASURED"}
-    for miss in sorted(null_signals - unmeasured_warned):
-        errs.append(f"A17: {miss} 가 null 인데 SIGNAL_UNMEASURED 경고 없음")
-    for extra in sorted(unmeasured_warned - null_signals):
-        errs.append(f"A17: SIGNAL_UNMEASURED({extra}) 인데 해당 신호가 null 이 아님")
+    def _a17():
+        null_signals = {
+            f"{e['id']}.signals.{name}"
+            for e in d["evidence"]
+            for name, v in e["signals"].items()
+            if v is None
+        }
+        unmeasured_warned = {w["trigger"] for w in d["warnings"] if w["code"] == "SIGNAL_UNMEASURED"}
+        for miss in sorted(null_signals - unmeasured_warned):
+            errs.append(f"A17: {miss} 가 null 인데 SIGNAL_UNMEASURED 경고 없음")
+        for extra in sorted(unmeasured_warned - null_signals):
+            errs.append(f"A17: SIGNAL_UNMEASURED({extra}) 인데 해당 신호가 null 이 아님")
+    rule(_a17)
 
     # A18 — trigger 가 실재 대상을 가리키는가
-    conflict_ids = {c["id"] for c in d["conflicts"]}
-    for w in d["warnings"]:
-        code, trg = w["code"], w["trigger"]
-        if trg.startswith("coverage."):
-            ok = trg.split(".", 1)[1] in d["coverage"]
-        elif code == "SIGNAL_UNMEASURED":
-            ok = trg.rsplit(".signals.", 1)[0] in ev_ids
-        elif code == "CONFLICT_UNRESOLVED":
-            ok = trg in conflict_ids
-        elif code == "ABSTAIN":
-            ok = trg in {"evidence", "coverage"} or trg in ev_ids or trg in conflict_ids
-        else:
-            ok = trg in ev_ids or trg in conflict_ids
-        if not ok:
-            errs.append(f"A18: 경고 {code} 의 trigger '{trg}' 가 실재 대상을 가리키지 않음")
+    def _a18():
+        conflict_ids = {c["id"] for c in d["conflicts"]}
+        for w in d["warnings"]:
+            code, trg = w["code"], w["trigger"]
+            if trg.startswith("coverage."):
+                ok = trg.split(".", 1)[1] in d["coverage"]
+            elif code == "SIGNAL_UNMEASURED":
+                ok = trg.rsplit(".signals.", 1)[0] in ev_ids
+            elif code == "CONFLICT_UNRESOLVED":
+                ok = trg in conflict_ids
+            elif code == "ABSTAIN":
+                ok = trg in {"evidence", "coverage"} or trg in ev_ids or trg in conflict_ids
+            else:
+                ok = trg in ev_ids or trg in conflict_ids
+            if not ok:
+                errs.append(f"A18: 경고 {code} 의 trigger '{trg}' 가 실재 대상을 가리키지 않음")
+    rule(_a18)
 
     # A16 — abstention 조건 1~3 (계약 §6.2)
-    core = CORE_CLASSES[d["task"]["intent"]]
-    triggers = [
-        not d["evidence"],
-        all(d["coverage"][c] != "present" for c in core),
-        any(c["status"] == "NEEDS_CHECK" for c in d["conflicts"]),
-    ]
-    if any(triggers) and "ABSTAIN" not in codes:
-        fired = [i + 1 for i, t in enumerate(triggers) if t]
-        errs.append(f"A16: abstention 조건 {fired} 성립인데 ABSTAIN 경고 없음")
+    def _a16():
+        core = CORE_CLASSES[d["task"]["intent"]]
+        triggers = [
+            not d["evidence"],
+            all(d["coverage"][c] != "present" for c in core),
+            any(c["status"] == "NEEDS_CHECK" for c in d["conflicts"]),
+        ]
+        if any(triggers) and "ABSTAIN" not in codes:
+            fired = [i + 1 for i, t in enumerate(triggers) if t]
+            errs.append(f"A16: abstention 조건 {fired} 성립인데 ABSTAIN 경고 없음")
+    rule(_a16)
 
     return errs
 
@@ -158,11 +198,7 @@ def main():
     for case in MANIFEST["cases"]:
         doc = json.loads((HERE / "examples" / case["file"]).read_text())
         schema_errs = sorted(validator.iter_errors(doc), key=lambda e: list(e.path))
-        try:
-            cross_errs = cross_field_errors(doc)
-        except (KeyError, TypeError, AttributeError):
-            # 구조가 결손된 문서(필수 필드 누락 등)는 교차 검사가 정의되지 않는다.
-            cross_errs = []
+        cross_errs = cross_field_errors(doc)
         accepted = not schema_errs and not cross_errs
         expected = case["expect"] == "valid"
 
