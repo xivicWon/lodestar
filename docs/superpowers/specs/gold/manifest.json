@@ -181,7 +181,7 @@
     },
     {
       "path": "failures.json",
-      "sha256": "sha256:8e52b4b058b6d7b62ae49db7a8b2d134a9ee8bc97219ac2d3d61ce3ae532fb55"
+      "sha256": "sha256:47e53adbd3305d0b105817d0f3934022a59d8fe66de11cb4523e0c8e15b06281"
     },
     {
       "path": "gold.docs.v0.schema.json",
@@ -193,11 +193,11 @@
     },
     {
       "path": "l1/code.json",
-      "sha256": "sha256:c8d35d2eb879bccdc08c596bd7204971f732460b51358e85080ca12f2833c994"
+      "sha256": "sha256:c2af1e02328560722bd4c6b70ec238b1ab77f6e2b7fd275b3d030f95a470b0c8"
     },
     {
       "path": "l1/db.json",
-      "sha256": "sha256:b6bfad274d85c5c73a4f52d855de6c0338468f38244b50dced1c6e4ce710d55b"
+      "sha256": "sha256:245f0fa1eb9923496ff66a28fcec855125b78eeb1f6215f4160701a3cbcb2d5e"
     },
     {
       "path": "l2/links.json",
@@ -213,7 +213,7 @@
     },
     {
       "path": "validate_gold.py",
-      "sha256": "sha256:ec485bc9083c3c1ff57382c4ccc2bc8c68bdb536c45cd75a76238285ae86e419"
+      "sha256": "sha256:1ccade91fe0ce833ff7d96b02f0860d69212048453d4f278e02e80bb3a12578e"
     }
   ],
   "fixtures": [
@@ -279,5 +279,5 @@
     }
   ],
   "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
-  "goldSetId": "gold-set/v0+05e9023bf54e"
+  "goldSetId": "gold-set/v0+35a80e1e29e7"
 }

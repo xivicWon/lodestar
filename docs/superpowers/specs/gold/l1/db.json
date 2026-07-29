@@ -3476,7 +3476,7 @@
       },
       "ref": {
         "sourceId": "db:legacy-sample",
-        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L221-L224",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L223-L225",
         "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
         "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
       },
@@ -3494,7 +3494,7 @@
       },
       "ref": {
         "sourceId": "db:legacy-sample",
-        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L221",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L222",
         "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
         "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
       },
@@ -3512,7 +3512,7 @@
       },
       "ref": {
         "sourceId": "db:legacy-sample",
-        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L221-L224",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L223-L225",
         "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
         "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
       },

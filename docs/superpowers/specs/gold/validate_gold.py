@@ -338,16 +338,23 @@ def _g8():
 def _g9():
     lines = blob_lines("db:legacy-sample")
     for it in DOCS["l1/db.json"]["items"]:
-        if it["expect"] != "PRESENT":
-            continue
-        name = it["value"].get("name") or it["value"].get("constraintName") \
-            or (it["value"]["columns"][0] if it["type"] == "PRIMARY_KEY" else None)
-        if not name:
-            continue
         ln = int(re.search(r"L(\d+)", it["ref"]["locator"]).group(1))
         if ln > len(lines):
             yield f"{it['id']}: 인용 행 L{ln} 이 파일 범위(1..{len(lines)})를 벗어난다"
-        elif name not in lines[ln - 1]:
+            continue
+        # **모든** 항목의 좌표가 실제 내용을 가리켜야 한다. 빈 줄을 가리키는 좌표는
+        # 어떤 주장의 근거도 될 수 없다 — 음성 항목이라고 예외를 두면 "왜 그것이
+        # 오탐인지" 를 아무 데서도 확인할 수 없고, 좌표가 조용히 밀려도 통과한다.
+        if not lines[ln - 1].strip():
+            yield f"{it['id']}: 인용 행 L{ln} 이 빈 줄이다 — 근거가 없는 좌표"
+            continue
+        # 실재하는 것(PRESENT·REPORTED_EXCLUDED)은 이름이 그 줄에 있어야 한다.
+        # ABSENT 는 정의상 원본에 없으므로 이름 대조를 요구할 수 없다(위 검사까지만).
+        if it["expect"] not in ("PRESENT", "REPORTED_EXCLUDED"):
+            continue
+        name = it["value"].get("name") or it["value"].get("constraintName") \
+            or (it["value"]["columns"][0] if it["type"] == "PRIMARY_KEY" else None)
+        if name and name not in lines[ln - 1]:
             yield f"{it['id']}: '{name}' 가 인용 행 L{ln} 에 없다 — gold 좌표가 원본과 어긋난다"
 
 
@@ -528,9 +535,19 @@ def _g14():
             yield f"{f['id']}: contentHash 불일치"
         if not f["reported"]:
             yield f"{f['id']}: reported 가 비어 있다 — 실패 픽스처인데 보고 기대치가 없다"
+        n = len(p.read_text().splitlines())
         for r in f["reported"]:
             if not r.get("reasonRequired"):
                 yield f"{f['id']}: reported 항목에 reasonRequired 가 없다 (사유 없는 보고는 보고가 아니다)"
+            # 실패 픽스처의 보고 좌표도 실재해야 한다. 여기만 예외를 두면 "어디서
+            # 실패했다고 보고해야 하는가" 의 정답이 존재하지 않는 행을 가리키게 되고,
+            # 채점자는 대조할 대상이 없어 그 항목을 통과 처리하게 된다.
+            nums = [int(x) for x in re.findall(r"L(\d+)", r["locator"])]
+            if any(x < 1 or x > n for x in nums):
+                yield (f"{f['id']}: 보고 좌표 {r['locator']} 가 파일 범위(1..{n})를 벗어난다 "
+                       f"— 유령 좌표")
+            elif len(nums) == 2 and nums[0] > nums[1]:
+                yield f"{f['id']}: 보고 좌표 {r['locator']} 의 시작 행이 끝 행보다 크다"
     for need in ("파싱 실패", "미지원 문법", "부분 추출"):
         if need not in kinds:
             yield f"이슈 #99 가 요구한 실패 종류 '{need}' 가 없다"

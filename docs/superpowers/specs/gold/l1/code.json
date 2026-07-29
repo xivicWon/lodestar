@@ -612,7 +612,7 @@
       },
       "ref": {
         "sourceId": "code:rdb/SqlTypeMapping.kt",
-        "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SqlTypeMapping.kt#L6-L18",
+        "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SqlTypeMapping.kt#L6-L19",
         "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
         "contentHash": "sha256:2d4e082071042d625a2a1cf8bae72d92a8ffbce89be1a2e449dc078eca24f9b9"
       },
