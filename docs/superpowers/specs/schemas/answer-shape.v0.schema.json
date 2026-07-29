@@ -128,7 +128,7 @@
       }
     },
     "signals": {
-      "description": "confidence의 구성요소. 단일 스칼라로 뭉치지 않고 '왜 그 점수인지'를 노출한다. 5개 모두 필수 — 미측정 신호를 0으로 채우는 것은 금지이며, 측정 불가 시 warnings로 보고한다.",
+      "description": "confidence의 구성요소. 단일 스칼라로 뭉치지 않고 '왜 그 점수인지'를 노출한다. 5개 모두 필수 — 미측정 신호를 0으로 채우는 것은 금지이며(0은 '측정했고 낮다'는 뜻이다), 측정 불가 시 warnings에 code=SIGNAL_UNMEASURED, trigger='<evidenceId>.signals.<name>' 으로 보고한다.",
       "type": "object",
       "additionalProperties": false,
       "required": ["finality", "freshness", "authority", "corroboration", "contradicted"],
@@ -240,10 +240,10 @@
     "warning": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["code", "message"],
+      "required": ["code", "message", "trigger"],
       "properties": {
         "code": {
-          "description": "측정 가능한 경고 코드. NO_ADR/NO_TEST/NO_RUNTIME/NO_ISSUE/NO_CODE=해당 클래스 absent · NOT_COLLECTED=수집 미실행 · CONFLICT_UNRESOLVED=NEEDS_CHECK 잔존 · LOW_CORROBORATION=교차확인 부족 · STALE_EVIDENCE=근거 노후 · DEGRADED_SOURCE=하위 레이어 실패 전파(I1 §3.3) · ABSTAIN=답변 보류.",
+          "description": "측정 가능한 경고 코드. NO_ADR/NO_TEST/NO_RUNTIME/NO_ISSUE/NO_CODE=해당 클래스 absent · NOT_COLLECTED=수집 미실행 · CONFLICT_UNRESOLVED=NEEDS_CHECK 잔존 · LOW_CORROBORATION=교차확인 부족 · STALE_EVIDENCE=근거 노후 · SIGNAL_UNMEASURED=신호를 측정하지 못함(0으로 채우는 것의 대체) · DEGRADED_SOURCE=하위 레이어 실패 전파(I1 §3.3) · ABSTAIN=답변 보류.",
           "enum": [
             "NO_CODE",
             "NO_ISSUE",
@@ -254,15 +254,17 @@
             "CONFLICT_UNRESOLVED",
             "LOW_CORROBORATION",
             "STALE_EVIDENCE",
+            "SIGNAL_UNMEASURED",
             "DEGRADED_SOURCE",
             "ABSTAIN"
           ]
         },
         "message": { "type": "string", "minLength": 1 },
         "trigger": {
-          "description": "이 경고를 발생시킨 대상(coverage 키, evidence id, conflict id 등). 감사 시 경고와 사실을 연결한다.",
+          "description": "이 경고를 발생시킨 대상. 필수다 — 대상이 없으면 '어느 클래스에 경고했는가'를 결정론적으로 판정할 수 없다(A11). 형식: coverage 클래스는 'coverage.<key>', 그 외는 evidence id · conflict id · 'evidence[].signals.<name>'.",
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "pattern": "^(coverage\\.(code|issue|adr|test|runtime)|evidence|[A-Za-z0-9][A-Za-z0-9._:\\[\\]-]*)$"
         }
       }
     },
@@ -270,7 +272,7 @@
       "description": "역추적 로그. 이 블록만으로 동일 응답을 재구성할 수 있어야 한다.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["bundleId", "promptHash", "evidenceIds", "revision", "createdAt"],
+      "required": ["bundleId", "promptHash", "evidenceIds", "revision", "createdAt", "ceilingApplied"],
       "properties": {
         "bundleId": { "$ref": "#/$defs/id" },
         "promptHash": {
@@ -291,7 +293,7 @@
         },
         "createdAt": { "type": "string", "format": "date-time" },
         "ceilingApplied": {
-          "description": "하위 레이어 실패로 confidence 상한이 적용되었는지. 상한 수치는 미확정이나 '적용 사실 기록'은 I1 §3.3의 게이트다.",
+          "description": "confidence 상한이 적용되었는지. 필수다 — 선택 필드로 두면 필드를 생략하는 것만으로 상한 적용을 은폐할 수 있다. 상한 수치는 미확정이나 '적용 사실 기록'은 I1 §3.3의 게이트다(A15).",
           "type": "boolean"
         }
       }
