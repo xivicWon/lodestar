@@ -78,6 +78,17 @@ def cross_field_errors(d):
                 errs.append(f"A5: coverage.{cls}={state} 인데 해당 소스 증거 존재={cls in sources}")
     rule(_a5)
 
+    # A19 — id 는 응답 내에서 유일해야 한다. §2.3 은 "응답 내 유일"이라 적어두었지만
+    #       어디서도 강제하지 않았다. 중복 id 는 경고 하나가 여러 대상을 충족시키는
+    #       것처럼 보이게 만들어 A11·A16·A18 의 집계를 통째로 무너뜨린다.
+    def _a19():
+        for label, ids in (("evidence", ev_ids),
+                           ("conflicts", [c["id"] for c in conflicts if "id" in c])):
+            dup = sorted({i for i in ids if ids.count(i) > 1})
+            if dup:
+                errs.append(f"A19: {label}[].id 가 응답 내에서 중복됨 {dup}")
+    rule(_a19)
+
     # A6 — conflicts[].between ⊆ evidence[].id
     def _a6():
         for c in conflicts:

@@ -17,7 +17,7 @@ Evidence Validation Layer가 AI 에이전트에게 돌려주는 **형식화된 �
 | | 내용 | 소유 |
 |---|---|---|
 | ✅ 확정 | answer-shape v0 필드 구조·타입·통제어휘 | 본 문서 §2 + JSON Schema |
-| ✅ 확정 | 구조 불변식 A1~A18 (스키마 강제 / 검증기 강제 구분) | 본 문서 §4 |
+| ✅ 확정 | 구조 불변식 A1~A19 (스키마 강제 / 검증기 강제 구분) | 본 문서 §4 |
 | ✅ 확정 | 필드별 **검증 방법**과 "실패 = 무엇인가"의 정의 | 본 문서 §5 |
 | ✅ 확정 | confidence를 **함수**로 취급한다는 계약(신호 노출 의무) | 본 문서 §3 |
 | ✅ 확정 | abstention 발동 조건의 **형식**(경고 코드 체계) | 본 문서 §6 |
@@ -183,7 +183,7 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 
 ---
 
-## 4. 구조 불변식 (A1~A18)
+## 4. 구조 불변식 (A1~A19)
 
 **강제 위치**가 두 종류다. `schema`는 JSON Schema만으로 걸러지고, `validator`는 스키마를 통과하지만 교차 필드 검사에서 걸러진다.
 픽스처는 [`schemas/examples/manifest.json`](schemas/examples/manifest.json)에 규칙 ID로 연결돼 있다.
@@ -208,6 +208,7 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 | **A16** | §6.2의 abstention 조건 1~3(근거 0건 · 핵심 클래스 부재 · 미해결 충돌 존재) 중 하나라도 성립하면 `ABSTAIN` 경고가 존재하고, 그 **`trigger`가 성립한 조건을 실제로 가리킨다**(§2.6) | validator | 근거 없이 단정 · 보류 사유를 기계적으로 집계할 수 없음 |
 | **A17** | `signals`의 값이 `null`(미측정)이면 `SIGNAL_UNMEASURED` 경고가 `trigger="<evidenceId>.signals.<name>"` 로 존재하고, 그 역도 성립한다 | validator | 미측정을 조용히 숨김 |
 | **A18** | 모든 `warnings[].trigger`가 실재 대상을 가리킨다 — `coverage.<key>`는 해당 키, 그 외는 실재하는 `evidence[].id`·`conflicts[].id`·`<evidenceId>.signals.<name>`. **예약 리터럴 `evidence`는 항상 유효**하다(근거 0건 abstention은 가리킬 개별 증거가 없으므로 배열 자체를 가리킨다) | validator | 경고가 아무것도 가리키지 않음 |
+| **A19** | `evidence[].id`와 `conflicts[].id`가 각각 **응답 내에서 유일**하다 | validator | 중복 id 로 경고 하나가 여러 대상을 충족한 것처럼 보임 — A11·A16·A18 집계가 무너짐 |
 
 > **A14는 gold 대조 없이도 검사 가능한 하한선**이다. 실제 충돌 탐지 성능은 §5의 precision/recall로 별도 측정한다.
 
@@ -242,8 +243,10 @@ abstention은 별도 필드가 아니라 **`warnings`에 `code: "ABSTAIN"`이 �
 다음 중 하나면 `ABSTAIN`을 낸다:
 
 1. `evidence`가 비어 있다.
-2. 질문 intent가 요구하는 **핵심 클래스**가 전부 `absent`/`not_collected`다.
+2. 질문 intent의 **핵심 클래스 후보군에서 `present`가 하나도 없다.**
    (v0 매핑: `EXPLAIN`→`adr`·`issue` · `VERIFY`→`test`·`runtime` · `IMPACT`·`LOCATE`→`code` · `HISTORY`→`issue`)
+
+   > **후보군은 대체 관계(OR)이지 필수 목록(AND)이 아니다.** `EXPLAIN`에서 ADR이 있으면 이슈가 없어도 설계 근거는 확보된 것이므로 답하되, 없는 클래스는 **A11이 `NO_ISSUE` 경고를 강제**해 반드시 드러낸다. 후보군 중 하나라도 빠지면 보류하도록 하면 — 대부분의 실제 시스템은 ADR·이슈·테스트·런타임을 다 갖추고 있지 않으므로 — 거의 모든 응답이 보류가 되어 abstention이 무의미해진다. **부분 부재는 경고로, 전면 부재는 보류로** 다룬다.
 3. **`NEEDS_CHECK` 충돌이 하나라도 존재**한다.
 4. `confidence_overall`이 임계값 미만이다.
 
@@ -315,7 +318,7 @@ I1은 Gold Set을 "사실 추출" 중심으로 남겨두었다. 이 층을 측�
 
 | 하위 | 범위 | 계약 근거 | 선행 |
 |---|---|---|---|
-| **C0 검증기** | `validate.py`의 규칙(A5·A6·A11·A13·A14·A15·A16·A17·A18) **전부**를 백엔드 언어로 옮기고 실행 경로·CI에 연결, `examples/manifest.json`을 테스트 스위트로 사용 | §2·§4 | 없음 (지금 착수 가능) |
+| **C0 검증기** | `validate.py`의 규칙(A5·A6·A11·A13·A14·A15·A16·A17·A18·A19) **전부**를 백엔드 언어로 옮기고 실행 경로·CI에 연결, `examples/manifest.json`을 테스트 스위트로 사용 | §2·§4 | 없음 (지금 착수 가능) |
 | **C1 confidence / calibration** | `f(signals)` 구현 + **곡선·ECE 산출 형식 확정**(#100 템플릿에 편입) + 원자료 누락 건수 보고 + 계수 비준 | §3.3·§5 | #99, C0, C5 |
 | **C2 reason 근거 연결** | `basis` 실재성 검증 + 산문 탐지 | §5 | C0 |
 | **C3 conflict 탐지** | 탐지기 + gold 대조 precision/recall | §5·§8 | #99, C0 |
@@ -356,6 +359,8 @@ I1 §7과 동일하며, 추가로:
 | `trigger` 형식 | 느슨한 정규식(`foo` 허용) | code별 형식 고정 | 임의 문자열을 허용하면 `trigger` 필수화의 의미가 사라진다 |
 | A16 표 렌더링 | 빈 줄로 표 밖에 표시 | 표 내부 행 | 서식 오류 |
 | abstention 조건 3 | "충돌이 `evidence[0]`을 포함" | **"`NEEDS_CHECK` 충돌 존재"** | 랭킹이 중요도의 대리값이 되지 못했다 — 자체 정상 픽스처에서 질문 자체를 다투는 충돌이 하위 순위라는 이유로 비보류 판정됐다. 비보류 경로는 `RESOLVED`/`COEXIST`로 이미 존재한다 |
+| id 유일성 | §2.3 문장만 존재 | **A19 로 강제** | "응답 내 유일"이라 적어두고 어디서도 검사하지 않아 중복 id 가 통과했다 |
+| abstention 조건 2 문언 | "핵심 클래스가 전부 부재" | "후보군에 present 가 하나도 없음"(+OR 관계 명시) | 필수 목록(AND)으로 오독될 수 있었다 |
 | `ABSTAIN` trigger | `evidence` 또는 `<conflictId>` | **성립한 조건을 가리킬 것**(+`coverage.<key>`) | 핵심 클래스 부재로 보류할 때 원인을 가리킬 어휘가 없었고, 무관한 증거 id 로도 통과했다 |
 | A14 | "충돌이 하나라도 있으면 통과" | 반대 증거 **자신이** supports 와 함께 연결 | 반대 증거와 무관한 충돌 하나로 통과할 수 있었다 |
 | `validate.py` 예외 처리 | 함수 전체를 `try` | **규칙별 격리** | 구조 결손으로 예외가 나면 그 전에 검출된 위반까지 전부 버려졌다 |
@@ -389,14 +394,14 @@ I1 §7과 동일하며, 추가로:
 
 - [x] answer-shape v0 필드·타입·통제어휘 확정 → §2 + JSON Schema
 - [x] 기계 판독 스키마 커밋 → `schemas/answer-shape.v0.schema.json`
-- [x] 구조 불변식 A1~A18 확정 + 스키마/검증기 강제 위치 구분 → §4
+- [x] 구조 불변식 A1~A19 확정 + 스키마/검증기 강제 위치 구분 → §4
 - [x] 필드별 검증 계약(검증 방법·지표·"실패 = ") 확정 → §5
 - [x] confidence를 함수로 취급하는 계약(신호 노출 의무·계수 미확정 명시) → §3
 - [x] abstention 형식·발동 조건 확정, 임계값은 비준으로 위임 → §6
 - [x] 게이트 / 잠정 지표 분리 → §7
 - [x] #99(I2)에 추가 요구되는 gold 케이스 명시 → §8
-- [x] 검증 픽스처(정상 3 + 위반 27) 커밋 + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
-- [x] 픽스처 적합성 확인기 커밋(30/30 재현 가능, 규칙 동일성·검출 계층·기대 메시지까지 대조) → `schemas/validate.py`
+- [x] 검증 픽스처(정상 3 + 위반 30) 커밋 + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
+- [x] 픽스처 적합성 확인기 커밋(33/33 재현 가능, 규칙 동일성·검출 계층·기대 메시지까지 대조) → `schemas/validate.py`
 - [x] 하위 이슈 분할안 → §9
 
 **다음 착수: C0 검증기 (§9)** — 픽스처 스위트와 참조 규칙 구현이 이미 있으므로 실패 테스트부터 시작할 수 있다.

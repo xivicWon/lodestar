@@ -203,7 +203,7 @@
       "enforcedBy": "validator",
       "rule": "A17",
       "expectedError": "가 null 인데 SIGNAL_UNMEASURED 경고 없음",
-      "note": "신호를 null 로 두고 SIGNAL_UNMEASURED 경고를 내지 않음 — 미측정을 조용히 숨김"
+      "note": "신호를 null 로 두고 SIGNAL_UNMEASURED 경고를 내지 않음. 미측정 신호에 LOW_CORROBORATION 을 함께 붙이면 '측정 못함'과 '측정했고 낮음'이 뒤섞이므로 제거했다"
     },
     {
       "file": "invalid.trigger-dangling.json",
@@ -236,6 +236,30 @@
       "rule": "A15",
       "expectedError": "is not one of",
       "note": "LOW_CORROBORATION 은 상한 사유 통제어휘 밖 — 아무 경고나 사유로 끌어다 쓰는 것을 막는다"
+    },
+    {
+      "file": "invalid.duplicate-conflict-id.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A19",
+      "expectedError": "conflicts[].id 가 응답 내에서 중복됨",
+      "note": "서로 다른 충돌이 같은 id 를 쓰면 경고 하나가 둘을 충족시킨 것처럼 보인다"
+    },
+    {
+      "file": "invalid.duplicate-evidence-id.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A19",
+      "expectedError": "evidence[].id 가 응답 내에서 중복됨",
+      "note": "§2.3 이 '응답 내 유일'이라 적어두었지만 어디서도 강제되지 않던 부분"
+    },
+    {
+      "file": "invalid.additional-property.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A1",
+      "expectedError": "Additional properties are not allowed",
+      "note": "스키마에 없는 필드 하나만 추가 — additionalProperties:false 회귀를 직접 검증한다"
     }
   ]
 }
