@@ -319,6 +319,10 @@ def manifest_errors():
             if not c.get("expectedError"):
                 errs.append(f"{where}: expectedError 가 비어 있음")
                 bad.add(i)
+            if c.get("enforcedBy") == "schema" and rule not in RULE_SCHEMA_MARKERS:
+                errs.append(f"{where}: schema 케이스의 rule {rule!r} 에 위치 표지가 없어 "
+                            f"라벨 대조가 수행되지 않는다 (RULE_SCHEMA_MARKERS 에 추가 필요)")
+                bad.add(i)
     return errs, bad
 
 
@@ -326,6 +330,7 @@ def main():
     Draft202012Validator.check_schema(SCHEMA)
     validator = Draft202012Validator(SCHEMA)
     mismatches = 0
+    verified_rules = set()   # 실제로 라벨·계층·위치·메시지 대조를 통과한 규칙만 집계한다
 
     man_errs, bad_cases = manifest_errors()
     for e in man_errs:
@@ -381,14 +386,16 @@ def main():
                 if not any(case["expectedError"] in a for a in actual):
                     ok, detail = False, f"기대 오류 '{case['expectedError']}' 미검출: {actual}"
 
+        if ok and not expected:
+            verified_rules.add(case["rule"])
         mismatches += not ok
         print(f"{'OK  ' if ok else 'FAIL'} {case['file']:<48} {detail}")
 
     # 규칙 커버리지 — 불변식이 하나라도 음성 픽스처 없이 남으면 그 규칙은
     # 구현되지 않거나 나중에 제거돼도 이 스위트가 통과한다.
-    covered = {c.get("rule") for i, c in enumerate(MANIFEST["cases"])
-               if i not in bad_cases and c.get("expect") == "invalid"}
-    uncovered = [f"A{i}" for i in range(1, MAX_RULE + 1) if f"A{i}" not in covered]
+    # 선언만으로는 인정하지 않는다 — 그 case 가 실제로 선언된 규칙으로,
+    # 선언된 계층에서, 선언된 위치·메시지로 걸린 것이 확인돼야 covered 다.
+    uncovered = [f"A{i}" for i in range(1, MAX_RULE + 1) if f"A{i}" not in verified_rules]
     if uncovered:
         mismatches += 1
         print(f"FAIL 규칙 커버리지 — 음성 픽스처가 없는 불변식: {uncovered}")
