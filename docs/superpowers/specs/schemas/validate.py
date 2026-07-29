@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """answer-shape v0 픽스처 적합성 확인기 (참조 구현).
 
-이 스크립트의 목적은 **커밋된 스키마와 픽스처가 계약 문서(§4 A1~A16)와 일치함을
+이 스크립트의 목적은 **커밋된 스키마와 픽스처가 계약 문서(§4 A1~A18)와 일치함을
 누구나 재현할 수 있게 하는 것**이다. 제품 검증기가 아니다 — 실행 경로에 붙는
 검증기·CI 연결은 하위 이슈 C0의 범위이며, 그때 이 규칙들을 백엔드 언어로 옮긴다.
 
@@ -42,7 +42,7 @@ CEILING_REASONS = {"DEGRADED_SOURCE", "CONFLICT_UNRESOLVED", "NOT_COLLECTED"} | 
 
 
 def cross_field_errors(d):
-    """스키마로 표현할 수 없는 교차 필드 불변식. A5·A6·A11·A13·A14·A15·A16."""
+    """스키마로 표현할 수 없는 교차 필드 불변식. A5·A6·A11·A13·A14·A15·A16·A17·A18."""
     errs = []
     ev_ids = [e["id"] for e in d["evidence"]]
     sources = {e["source"] for e in d["evidence"]}
@@ -84,6 +84,36 @@ def cross_field_errors(d):
     if d["audit"]["ceilingApplied"] and not (codes & CEILING_REASONS):
         errs.append("A15: ceilingApplied=true 인데 상한 사유 경고 없음")
 
+    # A17 — null 신호 ⟺ SIGNAL_UNMEASURED 경고 (양방향)
+    null_signals = {
+        f"{e['id']}.signals.{name}"
+        for e in d["evidence"]
+        for name, v in e["signals"].items()
+        if v is None
+    }
+    unmeasured_warned = {w["trigger"] for w in d["warnings"] if w["code"] == "SIGNAL_UNMEASURED"}
+    for miss in sorted(null_signals - unmeasured_warned):
+        errs.append(f"A17: {miss} 가 null 인데 SIGNAL_UNMEASURED 경고 없음")
+    for extra in sorted(unmeasured_warned - null_signals):
+        errs.append(f"A17: SIGNAL_UNMEASURED({extra}) 인데 해당 신호가 null 이 아님")
+
+    # A18 — trigger 가 실재 대상을 가리키는가
+    conflict_ids = {c["id"] for c in d["conflicts"]}
+    for w in d["warnings"]:
+        code, trg = w["code"], w["trigger"]
+        if trg.startswith("coverage."):
+            ok = trg.split(".", 1)[1] in d["coverage"]
+        elif code == "SIGNAL_UNMEASURED":
+            ok = trg.rsplit(".signals.", 1)[0] in ev_ids
+        elif code == "CONFLICT_UNRESOLVED":
+            ok = trg in conflict_ids
+        elif code == "ABSTAIN":
+            ok = trg in {"evidence", "coverage"} or trg in ev_ids or trg in conflict_ids
+        else:
+            ok = trg in ev_ids or trg in conflict_ids
+        if not ok:
+            errs.append(f"A18: 경고 {code} 의 trigger '{trg}' 가 실재 대상을 가리키지 않음")
+
     # A16 — abstention 조건 1~3 (계약 §6.2)
     core = CORE_CLASSES[d["task"]["intent"]]
     triggers = [
@@ -114,12 +144,23 @@ def main():
         expected = case["expect"] == "valid"
 
         ok = accepted == expected
-        mismatches += not ok
         detail = ""
         if schema_errs:
             detail = "schema: " + schema_errs[0].message
         elif cross_errs:
             detail = "cross:  " + cross_errs[0]
+
+        # 승인 여부만 비교하면 '다른 오류' 때문에 목표 규칙 검사가 누락돼도 통과한다.
+        # invalid 픽스처는 manifest 가 선언한 규칙 하나만, 그 이유로 걸려야 한다.
+        if ok and not expected:
+            if len(cross_errs) > 1:
+                ok, detail = False, f"교차 위반 {len(cross_errs)}건 — 단일 위반이어야 함: {cross_errs}"
+            elif cross_errs and not cross_errs[0].startswith(case["rule"] + ":"):
+                ok, detail = False, f"규칙 불일치: 기대 {case['rule']}, 실제 {cross_errs[0]}"
+            elif schema_errs and case["expectedError"] not in schema_errs[0].message:
+                ok, detail = False, f"기대 오류 '{case['expectedError']}' 미검출: {schema_errs[0].message}"
+
+        mismatches += not ok
         print(f"{'OK  ' if ok else 'FAIL'} {case['file']:<48} {detail}")
 
     print(f"\n{len(MANIFEST['cases'])} cases, {mismatches} mismatches")

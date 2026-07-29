@@ -35,9 +35,30 @@
               "id": "obs-ddl-tb_pay_mst"
             }
           ]
-        },
+        }
+      ],
+      "stance": "supports"
+    },
+    {
+      "id": "ev-2",
+      "source": "code",
+      "ref": {
+        "sourceId": "src-rdb-legacy-sample",
+        "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L80-L87",
+        "revision": "3c27259",
+        "contentHash": "git-blob:de7ba888f32e07a8a65770cf4161850ac650d36e"
+      },
+      "confidence": 0.76,
+      "signals": {
+        "finality": 0.9,
+        "freshness": 0.95,
+        "authority": 0.9,
+        "corroboration": 0.6,
+        "contradicted": 0.3
+      },
+      "reason": [
         {
-          "text": "TB_ORD_HD.ORD_NO 가 동일 이름·동일 타입 CHAR(15) 의 PRIMARY KEY 다 (L80-L87)",
+          "text": "TB_ORD_HD.ORD_NO 가 CHAR(15) PRIMARY KEY 다 — TB_PAY_MST.ORD_NO 와 이름·타입이 일치한다",
           "basis": [
             {
               "layer": "L1",
@@ -49,7 +70,7 @@
       "stance": "supports"
     },
     {
-      "id": "ev-2",
+      "id": "ev-3",
       "source": "code",
       "ref": {
         "sourceId": "src-backend-kotlin",
@@ -79,7 +100,7 @@
       "stance": "supports"
     },
     {
-      "id": "ev-3",
+      "id": "ev-4",
       "source": "code",
       "ref": {
         "sourceId": "src-rdb-legacy-sample",
@@ -118,7 +139,7 @@
       "stance": "contradicts"
     },
     {
-      "id": "ev-4",
+      "id": "ev-5",
       "source": "test",
       "ref": {
         "sourceId": "src-backend-kotlin-test",
@@ -152,8 +173,8 @@
     {
       "id": "cf-1",
       "between": [
-        "ev-2",
-        "ev-3"
+        "ev-3",
+        "ev-4"
       ],
       "claim": "관계 확정 근거: 이름 규칙 추정으로 충분하다 vs 명시 FK 관행이 있는 스키마에서는 부족하다",
       "status": "NEEDS_CHECK"
@@ -202,8 +223,9 @@
       "ev-2",
       "ev-3",
       "ev-4",
-      "ev-5-dropped-low-rank",
-      "ev-6-dropped-low-rank"
+      "ev-5",
+      "ev-6-dropped-low-rank",
+      "ev-7-dropped-low-rank"
     ],
     "revision": "3c27259",
     "createdAt": "2026-07-29T02:00:11Z",

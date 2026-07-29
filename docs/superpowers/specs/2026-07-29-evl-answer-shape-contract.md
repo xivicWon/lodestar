@@ -17,7 +17,7 @@ Evidence Validation Layer가 AI 에이전트에게 돌려주는 **형식화된 �
 | | 내용 | 소유 |
 |---|---|---|
 | ✅ 확정 | answer-shape v0 필드 구조·타입·통제어휘 | 본 문서 §2 + JSON Schema |
-| ✅ 확정 | 구조 불변식 A1~A16 (스키마 강제 / 검증기 강제 구분) | 본 문서 §4 |
+| ✅ 확정 | 구조 불변식 A1~A18 (스키마 강제 / 검증기 강제 구분) | 본 문서 §4 |
 | ✅ 확정 | 필드별 **검증 방법**과 "실패 = 무엇인가"의 정의 | 본 문서 §5 |
 | ✅ 확정 | confidence를 **함수**로 취급한다는 계약(신호 노출 의무) | 본 문서 §3 |
 | ✅ 확정 | abstention 발동 조건의 **형식**(경고 코드 체계) | 본 문서 §6 |
@@ -83,9 +83,11 @@ L0 수집(#88) → L1 사실(#89) → L2 관계(#90) → L3 지식·이력(#91) 
 | `source` | ✅ | `code` \| `issue` \| `adr` \| `test` \| `runtime` — **`coverage`의 키 집합과 정확히 동일**(A4) |
 | `ref` | ✅ | `{sourceId, locator, revision}` 필수, `contentHash`·`observedAt` 선택. 좌표 없는 인용은 증거가 아니다 |
 | `confidence` | ✅ | 0.0~1.0. **소스 타입 상수가 아니라 `signals`의 함수값**(§3) |
-| `signals` | ✅ | `finality`·`freshness`·`authority`·`corroboration`·`contradicted` **5개 전부**. 미측정 신호를 0으로 채우는 것 금지(0은 "측정했고 낮다"는 뜻) — 측정 불가는 `SIGNAL_UNMEASURED` 경고에 `trigger: "<evidenceId>.signals.<name>"` 으로 보고 |
+| `signals` | ✅ | 5개 키 전부. 값은 `0.0~1.0` **또는 `null`**. 미측정을 0으로 채우는 것 금지(0은 "측정했고 낮다"는 뜻) — **미측정은 `null`** 로 두고 `SIGNAL_UNMEASURED` 경고를 `trigger: "<evidenceId>.signals.<name>"` 로 함께 낸다(A17, 양방향) |
 | `reason[]` | ✅ (≥1) | `{text, basis[]}`. `basis`는 `{layer: L1\|L2\|L3, id}` **≥1개**. 근거 없는 이유 = 산문 = 계약 위반 |
 | `stance` | ✅ | `supports` \| `contradicts`. **기본값 없음** — 반대 증거는 1급이므로 생산자가 명시해야 한다 |
+
+> **reason 은 그 증거의 `ref` 로 재확인 가능해야 한다.** 다른 파일·다른 행을 인용해야 한다면 그건 **별도 evidence** 다 — 하나의 `ref` 아래 여러 좌표의 주장을 묶으면 `locator` 로 검증할 수 없는 문장이 생긴다. 이 규칙의 준수 여부는 gold 대조가 필요하므로 A규칙이 아니라 **C2(reason 근거 검증)** 에서 측정한다.
 
 ### 2.4 `conflicts[]`
 
@@ -116,6 +118,8 @@ L0 수집(#88) → L1 사실(#89) → L2 관계(#90) → L3 지식·이력(#91) 
 
 `trigger`가 필수인 이유: 여러 클래스가 동시에 `not_collected`일 때 공통 코드 하나만으로는 **어느 클래스에 경고했는지 판정할 수 없다.** `trigger`로 대상을 못박아야 A11이 결정론이 된다.
 
+형식은 **code별로 스키마가 고정**한다(아래 표) — 임의 문자열을 허용하면 `trigger`를 필수로 만든 의미가 사라진다. 가리키는 대상이 실재하는지는 검증기가 확인한다(A18).
+
 | code | 발동 조건 | `trigger` 형식 |
 |---|---|---|
 | `NO_CODE` / `NO_ISSUE` / `NO_ADR` / `NO_TEST` / `NO_RUNTIME` | 해당 클래스 `absent` | `coverage.<key>` |
@@ -123,7 +127,7 @@ L0 수집(#88) → L1 사실(#89) → L2 관계(#90) → L3 지식·이력(#91) 
 | `CONFLICT_UNRESOLVED` | `NEEDS_CHECK` 충돌 잔존 — **충돌마다 한 건씩** | `<conflictId>` |
 | `LOW_CORROBORATION` | 교차확인 부족 (임계값 §6.3) | `<evidenceId>` |
 | `STALE_EVIDENCE` | 근거 노후 (임계값 §6.3) | `<evidenceId>` |
-| `SIGNAL_UNMEASURED` | 신호를 측정하지 못함 — 0으로 채우는 것의 **유일한 대체 경로** | `<evidenceId>.signals.<name>` |
+| `SIGNAL_UNMEASURED` | 신호값이 `null` — 0으로 채우는 것의 **유일한 대체 경로** | `<evidenceId>.signals.<name>` |
 | `DEGRADED_SOURCE` | 하위 레이어 실패 전파 (I1 §3.3) | `<evidenceId>` |
 | `ABSTAIN` | 답변 보류 (§6) | `evidence` 또는 `<conflictId>` |
 
@@ -152,7 +156,7 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 
 - 5개 신호를 **전부 노출**한다(A8). "왜 그 점수인지"를 소비자가 재계산할 수 있어야 한다.
 - `contradicted`는 **방향이 반대인 유일한 신호**다 — 높을수록 confidence를 낮춘다. 스키마에 이 방향을 명시했다.
-- 신호를 측정하지 못했으면 **0으로 채우지 않는다.** 0은 "측정했고 낮다"는 뜻이다. 미측정은 `SIGNAL_UNMEASURED` 경고에 `trigger: "<evidenceId>.signals.<name>"` 으로 보고한다(§2.6) — 이것이 신호 누락을 표현하는 **유일한 합법 경로**다.
+- 신호를 측정하지 못했으면 **0으로 채우지 않는다.** 0은 "측정했고 낮다"는 뜻이다. 미측정은 값 자체를 **`null`** 로 두고 `SIGNAL_UNMEASURED` 경고를 함께 낸다(§2.6·A17) — 이것이 신호 누락을 표현하는 **유일한 합법 경로**이며, 둘 중 하나만 있으면 위반이다.
 
 ### 3.3 계수는 지금 정하지 않는다
 
@@ -165,7 +169,7 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 
 ---
 
-## 4. 구조 불변식 (A1~A16)
+## 4. 구조 불변식 (A1~A18)
 
 **강제 위치**가 두 종류다. `schema`는 JSON Schema만으로 걸러지고, `validator`는 스키마를 통과하지만 교차 필드 검사에서 걸러진다.
 픽스처는 [`schemas/examples/manifest.json`](schemas/examples/manifest.json)에 규칙 ID로 연결돼 있다.
@@ -187,8 +191,9 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 | **A13** | `evidence[].id` **⊆** `audit.evidenceIds` (등호 아님 — 탈락 후보가 더 있는 것은 정상, §2.7) | validator | 감사 로그 불완전 |
 | **A14** | 동일 대상에 `supports`와 `contradicts`가 공존하면 `conflicts` 항목이 있어야 한다 | validator | **충돌 미탐지 = 거짓 확신** |
 | **A15** | `audit.ceilingApplied=true`인 응답은 **상한 사유를 나타내는 경고를 최소 1개** 갖는다(`DEGRADED_SOURCE`·`CONFLICT_UNRESOLVED`·`NO_*`·`NOT_COLLECTED` 중). 사유가 하위 레이어 실패 전파면 `DEGRADED_SOURCE`가 **필수**다 | validator | 상한 은폐 (I1 §3.3) |
-
 | **A16** | §6.2의 abstention 조건 1~3 중 하나라도 성립하면 `ABSTAIN` 경고가 존재한다 | validator | 근거 없이 단정 |
+| **A17** | `signals`의 값이 `null`(미측정)이면 `SIGNAL_UNMEASURED` 경고가 `trigger="<evidenceId>.signals.<name>"` 로 존재하고, 그 역도 성립한다 | validator | 미측정을 조용히 숨김 |
+| **A18** | 모든 `warnings[].trigger`가 실재 대상을 가리킨다 — `coverage.<key>`는 해당 키, 그 외는 실재하는 `evidence[].id`·`conflicts[].id`·`<evidenceId>.signals.<name>` | validator | 경고가 아무것도 가리키지 않음 |
 
 > **A14는 gold 대조 없이도 검사 가능한 하한선**이다. 실제 충돌 탐지 성능은 §5의 precision/recall로 별도 측정한다.
 
@@ -329,6 +334,11 @@ I1 §7과 동일하며, 추가로:
 | `SIGNAL_UNMEASURED` | 없음 | 경고 코드 추가 | "미측정 신호를 0으로 채우지 말고 경고로 보고"를 요구하면서 대응 코드가 없어 준수 경로가 존재하지 않았다 |
 | abstention 조건 3 | "`NEEDS_CHECK` 충돌이 **핵심 주장**에 걸려 있다" | "`NEEDS_CHECK` 충돌의 `between`에 **`evidence[0]`**이 포함된다" | "핵심 주장"은 응답 필드로 표현되지 않아 검증기마다 판정이 갈렸다 |
 | A16 | 없음 | 추가 | abstention 조건이 §6에만 있고 불변식 표에 없어 검사 대상에서 빠질 수 있었다 |
+| `signals` 값 타입 | `number` 필수 | `number` **또는 `null`** | "미측정을 0으로 채우지 말라"면서 필수 숫자만 허용해 표현할 값이 없었다 |
+| A17·A18 | 없음 | 추가 | null 신호를 조용히 숨기는 경로, trigger 가 아무것도 안 가리키는 경로가 열려 있었다 |
+| `trigger` 형식 | 느슨한 정규식(`foo` 허용) | code별 형식 고정 | 임의 문자열을 허용하면 `trigger` 필수화의 의미가 사라진다 |
+| A16 표 렌더링 | 빈 줄로 표 밖에 표시 | 표 내부 행 | 서식 오류 |
+| 정상 픽스처 reason 좌표 | `ev-1`의 reason 이 다른 행(L80-L87)을 인용 | 별도 evidence 로 분리 | 그 증거의 `locator` 로 재확인할 수 없는 문장이었다 |
 | 정상 픽스처 좌표 | 가공 예시(`payment_tx`·존재하지 않는 코드 행) | 리포 실좌표(`legacy-sample.sql`·`RelationService.kt`·`RelationJudgeTest.kt` @`3c27259`) | 계약이 "재확인 가능한 좌표"를 요구하는데 예제가 그것을 어겼다 — P1 자기적용 |
 
 ---
@@ -343,8 +353,8 @@ I1 §7과 동일하며, 추가로:
 - [x] abstention 형식·발동 조건 확정, 임계값은 비준으로 위임 → §6
 - [x] 게이트 / 잠정 지표 분리 → §7
 - [x] #99(I2)에 추가 요구되는 gold 케이스 명시 → §8
-- [x] 검증 픽스처(정상 2 + 위반 13) 커밋 + 규칙 ID·강제 위치 연결 → `schemas/examples/manifest.json`
-- [x] 픽스처 적합성 확인기 커밋(15/15 재현 가능) → `schemas/validate.py`
+- [x] 검증 픽스처(정상 3 + 위반 18) 커밋 + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
+- [x] 픽스처 적합성 확인기 커밋(21/21 재현 가능, 규칙 동일성까지 대조) → `schemas/validate.py`
 - [x] 하위 이슈 분할안 → §9
 
 **다음 착수: C0 검증기 (§9)** — 픽스처 스위트와 참조 규칙 구현이 이미 있으므로 실패 테스트부터 시작할 수 있다.

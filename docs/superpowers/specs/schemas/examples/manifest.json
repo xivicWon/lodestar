@@ -1,5 +1,5 @@
 {
-  "description": "answer-shape v0 검증 픽스처 목록. 하위 이슈 C0 검증기는 이 목록을 그대로 테스트 케이스로 사용한다. enforcedBy=schema 는 JSON Schema 만으로 걸러야 하고, enforcedBy=validator 는 스키마를 통과하지만 계약 §4 교차 필드 불변식에서 실패해야 한다. 각 invalid 픽스처는 valid.full.json 에서 rule 하나만 어긋나도록 파생시킨다 — 복합 위반은 목표 검사가 누락돼도 통과처럼 보이게 만든다.",
+  "description": "answer-shape v0 검증 픽스처 목록. 하위 이슈 C0 검증기는 이 목록을 그대로 테스트 케이스로 사용한다. enforcedBy=schema 는 JSON Schema 만으로 걸러야 하고, enforcedBy=validator 는 스키마를 통과하지만 계약 §4 교차 필드 불변식에서 실패해야 한다. 각 invalid 픽스처는 valid.full.json 에서 rule 하나만 어긋나도록 파생시킨다 — 복합 위반은 목표 검사가 누락돼도 통과처럼 보이게 만든다. validate.py 는 승인 여부뿐 아니라 **실제로 걸린 규칙이 rule 과 같은지**(validator 케이스는 위반 1건, schema 케이스는 expectedError 일치)까지 대조한다.",
   "schema": "../answer-shape.v0.schema.json",
   "contract": "../../2026-07-29-evl-answer-shape-contract.md",
   "checker": "../validate.py",
@@ -9,7 +9,7 @@
     {
       "file": "valid.full.json",
       "expect": "valid",
-      "note": "충돌·부재 경고·상한 적용이 모두 살아있는 정상 응답. 충돌이 랭킹 1위(ev-1)를 건드리지 않으므로 CONFLICT_UNRESOLVED 경고는 내되 ABSTAIN 까지는 가지 않는 경계 사례다(§6.2 조건 3)"
+      "note": "증거 5건·충돌·부재 경고·상한 적용이 모두 살아있는 정상 응답. 충돌이 랭킹 1위(ev-1)를 건드리지 않으므로 CONFLICT_UNRESOLVED 는 내되 ABSTAIN 까지는 가지 않는 경계 사례(§6.2 조건 3)"
     },
     {
       "file": "valid.abstention.json",
@@ -17,10 +17,16 @@
       "note": "근거 0건 → ABSTAIN(§6.2 조건 1). 빈 응답도 계약을 만족해야 한다"
     },
     {
+      "file": "valid.unmeasured-signal.json",
+      "expect": "valid",
+      "note": "측정하지 못한 신호를 0으로 위장하지 않고 null + SIGNAL_UNMEASURED 로 정직하게 표현한 응답(A17 양성)"
+    },
+    {
       "file": "invalid.reason-no-basis.json",
       "expect": "invalid",
       "enforcedBy": "schema",
       "rule": "A3",
+      "expectedError": "should be non-empty",
       "note": "무근거 이유 = 산문"
     },
     {
@@ -28,6 +34,7 @@
       "expect": "invalid",
       "enforcedBy": "schema",
       "rule": "A10",
+      "expectedError": "'stance' is a required property",
       "note": "supports/contradicts 는 기본값 없이 명시 필수"
     },
     {
@@ -35,6 +42,7 @@
       "expect": "invalid",
       "enforcedBy": "schema",
       "rule": "A4",
+      "expectedError": "is not one of ['present', 'absent', 'not_collected']",
       "note": "커버리지를 %로 위장"
     },
     {
@@ -42,6 +50,7 @@
       "expect": "invalid",
       "enforcedBy": "schema",
       "rule": "A8",
+      "expectedError": "'contradicted' is a required property",
       "note": "signals 5개 미노출 = 근거 없는 스칼라"
     },
     {
@@ -49,6 +58,7 @@
       "expect": "invalid",
       "enforcedBy": "schema",
       "rule": "A9",
+      "expectedError": "greater than the maximum of 1.0",
       "note": "0.0~1.0 범위 이탈"
     },
     {
@@ -56,6 +66,7 @@
       "expect": "invalid",
       "enforcedBy": "schema",
       "rule": "A7",
+      "expectedError": "'resolvedBy' is a required property",
       "note": "근거 없이 충돌을 해소 처리(덮어쓰기 — I1 P4)"
     },
     {
@@ -63,6 +74,7 @@
       "expect": "invalid",
       "enforcedBy": "schema",
       "rule": "A12",
+      "expectedError": "'audit' is a required property",
       "note": "역추적 불가"
     },
     {
@@ -70,7 +82,16 @@
       "expect": "invalid",
       "enforcedBy": "schema",
       "rule": "A12",
+      "expectedError": "'trigger' is a required property",
       "note": "trigger 없는 경고 — 어느 클래스에 경고했는지 판정 불가(A11 결정성의 전제)"
+    },
+    {
+      "file": "invalid.trigger-wrong-form.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A12",
+      "expectedError": "was expected",
+      "note": "NO_ISSUE 의 trigger 가 'foo' — code 별 trigger 형식 고정을 스키마가 강제한다"
     },
     {
       "file": "invalid.conflict-dangling-ref.json",
@@ -101,11 +122,39 @@
       "note": "응답에 쓴 증거가 audit.evidenceIds 에 없음. 반대로 탈락 후보가 더 들어있는 것은 정상이다(§2.7)"
     },
     {
+      "file": "invalid.abstain-missing-on-empty-evidence.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A16",
+      "note": "§6.2 조건 1 — 근거가 0건인데 보류하지 않음"
+    },
+    {
+      "file": "invalid.abstain-missing-on-core-class-absent.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A16",
+      "note": "§6.2 조건 2 — intent(VERIFY)의 핵심 클래스 test·runtime 이 모두 non-present 인데 보류하지 않음"
+    },
+    {
       "file": "invalid.abstain-missing-on-top-conflict.json",
       "expect": "invalid",
       "enforcedBy": "validator",
       "rule": "A16",
-      "note": "랭킹 1위 증거가 미해결 충돌에 걸렸는데 보류하지 않음(§6.2 조건 3)"
+      "note": "§6.2 조건 3 — 랭킹 1위 증거가 미해결 충돌에 걸렸는데 보류하지 않음"
+    },
+    {
+      "file": "invalid.signal-null-without-warning.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A17",
+      "note": "신호를 null 로 두고 SIGNAL_UNMEASURED 경고를 내지 않음 — 미측정을 조용히 숨김"
+    },
+    {
+      "file": "invalid.trigger-dangling.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A18",
+      "note": "경고 trigger 가 존재하지 않는 evidence id 를 가리킴"
     }
   ]
 }
