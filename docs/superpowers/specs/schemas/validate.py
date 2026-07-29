@@ -12,6 +12,7 @@
 import json
 import pathlib
 import sys
+from datetime import datetime
 
 from jsonschema import Draft202012Validator
 
@@ -87,11 +88,16 @@ def cross_field_errors(d):
     coverage = d.get("coverage") if isinstance(d.get("coverage"), dict) else {}
     audit = d.get("audit") if isinstance(d.get("audit"), dict) else {}
 
-    ev_ids = [e["id"] for e in evidence if "id" in e]
-    sources = {e["source"] for e in evidence if "source" in e}
-    warns = {(w["code"], w["trigger"]) for w in warnings_
-             if "code" in w and "trigger" in w}
-    codes = {w["code"] for w in warnings_ if "code" in w}
+    def _s(v):
+        """해시 가능한 문자열만 통과. 타입 위반은 스키마(A1)의 몫이며,
+        여기서 TypeError 로 죽으면 나머지 규칙과 나머지 픽스처를 전부 놓친다."""
+        return v if isinstance(v, str) else None
+
+    ev_ids = [x for x in (_s(e.get("id")) for e in evidence) if x is not None]
+    sources = {x for x in (_s(e.get("source")) for e in evidence) if x is not None}
+    warns = {(_s(w.get("code")), _s(w.get("trigger"))) for w in warnings_
+             if _s(w.get("code")) and _s(w.get("trigger"))}
+    codes = {x for x in (_s(w.get("code")) for w in warnings_) if x is not None}
 
     # A5 — coverage[X]=present ⟺ source=X 증거가 존재
     def _a5():
@@ -99,6 +105,22 @@ def cross_field_errors(d):
             if (state == "present") != (cls in sources):
                 errs.append(f"A5: coverage.{cls}={state} 인데 해당 소스 증거 존재={cls in sources}")
     rule(_a5)
+
+    # A1 — 스키마 메타 규칙 중 확인기가 보강해야 하는 부분: 달력 유효성.
+    #      draft 2020-12 의 format 은 기본이 annotation 이고 pattern 은 자릿수·범위까지만
+    #      막으므로(2026-02-30 통과), 실재하는 날짜인지는 여기서 확인한다.
+    def _a1_dates():
+        spots = [("audit.createdAt", audit.get("createdAt"))]
+        spots += [(f"{e.get('id')}.ref.observedAt", (e.get("ref") or {}).get("observedAt"))
+                  for e in evidence]
+        for label, v in spots:
+            if not isinstance(v, str):
+                continue
+            try:
+                datetime.fromisoformat(v.replace("Z", "+00:00"))
+            except ValueError:
+                errs.append(f"A1: {label} 이 실재하지 않는 시각 '{v}'")
+    rule(_a1_dates)
 
     # A19 — id 는 응답 내에서 유일해야 한다. §2.3 은 "응답 내 유일"이라 적어두었지만
     #       어디서도 강제하지 않았다. 중복 id 는 경고 하나가 여러 대상을 충족시키는
