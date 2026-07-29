@@ -286,10 +286,40 @@ def cross_field_errors(d):
     return errs
 
 
+def manifest_errors():
+    """manifest 자체의 무결성. 통제값이 아닌 expect/enforcedBy 는 오타여도
+    우연히 실제 결과와 맞아떨어져 통과할 수 있으므로 먼저 거른다."""
+    errs = []
+    seen = set()
+    for i, c in enumerate(MANIFEST["cases"]):
+        where = c.get("file", f"[{i}]")
+        if c.get("expect") not in ("valid", "invalid"):
+            errs.append(f"{where}: expect 는 valid|invalid 여야 함 (실제 {c.get('expect')!r})")
+        if c.get("file") in seen:
+            errs.append(f"{where}: 중복 등록")
+        seen.add(c.get("file"))
+        if not (HERE / "examples" / str(c.get("file"))).exists():
+            errs.append(f"{where}: 파일이 존재하지 않음")
+        if c.get("expect") == "invalid":
+            if c.get("enforcedBy") not in ("schema", "validator"):
+                errs.append(f"{where}: enforcedBy 는 schema|validator 여야 함 (실제 {c.get('enforcedBy')!r})")
+            rule = c.get("rule", "")
+            if not (isinstance(rule, str) and rule.startswith("A")
+                    and rule[1:].isdigit() and 1 <= int(rule[1:]) <= MAX_RULE):
+                errs.append(f"{where}: rule 은 A1~A{MAX_RULE} 여야 함 (실제 {rule!r})")
+            if not c.get("expectedError"):
+                errs.append(f"{where}: expectedError 가 비어 있음")
+    return errs
+
+
 def main():
     Draft202012Validator.check_schema(SCHEMA)
     validator = Draft202012Validator(SCHEMA)
     mismatches = 0
+
+    for e in manifest_errors():
+        mismatches += 1
+        print(f"FAIL manifest 무결성 — {e}")
 
     for case in MANIFEST["cases"]:
         doc = json.loads((HERE / "examples" / case["file"]).read_text())
