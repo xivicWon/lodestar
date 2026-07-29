@@ -322,7 +322,10 @@ def main():
         print(f"FAIL manifest 무결성 — {e}")
 
     for case in MANIFEST["cases"]:
-        doc = json.loads((HERE / "examples" / case["file"]).read_text())
+        path = HERE / "examples" / str(case.get("file"))
+        if not path.exists():
+            continue  # manifest 무결성에서 이미 보고했다. 여기서 죽으면 나머지 case 를 못 본다.
+        doc = json.loads(path.read_text())
         schema_errs = sorted(validator.iter_errors(doc), key=lambda e: list(e.path))
         cross_errs = cross_field_errors(doc)
         accepted = not schema_errs and not cross_errs
