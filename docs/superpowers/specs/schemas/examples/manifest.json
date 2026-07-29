@@ -22,6 +22,14 @@
       "note": "측정하지 못한 신호를 0으로 위장하지 않고 null + SIGNAL_UNMEASURED 로 표현한 응답(A17 양성)"
     },
     {
+      "file": "invalid.wrong-schema-version.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A2",
+      "expectedError": "was expected",
+      "note": "다른 계약 버전을 v0 자리에 넣은 경우 — 버전이 맞지 않으면 그 응답을 어느 계약으로 평가할지 결정할 수 없다"
+    },
+    {
       "file": "invalid.reason-no-basis.json",
       "expect": "invalid",
       "enforcedBy": "schema",

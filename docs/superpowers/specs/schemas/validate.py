@@ -18,6 +18,8 @@ from jsonschema import Draft202012Validator
 HERE = pathlib.Path(__file__).parent
 SCHEMA = json.loads((HERE / "answer-shape.v0.schema.json").read_text())
 MANIFEST = json.loads((HERE / "examples" / "manifest.json").read_text())
+# 계약 §4 가 정의한 불변식 개수 — 규칙이 늘면 여기도 올린다(커버리지 검사에 쓰인다).
+MAX_RULE = 19
 
 # coverage 클래스 -> absent 일 때 요구되는 경고 코드 (계약 §2.6)
 WARN_FOR_ABSENT = {
@@ -274,6 +276,14 @@ def main():
 
         mismatches += not ok
         print(f"{'OK  ' if ok else 'FAIL'} {case['file']:<48} {detail}")
+
+    # 규칙 커버리지 — 불변식이 하나라도 음성 픽스처 없이 남으면 그 규칙은
+    # 구현되지 않거나 나중에 제거돼도 이 스위트가 통과한다.
+    covered = {c["rule"] for c in MANIFEST["cases"] if c["expect"] == "invalid"}
+    uncovered = [f"A{i}" for i in range(1, MAX_RULE + 1) if f"A{i}" not in covered]
+    if uncovered:
+        mismatches += 1
+        print(f"FAIL 규칙 커버리지 — 음성 픽스처가 없는 불변식: {uncovered}")
 
     print(f"\n{len(MANIFEST['cases'])} cases, {mismatches} mismatches")
     return 1 if mismatches else 0
