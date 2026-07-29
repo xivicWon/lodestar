@@ -190,6 +190,14 @@
       "note": "§6.2 조건 3 — 미해결(NEEDS_CHECK) 충돌이 있는데 보류하지 않음"
     },
     {
+      "file": "invalid.abstain-trigger-unrelated.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A16",
+      "expectedError": "가 성립한 조건",
+      "note": "ABSTAIN 의 trigger 가 실재하는 증거 id 라 A18 은 통과하지만 보류 사유를 가리키지 않는다 — 보류 원인이 기계적으로 집계되지 않는다"
+    },
+    {
       "file": "invalid.signal-null-without-warning.json",
       "expect": "invalid",
       "enforcedBy": "validator",

@@ -6,3 +6,7 @@ build/
 .DS_Store
 .superpowers/
 data/
+
+# Python 바이트코드 (참조 확인기 실행 시 생성)
+__pycache__/
+*.pyc

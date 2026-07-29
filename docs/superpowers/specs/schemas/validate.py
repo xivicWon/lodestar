@@ -57,22 +57,30 @@ def cross_field_errors(d):
         except (KeyError, TypeError, AttributeError, IndexError):
             pass  # 구조 자체의 결손은 스키마(A1)가 잡는다
 
-    ev_ids = [e["id"] for e in d.get("evidence", [])]
-    sources = {e["source"] for e in d.get("evidence", []) if "source" in e}
-    warns = {(w["code"], w["trigger"]) for w in d.get("warnings", [])
+    # 파생값 구성도 방어적으로 — 여기서 예외가 나면 규칙 격리가 무의미해지고
+    # 실행 전체가 죽어 나머지 픽스처까지 검증할 수 없게 된다.
+    evidence = [e for e in d.get("evidence", []) if isinstance(e, dict)]
+    warnings_ = [w for w in d.get("warnings", []) if isinstance(w, dict)]
+    conflicts = [c for c in d.get("conflicts", []) if isinstance(c, dict)]
+    coverage = d.get("coverage") if isinstance(d.get("coverage"), dict) else {}
+    audit = d.get("audit") if isinstance(d.get("audit"), dict) else {}
+
+    ev_ids = [e["id"] for e in evidence if "id" in e]
+    sources = {e["source"] for e in evidence if "source" in e}
+    warns = {(w["code"], w["trigger"]) for w in warnings_
              if "code" in w and "trigger" in w}
-    codes = {w["code"] for w in d.get("warnings", []) if "code" in w}
+    codes = {w["code"] for w in warnings_ if "code" in w}
 
     # A5 — coverage[X]=present ⟺ source=X 증거가 존재
     def _a5():
-        for cls, state in d["coverage"].items():
+        for cls, state in coverage.items():
             if (state == "present") != (cls in sources):
                 errs.append(f"A5: coverage.{cls}={state} 인데 해당 소스 증거 존재={cls in sources}")
     rule(_a5)
 
     # A6 — conflicts[].between ⊆ evidence[].id
     def _a6():
-        for c in d["conflicts"]:
+        for c in conflicts:
             for ref in c["between"]:
                 if ref not in ev_ids:
                     errs.append(f"A6: conflict {c['id']} 가 없는 증거 {ref} 를 참조")
@@ -80,7 +88,7 @@ def cross_field_errors(d):
 
     # A11 — 부재·미수집 클래스마다, 미해결 충돌마다 대응 경고(+trigger)
     def _a11():
-        for cls, state in d["coverage"].items():
+        for cls, state in coverage.items():
             if state not in ("present", "absent", "not_collected"):
                 continue  # 구조적으로 잘못된 값은 스키마(A4)의 몫 — 여기서 이중 보고하지 않는다
             absent_warned = (WARN_FOR_ABSENT[cls], f"coverage.{cls}") in warns
@@ -94,8 +102,8 @@ def cross_field_errors(d):
                 errs.append(f"A11: {WARN_FOR_ABSENT[cls]} 경고가 있는데 coverage.{cls}={state}")
             if state != "not_collected" and nc_warned:
                 errs.append(f"A11: NOT_COLLECTED(coverage.{cls}) 경고가 있는데 coverage.{cls}={state}")
-        needs_check = {c["id"] for c in d["conflicts"] if c["status"] == "NEEDS_CHECK"}
-        warned_conflicts = {w["trigger"] for w in d["warnings"] if w["code"] == "CONFLICT_UNRESOLVED"}
+        needs_check = {c["id"] for c in conflicts if c["status"] == "NEEDS_CHECK"}
+        warned_conflicts = {w["trigger"] for w in warnings_ if w["code"] == "CONFLICT_UNRESOLVED"}
         for cid in sorted(needs_check - warned_conflicts):
             errs.append(f"A11: 미해결 충돌 {cid} 에 대한 경고 없음")
         for cid in sorted(warned_conflicts - needs_check):
@@ -104,7 +112,7 @@ def cross_field_errors(d):
 
     # A13 — evidence[].id ⊆ audit.evidenceIds (등호 아님: 탈락 후보는 정상)
     def _a13():
-        missing = [i for i in ev_ids if i not in d["audit"]["evidenceIds"]]
+        missing = [i for i in ev_ids if i not in audit["evidenceIds"]]
         if missing:
             errs.append(f"A13: audit.evidenceIds 에 없는 증거 {missing}")
     rule(_a13)
@@ -112,13 +120,13 @@ def cross_field_errors(d):
     # A14 — 반대 증거는 '어떤 충돌이든 하나 있으면' 되는 게 아니라,
     #       그 증거 자신이 supports 증거와 함께 충돌로 연결돼야 한다.
     def _a14():
-        supports = {e["id"] for e in d["evidence"] if e["stance"] == "supports"}
-        for e in d["evidence"]:
+        supports = {e["id"] for e in evidence if e["stance"] == "supports"}
+        for e in evidence:
             if e["stance"] != "contradicts":
                 continue
             linked = any(
                 e["id"] in c["between"] and (set(c["between"]) & supports)
-                for c in d["conflicts"]
+                for c in conflicts
             )
             if not linked:
                 errs.append(f"A14: 반대 증거 {e['id']} 가 supports 증거와 함께 충돌로 연결되지 않음")
@@ -127,8 +135,8 @@ def cross_field_errors(d):
     # A15 — 상한 적용 시 사유를 audit 에 명시하고, 그 사유가 통제어휘이며 실제 경고로 존재해야 한다.
     #       스키마와 별개로 여기서도 완결적으로 검사한다 — C0 가 교차 규칙만 이식해도 구멍이 없어야 한다.
     def _a15():
-        reasons = d["audit"].get("ceilingReasons", [])
-        if d["audit"]["ceilingApplied"]:
+        reasons = audit.get("ceilingReasons", [])
+        if audit["ceilingApplied"]:
             if not reasons:
                 errs.append("A15: ceilingApplied=true 인데 ceilingReasons 가 비어 있음")
             for r in reasons:
@@ -144,11 +152,11 @@ def cross_field_errors(d):
     def _a17():
         null_signals = {
             f"{e['id']}.signals.{name}"
-            for e in d["evidence"]
+            for e in evidence
             for name, v in e["signals"].items()
             if v is None
         }
-        unmeasured_warned = {w["trigger"] for w in d["warnings"] if w["code"] == "SIGNAL_UNMEASURED"}
+        unmeasured_warned = {w["trigger"] for w in warnings_ if w["code"] == "SIGNAL_UNMEASURED"}
         for miss in sorted(null_signals - unmeasured_warned):
             errs.append(f"A17: {miss} 가 null 인데 SIGNAL_UNMEASURED 경고 없음")
         for extra in sorted(unmeasured_warned - null_signals):
@@ -157,11 +165,11 @@ def cross_field_errors(d):
 
     # A18 — trigger 가 실재 대상을 가리키는가
     def _a18():
-        conflict_ids = {c["id"] for c in d["conflicts"]}
-        for w in d["warnings"]:
+        conflict_ids = {c["id"] for c in conflicts}
+        for w in warnings_:
             code, trg = w["code"], w["trigger"]
             if trg.startswith("coverage."):
-                ok = trg.split(".", 1)[1] in d["coverage"]
+                ok = trg.split(".", 1)[1] in coverage
             elif code == "SIGNAL_UNMEASURED":
                 ok = trg.rsplit(".signals.", 1)[0] in ev_ids
             elif code == "CONFLICT_UNRESOLVED":
@@ -178,13 +186,28 @@ def cross_field_errors(d):
     def _a16():
         core = CORE_CLASSES[d["task"]["intent"]]
         triggers = [
-            not d["evidence"],
-            all(d["coverage"][c] != "present" for c in core),
-            any(c["status"] == "NEEDS_CHECK" for c in d["conflicts"]),
+            not evidence,
+            all(coverage[c] != "present" for c in core),
+            any(c["status"] == "NEEDS_CHECK" for c in conflicts),
         ]
-        if any(triggers) and "ABSTAIN" not in codes:
-            fired = [i + 1 for i, t in enumerate(triggers) if t]
+    
+        fired = [i + 1 for i, x in enumerate(triggers) if x]
+        if fired and "ABSTAIN" not in codes:
             errs.append(f"A16: abstention 조건 {fired} 성립인데 ABSTAIN 경고 없음")
+        elif fired:
+            # 보류 '사유'가 기계적으로 식별돼야 한다 — 관계없는 id 를 trigger 로 써서는 안 된다.
+            valid_targets = set()
+            if 1 in fired:
+                valid_targets.add("evidence")
+            if 2 in fired:
+                valid_targets |= {f"coverage.{c}" for c in core if coverage.get(c) != "present"}
+            if 3 in fired:
+                valid_targets |= {c["id"] for c in conflicts if c["status"] == "NEEDS_CHECK"}
+            got = {w["trigger"] for w in warnings_ if w["code"] == "ABSTAIN"}
+            if not (got & valid_targets):
+                errs.append(f"A16: ABSTAIN 의 trigger {sorted(got)} 가 성립한 조건 {fired} "
+                            f"중 무엇도 가리키지 않음 (유효: {sorted(valid_targets)})")
+
     rule(_a16)
 
     return errs

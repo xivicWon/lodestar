@@ -129,7 +129,7 @@ L0 수집(#88) → L1 사실(#89) → L2 관계(#90) → L3 지식·이력(#91) 
 | `STALE_EVIDENCE` | 근거 노후 (임계값 §6.3) | `<evidenceId>` |
 | `SIGNAL_UNMEASURED` | 신호값이 `null` — 0으로 채우는 것의 **유일한 대체 경로** | `<evidenceId>.signals.<name>` |
 | `DEGRADED_SOURCE` | 하위 레이어 실패 전파 (I1 §3.3) | `<evidenceId>` |
-| `ABSTAIN` | 답변 보류 (§6) | `evidence` 또는 `<conflictId>` |
+| `ABSTAIN` | 답변 보류 (§6) | **성립한 조건을 가리킨다** — 조건 1이면 `evidence`, 조건 2면 `coverage.<key>`(부재한 핵심 클래스), 조건 3이면 `<conflictId>` |
 
 ### 2.7 `audit`
 
@@ -205,7 +205,7 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 | **A13** | `evidence[].id` **⊆** `audit.evidenceIds` (등호 아님 — 탈락 후보가 더 있는 것은 정상, §2.7) | validator | 감사 로그 불완전 |
 | **A14** | 모든 `contradicts` 증거는 **자기 자신이** 어떤 `conflicts[].between`에 들어 있고, 그 충돌이 `supports` 증거도 함께 참조한다. "충돌이 하나라도 있으면 통과"가 아니다 | validator | **충돌 미탐지 = 거짓 확신** · 반대 증거가 어디에도 연결되지 않음 |
 | **A15** | `ceilingApplied=true` ⟺ `ceilingReasons`가 비어있지 않고, 그 모든 코드가 **상한 사유 통제어휘**(`DEGRADED_SOURCE`·`CONFLICT_UNRESOLVED`·`NOT_COLLECTED`·`NO_*`)에 속하며 **실제 `warnings`에 존재**한다. `false`면 필드를 두지 않는다 | schema + validator | 상한 은폐 · 사유를 사후에 지어냄 (I1 §3.3) |
-| **A16** | §6.2의 abstention 조건 1~3(근거 0건 · 핵심 클래스 부재 · **미해결 충돌 존재**) 중 하나라도 성립하면 `ABSTAIN` 경고가 존재한다 | validator | 근거 없이 단정 |
+| **A16** | §6.2의 abstention 조건 1~3(근거 0건 · 핵심 클래스 부재 · 미해결 충돌 존재) 중 하나라도 성립하면 `ABSTAIN` 경고가 존재하고, 그 **`trigger`가 성립한 조건을 실제로 가리킨다**(§2.6) | validator | 근거 없이 단정 · 보류 사유를 기계적으로 집계할 수 없음 |
 | **A17** | `signals`의 값이 `null`(미측정)이면 `SIGNAL_UNMEASURED` 경고가 `trigger="<evidenceId>.signals.<name>"` 로 존재하고, 그 역도 성립한다 | validator | 미측정을 조용히 숨김 |
 | **A18** | 모든 `warnings[].trigger`가 실재 대상을 가리킨다 — `coverage.<key>`는 해당 키, 그 외는 실재하는 `evidence[].id`·`conflicts[].id`·`<evidenceId>.signals.<name>`. **예약 리터럴 `evidence`는 항상 유효**하다(근거 0건 abstention은 가리킬 개별 증거가 없으므로 배열 자체를 가리킨다) | validator | 경고가 아무것도 가리키지 않음 |
 
@@ -356,6 +356,7 @@ I1 §7과 동일하며, 추가로:
 | `trigger` 형식 | 느슨한 정규식(`foo` 허용) | code별 형식 고정 | 임의 문자열을 허용하면 `trigger` 필수화의 의미가 사라진다 |
 | A16 표 렌더링 | 빈 줄로 표 밖에 표시 | 표 내부 행 | 서식 오류 |
 | abstention 조건 3 | "충돌이 `evidence[0]`을 포함" | **"`NEEDS_CHECK` 충돌 존재"** | 랭킹이 중요도의 대리값이 되지 못했다 — 자체 정상 픽스처에서 질문 자체를 다투는 충돌이 하위 순위라는 이유로 비보류 판정됐다. 비보류 경로는 `RESOLVED`/`COEXIST`로 이미 존재한다 |
+| `ABSTAIN` trigger | `evidence` 또는 `<conflictId>` | **성립한 조건을 가리킬 것**(+`coverage.<key>`) | 핵심 클래스 부재로 보류할 때 원인을 가리킬 어휘가 없었고, 무관한 증거 id 로도 통과했다 |
 | A14 | "충돌이 하나라도 있으면 통과" | 반대 증거 **자신이** supports 와 함께 연결 | 반대 증거와 무관한 충돌 하나로 통과할 수 있었다 |
 | `validate.py` 예외 처리 | 함수 전체를 `try` | **규칙별 격리** | 구조 결손으로 예외가 나면 그 전에 검출된 위반까지 전부 버려졌다 |
 | `schemaVersion` 상승 대상 | 필드 구조 변경 | **유효성·의미를 바꾸는 모든 변경** | 어휘·제약·A규칙이 바뀌어도 같은 v0 로 식별됐다 |
@@ -394,8 +395,8 @@ I1 §7과 동일하며, 추가로:
 - [x] abstention 형식·발동 조건 확정, 임계값은 비준으로 위임 → §6
 - [x] 게이트 / 잠정 지표 분리 → §7
 - [x] #99(I2)에 추가 요구되는 gold 케이스 명시 → §8
-- [x] 검증 픽스처(정상 3 + 위반 26) 커밋 + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
-- [x] 픽스처 적합성 확인기 커밋(29/29 재현 가능, 규칙 동일성·검출 계층·기대 메시지까지 대조) → `schemas/validate.py`
+- [x] 검증 픽스처(정상 3 + 위반 27) 커밋 + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
+- [x] 픽스처 적합성 확인기 커밋(30/30 재현 가능, 규칙 동일성·검출 계층·기대 메시지까지 대조) → `schemas/validate.py`
 - [x] 하위 이슈 분할안 → §9
 
 **다음 착수: C0 검증기 (§9)** — 픽스처 스위트와 참조 규칙 구현이 이미 있으므로 실패 테스트부터 시작할 수 있다.
