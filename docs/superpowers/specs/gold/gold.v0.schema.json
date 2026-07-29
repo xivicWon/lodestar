@@ -323,6 +323,32 @@
               }
             }
           }
+        },
+        {
+          "description": "역방향 제약 — 마스킹 판정값은 MASK_SPAN 에만 붙는다. 없으면 TABLE·LINK 같은 비-PII 항목이 MASKED 를 달 수 있고, 그 항목은 어느 채점에도 잡히지 않는 사각지대가 된다.",
+          "if": {
+            "properties": {
+              "expect": {
+                "enum": [
+                  "MASKED",
+                  "NOT_MASKED"
+                ]
+              }
+            },
+            "required": [
+              "expect"
+            ]
+          },
+          "then": {
+            "properties": {
+              "type": {
+                "const": "MASK_SPAN"
+              },
+              "track": {
+                "const": "pii"
+              }
+            }
+          }
         }
       ]
     }

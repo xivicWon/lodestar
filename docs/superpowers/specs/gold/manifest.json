@@ -176,40 +176,44 @@
   ],
   "goldFiles": [
     {
-      "path": "gold.v0.schema.json",
-      "sha256": "sha256:6fcaf7d62eda8d3570bf27dfb8dfd5e8ce01a9906224b8a4a4ec1ce8965079a2"
-    },
-    {
-      "path": "l1/db.json",
-      "sha256": "sha256:b6bfad274d85c5c73a4f52d855de6c0338468f38244b50dced1c6e4ce710d55b"
-    },
-    {
-      "path": "l1/code.json",
-      "sha256": "sha256:999b2e8f11c55d66019cccaf7e005d7747bdb9ce5298733419cbb5f7fd823607"
-    },
-    {
-      "path": "l2/links.json",
-      "sha256": "sha256:943446ff4f627bfebc46774c2be24001757975d36cf5324f86d88b0e25060bd4"
-    },
-    {
-      "path": "l3/claims.json",
-      "sha256": "sha256:225686412a03515355825f1a03e4d9638250318d56df03b26e56a3d0d9c78731"
-    },
-    {
       "path": "evl/questions.json",
-      "sha256": "sha256:af600169606c5353eb29ed625f207b4483f61877401d42600ab04653e75295c3"
-    },
-    {
-      "path": "pii.json",
-      "sha256": "sha256:b6a3fcadd2f588c9b41223f755c9452d0ab104a3092349b6c20c51a248200d49"
+      "sha256": "sha256:b65c7fc5a02a53e0f1bf24877646ab2960c222c729bc4a91a35b83641e0f5f04"
     },
     {
       "path": "failures.json",
       "sha256": "sha256:8e52b4b058b6d7b62ae49db7a8b2d134a9ee8bc97219ac2d3d61ce3ae532fb55"
     },
     {
+      "path": "gold.docs.v0.schema.json",
+      "sha256": "sha256:9ab786f0c3a89151847abe86e8994993981e688c869e571915b92af62f31b494"
+    },
+    {
+      "path": "gold.v0.schema.json",
+      "sha256": "sha256:d12b35f59f728999fa0bd35f4ed88919242c43435888a0c2c8662cdda258594e"
+    },
+    {
+      "path": "l1/code.json",
+      "sha256": "sha256:c8d35d2eb879bccdc08c596bd7204971f732460b51358e85080ca12f2833c994"
+    },
+    {
+      "path": "l1/db.json",
+      "sha256": "sha256:b6bfad274d85c5c73a4f52d855de6c0338468f38244b50dced1c6e4ce710d55b"
+    },
+    {
+      "path": "l2/links.json",
+      "sha256": "sha256:2860a3f7b1a6dd5f366c9a6d6d513851a3a12fa2fded00f4cdba60bd894020b7"
+    },
+    {
+      "path": "l3/claims.json",
+      "sha256": "sha256:225686412a03515355825f1a03e4d9638250318d56df03b26e56a3d0d9c78731"
+    },
+    {
+      "path": "pii.json",
+      "sha256": "sha256:b6a3fcadd2f588c9b41223f755c9452d0ab104a3092349b6c20c51a248200d49"
+    },
+    {
       "path": "validate_gold.py",
-      "sha256": "sha256:030f90d3f05428b81fd862614729c986b7b73ee1d161c93df5d6516b24cb0f87"
+      "sha256": "sha256:e3c0a062f7919ae086c0497d90854f4096ef6bb989d0a9833503b7432ded1637"
     }
   ],
   "fixtures": [
@@ -275,5 +279,5 @@
     }
   ],
   "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
-  "goldSetId": "gold-set/v0+f342e9fa8fc7"
+  "goldSetId": "gold-set/v0+ddd5abfb8976"
 }

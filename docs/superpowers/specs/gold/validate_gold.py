@@ -21,6 +21,7 @@ from jsonschema import Draft202012Validator
 HERE = pathlib.Path(__file__).parent
 REPO = HERE.parents[3]
 SCHEMA = json.loads((HERE / "gold.v0.schema.json").read_text())
+DOC_SCHEMA = json.loads((HERE / "gold.docs.v0.schema.json").read_text())
 MANIFEST = json.loads((HERE / "manifest.json").read_text())
 CONTRACT_DOC = (HERE.parent / "2026-07-29-m0-i2-gold-set.md").read_text()
 
@@ -47,8 +48,15 @@ def rule(rid):
     """규칙 하나를 실행하고, 실행됐다는 사실을 기록한다(커버리지 과대보고 방지)."""
     def deco(fn):
         covered.add(rid)
-        for msg in fn() or []:
-            errors.append(f"[{rid}] {msg}")
+        # 규칙이 예외로 죽으면 그 규칙의 결과가 사라질 뿐 아니라 **뒤의 규칙이
+        # 아예 실행되지 않는다.** 손상된 gold 일수록 예외가 잘 나므로, 가장 검사가
+        # 필요한 순간에 확인기가 침묵하게 된다. 예외도 그 규칙의 실패로 기록한다.
+        try:
+            for msg in fn() or []:
+                errors.append(f"[{rid}] {msg}")
+        except Exception as e:
+            errors.append(f"[{rid}] 규칙 실행 중 예외 — 입력이 규칙의 전제를 깨뜨렸다: "
+                          f"{type(e).__name__}: {e}")
         return fn
     return deco
 
@@ -59,6 +67,37 @@ def sha(path):
 
 def load(rel):
     return json.loads((HERE / rel).read_text())
+
+
+_BLOB = {}
+
+
+def blob(sid):
+    """고정된 원본 바이트를 돌려준다 — **작업 트리가 아니라 고정 revision 에서** 읽는다.
+
+    gold 는 특정 revision 의 원본에 대한 정답이다. 확인기가 작업 트리를 읽으면
+    검사 결과가 체크아웃 상태에 따라 달라진다: 원본이 뒤에서 바뀌면 틀린 gold 가
+    통과하고, 브랜치를 옮기면 맞는 gold 가 실패한다. 어느 쪽이든 '검증 통과' 가
+    '고정 revision 과 일치' 를 뜻하지 않게 되므로 확인기 전체의 의미가 사라진다.
+
+    픽스처(origin=fixture)는 revision 이 아니라 해시로 고정되므로 디스크에서
+    읽되, 그 내용의 무결성은 G4 가 매니페스트 해시로 따로 보장한다.
+    """
+    if sid in _BLOB:
+        return _BLOB[sid]
+    s = SOURCES[sid]
+    if s.get("origin") == "repo":
+        r = subprocess.run(["git", "show", f"{s['revision']}:{s['path']}"],
+                           cwd=REPO, capture_output=True, check=True)
+        data = r.stdout
+    else:
+        data = (REPO / s["path"]).read_bytes()
+    _BLOB[sid] = data
+    return data
+
+
+def blob_lines(sid):
+    return blob(sid).decode().splitlines()
 
 
 def _digest(lines):
@@ -103,10 +142,21 @@ SOURCES = {s["sourceId"]: s for s in MANIFEST["pinnedSources"]}
 # --- G1 스키마 --------------------------------------------------------------
 @rule("G1")
 def _g1():
-    v = Draft202012Validator(SCHEMA)
-    for rel in ITEM_FILES:
+    # 항목 파일과 문서형 파일은 구조가 다르지만 **둘 다** 스키마 검사를 받는다.
+    # 문서형을 빼두면 교차 필드 규칙이 손으로 짚는 필드만 검사되어, 오타 난 키는
+    # 조용히 무시되고 필수 필드 누락은 구조화된 오류 대신 예외가 된다.
+    item_v = Draft202012Validator(SCHEMA)
+    # 문서형 스키마는 oneOf 로 세 갈래라 최상위 오류가 "셋 다 안 맞음" 으로만 나온다.
+    # 어느 갈래인지는 파일이 정해져 있으므로 해당 $defs 로 직접 검사해 원인을 보이게 한다.
+    branch = {"l3/claims.json": "l3", "evl/questions.json": "evl", "failures.json": "failures"}
+    doc_v = {k: Draft202012Validator({"$schema": DOC_SCHEMA["$schema"],
+                                      "$defs": DOC_SCHEMA["$defs"],
+                                      "$ref": f"#/$defs/{k}"})
+             for k in set(branch.values())}
+    for rel in ITEM_FILES + OTHER_FILES:
+        v = doc_v[branch[rel]] if rel in branch else item_v
         for e in sorted(v.iter_errors(DOCS[rel]), key=lambda e: list(e.path)):
-            yield f"{rel}: {'/'.join(str(p) for p in e.path)}: {e.message}"
+            yield f"{rel}: {'/'.join(str(x) for x in e.path)}: {e.message}"
 
 
 # --- G2 id 단일 네임스페이스 ------------------------------------------------
@@ -160,7 +210,7 @@ def _g4():
             if rel not in pinned:
                 yield f"고정되지 않은 픽스처: {rel} (I1 §1.3 — fixture hash 없는 실행은 baseline 이 아니다)"
     listed = {e["path"] for e in MANIFEST["goldFiles"]}
-    for rel in ITEM_FILES + OTHER_FILES + ["gold.v0.schema.json"]:
+    for rel in ITEM_FILES + OTHER_FILES + ["gold.v0.schema.json", "gold.docs.v0.schema.json"]:
         if rel not in listed:
             yield f"매니페스트 goldFiles 에서 누락: {rel}"
     # I3 로 넘기는 파생값은 **재계산 가능해야** 한다. 손으로 적어 둔 값이 내용과
@@ -185,16 +235,14 @@ def _g5():
     for sid, s in SOURCES.items():
         if s.get("origin") != "repo":
             continue
-        rev = s["revision"]
         try:
-            blob = subprocess.run(["git", "show", f"{rev}:{s['path']}"], cwd=REPO,
-                                  capture_output=True, check=True).stdout
+            data = blob(sid)
         except (subprocess.CalledProcessError, FileNotFoundError) as e:
             yield f"{sid}: 고정 revision 에서 원본을 읽을 수 없다 ({s['path']}): {e}"
             continue
-        got = "sha256:" + hashlib.sha256(blob).hexdigest()
+        got = "sha256:" + hashlib.sha256(data).hexdigest()
         if got != s["contentHash"]:
-            yield f"{sid}: {rev} 의 실제 해시 {got} ≠ 고정값 {s['contentHash']}"
+            yield f"{sid}: {s['revision']} 의 실제 해시 {got} ≠ 고정값 {s['contentHash']}"
 
 
 # --- G6 항목의 contentHash = 매니페스트의 소스 해시 --------------------------
@@ -249,9 +297,10 @@ def _g7():
 def _g8():
     for it in DOCS["pii.json"]["items"]:
         r = it["ref"]
-        path = REPO / r["locator"].split("#")[0]
+        name = pathlib.Path(r["locator"].split("#")[0]).name
         ln = int(re.search(r"L(\d+)", r["locator"]).group(1))
-        lines = path.read_text().splitlines()
+        lines = blob_lines(r["sourceId"])
+        path = type("P", (), {"name": name})
         # 범위를 먼저 본다 — 여기서 색인 예외가 나면 확인기가 죽고, 죽은 확인기의
         # 침묵은 '문제 없음' 과 구분되지 않는다.
         if ln > len(lines):
@@ -263,8 +312,7 @@ def _g8():
 # --- G9 L1 DB: 인용한 행에 그 이름이 실제로 있다 -----------------------------
 @rule("G9")
 def _g9():
-    src = SOURCES["db:legacy-sample"]
-    lines = (REPO / src["path"]).read_text().splitlines()
+    lines = blob_lines("db:legacy-sample")
     for it in DOCS["l1/db.json"]["items"]:
         if it["expect"] != "PRESENT":
             continue
