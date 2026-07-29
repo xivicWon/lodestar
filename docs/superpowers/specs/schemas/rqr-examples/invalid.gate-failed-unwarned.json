@@ -57,7 +57,7 @@
       "value": 0.93,
       "note": "Gold Set 대비 명시 사실 재현율"
     },
-    "coverage": {
+    "scopeCoverage": {
       "status": "MEASURED",
       "value": 0.9655,
       "note": "counts.output/counts.input = 28/29 — 미지원 뷰 1건 제외"
@@ -140,7 +140,7 @@
       "id": "gate-l1-source-location",
       "name": "L1 sourceLocation·revision 연결률",
       "required": 1.0,
-      "observed": 1.0,
+      "observed": 0.94,
       "status": "FAIL"
     },
     {
@@ -173,8 +173,10 @@
     "deltas": []
   },
   "verdict": {
-    "value": "PASS",
-    "haltRules": [],
+    "value": "BLOCKED",
+    "haltRules": [
+      "H3"
+    ],
     "restrictions": []
   },
   "featureJudgments": [

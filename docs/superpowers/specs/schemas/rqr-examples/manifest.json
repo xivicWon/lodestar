@@ -1,6 +1,7 @@
 {
-  "$comment": "Run Quality Report v0 검증 픽스처. 계약 §4(R1~R19)의 규칙 ID 로 연결한다. invalid 픽스처는 정상 픽스처에서 **단일 규칙만** 위반하도록 순수 파생했다 — 복수 위반이면 목표 규칙의 검사 누락을 다른 오류가 가린다. 검사: python3 ../validate_rqr.py",
-  "caseCount": 33,
+  "$comment": "Run Quality Report v0 검증 픽스처. 계약 §4(R1~R20)의 규칙 ID 로 연결한다. invalid 픽스처는 정상 픽스처에서 **단일 규칙만** 위반하도록 순수 파생했다 — 복수 위반이면 목표 규칙의 검사 누락을 다른 오류가 가린다. 검사: python3 ../validate_rqr.py",
+  "ruleRange": "R1~R20",
+  "caseCount": 34,
   "cases": [
     {
       "file": "template.blank.json",
@@ -253,6 +254,14 @@
       "enforcedBy": "validator",
       "expectedError": "산식 output/input",
       "note": "coverage 의 분모가 보고서마다 달라지면 레이어 간·기준선 대비 비교가 성립하지 않는다"
+    },
+    {
+      "file": "invalid.empty-run-scope-coverage.json",
+      "expect": "invalid",
+      "rule": "R20",
+      "enforcedBy": "validator",
+      "expectedError": "counts.input=0 인데 scopeCoverage.status=MEASURED",
+      "note": "대상이 없는 실행의 0/0 을 0.0 이나 1.0 으로 적으면 '아무것도 못 했다' 와 '다 했다' 가 같은 자리에 온다"
     }
   ]
 }

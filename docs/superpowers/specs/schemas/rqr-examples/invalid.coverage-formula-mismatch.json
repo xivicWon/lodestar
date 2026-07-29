@@ -57,7 +57,7 @@
       "value": 0.93,
       "note": "Gold Set 대비 명시 사실 재현율"
     },
-    "coverage": {
+    "scopeCoverage": {
       "status": "MEASURED",
       "value": 0.97,
       "note": "counts.output/counts.input = 28/29 — 미지원 뷰 1건 제외"

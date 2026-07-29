@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run Quality Report v0 픽스처 적합성 확인기 (참조 구현).
 
-목적은 **커밋된 스키마·템플릿·픽스처가 계약 문서(§4 R1~R19)와 일치함을 누구나
+목적은 **커밋된 스키마·템플릿·픽스처가 계약 문서(§4 R1~R20)와 일치함을 누구나
 재현할 수 있게 하는 것**이다. 제품 검증기가 아니다 — 실행 경로·CI 연결은 각 레이어
 이슈(#88~#91)가 이 규칙들을 백엔드 언어로 옮기면서 한다.
 
@@ -35,7 +35,7 @@ RULE_SCHEMA_MARKERS = {
     "R5": ["verdict/properties/value/enum"],
 }
 
-METRIC_KEYS = ["precision", "recall", "coverage", "determinism", "provenanceCompleteness"]
+METRIC_KEYS = ["precision", "recall", "scopeCoverage", "determinism", "provenanceCompleteness"]
 COVERAGE_CLASSES = ["code", "issue", "adr", "test", "runtime"]
 # code -> 그 코드가 가리킬 수 있는 trigger 의 종류(R18). 형식은 스키마가, 대상 실재는 여기가 본다.
 TRIGGER_KIND = {
@@ -56,7 +56,7 @@ def _calendar(v):
 
 
 def cross_field_errors(d):
-    """스키마로 표현할 수 없는 교차 필드 불변식. R1(달력·시각 순서)·R2~R4·R6~R19.
+    """스키마로 표현할 수 없는 교차 필드 불변식. R1(달력·시각 순서)·R2~R4·R6~R20.
 
     각 규칙은 **독립적으로** 실행한다. 한 규칙이 구조 결손으로 예외를 내도 이미
     검출된 다른 규칙의 위반이 사라지면 안 된다 — 그러면 복수 위반 픽스처가 단일
@@ -381,15 +381,22 @@ def cross_field_errors(d):
                 errs.append(f"R19: {label} 가 보고서 안에서 중복됨 {dup}")
     rule(_r19)
 
-    # R20 — coverage 는 산식이 있는 값이다: counts.output / counts.input (소수 4자리 반올림 허용).
+    # R20 — scopeCoverage 는 산식이 있는 값이다: counts.output / counts.input.
     #       정의 없이 적힌 비율은 보고서마다 분모가 달라져 비교가 성립하지 않는다.
+    #       스코프에 대상이 없는 실행(input=0)은 비율이 정의되지 않으므로 NOT_APPLICABLE 이다
+    #       — 0/0 을 0.0 이나 1.0 으로 적으면 '아무것도 못 했다' 와 '다 했다' 가 같은 자리에 온다.
     def _r20():
-        cov = metrics["coverage"]
-        if cov["status"] != "MEASURED" or counts["input"] == 0:
+        cov = metrics["scopeCoverage"]
+        if counts["input"] == 0:
+            if cov["status"] != "NOT_APPLICABLE":
+                errs.append(f"R20: counts.input=0 인데 scopeCoverage.status={cov['status']} "
+                            f"(대상이 없는 실행의 비율은 정의되지 않는다 — NOT_APPLICABLE)")
+            return
+        if cov["status"] != "MEASURED":
             return
         expected = counts["output"] / counts["input"]
         if abs(cov["value"] - expected) > COVERAGE_TOLERANCE:
-            errs.append(f"R20: coverage={cov['value']} 가 산식 output/input "
+            errs.append(f"R20: scopeCoverage={cov['value']} 가 산식 output/input "
                         f"({counts['output']}/{counts['input']} = {expected:.4f}) 과 다름")
     rule(_r20)
 
@@ -476,9 +483,13 @@ def fixture_errors(doc):
                 errs.append(f"재현 fixture: reproduces.{k} 가 없음 (어느 실행의 어느 실패인지 불명)")
     elif "reproduces" in doc:
         errs.append("재현 fixture: reproduces 는 {runId, failureId} 객체여야 함")
-    exp = doc.get("expected")
-    if isinstance(exp, dict) and not exp.get("rule"):
-        errs.append("재현 fixture: expected.rule 이 없음 (어느 계약 규칙의 위반인지 불명)")
+    if "expected" in doc:
+        exp = doc["expected"]
+        if not isinstance(exp, dict):
+            errs.append(f"재현 fixture: expected 는 객체여야 함 (실제 {type(exp).__name__}) — "
+                        f"문자열·배열이면 어느 규칙의 무엇이 기대값인지 기계적으로 읽을 수 없다")
+        elif not exp.get("rule"):
+            errs.append("재현 fixture: expected.rule 이 없음 (어느 계약 규칙의 위반인지 불명)")
     return errs
 
 
@@ -543,6 +554,9 @@ def manifest_errors():
         errs.append("manifest: 빈 템플릿 케이스가 없다 (#100 산출물 요구사항)")
     # 총계를 manifest 안에 못박는다 — 계약 문서의 완료조건("N cases")이 인용하는 수이며,
     # 픽스처가 늘거나 줄었는데 문서의 N 이 그대로면 완료조건이 실제와 어긋난다.
+    if MANIFEST.get("ruleRange") != f"R1~R{MAX_RULE}":
+        errs.append(f"manifest: ruleRange {MANIFEST.get('ruleRange')!r} 가 확인기의 규칙 범위 "
+                    f"R1~R{MAX_RULE} 와 다름 (계약 §4 제목·manifest $comment 도 함께 갱신할 것)")
     if MANIFEST.get("caseCount") != len(MANIFEST["cases"]):
         errs.append(f"manifest: caseCount {MANIFEST.get('caseCount')!r} 가 실제 케이스 수 "
                     f"{len(MANIFEST['cases'])} 와 다름 (계약 §4.1·§8 의 'N cases' 도 함께 갱신할 것)")

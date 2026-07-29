@@ -65,7 +65,7 @@
       "value": null,
       "note": "#99 Gold Set 이 아직 없어 재현율을 산출할 수 없다"
     },
-    "coverage": {
+    "scopeCoverage": {
       "status": "MEASURED",
       "value": 0.9896,
       "note": "counts.output/counts.input = 380/384"

@@ -150,8 +150,8 @@
           "summary": { "type": "string", "minLength": 1 },
           "link": {
             "type": "string",
-            "minLength": 1,
-            "description": "실패 사례의 원본 좌표 또는 이슈/로그 링크."
+            "pattern": "^(log|artifact|run|https?)://.+",
+            "description": "그 실패가 **기록된 산출물·로그의 URI**(log:// · artifact:// · run:// · http(s)://). 소스 파일 경로가 아니다 — 코드 위치는 '어디서 났는가' 일 뿐 '그 실행에서 실제로 일어났다' 는 증거가 아니며, 재실행 없이 대조할 수 있는 것은 그 실행이 남긴 기록뿐이다. 코드 위치가 필요하면 재현 fixture 안에 적는다."
           },
           "fixture": {
             "type": "string",
@@ -165,13 +165,13 @@
       "description": "I1 §4가 정의한 지표. 측정하지 못한 지표는 0으로 채우지 않는다 — status 로 구분하고 경고를 낸다(R10).",
       "type": "object",
       "additionalProperties": false,
-      "required": ["precision", "recall", "coverage", "determinism", "provenanceCompleteness"],
+      "required": ["precision", "recall", "scopeCoverage", "determinism", "provenanceCompleteness"],
       "properties": {
         "precision": { "$ref": "#/$defs/measurement" },
         "recall": { "$ref": "#/$defs/measurement" },
-        "coverage": {
+        "scopeCoverage": {
           "$ref": "#/$defs/measurement",
-          "description": "산식 고정: counts.output / counts.input (소수 4자리 반올림 허용 — R20). 실패·제외는 분자에서 빠지고 분모에는 남는다. EVL coverage(클래스 존재/부재)와 다른 값이며 섞지 않는다."
+          "description": "스코프 처리율. 산식 고정: counts.output / counts.input (소수 4자리 반올림 허용 — R20). 실패·제외는 분자에서 빠지고 분모에는 남는다. counts.input = 0(스코프에 대상이 없는 실행)이면 status=NOT_APPLICABLE·value=null 이다(R20). **evl.coverageClasses 와 다른 개념이다** — 이쪽은 '스코프의 몇 %를 처리했나'(비율), 저쪽은 '어떤 소스 클래스를 봤나'(5클래스 체크리스트)다. 이름이 비슷하다는 이유로 한 값에 섞지 않는다."
         },
         "determinism": {
           "$ref": "#/$defs/measurement",
@@ -236,7 +236,7 @@
           }
         },
         "coverageClasses": {
-          "description": "EVL coverage 5클래스 체크리스트. 5개가 정확히 한 번씩 있어야 한다 — 누락하면 '안 본 클래스' 가 조용히 사라진다(R15).",
+          "description": "소스 클래스 커버리지 체크리스트(EVL 계약 §2.5). code·issue·adr·test·runtime 각각을 봤는지·있었는지의 3값 기록이며 **비율이 아니다** — metrics.scopeCoverage(스코프 처리율)와 다른 개념이고 서로 대체하지 않는다. 5개가 정확히 한 번씩 있어야 한다 — 누락하면 '안 본 클래스' 가 조용히 사라진다(R15).",
           "type": "array",
           "items": {
             "type": "object",
@@ -409,7 +409,7 @@
           "message": { "type": "string", "minLength": 1 },
           "trigger": {
             "type": "string",
-            "pattern": "^(run\\.fixtureHash|versions\\.(collector|extractor|model|prompt)|metrics\\.(precision|recall|coverage|determinism|provenanceCompleteness)|evl\\.confidenceCalibration|evl\\.conflictDetection\\.(precision|recall)|gates\\.gate-[A-Za-z0-9][A-Za-z0-9._-]*|baseline|verdict)$",
+            "pattern": "^(run\\.fixtureHash|versions\\.(collector|extractor|model|prompt)|metrics\\.(precision|recall|scopeCoverage|determinism|provenanceCompleteness)|evl\\.confidenceCalibration|evl\\.conflictDetection\\.(precision|recall)|gates\\.gate-[A-Za-z0-9][A-Za-z0-9._-]*|baseline|verdict)$",
             "description": "경고 대상. code 마다 가리킬 수 있는 대상의 종류가 다르며(계약 §3.6) 형식은 여기서, 대상 실재는 검증기가 본다(R18)."
           }
         }

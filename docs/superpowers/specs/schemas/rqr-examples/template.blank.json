@@ -49,7 +49,7 @@
     {
       "id": "<fail-...>",
       "summary": "<무엇이 실패했는가>",
-      "link": "<원본 좌표 또는 이슈/로그 링크>",
+      "link": "<log://... | artifact://... — 실패가 기록된 산출물·로그 URI (소스 경로 아님)>",
       "fixture": "<재현 fixture 경로>"
     }
   ],
@@ -64,10 +64,10 @@
       "value": null,
       "note": "<측정 방법 또는 미측정 사유>"
     },
-    "coverage": {
+    "scopeCoverage": {
       "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>",
       "value": null,
-      "note": "<측정 방법 또는 미측정 사유>"
+      "note": "<counts.output/counts.input · input=0 이면 NOT_APPLICABLE>"
     },
     "determinism": {
       "status": "<MEASURED|NOT_MEASURED|NOT_APPLICABLE>",

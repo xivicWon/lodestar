@@ -22,8 +22,8 @@
       "value": "SchemaToOwlMapper@3c27259"
     },
     "model": {
-      "status": "UNPINNED",
-      "value": null
+      "status": "PINNED",
+      "value": "claude-example@0"
     },
     "prompt": {
       "status": "PINNED",
@@ -57,7 +57,7 @@
     {
       "id": "fail-claim-no-evidence",
       "summary": "AI 의미 추정 Claim 1건이 evidenceIds 없이 생성되어 무효 처리됨 (P1 위반)",
-      "link": "backend/src/main/kotlin/com/ontostudio/ai/SemanticEnricher.kt",
+      "link": "log://run-l3-db-example-0002/enrich/claims.jsonl#L1188",
       "fixture": "docs/superpowers/specs/schemas/rqr-examples/fixtures/l3-claim-no-evidence.json"
     }
   ],
@@ -72,7 +72,7 @@
       "value": null,
       "note": "#99 Gold Set 이 아직 없어 재현율을 산출할 수 없다"
     },
-    "coverage": {
+    "scopeCoverage": {
       "status": "MEASURED",
       "value": 0.9896,
       "note": "counts.output/counts.input = 380/384"
@@ -231,11 +231,6 @@
     }
   ],
   "warnings": [
-    {
-      "code": "VERSION_UNPINNED",
-      "message": "모델 API 가 정확한 버전 문자열을 돌려주지 않아 model 버전을 고정하지 못했다",
-      "trigger": "versions.model"
-    },
     {
       "code": "METRIC_UNMEASURED",
       "message": "Gold Set 미확정으로 재현율 미측정",
