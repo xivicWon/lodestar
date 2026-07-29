@@ -21,6 +21,23 @@ MANIFEST = json.loads((HERE / "examples" / "manifest.json").read_text())
 # 계약 §4 가 정의한 불변식 개수 — 규칙이 늘면 여기도 올린다(커버리지 검사에 쓰인다).
 MAX_RULE = 19
 
+# 규칙 -> 그 규칙이 스키마에서 강제되는 위치의 표지.
+# schema 계층 픽스처는 expectedError 문자열뿐 아니라 **실제 위반 위치가 선언된 rule 과
+# 맞는지**까지 대조한다. 그러지 않으면 잘못 라벨링된 픽스처가 다른 규칙의 검증 실적으로
+# 집계되어 규칙 커버리지가 과대 보고된다.
+RULE_SCHEMA_MARKERS = {
+    "A1": ["additionalProperties"],
+    "A2": ["schemaVersion"],
+    "A3": ["reason"],
+    "A4": ["coverage"],
+    "A7": ["conflicts"],
+    "A8": ["signals"],
+    "A9": ["confidence"],
+    "A10": ["stance"],
+    "A12": ["warnings", "'audit' is a required property"],
+    "A15": ["ceilingReasons"],
+}
+
 # coverage 클래스 -> absent 일 때 요구되는 경고 코드 (계약 §2.6)
 WARN_FOR_ABSENT = {
     "code": "NO_CODE",
@@ -290,6 +307,15 @@ def main():
             elif cross_rules - {case["rule"]}:
                 ok, detail = False, (f"다른 규칙 위반이 섞임 — 기대 {case['rule']}, "
                                      f"실제 {sorted(cross_rules)}: {cross_errs}")
+            elif schema_errs and case["rule"] in RULE_SCHEMA_MARKERS and not any(
+                mk in "/".join(map(str, schema_errs[0].absolute_schema_path))
+                or mk in schema_errs[0].message
+                for mk in RULE_SCHEMA_MARKERS[case["rule"]]
+            ):
+                ok, detail = False, (
+                    f"규칙 라벨 불일치 — {case['rule']} 의 표지 "
+                    f"{RULE_SCHEMA_MARKERS[case['rule']]} 가 실제 위반 위치 "
+                    f"'{'/'.join(map(str, schema_errs[0].absolute_schema_path))}' 에 없음")
             elif len(schema_errs) > 1:
                 ok, detail = False, (f"스키마 위반 {len(schema_errs)}건 — 단일 위반이어야 함: "
                                      f"{[e.message for e in schema_errs]}")
