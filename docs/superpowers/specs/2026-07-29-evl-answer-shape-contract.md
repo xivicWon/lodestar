@@ -4,7 +4,7 @@
 > 이슈: #103 `[EVL] answer-shape 스키마 + 검증 계약` · 에픽: **#104 Evidence Validation Layer** · 마일스톤: **Evidence Validation Layer**
 > 상태: **확정** — 본 문서 머지 시점부터 answer-shape v0 계약이 발효된다.
 > 리뷰어/승인권자: **@xivicWon**
-> 기계 판독 스키마: [`schemas/answer-shape.v0.schema.json`](schemas/answer-shape.v0.schema.json) · 픽스처: [`schemas/examples/manifest.json`](schemas/examples/manifest.json) · 적합성 확인기: [`schemas/validate.py`](schemas/validate.py) · 변이 하네스: [`schemas/fuzz.py`](schemas/fuzz.py)
+> 기계 판독 스키마: [`schemas/answer-shape.v0.schema.json`](schemas/answer-shape.v0.schema.json) · 픽스처: [`schemas/examples/manifest.json`](schemas/examples/manifest.json) · 적합성 확인기: [`schemas/validate.py`](schemas/validate.py) · 변이 하네스: [`schemas/fuzz.py`](schemas/fuzz.py) · 조합 스윕: [`schemas/sweep.py`](schemas/sweep.py)
 > 선행 계약: [M0 / I1 기준선 계약](2026-07-29-m0-i1-baseline-contract.md) (이하 **I1**)
 
 Evidence Validation Layer가 AI 에이전트에게 돌려주는 **형식화된 응답**의 모양과, 각 필드를 **무엇으로 검증하는지**를 못박는다.
@@ -347,7 +347,7 @@ I1은 Gold Set을 "사실 추출" 중심으로 남겨두었다. 이 층을 측�
 
 | 하위 | 범위 | 계약 근거 | 선행 |
 |---|---|---|---|
-| **C0 검증기** | `validate.py`·`fuzz.py`의 규칙(A5·A6·A11·A13·A14·A15·A16·A17·A18·A19) **전부**를 백엔드 언어로 옮기고 실행 경로·CI에 연결, `examples/manifest.json`을 테스트 스위트로 사용 | §2·§4 | 없음 (지금 착수 가능) |
+| **C0 검증기** | `validate.py`·`fuzz.py`·`sweep.py`의 규칙(A5·A6·A11·A13·A14·A15·A16·A17·A18·A19) **전부**를 백엔드 언어로 옮기고 실행 경로·CI에 연결, `examples/manifest.json`을 테스트 스위트로 사용 | §2·§4 | 없음 (지금 착수 가능) |
 | **C1 confidence / calibration** | `f(signals)` 구현 + **곡선·ECE 산출 형식 확정**(#100 템플릿에 편입) + 원자료 누락 건수 보고 + 계수 비준 | §3.3·§5 | #99, C0, C5 |
 | **C2 reason 근거 연결** | `basis` 실재성 검증 + 산문 탐지 | §5 | C0 |
 | **C3 conflict 탐지** | 탐지기 + gold 대조 precision/recall | §5·§8 | #99, C0 |
@@ -458,6 +458,7 @@ I1 §7과 동일하며, 추가로:
 - [x] 게이트 / 잠정 지표 분리 → §7
 - [x] #99(I2)에 추가 요구되는 gold 케이스 명시 → §8
 - [x] 검증 픽스처(정상 7 + 위반 37) 커밋 — intent 5종·보류/비보류 양쪽 + **규칙 커버리지 검사**(A1~A19 전부 음성 픽스처 보유) + **규칙 라벨 검증** + **manifest 무결성 검사** + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
+- [x] 검사 3층 커밋 — 픽스처 44/44 · 변이 650건 · 조합 스윕 727건(충족가능성·결정성·순서무관·경계값·결손내성)
 - [x] 픽스처 적합성 확인기 커밋(44/44 재현 가능, 규칙 동일성·검출 계층·기대 메시지까지 대조) → `schemas/validate.py`
 - [x] 하위 이슈 분할안 → §9
 
