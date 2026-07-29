@@ -392,14 +392,14 @@ def main():
                 ok, detail = False, (f"다른 규칙 위반이 섞임 — 기대 {case['rule']}, "
                                      f"실제 {sorted(cross_rules)}: {cross_errs}")
             elif schema_errs and case["rule"] in RULE_SCHEMA_MARKERS and not any(
-                mk in "/".join(map(str, schema_errs[0].absolute_schema_path))
-                or mk in schema_errs[0].message
-                for mk in RULE_SCHEMA_MARKERS[case["rule"]]
+                # jsonschema 의 오류 순서는 계약이 아니므로 생성된 오류 전체에서 표지를 찾는다.
+                mk in "/".join(map(str, se.absolute_schema_path)) or mk in se.message
+                for se in schema_errs for mk in RULE_SCHEMA_MARKERS[case["rule"]]
             ):
                 ok, detail = False, (
                     f"규칙 라벨 불일치 — {case['rule']} 의 표지 "
                     f"{RULE_SCHEMA_MARKERS[case['rule']]} 가 실제 위반 위치 "
-                    f"'{'/'.join(map(str, schema_errs[0].absolute_schema_path))}' 에 없음")
+                    f"{['/'.join(map(str, se.absolute_schema_path)) for se in schema_errs]} 에 없음")
             elif len(schema_errs) > 1:
                 ok, detail = False, (f"스키마 위반 {len(schema_errs)}건 — 단일 위반이어야 함: "
                                      f"{[e.message for e in schema_errs]}")
