@@ -80,7 +80,9 @@
             "additionalProperties": false
           }
         }
-      }
+      },
+      "additionalProperties": false,
+      "description": "오타 난 키를 거부한다 — `contentHsah` 같은 오타가 통과하면 고정 해시가 선언되지 않은 채 '고정했다' 고 읽힌다."
     },
     "rules": {
       "type": "object",

@@ -6,57 +6,118 @@
   "$defs": {
     "scope": {
       "type": "object",
-      "required": ["track", "closed", "note"],
+      "required": [
+        "track",
+        "closed",
+        "note"
+      ],
       "additionalProperties": false,
       "properties": {
-        "track": { "enum": ["db", "code", "pii", "fixture", "mixed", "evl"] },
-        "closed": { "type": "boolean" },
-        "note": { "type": "string", "minLength": 1 },
-        "revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+        "track": {
+          "enum": [
+            "db",
+            "code",
+            "pii",
+            "fixture",
+            "mixed",
+            "evl"
+          ]
+        },
+        "closed": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        }
       }
     },
     "rules": {
       "type": "object",
       "minProperties": 1,
-      "patternProperties": { "^R-[A-Za-z0-9-]+$": { "type": "string", "minLength": 1 } },
+      "patternProperties": {
+        "^R-[A-Za-z0-9-]+$": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
       "additionalProperties": false
     },
     "counts": {
       "type": "object",
       "minProperties": 1,
-      "additionalProperties": { "type": "integer", "minimum": 0 }
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
     },
     "locator": {
       "type": "string",
       "pattern": "^[^#]+#L[0-9]+(-L[0-9]+)?$",
       "description": "실재 여부는 G7 이 고정 원본과 대조한다. 여기서는 형식만 본다."
     },
-
     "l3": {
       "type": "object",
-      "required": ["goldSetVersion", "scope", "rules", "counts", "scenarios"],
+      "required": [
+        "goldSetVersion",
+        "scope",
+        "rules",
+        "counts",
+        "scenarios"
+      ],
       "additionalProperties": false,
       "properties": {
-        "goldSetVersion": { "const": "gold-set/v0" },
-        "scope": { "$ref": "#/$defs/scope" },
-        "rules": { "$ref": "#/$defs/rules" },
-        "counts": { "$ref": "#/$defs/counts" },
+        "goldSetVersion": {
+          "const": "gold-set/v0"
+        },
+        "scope": {
+          "$ref": "#/$defs/scope"
+        },
+        "rules": {
+          "$ref": "#/$defs/rules"
+        },
+        "counts": {
+          "$ref": "#/$defs/counts"
+        },
         "scenarios": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "object",
-            "required": ["id", "case", "title", "why", "steps"],
+            "required": [
+              "id",
+              "case",
+              "title",
+              "why",
+              "steps"
+            ],
             "additionalProperties": false,
             "properties": {
-              "id": { "type": "string", "minLength": 3 },
+              "id": {
+                "type": "string",
+                "minLength": 3
+              },
               "case": {
-                "enum": ["정상", "변경", "충돌", "삭제", "재등장"],
+                "enum": [
+                  "정상",
+                  "변경",
+                  "충돌",
+                  "삭제",
+                  "재등장"
+                ],
                 "description": "이슈 #99 가 요구한 다섯 종류. 자유 문자열을 허용하면 요구 케이스 충족 여부를 기계로 셀 수 없다."
               },
-              "title": { "type": "string", "minLength": 1 },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              },
               "why": {
-                "type": "string", "minLength": 1,
+                "type": "string",
+                "minLength": 1,
                 "description": "이 시나리오가 겨냥하는 실패. 없으면 무엇을 재는지 모르는 시나리오가 된다."
               },
               "steps": {
@@ -64,22 +125,50 @@
                 "minItems": 1,
                 "items": {
                   "type": "object",
-                  "required": ["step", "input", "mustHold"],
+                  "required": [
+                    "step",
+                    "input",
+                    "mustHold"
+                  ],
                   "additionalProperties": false,
                   "properties": {
-                    "step": { "type": "integer", "minimum": 1 },
+                    "step": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
                     "input": {
                       "type": "object",
-                      "required": ["action"],
+                      "required": [
+                        "action"
+                      ],
                       "properties": {
                         "action": {
-                          "enum": ["IMPORT", "REIMPORT", "HUMAN_CONFIRM", "HUMAN_RESOLVE",
-                                   "CONFIRM_LABEL", "CONTINUE_FROM"]
+                          "enum": [
+                            "IMPORT",
+                            "REIMPORT",
+                            "HUMAN_CONFIRM",
+                            "HUMAN_RESOLVE",
+                            "CONFIRM_LABEL",
+                            "CONTINUE_FROM"
+                          ]
                         }
                       }
                     },
-                    "mustHold": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
-                    "mustNot": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+                    "mustHold": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "mustNot": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
                   }
                 }
               }
@@ -88,26 +177,58 @@
         }
       }
     },
-
     "evl": {
       "type": "object",
-      "required": ["goldSetVersion", "answerShapeVersion", "scope", "collectionScope",
-                   "rules", "counts", "questions", "conflictGold", "calibrationPool"],
+      "required": [
+        "goldSetVersion",
+        "answerShapeVersion",
+        "scope",
+        "collectionScope",
+        "rules",
+        "counts",
+        "questions",
+        "conflictGold",
+        "calibrationPool"
+      ],
       "additionalProperties": false,
       "properties": {
-        "goldSetVersion": { "const": "gold-set/v0" },
-        "answerShapeVersion": { "const": "answer-shape/v0" },
-        "scope": { "$ref": "#/$defs/scope" },
+        "goldSetVersion": {
+          "const": "gold-set/v0"
+        },
+        "answerShapeVersion": {
+          "const": "answer-shape/v0"
+        },
+        "scope": {
+          "$ref": "#/$defs/scope"
+        },
         "collectionScope": {
           "type": "object",
-          "required": ["declared", "contract", "consequence"],
+          "required": [
+            "declared",
+            "contract",
+            "consequence"
+          ],
           "additionalProperties": false,
           "properties": {
             "declared": {
               "type": "object",
-              "required": ["code", "issue", "adr", "test", "runtime"],
+              "required": [
+                "code",
+                "issue",
+                "adr",
+                "test",
+                "runtime"
+              ],
               "additionalProperties": false,
-              "propertyNames": { "enum": ["code", "issue", "adr", "test", "runtime"] },
+              "propertyNames": {
+                "enum": [
+                  "code",
+                  "issue",
+                  "adr",
+                  "test",
+                  "runtime"
+                ]
+              },
               "patternProperties": {
                 "^(code|issue|adr|test|runtime)$": {
                   "type": "string",
@@ -116,131 +237,425 @@
                 }
               }
             },
-            "contract": { "type": "string", "minLength": 1 },
-            "consequence": { "type": "string", "minLength": 1 }
+            "contract": {
+              "type": "string",
+              "minLength": 1
+            },
+            "consequence": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
-        "rules": { "$ref": "#/$defs/rules" },
-        "counts": { "$ref": "#/$defs/counts" },
+        "rules": {
+          "$ref": "#/$defs/rules"
+        },
+        "counts": {
+          "$ref": "#/$defs/counts"
+        },
         "questions": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "object",
-            "required": ["id", "task", "coverage", "expectAbstain", "expectedWarnings",
-                         "expectedConflicts", "requiredEvidence", "notes"],
+            "required": [
+              "id",
+              "task",
+              "coverage",
+              "expectAbstain",
+              "expectedWarnings",
+              "expectedConflicts",
+              "requiredEvidence",
+              "notes"
+            ],
             "additionalProperties": false,
             "properties": {
-              "id": { "type": "string", "minLength": 3 },
+              "id": {
+                "type": "string",
+                "minLength": 3
+              },
               "task": {
                 "type": "object",
-                "required": ["intent", "target", "raw"],
+                "required": [
+                  "intent",
+                  "target",
+                  "raw"
+                ],
                 "additionalProperties": false,
                 "properties": {
-                  "intent": { "enum": ["LOCATE", "EXPLAIN", "IMPACT", "HISTORY", "VERIFY"] },
+                  "intent": {
+                    "enum": [
+                      "LOCATE",
+                      "EXPLAIN",
+                      "IMPACT",
+                      "HISTORY",
+                      "VERIFY"
+                    ]
+                  },
                   "target": {
                     "type": "object",
-                    "required": ["kind", "ref"],
+                    "required": [
+                      "kind",
+                      "ref"
+                    ],
                     "additionalProperties": false,
                     "properties": {
-                      "kind": { "enum": ["TABLE", "COLUMN", "CLASS", "FILE", "METHOD", "RELATION", "CLAIM"] },
-                      "ref": { "type": "string", "minLength": 1 }
+                      "kind": {
+                        "enum": [
+                          "TABLE",
+                          "COLUMN",
+                          "CLASS",
+                          "FILE",
+                          "METHOD",
+                          "RELATION",
+                          "CLAIM"
+                        ]
+                      },
+                      "ref": {
+                        "type": "string",
+                        "minLength": 1
+                      }
                     }
                   },
-                  "raw": { "type": "string", "minLength": 1 }
+                  "raw": {
+                    "type": "string",
+                    "minLength": 1
+                  }
                 }
               },
               "coverage": {
                 "type": "object",
-                "required": ["code", "issue", "adr", "test", "runtime"],
+                "required": [
+                  "code",
+                  "issue",
+                  "adr",
+                  "test",
+                  "runtime"
+                ],
                 "additionalProperties": false,
                 "patternProperties": {
-                  "^(code|issue|adr|test|runtime)$": { "enum": ["present", "absent", "not_collected"] }
+                  "^(code|issue|adr|test|runtime)$": {
+                    "enum": [
+                      "present",
+                      "absent",
+                      "not_collected"
+                    ]
+                  }
                 }
               },
-              "expectAbstain": { "type": "boolean" },
-              "abstainCondition": { "enum": [1, 2, 3] },
+              "expectAbstain": {
+                "type": "boolean"
+              },
+              "abstainCondition": {
+                "enum": [
+                  1,
+                  2,
+                  3
+                ]
+              },
               "expectedWarnings": {
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "required": ["code", "trigger"],
+                  "required": [
+                    "code",
+                    "trigger"
+                  ],
                   "additionalProperties": false,
                   "properties": {
                     "code": {
-                      "enum": ["NO_CODE", "NO_ISSUE", "NO_ADR", "NO_TEST", "NO_RUNTIME",
-                               "NOT_COLLECTED", "CONFLICT_UNRESOLVED", "LOW_CORROBORATION",
-                               "STALE_EVIDENCE", "SIGNAL_UNMEASURED", "DEGRADED_SOURCE", "ABSTAIN"]
+                      "enum": [
+                        "NO_CODE",
+                        "NO_ISSUE",
+                        "NO_ADR",
+                        "NO_TEST",
+                        "NO_RUNTIME",
+                        "NOT_COLLECTED",
+                        "CONFLICT_UNRESOLVED",
+                        "LOW_CORROBORATION",
+                        "STALE_EVIDENCE",
+                        "SIGNAL_UNMEASURED",
+                        "DEGRADED_SOURCE",
+                        "ABSTAIN"
+                      ]
                     },
-                    "trigger": { "type": "string", "minLength": 1 }
+                    "trigger": {
+                      "type": "string",
+                      "minLength": 1
+                    }
                   }
                 }
               },
-              "expectedConflicts": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+              "expectedConflicts": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
               "expectedConflictStatus": {
                 "type": "object",
-                "additionalProperties": { "enum": ["NEEDS_CHECK", "COEXIST", "RESOLVED"] }
+                "additionalProperties": {
+                  "enum": [
+                    "NEEDS_CHECK",
+                    "COEXIST",
+                    "RESOLVED"
+                  ]
+                }
               },
               "requiredEvidence": {
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "required": ["source", "locator"],
+                  "required": [
+                    "source",
+                    "locator"
+                  ],
                   "additionalProperties": false,
                   "properties": {
-                    "source": { "enum": ["code", "issue", "adr", "test", "runtime"] },
-                    "locator": { "$ref": "#/$defs/locator" },
-                    "stance": { "enum": ["supports", "contradicts"] },
-                    "fact": { "type": "string", "minLength": 1 }
-                  }
+                    "source": {
+                      "enum": [
+                        "code",
+                        "issue",
+                        "adr",
+                        "test",
+                        "runtime"
+                      ]
+                    },
+                    "locator": {
+                      "$ref": "#/$defs/locator"
+                    },
+                    "stance": {
+                      "enum": [
+                        "supports",
+                        "contradicts"
+                      ]
+                    },
+                    "fact": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "countingRule": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "근거가 **개수 주장**일 때 필수. 한 줄 좌표는 27건 같은 집계를 입증하지 못하므로, 누구나 같은 수를 다시 셀 수 있는 규칙을 함께 적는다."
+                    },
+                    "countClaim": {
+                      "type": "object",
+                      "required": [
+                        "value",
+                        "goldFile",
+                        "goldType"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "value": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "goldFile": {
+                          "enum": [
+                            "l1/db.json",
+                            "l1/code.json"
+                          ]
+                        },
+                        "goldType": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "description": "개수 주장의 **기계 검증 가능한** 형태. 산문 규칙만 두면 27 이라는 수를 아무도 다시 세지 않는다. 닫힌 범위 gold 의 실제 항목 수와 대조한다(G11)."
+                    }
+                  },
+                  "allOf": [
+                    {
+                      "description": "집계 규칙을 적었으면 구조화된 주장도 함께 둔다 — 둘 중 하나만 있으면 사람만 읽는 규칙이거나 근거 없는 숫자가 된다.",
+                      "dependentRequired": {
+                        "countingRule": [
+                          "countClaim"
+                        ],
+                        "countClaim": [
+                          "countingRule"
+                        ]
+                      }
+                    }
+                  ]
                 }
               },
-              "notes": { "type": "string", "minLength": 1 }
+              "notes": {
+                "type": "string",
+                "minLength": 1
+              }
             },
             "allOf": [
               {
                 "description": "보류가 정답이면 어느 조건으로 성립하는지 적는다 — 조건 없이는 trigger 를 판정할 수 없다(A16).",
-                "if": { "properties": { "expectAbstain": { "const": true } }, "required": ["expectAbstain"] },
-                "then": { "required": ["abstainCondition"] },
-                "else": { "not": { "required": ["abstainCondition"] } }
+                "if": {
+                  "properties": {
+                    "expectAbstain": {
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "expectAbstain"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "abstainCondition"
+                  ]
+                },
+                "else": {
+                  "not": {
+                    "required": [
+                      "abstainCondition"
+                    ]
+                  }
+                }
               }
             ]
           }
         },
         "conflictGold": {
           "type": "object",
-          "required": ["note", "positive", "negative"],
+          "required": [
+            "note",
+            "positive",
+            "negative"
+          ],
           "additionalProperties": false,
           "properties": {
-            "note": { "type": "string", "minLength": 1 },
+            "note": {
+              "type": "string",
+              "minLength": 1
+            },
             "positive": {
               "type": "array",
               "minItems": 1,
               "items": {
                 "type": "object",
-                "required": ["id", "claim", "between", "status", "question", "resolutionPath"],
+                "required": [
+                  "id",
+                  "claim",
+                  "between",
+                  "status",
+                  "question",
+                  "resolutionPath"
+                ],
                 "additionalProperties": false,
                 "properties": {
-                  "id": { "type": "string", "minLength": 3 },
-                  "claim": { "type": "string", "minLength": 1 },
-                  "between": { "type": "array", "minItems": 2, "items": { "type": "string", "minLength": 1 } },
-                  "status": { "enum": ["NEEDS_CHECK", "COEXIST", "RESOLVED"] },
-                  "question": { "type": "string", "minLength": 1 },
-                  "resolutionPath": { "type": "string", "minLength": 1 },
-                  "resolvedBy": { "type": ["object", "null"] },
-                  "whyNotNeedsCheck": { "type": "string", "minLength": 1 }
+                  "id": {
+                    "type": "string",
+                    "minLength": 3
+                  },
+                  "claim": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "between": {
+                    "type": "array",
+                    "minItems": 2,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "status": {
+                    "enum": [
+                      "NEEDS_CHECK",
+                      "COEXIST",
+                      "RESOLVED"
+                    ]
+                  },
+                  "question": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "resolutionPath": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "resolvedBy": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "layer",
+                          "id"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "layer": {
+                            "enum": [
+                              "L1",
+                              "L2",
+                              "L3"
+                            ]
+                          },
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        }
+                      }
+                    ],
+                    "description": "해소 근거의 좌표(EVL §2.4). 빈 객체를 허용하면 근거 없이 상태만 RESOLVED 로 바꾸는 경로가 열리고, 그것이 곧 무보고 덮어쓰기다(I1 P4)."
+                  },
+                  "whyNotNeedsCheck": {
+                    "type": "string",
+                    "minLength": 1
+                  }
                 },
                 "allOf": [
                   {
                     "description": "RESOLVED ⟺ resolvedBy 근거 존재. 근거 없는 해소는 덮어쓰기다(I1 P4 · EVL A7).",
-                    "if": { "properties": { "status": { "const": "RESOLVED" } }, "required": ["status"] },
-                    "then": { "required": ["resolvedBy"], "properties": { "resolvedBy": { "type": "object" } } },
-                    "else": { "properties": { "resolvedBy": { "type": "null" } } }
+                    "if": {
+                      "properties": {
+                        "status": {
+                          "const": "RESOLVED"
+                        }
+                      },
+                      "required": [
+                        "status"
+                      ]
+                    },
+                    "then": {
+                      "required": [
+                        "resolvedBy"
+                      ],
+                      "properties": {
+                        "resolvedBy": {
+                          "type": "object"
+                        }
+                      }
+                    },
+                    "else": {
+                      "properties": {
+                        "resolvedBy": {
+                          "type": "null"
+                        }
+                      }
+                    }
                   },
                   {
                     "description": "NEEDS_CHECK 가 아닌 충돌은 왜 아닌지를 적는다 — 보류 면제의 근거이므로 침묵하면 안 된다.",
-                    "if": { "not": { "properties": { "status": { "const": "NEEDS_CHECK" } } } },
-                    "then": { "required": ["whyNotNeedsCheck"] }
+                    "if": {
+                      "not": {
+                        "properties": {
+                          "status": {
+                            "const": "NEEDS_CHECK"
+                          }
+                        }
+                      }
+                    },
+                    "then": {
+                      "required": [
+                        "whyNotNeedsCheck"
+                      ]
+                    }
                   }
                 ]
               }
@@ -250,13 +665,30 @@
               "minItems": 1,
               "items": {
                 "type": "object",
-                "required": ["id", "claim", "question", "whyLooksLikeConflict"],
+                "required": [
+                  "id",
+                  "claim",
+                  "question",
+                  "whyLooksLikeConflict"
+                ],
                 "additionalProperties": false,
                 "properties": {
-                  "id": { "type": "string", "minLength": 3 },
-                  "claim": { "type": "string", "minLength": 1 },
-                  "question": { "type": "string", "minLength": 1 },
-                  "whyLooksLikeConflict": { "type": "string", "minLength": 1 }
+                  "id": {
+                    "type": "string",
+                    "minLength": 3
+                  },
+                  "claim": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "question": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "whyLooksLikeConflict": {
+                    "type": "string",
+                    "minLength": 1
+                  }
                 }
               }
             }
@@ -264,24 +696,65 @@
         },
         "calibrationPool": {
           "type": "object",
-          "required": ["note", "requirement", "population", "tiers"],
+          "required": [
+            "note",
+            "requirement",
+            "population",
+            "tiers"
+          ],
           "additionalProperties": false,
           "properties": {
-            "note": { "type": "string", "minLength": 1 },
-            "requirement": { "type": "string", "minLength": 1 },
-            "population": { "type": "string", "minLength": 1 },
+            "note": {
+              "type": "string",
+              "minLength": 1
+            },
+            "requirement": {
+              "type": "string",
+              "minLength": 1
+            },
+            "population": {
+              "type": "string",
+              "minLength": 1
+            },
             "tiers": {
               "type": "array",
               "minItems": 2,
               "items": {
                 "type": "object",
-                "required": ["tier", "expectedVerdict", "why", "members"],
+                "required": [
+                  "tier",
+                  "expectedVerdict",
+                  "why",
+                  "members"
+                ],
                 "additionalProperties": false,
                 "properties": {
-                  "tier": { "enum": ["easy", "medium", "hard", "trap"] },
-                  "expectedVerdict": { "enum": ["CORRECT", "INCORRECT"] },
-                  "why": { "type": "string", "minLength": 1 },
-                  "members": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+                  "tier": {
+                    "enum": [
+                      "easy",
+                      "medium",
+                      "hard",
+                      "trap"
+                    ]
+                  },
+                  "expectedVerdict": {
+                    "enum": [
+                      "CORRECT",
+                      "INCORRECT"
+                    ]
+                  },
+                  "why": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "members": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
                 }
               }
             }
@@ -289,46 +762,114 @@
         }
       }
     },
-
     "failures": {
       "type": "object",
-      "required": ["goldSetVersion", "scope", "rules", "counts", "fixtures"],
+      "required": [
+        "goldSetVersion",
+        "scope",
+        "rules",
+        "counts",
+        "fixtures"
+      ],
       "additionalProperties": false,
       "properties": {
-        "goldSetVersion": { "const": "gold-set/v0" },
-        "scope": { "$ref": "#/$defs/scope" },
-        "rules": { "$ref": "#/$defs/rules" },
-        "counts": { "$ref": "#/$defs/counts" },
+        "goldSetVersion": {
+          "const": "gold-set/v0"
+        },
+        "scope": {
+          "$ref": "#/$defs/scope"
+        },
+        "rules": {
+          "$ref": "#/$defs/rules"
+        },
+        "counts": {
+          "$ref": "#/$defs/counts"
+        },
         "fixtures": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "object",
-            "required": ["id", "kind", "layer", "path", "contentHash", "extracted",
-                         "reported", "silentSkipIsFailure", "notes"],
+            "required": [
+              "id",
+              "kind",
+              "layer",
+              "path",
+              "contentHash",
+              "extracted",
+              "reported",
+              "silentSkipIsFailure",
+              "notes"
+            ],
             "additionalProperties": false,
             "properties": {
-              "id": { "type": "string", "minLength": 3 },
+              "id": {
+                "type": "string",
+                "minLength": 3
+              },
               "kind": {
-                "enum": ["파싱 실패", "미지원 문법", "부분 추출"],
+                "enum": [
+                  "파싱 실패",
+                  "미지원 문법",
+                  "부분 추출"
+                ],
                 "description": "이슈 #99 가 요구한 세 종류. 통제어휘여야 요구 충족 여부를 셀 수 있다."
               },
-              "layer": { "type": "array", "minItems": 1, "items": { "enum": ["L0", "L1", "L2", "L3"] } },
-              "path": { "type": "string", "minLength": 1 },
-              "contentHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-              "extracted": { "type": "array", "items": { "type": "object" } },
+              "layer": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "enum": [
+                    "L0",
+                    "L1",
+                    "L2",
+                    "L3"
+                  ]
+                }
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "contentHash": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "extracted": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
               "reported": {
                 "type": "array",
                 "minItems": 1,
                 "description": "실패 픽스처인데 보고 기대치가 없으면 '조용히 건너뛰어도 통과' 가 된다.",
                 "items": {
                   "type": "object",
-                  "required": ["kind", "target", "locator", "reasonRequired"],
+                  "required": [
+                    "kind",
+                    "target",
+                    "locator",
+                    "reasonRequired"
+                  ],
                   "additionalProperties": false,
                   "properties": {
-                    "kind": { "enum": ["PARSE_ERROR", "UNSUPPORTED_STATEMENT", "UNSUPPORTED_LANGUAGE"] },
-                    "target": { "type": "string", "minLength": 1 },
-                    "locator": { "type": "string", "pattern": "^#L[0-9]+(-L[0-9]+)?$" },
+                    "kind": {
+                      "enum": [
+                        "PARSE_ERROR",
+                        "UNSUPPORTED_STATEMENT",
+                        "UNSUPPORTED_LANGUAGE"
+                      ]
+                    },
+                    "target": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "locator": {
+                      "type": "string",
+                      "pattern": "^#L[0-9]+(-L[0-9]+)?$"
+                    },
                     "reasonRequired": {
                       "const": true,
                       "description": "사유 없는 보고는 보고가 아니다. false 를 허용하면 건수만 세고 넘어가는 경로가 열린다."
@@ -336,8 +877,13 @@
                   }
                 }
               },
-              "silentSkipIsFailure": { "const": true },
-              "notes": { "type": "string", "minLength": 1 }
+              "silentSkipIsFailure": {
+                "const": true
+              },
+              "notes": {
+                "type": "string",
+                "minLength": 1
+              }
             }
           }
         }
@@ -345,8 +891,14 @@
     }
   },
   "oneOf": [
-    { "$ref": "#/$defs/l3" },
-    { "$ref": "#/$defs/evl" },
-    { "$ref": "#/$defs/failures" }
+    {
+      "$ref": "#/$defs/l3"
+    },
+    {
+      "$ref": "#/$defs/evl"
+    },
+    {
+      "$ref": "#/$defs/failures"
+    }
   ]
 }

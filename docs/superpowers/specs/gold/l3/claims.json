@@ -8,7 +8,7 @@
   },
   "rules": {
     "R-L3-1": "각 단계의 `mustHold` 는 전부 성립해야 하고 `mustNot` 은 하나라도 성립하면 그 시나리오는 실패다.",
-    "R-L3-2": "Claim 의 의미 내용(라벨 문구)이 gold 와 글자 그대로 같을 필요는 없다. 판정 대상은 **status·evidenceIds·supersedes·validFrom/validTo·확인 이력의 전이**다. 문구 일치를 요구하면 AI 출력의 표현 차이를 정확도 실패로 오집계한다.",
+    "R-L3-2": "**AI 가 생성한** Claim 의 의미 내용(라벨 문구)은 gold 와 글자 그대로 같을 필요가 없다 — 판정 대상은 status·evidenceIds·supersedes·validFrom/validTo·확인 이력의 전이다. 문구 일치를 요구하면 AI 출력의 표현 차이를 정확도 실패로 오집계한다. **단 사람이 입력한 값(CONFIRM_LABEL 의 `label`, HUMAN_RESOLVE 의 `keep`)은 예외이며 그대로 보존되어야 한다** — 입력이 확정적인데도 다른 값이 저장되면 그건 표현 차이가 아니라 데이터 손상이고, 이 예외가 없으면 상태 전이만 맞고 라벨은 전혀 다른 구현이 통과한다.",
     "R-L3-3": "어느 단계에서든 evidenceIds 가 빈 Claim 이 존재하면 즉시 L3 BLOCKED 다(I1 P1). 시나리오별로 다시 적지 않는다 — 전역 규칙이다.",
     "R-L3-4": "재수집(re-import)은 항상 고정 revision 또는 지정된 픽스처 revision 을 입력으로 한다. 단계 사이에 입력을 임의로 바꾸면 그 실행은 무효다."
   },
@@ -74,7 +74,8 @@
             "label": "거래처 마스터"
           },
           "mustHold": [
-            "claimA 가 status=HUMAN_CONFIRMED · validTo 비어 있음으로 존재한다"
+            "claimA 가 status=HUMAN_CONFIRMED · validTo 비어 있음으로 존재한다",
+            "claimA.object 가 입력한 '거래처 마스터' 와 정확히 같다 (R-L3-2 예외)"
           ]
         },
         {
@@ -90,12 +91,14 @@
             "claimA 가 **삭제되지 않고** 남아 있으며 validTo 가 채워진다",
             "active 조회는 claimB 만 반환한다",
             "이력 조회는 claimA · claimB 를 모두 반환한다",
-            "claimA.validTo ≥ claimA.validFrom 이고 claimB.validFrom ≥ claimA.validTo 다"
+            "claimA.validTo ≥ claimA.validFrom 이고 claimB.validFrom ≥ claimA.validTo 다",
+            "claimB.object 가 입력한 '공급업체 마스터' 와 정확히 같다 (R-L3-2 예외)"
           ],
           "mustNot": [
             "claimA 의 object 값이 제자리에서 '공급업체 마스터' 로 바뀐다 (덮어쓰기 — I1 §6.1)",
             "claimA 가 물리 삭제된다",
-            "claimB.supersedes 가 비어 있다"
+            "claimB.supersedes 가 비어 있다",
+            "claimB.object 가 입력 라벨과 다른 값이다 (상태 전이만 맞고 내용이 손상됨)"
           ]
         }
       ]
@@ -135,7 +138,8 @@
           "mustHold": [
             "채택된 Claim 이 HUMAN_CONFIRMED 가 된다",
             "탈락한 Claim 이 남아 있고 supersedes 또는 동등한 관계로 연결된다",
-            "해소 시점과 해소자가 기록된다"
+            "해소 시점과 해소자가 기록된다",
+            "채택된 Claim 의 대상이 입력한 keep 값과 정확히 같다 (R-L3-2 예외)"
           ],
           "mustNot": [
             "탈락한 Claim 이 물리 삭제된다",

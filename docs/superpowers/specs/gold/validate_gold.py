@@ -232,8 +232,32 @@ def _g4():
 # --- G5 고정 revision 의 실제 원본과 대조 -----------------------------------
 @rule("G5")
 def _g5():
+    by_path = {e["path"]: e for e in MANIFEST["fixtures"]}
     for sid, s in SOURCES.items():
         if s.get("origin") != "repo":
+            # 픽스처 소스도 **선언된 해시를 실제 파일과 대조**한다. 이걸 건너뛰면
+            # pinnedSources 의 해시와 항목의 contentHash 가 서로 같기만 하면(G6) 둘 다
+            # 틀린 값이어도 통과한다 — gold 가 실제와 다른 입력을 가리킨 채 승인된다.
+            p = REPO / s["path"]
+            if not p.exists():
+                yield f"{sid}: 픽스처 파일이 없다 ({s['path']})"
+                continue
+            got = sha(p)
+            if got != s["contentHash"]:
+                yield f"{sid}: 실제 해시 {got} ≠ 고정값 {s['contentHash']}"
+            n = len(p.read_text().splitlines())
+            if s.get("lines") != n:
+                yield f"{sid}: lines 선언 {s.get('lines')} ≠ 실제 {n} (좌표 범위 검사가 헐거워진다)"
+            # 같은 파일이 fixtures[] 와 pinnedSources 두 곳에 적혀 있다. 두 값이
+            # 갈리면 어느 쪽이 정본인지 알 수 없고, fixtureHash 집계와 항목 대조가
+            # 서로 다른 파일을 뜻하게 된다.
+            rel = str(pathlib.Path(s["path"]).relative_to("docs/superpowers/specs/gold"))
+            fx = by_path.get(rel)
+            if fx is None:
+                yield f"{sid}: fixtures[] 에 같은 경로 항목이 없다 ({rel})"
+            elif fx["sha256"] != s["contentHash"]:
+                yield (f"{sid}: fixtures[].sha256({fx['sha256']}) 와 "
+                       f"pinnedSources.contentHash({s['contentHash']}) 가 다르다")
             continue
         try:
             data = blob(sid)
@@ -419,6 +443,17 @@ def _g11():
         for cid in q["expectedConflicts"]:
             if cid not in conflict_ids:
                 yield f"{qid}: conflictGold 에 없는 충돌 id '{cid}'"
+        # 개수 주장은 닫힌 범위 gold 의 실제 항목 수와 대조한다. 한 줄 좌표는
+        # "27건" 을 입증하지 못하므로, 주장의 정본을 전수 등재된 gold 로 못박는다.
+        for e in q["requiredEvidence"]:
+            cc = e.get("countClaim")
+            if not cc:
+                continue
+            got = sum(1 for it in DOCS[cc["goldFile"]]["items"]
+                      if it["type"] == cc["goldType"] and it["expect"] == "PRESENT")
+            if got != cc["value"]:
+                yield (f"{qid}: 개수 주장 {cc['value']} 이 {cc['goldFile']} 의 "
+                       f"{cc['goldType']} 정답 {got}건과 다르다")
     for c in evl["conflictGold"]["positive"] + evl["conflictGold"]["negative"]:
         if c["question"] not in {q["id"] for q in evl["questions"]}:
             yield f"conflictGold/{c['id']}: 존재하지 않는 질문 '{c['question']}'"

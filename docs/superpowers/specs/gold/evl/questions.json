@@ -114,9 +114,15 @@
       "requiredEvidence": [
         {
           "source": "code",
-          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L7",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L1-L262",
           "stance": "supports",
-          "fact": "실제 CREATE TABLE 문은 27건이다"
+          "fact": "실제 CREATE TABLE 문은 27건이다",
+          "countingRule": "행 시작이 `CREATE TABLE <식별자> (` 인 **문장**만 센다(주석 줄 제외). 결과는 27이며, 이 27건은 l1/db.json 에 `type=TABLE · expect=PRESENT` 로 **전수 등재**돼 있어 G3(개수)·G9(좌표·이름)가 기계로 재확인한다. 즉 이 주장의 정본은 닫힌 범위 gold 이고, 여기 좌표는 원문 구간이다.",
+          "countClaim": {
+            "value": 27,
+            "goldFile": "l1/db.json",
+            "goldType": "TABLE"
+          }
         },
         {
           "source": "adr",
@@ -223,7 +229,13 @@
           "source": "code",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L219",
           "stance": "supports",
-          "fact": "명시 FK 는 FK_ORD_MEMO 1건"
+          "fact": "명시 FK 는 FK_ORD_MEMO 1건",
+          "countingRule": "`CONSTRAINT ... FOREIGN KEY` 선언을 센다. 결과는 1이며 l1/db.json 의 `type=FOREIGN_KEY · expect=PRESENT` 1건과 일치한다.",
+          "countClaim": {
+            "value": 1,
+            "goldFile": "l1/db.json",
+            "goldType": "FOREIGN_KEY"
+          }
         },
         {
           "source": "adr",
