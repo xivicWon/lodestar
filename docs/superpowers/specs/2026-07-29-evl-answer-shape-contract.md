@@ -1,0 +1,327 @@
+# EVL — Answer-Shape v0 스키마 & 검증 계약
+
+> 작성일: 2026-07-29
+> 이슈: #103 `[EVL] answer-shape 스키마 + 검증 계약` · 에픽: **#104 Evidence Validation Layer** · 마일스톤: **Evidence Validation Layer**
+> 상태: **확정** — 본 문서 머지 시점부터 answer-shape v0 계약이 발효된다.
+> 리뷰어/승인권자: **@xivicWon**
+> 기계 판독 스키마: [`schemas/answer-shape.v0.schema.json`](schemas/answer-shape.v0.schema.json) · 픽스처: [`schemas/examples/manifest.json`](schemas/examples/manifest.json)
+> 선행 계약: [M0 / I1 기준선 계약](2026-07-29-m0-i1-baseline-contract.md) (이하 **I1**)
+
+Evidence Validation Layer가 AI 에이전트에게 돌려주는 **형식화된 응답**의 모양과, 각 필드를 **무엇으로 검증하는지**를 못박는다.
+이 문서에 없는 필드로 응답하거나, 여기 정의된 불변식을 어긴 응답은 **형식 위반**이며 정확도 측정 대상이 아니다.
+
+---
+
+## 0. 이 문서가 확정하는 것 / 하지 않는 것
+
+| | 내용 | 소유 |
+|---|---|---|
+| ✅ 확정 | answer-shape v0 필드 구조·타입·통제어휘 | 본 문서 §2 + JSON Schema |
+| ✅ 확정 | 구조 불변식 A1~A15 (스키마 강제 / 검증기 강제 구분) | 본 문서 §4 |
+| ✅ 확정 | 필드별 **검증 방법**과 "실패 = 무엇인가"의 정의 | 본 문서 §5 |
+| ✅ 확정 | confidence를 **함수**로 취급한다는 계약(신호 노출 의무) | 본 문서 §3 |
+| ✅ 확정 | abstention 발동 조건의 **형식**(경고 코드 체계) | 본 문서 §6 |
+| ✅ 확정 | 어떤 지표가 무조건 게이트이고 어떤 것이 잠정인지 | 본 문서 §7 |
+| ✅ 확정 | #99(I2) Gold Set에 추가로 요구되는 케이스 종류 | 본 문서 §8 |
+| ⛔ 미확정 | **confidence 함수 계수** `f(finality, freshness, authority, corroboration, contradicted)` | baseline 후 비준 (§3.3) |
+| ⛔ 미확정 | calibration·conflict precision/recall의 **목표 수치** | baseline 후 비준 (§7.2) |
+| ⛔ 미확정 | 검증기 **구현**, CI 연결, API/MCP 서빙, UI | 하위 이슈 (§9) |
+| ⛔ 미확정 | abstention 임계값의 **수치** | baseline 후 비준 (§6.3) |
+
+**비범위:** 실제 confidence 계수 확정 · UI · 검색/랭킹 알고리즘 · 프롬프트 설계.
+
+---
+
+## 1. 위치 — 이 층은 무엇의 출력인가
+
+```
+L0 수집(#88) → L1 사실(#89) → L2 관계(#90) → L3 지식·이력(#91) → [answer-shape] → API/MCP
+```
+
+- **입력:** L1 `Observation`, L2 `IdentityLink`(`confidence`·`status`), L3 `Claim`(`evidenceIds`·`supersedes`·`status`).
+- **출력:** 본 문서의 answer-shape.
+- I1 §3.3의 **confidence 상한 전파**는 이 층에서 끝나지 않고 응답에 드러나야 한다 → `audit.ceilingApplied` + 상한 사유 경고 (A15).
+- I1 §6.1의 "근거는 원본에서 재확인 가능한 좌표를 가진다"는 여기서 `evidence[].ref.{sourceId, locator, revision}` **필수**로 나타난다.
+
+**이 층의 자기적용:** 우리가 죽이려는 것이 "거짓 확신"이므로, 이 층 자체의 confidence도 보정되지 않은 채로는 게이트가 될 수 없다. 캘리브레이션 전의 `confidence_overall`은 **기록 대상이지 주장 근거가 아니다.**
+
+---
+
+## 2. Answer-Shape v0
+
+정규 정의는 [`schemas/answer-shape.v0.schema.json`](schemas/answer-shape.v0.schema.json)이며, 아래 표와 스키마가 다르면 **스키마가 우선**한다.
+
+### 2.1 최상위
+
+| 필드 | 필수 | 타입 | 계약 |
+|---|---|---|---|
+| `schemaVersion` | ✅ | `"answer-shape/v0"` | 개정 전후 실행을 구분하기 위한 고정 상수. 없으면 그 응답은 어느 계약을 따르는지 불명 = 측정 불가 |
+| `task` | ✅ | object | 해석된 질문 의도와 대상 |
+| `evidence` | ✅ | array | **랭킹된** 증거. 배열 순서가 랭킹이다. 빈 배열 허용(→ ABSTAIN 필수) |
+| `conflicts` | ✅ | array | 빈 배열도 **명시**한다. 필드를 생략하면 "충돌 없음"과 "충돌 탐지 안 함"이 구분되지 않는다 |
+| `coverage` | ✅ | object | 소스 클래스별 존재/부재 |
+| `confidence_overall` | ✅ | 0.0~1.0 | |
+| `warnings` | ✅ | array | abstention 트리거. 빈 배열 명시 |
+| `audit` | ✅ | object | 역추적 로그 |
+
+### 2.2 `task`
+
+| 필드 | 필수 | 값 |
+|---|---|---|
+| `intent` | ✅ | `LOCATE` \| `EXPLAIN` \| `IMPACT` \| `HISTORY` \| `VERIFY` |
+| `target.kind` | ✅ | `TABLE` \| `COLUMN` \| `CLASS` \| `FILE` \| `METHOD` \| `RELATION` \| `CLAIM` |
+| `target.ref` | ✅ | 대상 식별자 |
+| `target.raw` | — | 사용자 질문 원문(감사용). target 해석의 근거가 아니다 |
+
+> `intent` 어휘는 **v0 잠정**이다. #99(I2) Gold Set의 실제 질문 유형으로 검증한 뒤 확정한다. 목록 밖 의도가 필요하면 자유 문자열로 우겨넣지 말고 **계약 개정(§10)** 으로 추가한다. 통제어휘를 열어두면 intent별 정확도 분리 측정이 불가능해진다.
+
+### 2.3 `evidence[]`
+
+| 필드 | 필수 | 계약 |
+|---|---|---|
+| `id` | ✅ | 응답 내 유일 |
+| `source` | ✅ | `code` \| `issue` \| `adr` \| `test` \| `runtime` — **`coverage`의 키 집합과 정확히 동일**(A4) |
+| `ref` | ✅ | `{sourceId, locator, revision}` 필수, `contentHash`·`observedAt` 선택. 좌표 없는 인용은 증거가 아니다 |
+| `confidence` | ✅ | 0.0~1.0. **소스 타입 상수가 아니라 `signals`의 함수값**(§3) |
+| `signals` | ✅ | `finality`·`freshness`·`authority`·`corroboration`·`contradicted` **5개 전부**. 미측정 신호를 0으로 채우는 것 금지 — 측정 불가는 경고로 보고 |
+| `reason[]` | ✅ (≥1) | `{text, basis[]}`. `basis`는 `{layer: L1\|L2\|L3, id}` **≥1개**. 근거 없는 이유 = 산문 = 계약 위반 |
+| `stance` | ✅ | `supports` \| `contradicts`. **기본값 없음** — 반대 증거는 1급이므로 생산자가 명시해야 한다 |
+
+### 2.4 `conflicts[]`
+
+| 필드 | 필수 | 계약 |
+|---|---|---|
+| `id` | ✅ | |
+| `between[]` | ✅ (≥2) | 실재하는 `evidence[].id`만(A6) |
+| `claim` | ✅ | 무엇이 충돌하는지. 예: `"JWT vs Session"` |
+| `status` | ✅ | `NEEDS_CHECK`(미해결·기본) \| `COEXIST`(둘 다 참, 예: 버전별 상이) \| `RESOLVED` |
+| `resolvedBy` | `RESOLVED`일 때 ✅ | `{layer, id}`. 근거 없는 해소 = 덮어쓰기 = I1 **P4 위반** |
+
+### 2.5 `coverage`
+
+키 5개(`code`·`issue`·`adr`·`test`·`runtime`) 각각 다음 3값 중 하나:
+
+| 값 | 의미 |
+|---|---|
+| `present` | 찾았다 |
+| `absent` | **찾아봤는데** 없다 |
+| `not_collected` | **수집 자체를 하지 않았다** |
+
+- **퍼센트·점수 금지.** 미지 전체를 모르는 상태에서 "70% 커버"는 위장이다.
+- `absent`와 `not_collected`를 합치면 "없음"과 "안 봄"이 구분되지 않는다. 이것이 이 층이 제거하려는 거짓 확신의 전형이므로 **3값을 유지**한다.
+
+### 2.6 `warnings[]`
+
+`{code, message, trigger?}`. `code`는 통제어휘다 — **자유 문장은 "경고했는가"를 측정할 수 없다.**
+
+| code | 발동 조건 |
+|---|---|
+| `NO_CODE` / `NO_ISSUE` / `NO_ADR` / `NO_TEST` / `NO_RUNTIME` | 해당 클래스 `absent` |
+| `NOT_COLLECTED` | 해당 클래스 `not_collected` |
+| `CONFLICT_UNRESOLVED` | `NEEDS_CHECK` 충돌 잔존 |
+| `LOW_CORROBORATION` | 교차확인 부족 (임계값 §6.3) |
+| `STALE_EVIDENCE` | 근거 노후 (임계값 §6.3) |
+| `DEGRADED_SOURCE` | 하위 레이어 실패 전파 (I1 §3.3) |
+| `ABSTAIN` | 답변 보류 (§6) |
+
+### 2.7 `audit`
+
+`{bundleId, promptHash, evidenceIds[], revision, createdAt}` 전부 필수 + `ceilingApplied` 선택.
+
+- `promptHash` — 프롬프트 **원문 대신 해시**. 원문 저장은 PII·시크릿 유출 경로다(I1 §4.1 보안 게이트).
+- `evidenceIds` — 번들에 포함된 **전체** 후보. 응답에 실린 `evidence[].id`를 모두 포함하며(A13), **탈락한 후보도 남긴다**(왜 안 쓰였는지 역추적).
+- `ceilingApplied` — 상한 적용 **사실**의 기록. 상한 수치는 미확정이나 기록 자체는 I1 §3.3의 게이트다.
+
+---
+
+## 3. confidence = 함수 (핵심)
+
+### 3.1 prior는 시작점일 뿐이다
+
+`release/main=1.0, develop=0.8, 2년 전 Jira=0.2, Slack=0.3` 같은 소스 타입별 상수는 **prior**다.
+같은 Jira라도 **모듈이 그 뒤로 무변경이면** 유효하고, Slack이라도 **그것이 결정 출처면** 권위가 있다.
+
+### 3.2 계약: 단일 스칼라 금지, 구성요소 노출 의무
+
+```
+confidence = f(finality, freshness, authority, corroboration, contradicted)
+```
+
+- 5개 신호를 **전부 노출**한다(A8). "왜 그 점수인지"를 소비자가 재계산할 수 있어야 한다.
+- `contradicted`는 **방향이 반대인 유일한 신호**다 — 높을수록 confidence를 낮춘다. 스키마에 이 방향을 명시했다.
+- 신호를 측정하지 못했으면 **0으로 채우지 않는다.** 0은 "측정했고 낮다"는 뜻이다. 미측정은 경고로 보고한다.
+
+### 3.3 계수는 지금 정하지 않는다
+
+`f`의 형태와 가중치는 **#99 Gold Set 기반 calibration 측정 후 비준**한다(I1 §4.2와 동일 절차).
+비준 전까지:
+
+1. `confidence` 값은 **기록·측정 대상**이지 게이트가 아니다.
+2. 어떤 문서·PR·발표에서도 "confidence 0.8 = 80% 정확"이라고 **인용하지 않는다**.
+3. 다만 **신뢰도 곡선(calibration curve)은 매 실행 기록**한다 — 비준의 재료다.
+
+---
+
+## 4. 구조 불변식 (A1~A15)
+
+**강제 위치**가 두 종류다. `schema`는 JSON Schema만으로 걸러지고, `validator`는 스키마를 통과하지만 교차 필드 검사에서 걸러진다.
+픽스처는 [`schemas/examples/manifest.json`](schemas/examples/manifest.json)에 규칙 ID로 연결돼 있다.
+
+| ID | 불변식 | 강제 | 위반 시 |
+|---|---|---|---|
+| **A1** | 응답은 JSON Schema를 통과한다 | schema | 형식 위반 — 측정 대상 제외 |
+| **A2** | `schemaVersion`이 명시된다 | schema | 어느 계약인지 불명 |
+| **A3** | 모든 `reason`은 `basis` ≥1개를 가진다 | schema | **무근거 이유** |
+| **A4** | `coverage` 키 집합 = `evidence[].source` 어휘, 값은 3값 열거 | schema | %·점수 위장 |
+| **A5** | `source=X` 증거가 존재 ⟺ `coverage[X] = present` | validator | **없는 걸 있다고 함** |
+| **A6** | `conflicts[].between` ⊆ `evidence[].id` | validator | 유령 충돌 |
+| **A7** | `status=RESOLVED` ⟹ `resolvedBy` 존재 | schema | 근거 없는 해소 = 덮어쓰기(I1 P4) |
+| **A8** | `signals` 5개 전부 존재 | schema | 근거 없는 스칼라 |
+| **A9** | 모든 `confidence`·신호값이 0.0~1.0 | schema | 범위 이탈 |
+| **A10** | 모든 증거가 `stance`를 명시 | schema | 반대 증거 은폐 |
+| **A11** | `absent`/`not_collected` 클래스마다, 그리고 `NEEDS_CHECK` 충돌마다 대응 `warnings` 항목이 있다 | validator | **경고 안 함** |
+| **A12** | `audit` 5개 필드 전부 존재 | schema | 역추적 불가 |
+| **A13** | `evidence[].id` ⊆ `audit.evidenceIds` | validator | 감사 로그 불완전 |
+| **A14** | 동일 대상에 `supports`와 `contradicts`가 공존하면 `conflicts` 항목이 있어야 한다 | validator | **충돌 미탐지 = 거짓 확신** |
+| **A15** | `audit.ceilingApplied=true`인 응답은 **상한 사유를 나타내는 경고를 최소 1개** 갖는다(`DEGRADED_SOURCE`·`CONFLICT_UNRESOLVED`·`NO_*`·`NOT_COLLECTED` 중). 사유가 하위 레이어 실패 전파면 `DEGRADED_SOURCE`가 **필수**다 | validator | 상한 은폐 (I1 §3.3) |
+
+> **A14는 gold 대조 없이도 검사 가능한 하한선**이다. 실제 충돌 탐지 성능은 §5의 precision/recall로 별도 측정한다.
+
+---
+
+## 5. 필드별 검증 계약
+
+각 행의 "실패 = "는 **그 필드가 왜 존재하는지**를 뒤집어 쓴 것이다. 실패 정의가 없는 필드는 검증할 수 없으므로 필드가 아니다.
+
+| 필드 | 검증 방법 | 산출 지표 | 실패 = | 소유 |
+|---|---|---|---|---|
+| **confidence** | **calibration** — gold에서 "c로 주장한 것이 실제로 ~c 비율로 적중"하는지 신뢰도 곡선으로 검증. 구간별 bin 집계 | ECE(Expected Calibration Error), bin별 (주장 c, 실적중률), 곡선 | **미보정 confidence = 거짓 확신.** 0.9라고 해놓고 실제 0.5면 이 층의 존재 이유가 무너진다 | 하위 이슈 C1 |
+| **signals** | 각 신호가 confidence와 **단조 관계**인지, 특히 `contradicted`가 역방향인지 회귀 검사. 신호 제거 시 성능 변화(ablation) | 신호별 기여도, 방향 위반 건수 | 노출만 하고 실제로 쓰이지 않는 장식 신호 | 하위 이슈 C1 |
+| **reason** | 각 `basis.id`가 **실재하는 L1/L2/L3 레코드**인지 조회 검증 + 그 레코드가 `text` 주장을 실제로 뒷받침하는지 gold 대조 | 무근거 이유 건수, 근거 불일치 건수 | **무근거 이유.** "관련 있습니다" 류 산문 | 하위 이슈 C2 |
+| **conflicts** | gold 충돌셋과 대조한 **precision / recall** | precision, recall, 미탐지 목록, 과탐지 목록 | 미탐지 = 거짓 확신 / 과탐지 = 경보 피로. **둘 다 실패다** — 한쪽만 보고하는 것도 실패 | 하위 이슈 C3 |
+| **coverage** | 클래스 존재/부재의 **결정론 검증** — ADR·test·log를 실제로 찾았는지 gold와 1:1 대조. 동일 입력 3회 일치(I1 H1) | 클래스별 정오표(present/absent/not_collected 오분류 건수), 결정성 일치율 | **없는 걸 있다고 함.** %로 위장 | 하위 이슈 C4 |
+| **warnings / abstention** | 커버리지 미달·핵심 클래스 부재·미해결 충돌 시 **경고했는가**를 A11로 기계 검사 + gold의 "경고해야 하는 케이스" 재현율 | 경고 누락 건수, 경고 재현율, 오경고율 | **"찾았다"면서 30%만 찾음.** 경고 없이 자신 있게 틀리는 것이 최악 | 하위 이슈 C4 |
+| **audit** | 모든 번들이 로깅되고 `audit`만으로 **동일 응답 재구성** 가능한지(완전성·재현성) | 로깅 누락 건수, 재현 성공률 | **역추적 불가.** 틀렸을 때 왜 틀렸는지 말할 수 없음 | 하위 이슈 C5 |
+| **task.intent** | #99 실제 질문이 통제어휘로 **손실 없이** 분류되는지 | 미분류 질문 비율 | 어휘가 현실을 못 담음 → 개정 신호 | #99 + 본 계약 개정 |
+
+---
+
+## 6. Abstention (답변 보류)
+
+### 6.1 형식
+
+abstention은 별도 필드가 아니라 **`warnings`에 `code: "ABSTAIN"`이 존재하는 상태**로 표현한다.
+경고 체계 안에 두어야 "경고했는가" 측정과 abstention 측정이 같은 계기로 이뤄진다.
+
+### 6.2 발동 조건 (형식 확정)
+
+다음 중 하나면 `ABSTAIN`을 낸다:
+
+1. `evidence`가 비어 있다.
+2. 질문 intent가 요구하는 **핵심 클래스**가 전부 `absent`/`not_collected`다.
+   (v0 매핑: `EXPLAIN`→`adr`·`issue` · `VERIFY`→`test`·`runtime` · `IMPACT`·`LOCATE`→`code` · `HISTORY`→`issue`)
+3. `NEEDS_CHECK` 충돌이 응답의 핵심 주장에 걸려 있다.
+4. `confidence_overall`이 임계값 미만이다.
+
+**조건 1~3은 지금 확정**된다(결정론적으로 판정 가능). **조건 4의 임계값은 §6.3**.
+
+### 6.3 임계값은 지금 정하지 않는다
+
+`confidence_overall` 임계값, `LOW_CORROBORATION`·`STALE_EVIDENCE`의 경계값은 **calibration 전에는 의미가 없다.**
+보정되지 않은 스칼라에 임계값을 걸면 그 임계값 자체가 거짓 확신이다.
+→ #99 기반 1차 측정 후 §10 절차로 비준한다. 그 전까지는 **조건 1~3만으로 abstention을 운용**한다.
+
+---
+
+## 7. 목표 수치 정책
+
+I1 §4의 정책을 이 층에 그대로 적용한다: **정직성은 무조건 게이트, 정확도는 baseline 후 비준.**
+
+### 7.1 무조건 게이트 (사전 확정 · 협상 불가)
+
+| 지표 | 값 | 근거 |
+|---|---|---|
+| 스키마 적합률(A1) | 100% | 형식 위반은 측정 이전의 문제 |
+| 무근거 이유(A3) | **0건** | 산문 금지 |
+| `stance` 명시율(A10) | 100% | 반대 증거 1급 |
+| 커버리지 결정론 (동일 입력 3회 일치) | 100% | I1 H1 |
+| 커버리지 허위 `present`(A5) | **0건** | 없는 걸 있다고 하는 것은 정확도 이전의 실격 |
+| 경고 누락(A11) | **0건** | 경고 안 하고 틀리는 것이 최악 |
+| `audit` 완전성·재현성(A12·A13) | 100% | 역추적 불가 = 검증 불가 |
+| 상한 적용 기록(A15) | 100% | I1 §3.3 |
+
+> 공통점은 I1과 같다: **정확도가 아니라 정직성**이다. 성능이 낮은 것은 baseline이지만, 실패를 숨기는 것은 실격이다.
+
+### 7.2 잠정 (baseline 측정 후 비준)
+
+| 지표 | 상태 |
+|---|---|
+| confidence calibration (ECE 등) | 목표값 **미정** — 1차 곡선 측정 후 비준 |
+| conflict 탐지 precision / recall | 목표값 **미정** — gold 충돌셋 1차 측정 후 비준 |
+| abstention 임계값 | **미정** (§6.3) |
+| confidence 함수 계수 | **미정** (§3.3) |
+
+**비준 절차는 I1 §4.2와 동일**: ① 잠정값을 게이트로 쓰지 않고 1차 측정 → ② @xivicWon 검토 → ③ 본 문서 개정으로 확정 → ④ 비준 전 인용 금지.
+
+---
+
+## 8. #99 (I2 Gold Set)에 추가로 요구되는 것
+
+I1은 Gold Set을 "사실 추출" 중심으로 남겨두었다. 이 층을 측정하려면 **다음 케이스 종류가 #99에 포함되어야 한다.**
+
+| 케이스 종류 | 필요한 이유 | 없으면 |
+|---|---|---|
+| **confidence calibration bin 케이스** — 정답/오답이 알려진 증거를 신뢰도 구간별로 충분히 | 곡선을 그리려면 각 bin에 최소 표본이 필요 | calibration 측정 불가 → confidence 영구 미검증 |
+| **충돌 gold 셋** — 실제로 상충하는 소스 쌍(예: 코드=Session vs 이슈=JWT)과 **상충하지 않는 유사 쌍** | precision과 recall을 동시에 재려면 양성·음성 모두 필요 | 과탐지를 측정할 수 없다 |
+| **커버리지 gold** — 각 질문마다 5개 클래스의 실제 존재/부재 정답 | A5·결정론 검증의 기준 | 허위 `present`를 잡을 수 없다 |
+| **abstention 케이스** — 근거가 실제로 부족해서 **보류가 정답인** 질문 | "경고했는가"의 양성 케이스 | 자신 있게 틀리는 실패를 못 잡는다 |
+| **반대 증거 케이스** — `contradicts` 증거가 존재하는 질문 | A14·stance 검증 | 반대 증거 은폐를 못 잡는다 |
+
+→ 이 표는 **#99의 요구사항**이며, #99가 이를 반영하지 않으면 본 계약의 §5 지표 중 calibration·conflict·coverage·abstention은 **측정 불가 상태로 남는다**(그 사실을 Run Quality Report에 기록해야 한다).
+
+---
+
+## 9. 하위 이슈 분할 (에픽 #104)
+
+본 문서는 **정의까지**다. 아래는 이 계약의 어느 절을 구현·측정하는지의 매핑이며, 에픽 #104의 "후속(설계 확정 후 분할)"에 대응한다.
+
+| 하위 | 범위 | 계약 근거 | 선행 |
+|---|---|---|---|
+| **C0 검증기** | JSON Schema + A5·A6·A11·A13·A14·A15 교차 검사 구현, `examples/manifest.json`을 테스트 스위트로 CI 연결 | §2·§4 | 없음 (지금 착수 가능) |
+| **C1 confidence / calibration** | `f(signals)` 구현 + 신뢰도 곡선 측정 + 계수 비준 | §3·§5 | #99, C0 |
+| **C2 reason 근거 연결** | `basis` 실재성 검증 + 산문 탐지 | §5 | C0 |
+| **C3 conflict 탐지** | 탐지기 + gold 대조 precision/recall | §5·§8 | #99, C0 |
+| **C4 coverage / abstention** | 클래스 존재/부재 결정론 판정 + 경고·보류 발동 | §2.5·§6 | #99, C0 |
+| **C5 audit log** | 번들 로깅 + 재현 검증 | §2.7·§5 | C0 |
+| **C6 API / MCP 서빙** | answer-shape 반환 엔드포인트 | §2 전체 | C0~C5 |
+
+> **C0가 먼저다.** 검증기 없이 C1~C5를 만들면 각 하위가 자기 형식을 자기 기준으로 검사하게 되고, 계약이 코드마다 갈라진다.
+
+---
+
+## 10. 계약 개정 절차
+
+I1 §7과 동일하며, 추가로:
+
+1. 개정 사유·영향 범위(무효화되는 이전 측정)를 명시한 PR을 올린다.
+2. **@xivicWon 승인** 없이 개정되지 않는다.
+3. **필드 구조가 바뀌면 `schemaVersion`을 올린다**(`answer-shape/v1`). v0로 생성된 응답은 v0 계약으로 평가하고, 버전 간 수치를 직접 비교하지 않는다.
+4. 통제어휘(`intent`·`source`·`warning.code`·`status`) 추가는 개정 사항이다. **런타임에 자유 문자열로 확장하지 않는다** — 어휘가 열리는 순간 지표 분리 집계가 무너진다.
+5. 수치 비준(§3.3·§6.3·§7.2)도 개정으로 처리하며 이전 값과 함께 남긴다(덮어쓰기 금지 — I1 P4의 자기적용).
+
+---
+
+## 11. #103 완료 기준 체크
+
+- [x] answer-shape v0 필드·타입·통제어휘 확정 → §2 + JSON Schema
+- [x] 기계 판독 스키마 커밋 → `schemas/answer-shape.v0.schema.json`
+- [x] 구조 불변식 A1~A15 확정 + 스키마/검증기 강제 위치 구분 → §4
+- [x] 필드별 검증 계약(검증 방법·지표·"실패 = ") 확정 → §5
+- [x] confidence를 함수로 취급하는 계약(신호 노출 의무·계수 미확정 명시) → §3
+- [x] abstention 형식·발동 조건 확정, 임계값은 비준으로 위임 → §6
+- [x] 게이트 / 잠정 지표 분리 → §7
+- [x] #99(I2)에 추가 요구되는 gold 케이스 명시 → §8
+- [x] 검증 픽스처(정상 2 + 위반 11) 커밋 + 규칙 ID 연결 → `schemas/examples/manifest.json`
+- [x] 하위 이슈 분할안 → §9
+
+**다음 착수: C0 검증기 (§9)** — 픽스처 스위트가 이미 있으므로 실패 테스트부터 시작할 수 있다.

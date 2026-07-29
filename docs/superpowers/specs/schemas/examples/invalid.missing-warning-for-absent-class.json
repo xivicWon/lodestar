@@ -1,0 +1,131 @@
+{
+  "schemaVersion": "answer-shape/v0",
+  "task": {
+    "intent": "EXPLAIN",
+    "target": {
+      "kind": "TABLE",
+      "ref": "legacy.payment_tx",
+      "raw": "payment_tx 테이블은 왜 order_id에 FK가 없나요?"
+    }
+  },
+  "evidence": [
+    {
+      "id": "ev-1",
+      "source": "code",
+      "ref": {
+        "sourceId": "src-backend-kotlin",
+        "locator": "backend/src/main/kotlin/com/ontostudio/rel/RelationService.kt#L42-L58",
+        "revision": "3c27259",
+        "contentHash": "sha256:9f1c0b2a"
+      },
+      "confidence": 0.82,
+      "signals": {
+        "finality": 0.9,
+        "freshness": 0.85,
+        "authority": 0.8,
+        "corroboration": 0.6,
+        "contradicted": 0.1
+      },
+      "reason": [
+        {
+          "text": "payment_tx.order_id → orders.id 를 NAMEPATTERN 으로 연결한 링크가 존재",
+          "basis": [
+            {
+              "layer": "L2",
+              "id": "link-8821"
+            }
+          ]
+        },
+        {
+          "text": "DDL 에 명시 FOREIGN KEY 선언이 없음(관찰된 사실)",
+          "basis": [
+            {
+              "layer": "L1",
+              "id": "obs-4410"
+            }
+          ]
+        }
+      ],
+      "stance": "supports"
+    },
+    {
+      "id": "ev-2",
+      "source": "issue",
+      "ref": {
+        "sourceId": "src-github-issues",
+        "locator": "issue:432#comment-7",
+        "revision": "2026-05-11T04:12:00Z",
+        "observedAt": "2026-07-29T02:00:00Z"
+      },
+      "confidence": 0.41,
+      "signals": {
+        "finality": 0.5,
+        "freshness": 0.35,
+        "authority": 0.7,
+        "corroboration": 0.2,
+        "contradicted": 0.6
+      },
+      "reason": [
+        {
+          "text": "Issue #432 에서 '성능 때문에 FK 를 의도적으로 제거했다'는 결정이 기록됨",
+          "basis": [
+            {
+              "layer": "L3",
+              "id": "claim-1190"
+            }
+          ]
+        }
+      ],
+      "stance": "contradicts"
+    }
+  ],
+  "conflicts": [
+    {
+      "id": "cf-1",
+      "between": [
+        "ev-1",
+        "ev-2"
+      ],
+      "claim": "FK 부재 원인: 마이그레이션 누락(code) vs 의도적 제거(issue)",
+      "status": "NEEDS_CHECK"
+    }
+  ],
+  "coverage": {
+    "code": "present",
+    "issue": "present",
+    "adr": "absent",
+    "test": "absent",
+    "runtime": "not_collected"
+  },
+  "confidence_overall": 0.44,
+  "warnings": [
+    {
+      "code": "CONFLICT_UNRESOLVED",
+      "message": "코드 관찰과 이슈 기록이 상충합니다. 사람 확인 전까지 원인을 단정하지 않습니다.",
+      "trigger": "cf-1"
+    },
+    {
+      "code": "NO_ADR",
+      "message": "설계 결정 문서(ADR)가 없어 설계 근거가 부족합니다.",
+      "trigger": "coverage.adr"
+    },
+    {
+      "code": "NOT_COLLECTED",
+      "message": "런타임 로그는 수집 대상에 포함되지 않았습니다(없음이 아니라 확인하지 않음).",
+      "trigger": "coverage.runtime"
+    }
+  ],
+  "audit": {
+    "bundleId": "bnd-2026-07-29-0007",
+    "promptHash": "sha256:1a4d7e90",
+    "evidenceIds": [
+      "ev-1",
+      "ev-2",
+      "ev-3-dropped",
+      "ev-4-dropped"
+    ],
+    "revision": "3c27259",
+    "createdAt": "2026-07-29T02:00:11Z",
+    "ceilingApplied": true
+  }
+}

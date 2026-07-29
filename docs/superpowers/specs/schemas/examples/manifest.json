@@ -1,0 +1,94 @@
+{
+  "description": "answer-shape v0 검증 픽스처 목록. 하위 이슈에서 만들 검증기는 이 목록을 그대로 테스트 케이스로 사용한다. enforcedBy=schema 는 JSON Schema 만으로 걸러야 하고, enforcedBy=validator 는 스키마를 통과하지만 계약 §4 불변식에서 실패해야 한다.",
+  "schema": "../answer-shape.v0.schema.json",
+  "contract": "../../2026-07-29-evl-answer-shape-contract.md",
+  "cases": [
+    {
+      "file": "valid.full.json",
+      "expect": "valid",
+      "note": "충돌·부재 경고·상한 적용이 모두 살아있는 정상 응답"
+    },
+    {
+      "file": "valid.abstention.json",
+      "expect": "valid",
+      "note": "근거 0건 → ABSTAIN. 빈 응답도 계약을 만족해야 한다"
+    },
+    {
+      "file": "invalid.reason-no-basis.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A3",
+      "note": "무근거 이유 = 산문"
+    },
+    {
+      "file": "invalid.missing-stance.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A10",
+      "note": "supports/contradicts 는 기본값 없이 명시 필수"
+    },
+    {
+      "file": "invalid.coverage-percent.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A4",
+      "note": "커버리지를 %로 위장"
+    },
+    {
+      "file": "invalid.signals-incomplete.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A8",
+      "note": "signals 5개 미노출 = 근거 없는 스칼라"
+    },
+    {
+      "file": "invalid.confidence-out-of-range.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A9",
+      "note": "0.0~1.0 범위 이탈"
+    },
+    {
+      "file": "invalid.conflict-resolved-without-basis.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A7",
+      "note": "근거 없이 충돌을 해소 처리(덮어쓰기)"
+    },
+    {
+      "file": "invalid.missing-audit.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A12",
+      "note": "역추적 불가"
+    },
+    {
+      "file": "invalid.conflict-dangling-ref.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A6",
+      "note": "존재하지 않는 evidence id 참조"
+    },
+    {
+      "file": "invalid.coverage-claims-absent-class.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A5",
+      "note": "adr 증거가 없는데 coverage.adr=present — 없는 걸 있다고 함"
+    },
+    {
+      "file": "invalid.missing-warning-for-absent-class.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A11",
+      "note": "test=absent 인데 NO_TEST 경고 누락 — 경고 안 함"
+    },
+    {
+      "file": "invalid.audit-missing-evidence-id.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A13",
+      "note": "응답에 쓴 증거가 audit.evidenceIds 에 없음"
+    }
+  ]
+}
