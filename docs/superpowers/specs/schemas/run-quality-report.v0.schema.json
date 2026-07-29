@@ -1,0 +1,476 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/xivicWon/lodestar/schemas/run-quality-report.v0.schema.json",
+  "title": "Lodestar Run Quality Report v0",
+  "description": "M0 L0~L3 벤치 실행 하나가 남기는 표준 보고서. 규범 문서: docs/superpowers/specs/2026-07-29-m0-i3-run-quality-report-contract.md (이슈 #100). 이 스키마는 구조 불변식만 강제한다. 교차 필드 불변식(R2~R20)은 검증기 책임이며 규범 문서 §4에 정의한다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "run",
+    "versions",
+    "counts",
+    "exclusions",
+    "failures",
+    "metrics",
+    "evl",
+    "gates",
+    "baseline",
+    "verdict",
+    "featureJudgments",
+    "warnings"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "description": "이 보고서가 따르는 계약 버전. 버전이 다른 보고서의 수치는 직접 비교하지 않는다(계약 §7).",
+      "const": "run-quality-report/v0"
+    },
+    "run": {
+      "description": "실행 식별 — 이 보고서가 '무엇의' 결과인지. 여기의 한 필드라도 흐리면 비교 자체가 성립하지 않는다.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runId",
+        "projectId",
+        "layer",
+        "track",
+        "reportKind",
+        "sourceRevision",
+        "fixtureHash",
+        "startedAt",
+        "completedAt",
+        "executedBy"
+      ],
+      "properties": {
+        "runId": {
+          "type": "string",
+          "pattern": "^run-[A-Za-z0-9][A-Za-z0-9._-]*$",
+          "description": "실행 식별자. 다른 보고서가 이 실행을 인용할 때 쓰는 키다."
+        },
+        "projectId": { "type": "string", "minLength": 1 },
+        "layer": {
+          "enum": ["L0", "L1", "L2", "L3"],
+          "description": "M0 범위는 L0~L3 4개 레이어다(I1 §2.1). L4/L5는 M0 비범위이므로 어휘에 없다."
+        },
+        "track": {
+          "enum": ["db", "code"],
+          "description": "I1 §1.1의 2트랙. 지표는 트랙별로 분리 산출한다 — 합산 평균은 실패를 가린다(I1 §4.2)."
+        },
+        "reportKind": {
+          "enum": ["BASELINE", "EXAMPLE"],
+          "description": "BASELINE = 실제 측정 결과. EXAMPLE = 작성 예시·리허설(수치가 실측이 아님). EXAMPLE 은 baseline 으로 인정되지 않는다(R12)."
+        },
+        "sourceRevision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{7,40}$",
+          "description": "I1 §1.3이 고정한 revision. 이 값이 다르면 이전 보고서와 비교 기준선이 다르다(I1 §7.4)."
+        },
+        "fixtureHash": {
+          "oneOf": [
+            { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+            { "const": "UNPINNED" }
+          ],
+          "description": "#99(I2)가 고정하는 fixture 해시. 고정 전 실행은 문자열 'UNPINNED' 로 표기하며 baseline 으로 인정하지 않는다(I1 §1.3 · R12)."
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:([0-5]\\d|60)(\\.\\d+)?(Z|[+-]([01]\\d|2[0-3]):[0-5]\\d)$",
+          "description": "RFC 3339 축소 프로파일(EVL 계약 §2.7과 동일 — T·Z 대문자만). 달력 유효성은 검증기가 확인한다(R1)."
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:([0-5]\\d|60)(\\.\\d+)?(Z|[+-]([01]\\d|2[0-3]):[0-5]\\d)$",
+          "description": "RFC 3339 축소 프로파일. startedAt 이후여야 한다(R1)."
+        },
+        "executedBy": {
+          "type": "string",
+          "minLength": 1,
+          "description": "실행 주체(사람 또는 에이전트+버전). 판정 권한자는 @xivicWon 이며(I1 §1.2) 실행자와 다를 수 있다."
+        }
+      }
+    },
+    "versions": {
+      "description": "무엇으로 만든 결과인지. '이 레이어가 쓰지 않는 요소'(NOT_APPLICABLE)와 '쓰는데 버전을 모르는 상태'(UNPINNED)를 구분한다 — 둘을 합치면 재현 실패의 원인을 잃는다(R11).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["collector", "extractor", "model", "prompt"],
+      "properties": {
+        "collector": { "$ref": "#/$defs/versionRef" },
+        "extractor": { "$ref": "#/$defs/versionRef" },
+        "model": { "$ref": "#/$defs/versionRef" },
+        "prompt": { "$ref": "#/$defs/versionRef" }
+      }
+    },
+    "counts": {
+      "description": "레이어별 입력·출력·실패·제외 건수. input = output + failed + excluded 가 성립해야 한다(R2) — 성립하지 않는 보고서는 어딘가를 세지 않은 것이다.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input", "output", "failed", "excluded"],
+      "properties": {
+        "input": { "type": "integer", "minimum": 0 },
+        "output": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "excluded": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "exclusions": {
+      "description": "제외 사유별 집계. '조용한 스킵' 을 막는 자리다(I1 §4.1 오류 가시성). 합계는 counts.excluded 와 일치하고, 사유별 count 는 examples 의 좌표 수와도 일치해야 한다(R3).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["reason", "count", "examples"],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "제외 사유. 사유별로 한 항목이며 같은 사유를 두 번 적지 않는다(R3)."
+          },
+          "count": { "type": "integer", "minimum": 1 },
+          "examples": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 },
+            "description": "제외된 대상 전부의 원본 좌표 — 길이가 count 와 같아야 한다(R3). 사유만 적고 대상을 안 적으면 재확인이 불가능하다."
+          }
+        }
+      }
+    },
+    "failures": {
+      "description": "실패 사례. 항목 수는 counts.failed 와 정확히 같아야 한다(R4) — 집계만 남기고 사례를 일부만 적으면 나머지는 재현·회귀 검증이 되지 않는다. 각 사례는 실재하는 재현 fixture 를 가리켜야 한다.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "summary", "link", "fixture"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^fail-[A-Za-z0-9][A-Za-z0-9._-]*$" },
+          "summary": { "type": "string", "minLength": 1 },
+          "link": {
+            "type": "string",
+            "pattern": "^(log|artifact|run|https?)://.+",
+            "description": "그 실패가 **기록된 산출물·로그의 URI**(log:// · artifact:// · run:// · http(s)://). 소스 파일 경로가 아니다 — 코드 위치는 '어디서 났는가' 일 뿐 '그 실행에서 실제로 일어났다' 는 증거가 아니며, 재실행 없이 대조할 수 있는 것은 그 실행이 남긴 기록뿐이다. 코드 위치가 필요하면 재현 fixture 안에 적는다."
+          },
+          "fixture": {
+            "type": "string",
+            "minLength": 1,
+            "description": "재현 fixture 경로(리포 상대경로). 없으면 그 실패는 회귀로 고정되지 않는다."
+          }
+        }
+      }
+    },
+    "metrics": {
+      "description": "I1 §4가 정의한 지표. 측정하지 못한 지표는 0으로 채우지 않는다 — status 로 구분하고 경고를 낸다(R10).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["precision", "recall", "scopeCoverage", "determinism", "provenanceCompleteness"],
+      "properties": {
+        "precision": { "$ref": "#/$defs/measurement" },
+        "recall": { "$ref": "#/$defs/measurement" },
+        "scopeCoverage": {
+          "$ref": "#/$defs/measurement",
+          "description": "스코프 처리율. 산식 고정: counts.output / counts.input (소수 4자리 반올림 허용 — R20). 실패·제외는 분자에서 빠지고 분모에는 남는다. counts.input = 0(스코프에 대상이 없는 실행)이면 status=NOT_APPLICABLE·value=null 이다(R20). **evl.coverageClasses 와 다른 개념이다** — 이쪽은 '스코프의 몇 %를 처리했나'(비율), 저쪽은 '어떤 소스 클래스를 봤나'(5클래스 체크리스트)다. 이름이 비슷하다는 이유로 한 값에 섞지 않는다."
+        },
+        "determinism": {
+          "$ref": "#/$defs/measurement",
+          "description": "동일 revision 3회 실행 일치율. 1.0 미만이면 H1(결정성 실패)이며 판정은 BLOCKED 다(R8)."
+        },
+        "provenanceCompleteness": {
+          "$ref": "#/$defs/measurement",
+          "description": "필수 provenance 필드(근거·좌표·버전) 연결률. I1 §4.1의 무조건 게이트 대상이다."
+        }
+      }
+    },
+    "evl": {
+      "description": "EVL(#104) 계약이 요구하는 지표. answer-shape 응답을 산출하는 레이어가 아니면 각 항목을 NOT_APPLICABLE 로 둔다.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["confidenceCalibration", "conflictDetection", "coverageClasses"],
+      "properties": {
+        "confidenceCalibration": {
+          "description": "EVL 계약 §3.3의 사후 평가 산출물. 원자료 누락이 1건이라도 있으면 수치를 인용하지 않는다(R13).",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "population", "ece", "bins", "sampleCount", "missingRawCount"],
+          "properties": {
+            "status": { "enum": ["MEASURED", "NOT_MEASURED", "NOT_APPLICABLE"] },
+            "population": {
+              "oneOf": [{ "enum": ["presented", "candidates"] }, { "type": "null" }],
+              "description": "presented = 응답에 실린 증거, candidates = 번들 로그의 후보 전체. 모집단을 밝히지 않은 calibration 수치는 인용하지 않는다(EVL §3.3)."
+            },
+            "ece": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+            "bins": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["lowerBound", "upperBound", "claimed", "observed", "sampleCount"],
+                "properties": {
+                  "lowerBound": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "upperBound": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "claimed": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "observed": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "sampleCount": { "type": "integer", "minimum": 0 }
+                }
+              }
+            },
+            "sampleCount": { "type": "integer", "minimum": 0 },
+            "missingRawCount": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "평가 대상 중 원자료(번들)가 없어 곡선에서 제외된 건수. EVL §3.3 — 0건이 아니면 그 실행의 calibration 수치는 인용하지 않는다."
+            }
+          }
+        },
+        "conflictDetection": {
+          "description": "충돌 탐지 성능. gold 충돌셋(#99) 없이는 측정할 수 없다(R14).",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["precision", "recall", "goldSetId"],
+          "properties": {
+            "precision": { "$ref": "#/$defs/measurement" },
+            "recall": { "$ref": "#/$defs/measurement" },
+            "goldSetId": { "type": ["string", "null"], "minLength": 1 }
+          }
+        },
+        "coverageClasses": {
+          "description": "소스 클래스 커버리지 체크리스트(EVL 계약 §2.5). code·issue·adr·test·runtime 각각을 봤는지·있었는지의 3값 기록이며 **비율이 아니다** — metrics.scopeCoverage(스코프 처리율)와 다른 개념이고 서로 대체하지 않는다. 5개가 정확히 한 번씩 있어야 한다 — 누락하면 '안 본 클래스' 가 조용히 사라진다(R15).",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["class", "state", "deterministic", "warned"],
+            "properties": {
+              "class": { "enum": ["code", "issue", "adr", "test", "runtime"] },
+              "state": { "enum": ["present", "absent", "not_collected"] },
+              "deterministic": {
+                "type": "boolean",
+                "description": "동일 입력 3회에서 같은 state 가 나왔는가(EVL §7.1 커버리지 결정론)."
+              },
+              "warned": {
+                "type": "boolean",
+                "description": "absent/not_collected 에 대응 경고가 실제로 발행됐는가(EVL A11)."
+              }
+            }
+          }
+        }
+      }
+    },
+    "gates": {
+      "description": "I1 §4.1 무조건 게이트의 실행별 결과. FAIL 이 하나라도 있으면 PASS 판정을 낼 수 없다(R9).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "required", "observed", "status"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^gate-[A-Za-z0-9][A-Za-z0-9._-]*$" },
+          "name": { "type": "string", "minLength": 1 },
+          "required": {
+            "type": ["number", "string", "null"],
+            "description": "게이트 기준값(예: 1.0, '0건'). 잠정 수치는 게이트가 아니므로 여기에 적지 않는다(I1 §4.2)."
+          },
+          "observed": { "type": ["number", "string", "null"] },
+          "status": { "enum": ["PASS", "FAIL", "NOT_MEASURED"] }
+        }
+      }
+    },
+    "baseline": {
+      "description": "이전 기준선 대비 변화. 비교 불가한 경우를 '변화 없음' 으로 표기하지 않는다(R17).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["previous", "comparable", "reason", "eligibleAsBaseline", "deltas"],
+      "properties": {
+        "previous": {
+          "description": "비교 대상 실행의 신원. 비교 가능성은 runId 만으로 판정할 수 없다 — 같은 project·layer·track·sourceRevision·fixtureHash·schemaVersion 이어야 같은 것을 잰 것이다(R17).",
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["runId", "projectId", "layer", "track", "sourceRevision", "fixtureHash", "schemaVersion"],
+              "properties": {
+                "runId": { "type": "string", "pattern": "^run-[A-Za-z0-9][A-Za-z0-9._-]*$" },
+                "projectId": { "type": "string", "minLength": 1 },
+                "layer": { "enum": ["L0", "L1", "L2", "L3"] },
+                "track": { "enum": ["db", "code"] },
+                "sourceRevision": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+                "fixtureHash": {
+                  "oneOf": [
+                    { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+                    { "const": "UNPINNED" }
+                  ]
+                },
+                "schemaVersion": { "type": "string", "minLength": 1 }
+              }
+            }
+          ]
+        },
+        "comparable": { "type": "boolean" },
+        "reason": {
+          "type": "string",
+          "description": "비교 가능/불가의 근거. 불가일 때 필수다 — revision·fixtureHash·schemaVersion 이 바뀌면 비교 기준선에서 제외한다(I1 §7.4)."
+        },
+        "eligibleAsBaseline": {
+          "type": "boolean",
+          "description": "이 보고서가 다음 실행의 비교 기준선이 될 수 있는가. fixtureHash 미고정 · reportKind=EXAMPLE · 적용 대상 버전 중 하나라도 UNPINNED 이면 false 다(R12) — 재현할 수 없는 실행은 기준선이 아니다."
+        },
+        "deltas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["metric", "previous", "current", "delta"],
+            "properties": {
+              "metric": { "type": "string", "minLength": 1 },
+              "previous": { "type": ["number", "null"] },
+              "current": { "type": ["number", "null"] },
+              "delta": { "type": ["number", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "verdict": {
+      "description": "레이어 판정. 3값뿐이며(I1 §2.2) '대체로 통과' 는 없다.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "haltRules", "restrictions"],
+      "properties": {
+        "value": { "enum": ["PASS", "PASS_RESTRICTED", "BLOCKED"] },
+        "haltRules": {
+          "type": "array",
+          "items": { "enum": ["H1", "H2", "H3", "H5"] },
+          "description": "발동한 HALT 규칙(I1 §3.2). H4는 RESTRICT 등급이므로 여기가 아니라 restrictions 에 적는다."
+        },
+        "restrictions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["rule", "reason", "closedPaths"],
+            "properties": {
+              "rule": { "const": "H4" },
+              "reason": { "type": "string", "minLength": 1 },
+              "closedPaths": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "minLength": 1 },
+                "description": "닫힌 경로. 제한 사실만 적고 무엇이 닫혔는지 안 적으면 '측정되지 않은 경로' 를 식별할 수 없다(I1 §3.2)."
+              }
+            }
+          }
+        }
+      }
+    },
+    "featureJudgments": {
+      "description": "기능별 Core/Lab/Parked/Retire 판정(I4·#101 이 사용). 측정하지 않은 기능을 Core 로 판정하는 것은 금지된다(I1 §5.3 · R16).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["featureId", "judgment", "measured", "rationale", "evidenceRefs"],
+        "properties": {
+          "featureId": { "type": "string", "minLength": 1 },
+          "judgment": { "enum": ["Core", "Lab", "Parked", "Retire"] },
+          "measured": { "type": "boolean" },
+          "rationale": { "type": "string", "minLength": 1 },
+          "evidenceRefs": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 },
+            "description": "이 실행의 runId 또는 다른 보고서 참조('report:<runId>'). 근거 링크 없는 판정은 무효다(I1 G5)."
+          }
+        }
+      }
+    },
+    "warnings": {
+      "description": "보고서 자체의 경고. 빈 배열도 명시한다 — 필드를 생략하면 '경고 없음' 과 '경고를 안 봄' 이 구분되지 않는다.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message", "trigger"],
+        "properties": {
+          "code": {
+            "enum": [
+              "UNPINNED_FIXTURE",
+              "VERSION_UNPINNED",
+              "METRIC_UNMEASURED",
+              "CALIBRATION_RAW_MISSING",
+              "GATE_FAILED",
+              "BASELINE_NOT_COMPARABLE",
+              "PATH_RESTRICTED"
+            ],
+            "description": "통제어휘. 자유 문장은 '경고했는가' 를 측정할 수 없다(EVL §2.6과 같은 원칙)."
+          },
+          "message": { "type": "string", "minLength": 1 },
+          "trigger": {
+            "type": "string",
+            "pattern": "^(run\\.fixtureHash|versions\\.(collector|extractor|model|prompt)|metrics\\.(precision|recall|scopeCoverage|determinism|provenanceCompleteness)|evl\\.confidenceCalibration|evl\\.conflictDetection\\.(precision|recall)|gates\\.gate-[A-Za-z0-9][A-Za-z0-9._-]*|baseline|verdict)$",
+            "description": "경고 대상. code 마다 가리킬 수 있는 대상의 종류가 다르며(계약 §3.6) 형식은 여기서, 대상 실재는 검증기가 본다(R18)."
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "선택. 위 필드로 표현되지 않는 맥락. 지표·판정의 근거를 여기에 숨기지 않는다."
+    }
+  },
+  "$defs": {
+    "versionRef": {
+      "description": "버전 하나. PINNED = 값이 있다. UNPINNED = 이 레이어가 쓰는데 버전을 모른다(VERSION_UNPINNED 경고 필요). NOT_APPLICABLE = 이 레이어가 그 요소를 쓰지 않는다(경고 대상 아님).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "value"],
+      "properties": {
+        "status": { "enum": ["PINNED", "UNPINNED", "NOT_APPLICABLE"] },
+        "value": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "description": "PINNED 일 때만 문자열이다. 'unknown'·'' 로 채우는 것은 금지 — 문자열이 들어가는 순간 '버전을 안다'는 뜻이 된다."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "PINNED" } }, "required": ["status"] },
+          "then": { "properties": { "value": { "type": "string" } } },
+          "else": { "properties": { "value": { "type": "null" } } }
+        }
+      ]
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "value", "note"],
+      "properties": {
+        "status": {
+          "enum": ["MEASURED", "NOT_MEASURED", "NOT_APPLICABLE"],
+          "description": "MEASURED = 값이 있다. NOT_MEASURED = 측정하지 못했다(0이 아니다). NOT_APPLICABLE = 이 레이어에 해당 없음."
+        },
+        "value": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1,
+          "description": "0.0~1.0. 측정하지 못한 값을 0으로 채우는 것은 금지다 — 0은 '측정했고 0' 이라는 뜻이다."
+        },
+        "note": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "MEASURED" } }, "required": ["status"] },
+          "then": { "properties": { "value": { "type": "number" } } },
+          "else": {
+            "properties": {
+              "value": { "type": "null" },
+              "note": { "minLength": 1 }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
