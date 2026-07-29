@@ -97,7 +97,7 @@ L0 수집(#88) → L1 사실(#89) → L2 관계(#90) → L3 지식·이력(#91) 
 | `between[]` | ✅ (≥2) | 실재하는 `evidence[].id`만(A6) |
 | `claim` | ✅ | 무엇이 충돌하는지. 예: `"JWT vs Session"` |
 | `status` | ✅ | `NEEDS_CHECK`(미해결·기본) \| `COEXIST`(둘 다 참, 예: 버전별 상이) \| `RESOLVED` |
-| `resolvedBy` | `RESOLVED`일 때 ✅ | `{layer, id}`. 근거 없는 해소 = 덮어쓰기 = I1 **P4 위반** |
+| `resolvedBy` | `RESOLVED`일 때 ✅ · **그 외에는 금지** | `{layer, id}`. 근거 없는 해소 = 덮어쓰기 = I1 **P4 위반**. 반대로 `NEEDS_CHECK`·`COEXIST`에 해소 근거가 붙어 있으면 상태와 근거가 모순이므로 이것도 위반이다 |
 
 ### 2.5 `coverage`
 
@@ -182,11 +182,11 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 | **A4** | `coverage` 키 집합 = `evidence[].source` 어휘, 값은 3값 열거 | schema | %·점수 위장 |
 | **A5** | `source=X` 증거가 존재 ⟺ `coverage[X] = present` | validator | **없는 걸 있다고 함** |
 | **A6** | `conflicts[].between` ⊆ `evidence[].id` | validator | 유령 충돌 |
-| **A7** | `status=RESOLVED` ⟹ `resolvedBy` 존재 | schema | 근거 없는 해소 = 덮어쓰기(I1 P4) |
+| **A7** | `status=RESOLVED` **⟺** `resolvedBy` 존재 (비-RESOLVED에 붙는 것도 위반) | schema | 근거 없는 해소 = 덮어쓰기(I1 P4) · 상태와 근거의 모순 |
 | **A8** | `signals` 5개 전부 존재 | schema | 근거 없는 스칼라 |
 | **A9** | 모든 `confidence`·신호값이 0.0~1.0 | schema | 범위 이탈 |
 | **A10** | 모든 증거가 `stance`를 명시 | schema | 반대 증거 은폐 |
-| **A11** | `absent`/`not_collected` 클래스마다 `trigger="coverage.<key>"` 인 대응 경고가, `NEEDS_CHECK` 충돌마다 `trigger="<conflictId>"` 인 `CONFLICT_UNRESOLVED` 가 존재한다. `trigger`가 필수(A12)이므로 **클래스별 대응이 결정론적으로 판정된다** | validator | **경고 안 함** |
+| **A11** | `absent`/`not_collected` 클래스마다 `trigger="coverage.<key>"` 인 대응 경고가 존재하고, `CONFLICT_UNRESOLVED` 경고와 `NEEDS_CHECK` 충돌이 **양방향으로 일치**한다(미해결인데 경고 없음도, 해결됐는데 경고가 남은 것도 위반). `trigger`가 필수(A12)이므로 **클래스별 대응이 결정론적으로 판정된다** | validator | **경고 안 함** · 상태와 경고의 불일치 |
 | **A12** | `audit` 6개 필드(`ceilingApplied` 포함) 전부 존재 + 모든 `warnings` 항목이 `code`·`message`·`trigger`를 갖는다 | schema | 역추적 불가 · 경고 대상 불명 |
 | **A13** | `evidence[].id` **⊆** `audit.evidenceIds` (등호 아님 — 탈락 후보가 더 있는 것은 정상, §2.7) | validator | 감사 로그 불완전 |
 | **A14** | 동일 대상에 `supports`와 `contradicts`가 공존하면 `conflicts` 항목이 있어야 한다 | validator | **충돌 미탐지 = 거짓 확신** |
@@ -210,7 +210,7 @@ confidence = f(finality, freshness, authority, corroboration, contradicted)
 | **reason** | 각 `basis.id`가 **실재하는 L1/L2/L3 레코드**인지 조회 검증 + 그 레코드가 `text` 주장을 실제로 뒷받침하는지 gold 대조 | 무근거 이유 건수, 근거 불일치 건수 | **무근거 이유.** "관련 있습니다" 류 산문 | 하위 이슈 C2 |
 | **conflicts** | gold 충돌셋과 대조한 **precision / recall** | precision, recall, 미탐지 목록, 과탐지 목록 | 미탐지 = 거짓 확신 / 과탐지 = 경보 피로. **둘 다 실패다** — 한쪽만 보고하는 것도 실패 | 하위 이슈 C3 |
 | **coverage** | 클래스 존재/부재의 **결정론 검증** — ADR·test·log를 실제로 찾았는지 gold와 1:1 대조. 동일 입력 3회 일치(I1 H1) | 클래스별 정오표(present/absent/not_collected 오분류 건수), 결정성 일치율 | **없는 걸 있다고 함.** %로 위장 | 하위 이슈 C4 |
-| **warnings / abstention** | 커버리지 미달·핵심 클래스 부재·미해결 충돌 시 **경고했는가**를 A11로 기계 검사 + gold의 "경고해야 하는 케이스" 재현율 | 경고 누락 건수, 경고 재현율, 오경고율 | **"찾았다"면서 30%만 찾음.** 경고 없이 자신 있게 틀리는 것이 최악 | 하위 이슈 C4 |
+| **warnings / abstention** | 커버리지 미달·핵심 클래스 부재·미해결 충돌 시 **경고했는가**를 A11로, **보류했는가**를 A16으로 기계 검사 + gold의 "경고해야 하는 케이스" 재현율 | 경고 누락 건수, 경고 재현율, 오경고율 | **"찾았다"면서 30%만 찾음.** 경고 없이 자신 있게 틀리는 것이 최악 | 하위 이슈 C4 |
 | **audit** | 모든 번들이 로깅되고 `audit`만으로 **동일 응답 재구성** 가능한지(완전성·재현성) | 로깅 누락 건수, 재현 성공률 | **역추적 불가.** 틀렸을 때 왜 틀렸는지 말할 수 없음 | 하위 이슈 C5 |
 | **task.intent** | #99 실제 질문이 통제어휘로 **손실 없이** 분류되는지 | 미분류 질문 비율 | 어휘가 현실을 못 담음 → 개정 신호 | #99 + 본 계약 개정 |
 
@@ -235,6 +235,8 @@ abstention은 별도 필드가 아니라 **`warnings`에 `code: "ABSTAIN"`이 �
 
 **조건 1~3은 지금 확정**된다(현재 필드만으로 결정론적 판정 가능). **조건 4의 임계값은 §6.3**.
 
+> **미해결 충돌이 있다는 사실만으로는 보류하지 않는다.** 조건 3은 그 충돌이 **`evidence[0]`을 포함할 때**만 성립한다. 하위 순위 증거끼리의 다툼은 `CONFLICT_UNRESOLVED` 경고로 드러내되 답변은 한다 — 모든 충돌에 보류하면 abstention은 경보 피로가 되어 아무도 보지 않게 되고, 그러면 정작 보류해야 할 때 신호가 묻힌다. `valid.full.json`(충돌은 `ev-3`↔`ev-4`, 랭킹 1위는 `ev-1`)이 **보류하지 않는 정상 사례**이고, `invalid.abstain-missing-on-top-conflict.json`(충돌이 `ev-1` 포함)이 **보류해야 하는 위반 사례**다.
+>
 > **조건 3을 "핵심 주장"이 아니라 "랭킹 1위 증거"로 정의한 이유:** "핵심 주장"은 응답 필드로 표현되지 않으므로 검증기 구현마다 판정이 갈린다 — 그것 자체가 이 계약이 없애려는 모호함이다. `evidence` 배열의 **순서가 곧 랭킹**(§2.1)이므로 `evidence[0]`은 추가 필드 없이 결정된다. 랭킹 1위가 반박당한 상태에서 단정하지 않는 것이 이 층의 취지이며, 하위 순위 증거만 다투는 경우는 `CONFLICT_UNRESOLVED` 경고로 드러내되 보류까지는 가지 않는다(`valid.full.json`이 그 경계 사례다).
 
 ### 6.3 임계값은 지금 정하지 않는다
@@ -299,7 +301,7 @@ I1은 Gold Set을 "사실 추출" 중심으로 남겨두었다. 이 층을 측�
 
 | 하위 | 범위 | 계약 근거 | 선행 |
 |---|---|---|---|
-| **C0 검증기** | `validate.py`의 규칙(A5·A6·A11·A13·A14·A15·A16)을 백엔드 언어로 옮기고 실행 경로·CI에 연결, `examples/manifest.json`을 테스트 스위트로 사용 | §2·§4 | 없음 (지금 착수 가능) |
+| **C0 검증기** | `validate.py`의 규칙(A5·A6·A11·A13·A14·A15·A16·A17·A18) **전부**를 백엔드 언어로 옮기고 실행 경로·CI에 연결, `examples/manifest.json`을 테스트 스위트로 사용 | §2·§4 | 없음 (지금 착수 가능) |
 | **C1 confidence / calibration** | `f(signals)` 구현 + 신뢰도 곡선 측정 + 계수 비준 | §3·§5 | #99, C0 |
 | **C2 reason 근거 연결** | `basis` 실재성 검증 + 산문 탐지 | §5 | C0 |
 | **C3 conflict 탐지** | 탐지기 + gold 대조 precision/recall | §5·§8 | #99, C0 |
@@ -338,6 +340,11 @@ I1 §7과 동일하며, 추가로:
 | A17·A18 | 없음 | 추가 | null 신호를 조용히 숨기는 경로, trigger 가 아무것도 안 가리키는 경로가 열려 있었다 |
 | `trigger` 형식 | 느슨한 정규식(`foo` 허용) | code별 형식 고정 | 임의 문자열을 허용하면 `trigger` 필수화의 의미가 사라진다 |
 | A16 표 렌더링 | 빈 줄로 표 밖에 표시 | 표 내부 행 | 서식 오류 |
+| `resolvedBy` | `RESOLVED`일 때 필수(그 외 무제한) | `RESOLVED` **⟺** `resolvedBy` | 비-RESOLVED 에 해소 근거가 붙어도 통과해, 상태와 근거가 모순된 응답이 승인됐다 |
+| A11 `CONFLICT_UNRESOLVED` | 단방향(미해결 → 경고) | **양방향** | 해결된 충돌에 경고가 남아 있어도 통과했다 |
+| A5·A11 음성 픽스처 | 한 방향만 | 양방향 모두 | evidence 를 숨기는 coverage, `not_collected` 경고 누락을 검사하지 않았다 |
+| `validate.py` 스키마 케이스 | 첫 오류만 대조 | **오류 1건** + 메시지 대조 | 복수 스키마 위반 픽스처가 단일 위반으로 승인될 수 있었다 |
+| C0 이식 목록 | A5~A16 | A5~A18 | A17·A18 이 빠져 참조 검증기와 제품 검증기가 분화될 수 있었다 |
 | 정상 픽스처 reason 좌표 | `ev-1`의 reason 이 다른 행(L80-L87)을 인용 | 별도 evidence 로 분리 | 그 증거의 `locator` 로 재확인할 수 없는 문장이었다 |
 | 정상 픽스처 좌표 | 가공 예시(`payment_tx`·존재하지 않는 코드 행) | 리포 실좌표(`legacy-sample.sql`·`RelationService.kt`·`RelationJudgeTest.kt` @`3c27259`) | 계약이 "재확인 가능한 좌표"를 요구하는데 예제가 그것을 어겼다 — P1 자기적용 |
 
@@ -353,8 +360,8 @@ I1 §7과 동일하며, 추가로:
 - [x] abstention 형식·발동 조건 확정, 임계값은 비준으로 위임 → §6
 - [x] 게이트 / 잠정 지표 분리 → §7
 - [x] #99(I2)에 추가 요구되는 gold 케이스 명시 → §8
-- [x] 검증 픽스처(정상 3 + 위반 18) 커밋 + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
-- [x] 픽스처 적합성 확인기 커밋(21/21 재현 가능, 규칙 동일성까지 대조) → `schemas/validate.py`
+- [x] 검증 픽스처(정상 3 + 위반 21) 커밋 + 규칙 ID·강제 위치·기대 오류 연결 → `schemas/examples/manifest.json`
+- [x] 픽스처 적합성 확인기 커밋(24/24 재현 가능, 규칙 동일성·단일 위반까지 대조) → `schemas/validate.py`
 - [x] 하위 이슈 분할안 → §9
 
 **다음 착수: C0 검증기 (§9)** — 픽스처 스위트와 참조 규칙 구현이 이미 있으므로 실패 테스트부터 시작할 수 있다.

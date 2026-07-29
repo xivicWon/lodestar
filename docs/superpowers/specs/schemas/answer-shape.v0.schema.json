@@ -315,7 +315,7 @@
           ]
         },
         "resolvedBy": {
-          "description": "status=RESOLVED일 때 해소 근거. 사람 확인은 L3 HUMAN_CONFIRMED 레코드를 가리킨다.",
+          "description": "status=RESOLVED 일 때만 허용되며 그때는 필수다. 비-RESOLVED 상태에 해소 근거가 붙어 있으면 status 와 근거가 모순된 응답이므로 금지한다(A7).",
           "type": "object",
           "additionalProperties": false,
           "required": [
@@ -351,6 +351,13 @@
           "status",
           "resolvedBy"
         ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "resolvedBy"
+          ]
+        }
       }
     },
     "coverage": {

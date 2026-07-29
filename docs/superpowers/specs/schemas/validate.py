@@ -66,9 +66,12 @@ def cross_field_errors(d):
             errs.append(f"A11: coverage.{cls}=absent 인데 {WARN_FOR_ABSENT[cls]} 경고 없음")
         if state == "not_collected" and ("NOT_COLLECTED", f"coverage.{cls}") not in warns:
             errs.append(f"A11: coverage.{cls}=not_collected 인데 대응 경고 없음")
-    for c in d["conflicts"]:
-        if c["status"] == "NEEDS_CHECK" and ("CONFLICT_UNRESOLVED", c["id"]) not in warns:
-            errs.append(f"A11: 미해결 충돌 {c['id']} 에 대한 경고 없음")
+    needs_check = {c["id"] for c in d["conflicts"] if c["status"] == "NEEDS_CHECK"}
+    warned_conflicts = {w["trigger"] for w in d["warnings"] if w["code"] == "CONFLICT_UNRESOLVED"}
+    for cid in sorted(needs_check - warned_conflicts):
+        errs.append(f"A11: 미해결 충돌 {cid} 에 대한 경고 없음")
+    for cid in sorted(warned_conflicts - needs_check):
+        errs.append(f"A11: CONFLICT_UNRESOLVED({cid}) 인데 그 충돌은 NEEDS_CHECK 가 아님")
 
     # A13 — evidence[].id ⊆ audit.evidenceIds (등호 아님: 탈락 후보는 정상)
     missing = [i for i in ev_ids if i not in d["audit"]["evidenceIds"]]
@@ -157,6 +160,9 @@ def main():
                 ok, detail = False, f"교차 위반 {len(cross_errs)}건 — 단일 위반이어야 함: {cross_errs}"
             elif cross_errs and not cross_errs[0].startswith(case["rule"] + ":"):
                 ok, detail = False, f"규칙 불일치: 기대 {case['rule']}, 실제 {cross_errs[0]}"
+            elif len(schema_errs) > 1:
+                ok, detail = False, (f"스키마 위반 {len(schema_errs)}건 — 단일 위반이어야 함: "
+                                     f"{[e.message for e in schema_errs]}")
             elif schema_errs and case["expectedError"] not in schema_errs[0].message:
                 ok, detail = False, f"기대 오류 '{case['expectedError']}' 미검출: {schema_errs[0].message}"
 

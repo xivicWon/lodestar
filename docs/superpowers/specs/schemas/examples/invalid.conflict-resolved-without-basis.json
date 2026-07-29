@@ -190,11 +190,6 @@
   "confidence_overall": 0.58,
   "warnings": [
     {
-      "code": "CONFLICT_UNRESOLVED",
-      "message": "관계 확정 근거의 충분성에 대해 증거가 상충합니다. 사람 확인 전까지 관계를 확정하지 않습니다.",
-      "trigger": "cf-1"
-    },
-    {
       "code": "NO_ISSUE",
       "message": "이 관계를 논의한 이슈 기록을 찾지 못했습니다.",
       "trigger": "coverage.issue"

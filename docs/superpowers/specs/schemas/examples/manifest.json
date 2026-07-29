@@ -67,7 +67,15 @@
       "enforcedBy": "schema",
       "rule": "A7",
       "expectedError": "'resolvedBy' is a required property",
-      "note": "근거 없이 충돌을 해소 처리(덮어쓰기 — I1 P4)"
+      "note": "근거 없이 충돌을 해소 처리(덮어쓰기 — I1 P4). RESOLVED 로 바꾸면 CONFLICT_UNRESOLVED 경고가 상태와 모순되므로(A11 양방향) 그 경고를 함께 제거해 단일 위반으로 유지한다"
+    },
+    {
+      "file": "invalid.resolved-basis-on-unresolved.json",
+      "expect": "invalid",
+      "enforcedBy": "schema",
+      "rule": "A7",
+      "expectedError": "should not be valid under",
+      "note": "status=NEEDS_CHECK 인데 resolvedBy 가 붙음 — 상태와 해소 근거가 모순"
     },
     {
       "file": "invalid.missing-audit.json",
@@ -108,11 +116,25 @@
       "note": "adr 증거가 없는데 coverage.adr=present — 없는 걸 있다고 함"
     },
     {
+      "file": "invalid.coverage-hides-evidence.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A5",
+      "note": "A5 반대 방향 — code 증거가 실재하는데 coverage.code=absent. 있는 걸 없다고 하는 쪽도 똑같이 거짓이다"
+    },
+    {
       "file": "invalid.missing-warning-for-absent-class.json",
       "expect": "invalid",
       "enforcedBy": "validator",
       "rule": "A11",
       "note": "issue=absent 인데 NO_ISSUE 경고 누락 — 경고 안 함"
+    },
+    {
+      "file": "invalid.missing-warning-for-not-collected.json",
+      "expect": "invalid",
+      "enforcedBy": "validator",
+      "rule": "A11",
+      "note": "A11 의 not_collected 방향 — runtime 미수집인데 대응 경고 없음. '없음'과 '안 봄'의 구분이 경고 단계에서 무너진다"
     },
     {
       "file": "invalid.audit-missing-evidence-id.json",
