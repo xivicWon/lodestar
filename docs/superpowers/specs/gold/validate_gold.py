@@ -257,6 +257,11 @@ def _g10():
 def _g11():
     evl = DOCS["evl/questions.json"]
     conflict_ids = {c["id"] for c in evl["conflictGold"]["positive"]}
+    # 보류를 강제하는 것은 **미해결(NEEDS_CHECK) 충돌뿐**이다(EVL §6.2 조건 3).
+    # COEXIST·RESOLVED 는 이미 닫힌 상태라 보류 사유가 아니다 — 이 구분을 잃으면
+    # 충돌 탐지가 보류 스위치로 전락하고, 허위 보류가 정답으로 굳는다.
+    unresolved = {c["id"] for c in evl["conflictGold"]["positive"]
+                  if c.get("status", "NEEDS_CHECK") == "NEEDS_CHECK"}
     for q in evl["questions"]:
         qid = q["id"]
         if set(q["coverage"]) != COVERAGE_KEYS:
@@ -297,8 +302,8 @@ def _g11():
                 if trig.replace("coverage.", "") not in core:
                     yield f"{qid}: 조건 2 의 trigger 는 부재한 핵심 클래스를 가리켜야 한다 (got {trig})"
             elif cond == 3:
-                if not q["expectedConflicts"]:
-                    yield f"{qid}: 조건 3(미해결 충돌)인데 expectedConflicts 가 비어 있다"
+                if not set(q["expectedConflicts"]) & unresolved:
+                    yield f"{qid}: 조건 3 인데 NEEDS_CHECK 충돌이 없다 (COEXIST·RESOLVED 는 보류 사유가 아니다)"
             else:
                 yield f"{qid}: abstainCondition 이 1~3 이 아니다 ({cond})"
         elif not q["expectAbstain"]:
@@ -308,8 +313,13 @@ def _g11():
                 yield f"{qid}: 비보류인데 근거가 0건이다 (조건 1 성립)"
             if not any(q["coverage"][c] == "present" for c in core):
                 yield f"{qid}: 비보류인데 핵심 클래스 {core} 가 전면 부재다 (조건 2 성립)"
-            if q["expectedConflicts"]:
-                yield f"{qid}: 비보류인데 미해결 충돌이 있다 (조건 3 성립)"
+            if set(q["expectedConflicts"]) & unresolved:
+                yield f"{qid}: 비보류인데 NEEDS_CHECK 충돌이 있다 (조건 3 성립)"
+            # 닫힌 충돌은 보류를 면제받는 대신 **상태를 명시**해야 한다. 상태 없이
+            # 비보류로 넘어가면 '충돌을 못 본 것' 과 '보고 닫은 것' 이 구분되지 않는다.
+            for cid in q["expectedConflicts"]:
+                if q.get("expectedConflictStatus", {}).get(cid) not in ("COEXIST", "RESOLVED"):
+                    yield f"{qid}: 비보류 질문의 충돌 '{cid}' 에 닫힌 상태(COEXIST/RESOLVED) 선언이 없다"
         for cid in q["expectedConflicts"]:
             if cid not in conflict_ids:
                 yield f"{qid}: conflictGold 에 없는 충돌 id '{cid}'"
@@ -347,9 +357,24 @@ def _g13():
         for f in ("id", "case", "title", "why", "steps"):
             if not s.get(f):
                 yield f"{s.get('id', '?')}: 필수 필드 '{f}' 누락"
+        # step 은 비규범적 표식이 아니라 실행 순서다 — 중복·누락·역순을 허용하면
+        # 'step2 뒤에' 같은 참조가 무엇을 가리키는지 모호해진다(재등장 시나리오가 실제로 참조한다).
+        nums = [st.get("step") for st in s["steps"]]
+        if nums != list(range(1, len(nums) + 1)):
+            yield f"{s['id']}: step 이 배열 순서대로 1..{len(nums)} 가 아니다 (got {nums})"
         for st in s["steps"]:
             if not st.get("mustHold"):
                 yield f"{s['id']} step{st.get('step')}: mustHold 가 비어 있다 — 판정할 것이 없는 단계"
+        # 다른 시나리오의 단계를 이어받는 경우, 그 단계가 실재해야 한다.
+        for st in s["steps"]:
+            inp = st.get("input", {})
+            if inp.get("action") == "CONTINUE_FROM":
+                tgt = next((x for x in d["scenarios"] if x["id"] == inp.get("scenario")), None)
+                if tgt is None:
+                    yield f"{s['id']}: 존재하지 않는 시나리오를 이어받는다 '{inp.get('scenario')}'"
+                elif inp.get("afterStep") not in [x["step"] for x in tgt["steps"]]:
+                    yield (f"{s['id']}: {inp['scenario']} 에 step{inp.get('afterStep')} 이 없다 "
+                           f"— 이어받을 종료 상태가 정의되지 않는다")
     for need in ("정상", "변경", "충돌", "삭제", "재등장"):
         if need not in cases:
             yield f"이슈 #99 가 요구한 L3 케이스 '{need}' 가 없다"

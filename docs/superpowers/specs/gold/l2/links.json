@@ -42,7 +42,7 @@
         }
       ],
       "origin": "repo",
-      "notes": "이 코퍼스에서 EXTRACTED 가 정답인 **유일한** 링크다. 다른 어떤 쌍이 EXTRACTED 로 나오면 그 순간 I1 P2 위반이므로, 이 한 건은 precision 의 기준점 역할을 한다."
+      "notes": "**DB 코퍼스에서** EXTRACTED 가 정답인 유일한 링크다(코드 트랙의 override 링크는 별도로 EXTRACTED 다 — L2.CODE.OVR.*). DB 쪽에서 다른 쌍이 EXTRACTED 로 나오면 그 순간 I1 P2 위반이므로, 이 한 건이 DB 링크 precision 의 기준점이다."
     },
     {
       "id": "L2.DB.INF.ORD_HD.CUST_NO",

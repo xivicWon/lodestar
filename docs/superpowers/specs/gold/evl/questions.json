@@ -27,8 +27,8 @@
   },
   "counts": {
     "QUESTION": 8,
-    "ABSTAIN_TRUE": 5,
-    "ABSTAIN_FALSE": 3,
+    "ABSTAIN_TRUE": 4,
+    "ABSTAIN_FALSE": 4,
     "CONFLICT_POSITIVE": 2,
     "CONFLICT_NEGATIVE": 2
   },
@@ -150,8 +150,7 @@
         "test": "present",
         "runtime": "not_collected"
       },
-      "expectAbstain": true,
-      "abstainCondition": 3,
+      "expectAbstain": false,
       "expectedWarnings": [
         {
           "code": "NOT_COLLECTED",
@@ -160,14 +159,6 @@
         {
           "code": "NOT_COLLECTED",
           "trigger": "coverage.runtime"
-        },
-        {
-          "code": "CONFLICT_UNRESOLVED",
-          "trigger": "<conflictId of CF2>"
-        },
-        {
-          "code": "ABSTAIN",
-          "trigger": "<conflictId of CF2>"
         }
       ],
       "expectedConflicts": [
@@ -193,7 +184,10 @@
           "fact": "I1 §4.1 은 'L1 무보고 파싱 실패 0건' 을 무조건 게이트로 못박았다"
         }
       ],
-      "notes": "코드와 테스트가 한편, 계약 문서가 반대편인 2대1 충돌이다. 다수결로 '보고하지 않는다'고 단정하면 안 된다 — 여기서 다투는 것은 사실이 아니라 **현행 동작과 계약 요구의 불일치**이며, 그 불일치 자체가 F.DB.BROKEN_SYNTAX 픽스처가 겨냥하는 결함이다. 반대 증거(adr)를 stance=contradicts 로 명시하지 않고 빠뜨리면 EVL A10·A14 위반이다."
+      "notes": "**충돌은 있으나 보류가 정답이 아닌 유일한 질문이다.** 코드·테스트는 현행 동작을, ADR 은 계약 요구를 말한다 — 두 진술은 서로를 반증하지 않고 **둘 다 참**이다(구현이 계약을 위반 중인 상태). 따라서 status 는 `NEEDS_CHECK` 가 아니라 `COEXIST` 이고, EVL §6.2 조건 3 은 성립하지 않는다. 답은 '현재는 보고되지 않는다 — 다만 I1 §4.1 은 이를 금지한다' 이며, ADR 근거를 stance=contradicts 로 실어 반대 증거를 드러내야 한다(A10·A14).\n겨냥하는 오구현은 두 방향이다: ① 충돌이 보이면 무조건 보류하는 구현(허위 보류 — A16 역방향). ② 코드·테스트 2대1 다수결로 ADR 근거를 떨어뜨려 반대 증거를 은폐하는 구현.\nQ2 와 짝으로 봐야 한다 — Q2 는 둘 중 하나가 반드시 거짓이라 `NEEDS_CHECK`(보류)이고, Q3 는 둘 다 참이라 `COEXIST`(비보류)다. 이 구분을 못 하면 충돌 탐지가 보류 스위치로 전락한다.",
+      "expectedConflictStatus": {
+        "CF2.PARSE_FAILURE_REPORTING": "COEXIST"
+      }
     },
     {
       "id": "EVL.Q4.NEG_CONFLICT_FK_COUNT",
@@ -433,7 +427,7 @@
     }
   ],
   "conflictGold": {
-    "note": "EVL §5 의 conflict precision/recall 은 이 표를 분모로 산출한다. 양성 2건 · 음성 2건이며, 음성 없이 양성만 재면 과탐지가 보이지 않는다.",
+    "note": "EVL §5 의 conflict precision/recall 은 이 표를 분모로 산출한다. 양성 2건 · 음성 2건이며, 음성 없이 양성만 재면 과탐지가 보이지 않는다. 양성 2건은 status 가 서로 다르다 — CF1 은 `NEEDS_CHECK`(보류 유발), CF2 는 `COEXIST`(보류 아님). 충돌 탐지와 보류 발동을 같은 스위치로 구현하면 이 둘 중 하나는 반드시 틀린다.",
     "positive": [
       {
         "id": "CF1.TABLE_COUNT",
@@ -454,9 +448,11 @@
           "test:DdlParserTest.kt#L44",
           "adr:m0-i1-baseline-contract.md#L169"
         ],
-        "status": "NEEDS_CHECK",
+        "status": "COEXIST",
         "question": "EVL.Q3.CONFLICT_PARSE_FAILURE_REPORTING",
-        "resolutionPath": "구현이 실패 보고 경로를 갖추면 RESOLVED. 코드·테스트가 같은 편이라고 다수결로 닫으면 안 된다."
+        "resolutionPath": "해소 대상이 아니다 — `COEXIST` 는 이미 닫힌 상태다(EVL §2.4). 구현이 실패 보고 경로를 갖추면 충돌 자체가 소멸한다. `RESOLVED` 로 바꾸려면 `resolvedBy` 근거가 필요하며, 근거 없이 상태만 바꾸는 것은 I1 P4 위반이다.",
+        "resolvedBy": null,
+        "whyNotNeedsCheck": "두 진술이 서로를 반증하지 않기 때문이다. CF1 은 테이블 수가 27 이거나 28 이지 둘 다일 수 없어 `NEEDS_CHECK` 지만, CF2 는 '현재 보고하지 않는다' 와 '보고해야 한다' 가 동시에 참이다."
       }
     ],
     "negative": [

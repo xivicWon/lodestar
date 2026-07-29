@@ -177,7 +177,7 @@
   "goldFiles": [
     {
       "path": "gold.v0.schema.json",
-      "sha256": "sha256:4246fbc041e2895f45a33b04bdb57a4099d906903650bd5160ce8bc87560e4c1"
+      "sha256": "sha256:6fcaf7d62eda8d3570bf27dfb8dfd5e8ce01a9906224b8a4a4ec1ce8965079a2"
     },
     {
       "path": "l1/db.json",
@@ -185,19 +185,19 @@
     },
     {
       "path": "l1/code.json",
-      "sha256": "sha256:70e66a721541e585dbc72970cb6b82b97ce8821e45e383e9ab93504470a0f504"
+      "sha256": "sha256:999b2e8f11c55d66019cccaf7e005d7747bdb9ce5298733419cbb5f7fd823607"
     },
     {
       "path": "l2/links.json",
-      "sha256": "sha256:f1b665c4136e90d8ce8802a8853ec3f29275f4a6d4a25b5ae0c47cf87ec05380"
+      "sha256": "sha256:943446ff4f627bfebc46774c2be24001757975d36cf5324f86d88b0e25060bd4"
     },
     {
       "path": "l3/claims.json",
-      "sha256": "sha256:d349a688377bdfc0fd71c6dbbcfd00a65c5cfafa3bc5665ae4d4251dfbfdfb16"
+      "sha256": "sha256:225686412a03515355825f1a03e4d9638250318d56df03b26e56a3d0d9c78731"
     },
     {
       "path": "evl/questions.json",
-      "sha256": "sha256:813d7e22be1ee754f38afe86670fa13303ccfbec159f2f082b4ee27a5c6ff7a2"
+      "sha256": "sha256:af600169606c5353eb29ed625f207b4483f61877401d42600ab04653e75295c3"
     },
     {
       "path": "pii.json",
@@ -209,7 +209,7 @@
     },
     {
       "path": "validate_gold.py",
-      "sha256": "sha256:af6701c2a512b26fceb4d3e5df17b64b1ae5992e6939bdb83c90c901e3118b46"
+      "sha256": "sha256:ede397ce97dc73ba55e56df68b19ab505993fd5165fb1455df1b0df95fd191aa"
     }
   ],
   "fixtures": [

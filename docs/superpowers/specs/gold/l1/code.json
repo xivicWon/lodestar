@@ -44,13 +44,13 @@
     "R-CODE-3": "생성자 호출은 callee 를 `<타입>.<init>` 로 적는다.",
     "R-CODE-4": "TYPE 은 소스에 선언된 것만 센다 — enum·data class·interface·object·class 를 모두 포함한다.",
     "R-CODE-5": "컴파일러 생성 멤버(enum 의 `valueOf`/`values`, data class 의 `copy`/`componentN`/`equals`/`hashCode`/`toString`)는 TYPE·METHOD·CALL 어디에도 등재하지 않는다. 소스에 없는 것을 정답으로 요구하면 추출기마다 판정이 갈린다.",
-    "R-CODE-6": "Kotlin 프로퍼티는 METHOD 가 아니라 PROPERTY 로 센다. getter/setter 로 펴서 메서드로 집계하면 같은 선언이 두 번 세어진다."
+    "R-CODE-6": "PROPERTY 항목은 **타입 본문에 선언된 프로퍼티**만 센다(override val · const val 포함). 생성자 파라미터 프로퍼티(`val`/`var`)는 소유 TYPE 항목의 `value.properties` 로 기록하고 PROPERTY 로 중복 계상하지 않으며, 프로퍼티가 아닌 생성자 파라미터(예: DdlSource 의 `schemaName`)는 어디에도 등재하지 않는다. Kotlin 프로퍼티를 getter/setter 로 펴서 METHOD 로 세는 것도 금지한다 — 같은 선언이 두 번 세어진다. 분모 정의가 없으면 recall 이 집계 방식에 따라 달라진다."
   },
   "counts": {
     "FILE": 5,
     "TYPE": 13,
     "METHOD": 10,
-    "PROPERTY": 4,
+    "PROPERTY": 7,
     "CALL": 11,
     "negatives": 2
   },
@@ -362,6 +362,10 @@
         "kind": "CLASS",
         "supertypes": [
           "com.ontostudio.rdb.SchemaSource"
+        ],
+        "properties": [
+          "sql",
+          "parser"
         ]
       },
       "ref": {
@@ -383,6 +387,11 @@
         "kind": "CLASS",
         "supertypes": [
           "com.ontostudio.rdb.SchemaSource"
+        ],
+        "properties": [
+          "info",
+          "connector",
+          "metadata"
         ]
       },
       "ref": {
@@ -404,6 +413,10 @@
         "kind": "CLASS",
         "supertypes": [
           "com.ontostudio.rdb.SchemaSource"
+        ],
+        "properties": [
+          "sampleDb",
+          "metadata"
         ]
       },
       "ref": {
@@ -753,6 +766,70 @@
         "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L41",
         "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
         "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.CODE.PROPERTY.ProvenanceVocab.KIND",
+      "layer": "L1",
+      "track": "code",
+      "type": "PROPERTY",
+      "expect": "PRESENT",
+      "value": {
+        "owner": "com.ontostudio.provenance.ProvenanceVocab",
+        "name": "KIND",
+        "type": "String",
+        "const": true,
+        "constantValue": "http://lodestar/meta#kind"
+      },
+      "ref": {
+        "sourceId": "code:provenance/ProvenanceVocab.kt",
+        "locator": "backend/src/main/kotlin/com/ontostudio/provenance/ProvenanceVocab.kt#L13",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:cc4b53b0df762e10a8ed73065460e960195e279e1d7b1de5406d6fbd6ba11aab"
+      },
+      "origin": "repo",
+      "notes": "object 본문에 선언된 const val 이다. 이 셋은 provenance 어휘가 실제로 실리는 IRI 이므로, 빠지면 L2 status·method 를 어디에 기록했는지 역추적할 수 없다."
+    },
+    {
+      "id": "L1.CODE.PROPERTY.ProvenanceVocab.PROVENANCE",
+      "layer": "L1",
+      "track": "code",
+      "type": "PROPERTY",
+      "expect": "PRESENT",
+      "value": {
+        "owner": "com.ontostudio.provenance.ProvenanceVocab",
+        "name": "PROVENANCE",
+        "type": "String",
+        "const": true,
+        "constantValue": "http://lodestar/meta#provenance"
+      },
+      "ref": {
+        "sourceId": "code:provenance/ProvenanceVocab.kt",
+        "locator": "backend/src/main/kotlin/com/ontostudio/provenance/ProvenanceVocab.kt#L14",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:cc4b53b0df762e10a8ed73065460e960195e279e1d7b1de5406d6fbd6ba11aab"
+      },
+      "origin": "repo"
+    },
+    {
+      "id": "L1.CODE.PROPERTY.ProvenanceVocab.CONFIDENCE",
+      "layer": "L1",
+      "track": "code",
+      "type": "PROPERTY",
+      "expect": "PRESENT",
+      "value": {
+        "owner": "com.ontostudio.provenance.ProvenanceVocab",
+        "name": "CONFIDENCE",
+        "type": "String",
+        "const": true,
+        "constantValue": "http://lodestar/meta#confidence"
+      },
+      "ref": {
+        "sourceId": "code:provenance/ProvenanceVocab.kt",
+        "locator": "backend/src/main/kotlin/com/ontostudio/provenance/ProvenanceVocab.kt#L15",
+        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+        "contentHash": "sha256:cc4b53b0df762e10a8ed73065460e960195e279e1d7b1de5406d6fbd6ba11aab"
       },
       "origin": "repo"
     },

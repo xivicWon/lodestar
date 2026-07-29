@@ -5,33 +5,77 @@
   "description": "L1·L2·PII gold 의 항목 파일 형식. L3 시나리오·EVL 질문·실패 픽스처는 구조가 달라 이 스키마가 아니라 validate_gold.py 의 교차 필드 규칙이 검사한다.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["goldSetVersion", "scope", "counts", "items"],
+  "required": [
+    "goldSetVersion",
+    "scope",
+    "counts",
+    "items"
+  ],
   "properties": {
-    "goldSetVersion": { "const": "gold-set/v0" },
+    "goldSetVersion": {
+      "const": "gold-set/v0"
+    },
     "scope": {
       "type": "object",
-      "required": ["track", "closed", "note"],
+      "required": [
+        "track",
+        "closed",
+        "note"
+      ],
       "properties": {
-        "track": { "enum": ["db", "code", "pii", "fixture", "mixed", "evl"] },
+        "track": {
+          "enum": [
+            "db",
+            "code",
+            "pii",
+            "fixture",
+            "mixed",
+            "evl"
+          ]
+        },
         "closed": {
           "type": "boolean",
           "description": "true 면 이 파일이 recall 의 분모다 — 여기 없는 사실은 오탐이다. false 면 지목된 케이스의 정오 판정표일 뿐이며, 그 파일로 전체 recall 을 주장하면 분모 없는 수치다."
         },
-        "note": { "type": "string", "minLength": 1 },
-        "revision": { "$ref": "#/$defs/revision" },
-        "sourceId": { "type": "string" },
-        "path": { "type": "string" },
-        "contentHash": { "$ref": "#/$defs/contentHash" },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "$ref": "#/$defs/revision"
+        },
+        "sourceId": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "contentHash": {
+          "$ref": "#/$defs/contentHash"
+        },
         "files": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["sourceId", "path", "contentHash"],
+            "required": [
+              "sourceId",
+              "path",
+              "contentHash"
+            ],
             "properties": {
-              "sourceId": { "type": "string" },
-              "path": { "type": "string" },
-              "contentHash": { "$ref": "#/$defs/contentHash" },
-              "lines": { "type": "integer", "minimum": 1 }
+              "sourceId": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "contentHash": {
+                "$ref": "#/$defs/contentHash"
+              },
+              "lines": {
+                "type": "integer",
+                "minimum": 1
+              }
             },
             "additionalProperties": false
           }
@@ -41,19 +85,31 @@
     "rules": {
       "type": "object",
       "description": "이 파일의 판정 규칙. 규칙 없이 정답만 있으면 판정이 채점자마다 갈린다.",
-      "patternProperties": { "^R-[A-Za-z0-9-]+$": { "type": "string", "minLength": 1 } },
+      "patternProperties": {
+        "^R-[A-Za-z0-9-]+$": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
       "additionalProperties": false
     },
-    "gate": { "type": "object" },
+    "gate": {
+      "type": "object"
+    },
     "counts": {
       "type": "object",
       "description": "선언 개수. validate_gold.py 가 실제 항목 수와 대조한다 — 선언과 실제가 어긋나면 항목이 조용히 늘거나 준 것이다.",
-      "additionalProperties": { "type": "integer", "minimum": 0 }
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
     },
     "items": {
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "#/$defs/item" }
+      "items": {
+        "$ref": "#/$defs/item"
+      }
     }
   },
   "$defs": {
@@ -62,66 +118,209 @@
       "pattern": "^[0-9a-f]{40}$",
       "description": "축약형을 허용하지 않는다 — 축약 SHA 는 리포가 커지면 충돌할 수 있고, 두 표기가 섞이면 문자열 비교가 실행마다 갈린다."
     },
-    "contentHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "contentHash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
     "ref": {
       "type": "object",
-      "required": ["sourceId", "locator"],
+      "required": [
+        "sourceId",
+        "locator"
+      ],
       "additionalProperties": false,
       "properties": {
-        "sourceId": { "type": "string", "minLength": 1 },
+        "sourceId": {
+          "type": "string",
+          "minLength": 1
+        },
         "locator": {
           "type": "string",
           "pattern": "^[^#]+#L[0-9]+(-L[0-9]+)?$",
-          "description": "`<경로>#L<행>` 또는 `<경로>#L<시작>-L<끝>`. 좌표 없는 인용은 증거가 아니다(I1 §6.1)."
+          "description": "`<경로>#L<행>` 또는 `<경로>#L<시작>-L<끝>`. 좌표 없는 인용은 증거가 아니다(I1 §6.1). **여기서는 형식만 본다** — 행이 실재하는지·시작 ≤ 끝인지는 정규식으로 표현할 수 없으므로 확인기 G7 이 원본과 대조해 강제한다(검증 책임의 분담)."
         },
-        "revision": { "$ref": "#/$defs/revision" },
-        "contentHash": { "$ref": "#/$defs/contentHash" }
+        "revision": {
+          "$ref": "#/$defs/revision"
+        },
+        "contentHash": {
+          "$ref": "#/$defs/contentHash"
+        }
       }
     },
     "item": {
       "type": "object",
-      "required": ["id", "layer", "track", "type", "expect", "value", "origin"],
+      "required": [
+        "id",
+        "layer",
+        "track",
+        "type",
+        "expect",
+        "value",
+        "origin"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "pattern": "^[A-Za-z0-9._가-힣-]+$", "minLength": 3 },
-        "layer": { "enum": ["L0", "L1", "L2", "L3"] },
-        "track": { "enum": ["db", "code", "pii", "fixture"] },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._가-힣-]+$",
+          "minLength": 3
+        },
+        "layer": {
+          "enum": [
+            "L0",
+            "L1",
+            "L2",
+            "L3"
+          ]
+        },
+        "track": {
+          "enum": [
+            "db",
+            "code",
+            "pii",
+            "fixture"
+          ]
+        },
         "type": {
-          "enum": ["TABLE", "COLUMN", "PRIMARY_KEY", "FOREIGN_KEY", "VIEW", "FILE", "TYPE", "METHOD", "PROPERTY", "CALL", "LINK", "MASK_SPAN"]
+          "enum": [
+            "TABLE",
+            "COLUMN",
+            "PRIMARY_KEY",
+            "FOREIGN_KEY",
+            "VIEW",
+            "FILE",
+            "TYPE",
+            "METHOD",
+            "PROPERTY",
+            "CALL",
+            "LINK",
+            "MASK_SPAN"
+          ]
         },
         "expect": {
-          "enum": ["PRESENT", "ABSENT", "AMBIGUOUS", "REPORTED_EXCLUDED", "MASKED", "NOT_MASKED"],
+          "enum": [
+            "PRESENT",
+            "ABSENT",
+            "AMBIGUOUS",
+            "REPORTED_EXCLUDED",
+            "MASKED",
+            "NOT_MASKED"
+          ],
           "description": "PRESENT=산출되어야 함 · ABSENT=산출하면 오탐 · AMBIGUOUS=확정하지 말고 후보와 함께 남겨야 함(I1 P3) · REPORTED_EXCLUDED=추출 대상이 아니지만 제외 사유와 함께 보고되어야 함 · MASKED/NOT_MASKED=PII 전용"
         },
-        "value": { "type": "object" },
-        "ref": { "$ref": "#/$defs/ref" },
-        "refs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/ref" } },
+        "value": {
+          "type": "object"
+        },
+        "ref": {
+          "$ref": "#/$defs/ref"
+        },
+        "refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/ref"
+          }
+        },
         "origin": {
-          "enum": ["repo", "fixture"],
+          "enum": [
+            "repo",
+            "fixture"
+          ],
           "description": "repo=고정 revision 의 실제 리포 내용에서 확인된 것 · fixture=이 gold 를 위해 합성해 커밋한 것. 섞이면 '실제 코드에서 측정했다'는 주장의 범위가 흐려진다."
         },
-        "notes": { "type": "string" }
+        "notes": {
+          "type": "string"
+        }
       },
       "allOf": [
         {
           "description": "ref 와 refs 중 정확히 하나를 가진다. 둘 다 없으면 좌표 없는 정답이고, 둘 다 있으면 어느 쪽이 정본인지 모호해진다.",
           "oneOf": [
-            { "required": ["ref"], "not": { "required": ["refs"] } },
-            { "required": ["refs"], "not": { "required": ["ref"] } }
+            {
+              "required": [
+                "ref"
+              ],
+              "not": {
+                "required": [
+                  "refs"
+                ]
+              }
+            },
+            {
+              "required": [
+                "refs"
+              ],
+              "not": {
+                "required": [
+                  "ref"
+                ]
+              }
+            }
           ]
         },
         {
-          "description": "AMBIGUOUS 항목은 후보 목록을 반드시 제시한다 — 후보 없는 '모호함' 은 판정할 수 없다.",
-          "if": { "properties": { "expect": { "const": "AMBIGUOUS" } }, "required": ["expect"] },
-          "then": { "properties": { "value": { "required": ["candidates"] } } }
+          "description": "AMBIGUOUS 항목은 후보를 **1개 이상** 제시한다 — 후보 없는 '모호함' 은 판정할 수 없고, 확정을 회피하는 만능 답이 된다(I1 P3 의 남용).",
+          "if": {
+            "properties": {
+              "expect": {
+                "const": "AMBIGUOUS"
+              }
+            },
+            "required": [
+              "expect"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "required": [
+                  "candidates"
+                ],
+                "properties": {
+                  "candidates": {
+                    "type": "array",
+                    "minItems": 1
+                  }
+                }
+              }
+            }
+          }
         },
         {
           "description": "MASK_SPAN 은 마스킹 분류와 원문 조각을 함께 갖는다.",
-          "if": { "properties": { "type": { "const": "MASK_SPAN" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "MASK_SPAN"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "value": { "required": ["class", "text"], "properties": { "class": { "type": "string" }, "text": { "type": "string", "minLength": 1 } } },
-              "expect": { "enum": ["MASKED", "NOT_MASKED"] }
+              "value": {
+                "required": [
+                  "class",
+                  "text"
+                ],
+                "properties": {
+                  "class": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "expect": {
+                "enum": [
+                  "MASKED",
+                  "NOT_MASKED"
+                ]
+              }
             }
           }
         }
