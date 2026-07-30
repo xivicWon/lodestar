@@ -1,0 +1,1017 @@
+{
+  "goldSetVersion": "gold-set/v0",
+  "scope": {
+    "track": "mixed",
+    "closed": false,
+    "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+    "note": "L2 는 닫힌 범위가 아니다 — 후보 링크 공간은 컬럼 쌍의 조합이라 전수 열거가 불가능하다. 따라서 이 파일은 recall 의 분모가 아니라 **지목된 케이스에 대한 정오 판정표**다. Run Quality Report 는 여기 등재된 케이스에 한해 precision/recall 을 산출하고, '전체 링크 recall' 을 주장하지 않는다(주장하면 분모 없는 수치다).",
+    "denominator": "case-limited",
+    "denominatorNote": "이 파일에 등재된 케이스가 분모다. Run Quality Report 는 L2 지표에 이 값을 그대로 옮겨 적어 **어느 모집단으로 쟀는지** 남긴다 — 후보 쌍 전체를 분모로 삼은 실행과 케이스 한정 실행이 같은 이름의 recall 로 비교되면 그 비교는 성립하지 않는다(I3 §3.8)."
+  },
+  "rules": {
+    "R-L2-1": "expect=PRESENT 는 그 status·method 로 산출돼야 통과다. 같은 쌍을 더 강한 등급으로 올리면(예: INFERRED 를 EXTRACTED 로) I1 P2 위반이며 오답이다.",
+    "R-L2-2": "expect=AMBIGUOUS 는 후보를 임의로 하나 고르면 오답이다. 후보 목록과 함께 AMBIGUOUS 로 남겨야 통과(I1 P3).",
+    "R-L2-3": "expect=ABSENT 쌍을 링크로 산출하면 오연결이다. confidence ≥ 0.8 로 산출하면 '고신뢰 오연결'로 별도 집계한다(I1 §4.2 · H4 등급 판단의 입력).",
+    "R-L2-4": "drift 케이스(revA↔revB↔revC)의 정답은 픽스처 3벌 사이의 대응 관계다. 리포의 고정 revision 과 무관하며, 픽스처 파일 해시로 고정된다.",
+    "R-L2-5": "DB 트랙에서 `status=EXTRACTED` 인 정답 링크는 **정확히 1건**(FK_ORD_MEMO)이다. 이 코퍼스에 명시 FK 가 하나뿐이므로 둘째가 생기면 그것은 추론을 명시로 승격한 것이다(I1 P2). 종전에는 이 불변식이 notes 산문에만 있어 아무도 검사하지 않았다 — 규칙으로 올려 확인기가 센다."
+  },
+  "counts": {
+    "PRESENT": 22,
+    "AMBIGUOUS": 2,
+    "ABSENT": 9,
+    "negatives": 9
+  },
+  "items": [
+    {
+      "id": "L2.DB.EXT.ORD_MEMO.ORD_NO",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_ORD_MEMO.ORD_NO",
+        "right": "L1.DB.COLUMN.TB_ORD_HD.ORD_NO",
+        "status": "EXTRACTED",
+        "method": "FK"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L217",
+          "endpoint": "L1.DB.COLUMN.TB_ORD_MEMO.ORD_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L81",
+          "endpoint": "L1.DB.COLUMN.TB_ORD_HD.ORD_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "**DB 코퍼스에서** EXTRACTED 가 정답인 유일한 링크다(코드 트랙의 override 링크는 별도로 EXTRACTED 다 — L2.CODE.OVR.*). DB 쪽에서 다른 쌍이 EXTRACTED 로 나오면 그 순간 I1 P2 위반이므로, 이 한 건이 DB 링크 precision 의 기준점이다."
+    },
+    {
+      "id": "L2.DB.INF.ORD_HD.CUST_NO",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_ORD_HD.CUST_NO",
+        "right": "L1.DB.COLUMN.TB_CUST_MST.CUST_NO",
+        "status": "INFERRED",
+        "method": "NAMEPATTERN"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L82",
+          "endpoint": "L1.DB.COLUMN.TB_ORD_HD.CUST_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L8",
+          "endpoint": "L1.DB.COLUMN.TB_CUST_MST.CUST_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "이름 완전 일치 + 상대가 PK. 가장 쉬운 양성이며, 이것을 못 잡으면 NAMEPATTERN 휴리스틱이 동작하지 않는 것이다."
+    },
+    {
+      "id": "L2.DB.INF.ORD_DTL.ORD_NO",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_ORD_DTL.ORD_NO",
+        "right": "L1.DB.COLUMN.TB_ORD_HD.ORD_NO",
+        "status": "INFERRED",
+        "method": "NAMEPATTERN"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L90",
+          "endpoint": "L1.DB.COLUMN.TB_ORD_DTL.ORD_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L81",
+          "endpoint": "L1.DB.COLUMN.TB_ORD_HD.ORD_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "헤더-디테일 관계. 왼쪽은 복합 PK 의 선행 컬럼이다."
+    },
+    {
+      "id": "L2.DB.INF.ORD_DTL.ITEM_CD",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_ORD_DTL.ITEM_CD",
+        "right": "L1.DB.COLUMN.TB_ITEM_MST.ITEM_CD",
+        "status": "INFERRED",
+        "method": "NAMEPATTERN"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L92",
+          "endpoint": "L1.DB.COLUMN.TB_ORD_DTL.ITEM_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L35",
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_MST.ITEM_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo"
+    },
+    {
+      "id": "L2.DB.INF.STOK_QTY.WH_CD",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_STOK_QTY.WH_CD",
+        "right": "L1.DB.COLUMN.TB_WH_MST.WH_CD",
+        "status": "INFERRED",
+        "method": "NAMEPATTERN"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L57",
+          "endpoint": "L1.DB.COLUMN.TB_STOK_QTY.WH_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L65",
+          "endpoint": "L1.DB.COLUMN.TB_WH_MST.WH_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "왼쪽이 복합 PK(WH_CD, ITEM_CD)의 구성 컬럼이다. PK 구성 컬럼은 외부를 가리키지 않는다고 가정하는 구현은 여기서 recall 을 잃는다."
+    },
+    {
+      "id": "L2.DB.INF.STOK_QTY.ITEM_CD",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_STOK_QTY.ITEM_CD",
+        "right": "L1.DB.COLUMN.TB_ITEM_MST.ITEM_CD",
+        "status": "INFERRED",
+        "method": "NAMEPATTERN"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L58",
+          "endpoint": "L1.DB.COLUMN.TB_STOK_QTY.ITEM_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L35",
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_MST.ITEM_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo"
+    },
+    {
+      "id": "L2.DB.INF.ITEM_MST.VNDR_CD",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_ITEM_MST.VNDR_CD",
+        "right": "L1.DB.COLUMN.TB_VNDR_MST.VNDR_CD",
+        "status": "INFERRED",
+        "method": "NAMEPATTERN"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L40",
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_MST.VNDR_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L27",
+          "endpoint": "L1.DB.COLUMN.TB_VNDR_MST.VNDR_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo"
+    },
+    {
+      "id": "L2.DB.INF.ITEM_MST.UNIT_CD",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_ITEM_MST.UNIT_CD",
+        "right": "L1.DB.COLUMN.TB_UNIT_CD.UNIT_CD",
+        "status": "INFERRED",
+        "method": "NAMEPATTERN"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L38",
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_MST.UNIT_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L202",
+          "endpoint": "L1.DB.COLUMN.TB_UNIT_CD.UNIT_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "상대 테이블 이름(TB_UNIT_CD)이 컬럼 이름(UNIT_CD)을 그대로 포함한다 — 테이블명 규칙까지 쓰는 구현에는 쉽고, 컬럼명만 보는 구현에도 쉽다."
+    },
+    {
+      "id": "L2.DB.INF.ACCT_SLIP.ACCT_CD",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_ACCT_SLIP.ACCT_CD",
+        "right": "L1.DB.COLUMN.TB_ACCT_CD.ACCT_CD",
+        "status": "INFERRED",
+        "method": "NAMEPATTERN"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L133",
+          "endpoint": "L1.DB.COLUMN.TB_ACCT_SLIP.ACCT_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L140",
+          "endpoint": "L1.DB.COLUMN.TB_ACCT_CD.ACCT_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo"
+    },
+    {
+      "id": "L2.DB.INF.DEPT_MST.UP_DEPT_CD",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_DEPT_MST.UP_DEPT_CD",
+        "right": "L1.DB.COLUMN.TB_DEPT_MST.DEPT_CD",
+        "status": "INFERRED",
+        "method": "NAMEPATTERN"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L167",
+          "endpoint": "L1.DB.COLUMN.TB_DEPT_MST.UP_DEPT_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L165",
+          "endpoint": "L1.DB.COLUMN.TB_DEPT_MST.DEPT_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "자기참조 계층. 이름이 완전히 같지 않고(UP_ 접두사) 같은 테이블 안이다 — 이름 완전일치만 보는 구현은 못 잡고, 자기 테이블을 후보에서 빼는 구현도 못 잡는다."
+    },
+    {
+      "id": "L2.DB.INF.ITEM_GRP.UP_GRP_CD",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_ITEM_GRP.UP_GRP_CD",
+        "right": "L1.DB.COLUMN.TB_ITEM_GRP.GRP_CD",
+        "status": "INFERRED",
+        "method": "NAMEPATTERN"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L47",
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_GRP.UP_GRP_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L45",
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_GRP.GRP_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo"
+    },
+    {
+      "id": "L2.DB.INF.EMP_MST.MGR_EMP_NO",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_EMP_MST.MGR_EMP_NO",
+        "right": "L1.DB.COLUMN.TB_EMP_MST.EMP_NO",
+        "status": "INFERRED",
+        "method": "NAMEPATTERN"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L160",
+          "endpoint": "L1.DB.COLUMN.TB_EMP_MST.MGR_EMP_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L155",
+          "endpoint": "L1.DB.COLUMN.TB_EMP_MST.EMP_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo"
+    },
+    {
+      "id": "L2.DB.INF.LOG_HIST.ACT_EMP_NO",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_LOG_HIST.ACT_EMP_NO",
+        "right": "L1.DB.COLUMN.TB_EMP_MST.EMP_NO",
+        "status": "INFERRED",
+        "method": "NAMEPATTERN"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L210",
+          "endpoint": "L1.DB.COLUMN.TB_LOG_HIST.ACT_EMP_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L155",
+          "endpoint": "L1.DB.COLUMN.TB_EMP_MST.EMP_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "접두사(ACT_)가 붙은 접미 일치로, 등재된 양성 중 가장 어렵다. **누락은 R-L2-1 에 따라 오답이며 recall 에 그대로 반영된다** — 여기서 '보고만 하면 된다' 는 예외는 없다. 다만 그 recall 수치 자체가 잠정값이라 게이트가 아닐 뿐이다(I1 §4.2). 채점(오답)과 게이트(잠정)를 섞어 읽으면 L2 판정이 채점자마다 갈린다."
+    },
+    {
+      "id": "L2.DB.AMB.ITEM_GRP_MAP.GRP_CD",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "AMBIGUOUS",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_ITEM_GRP_MAP.GRP_CD",
+        "candidates": [
+          "L1.DB.COLUMN.TB_ITEM_GRP.GRP_CD",
+          "L1.DB.COLUMN.TB_COMM_CD.GRP_CD"
+        ],
+        "status": "AMBIGUOUS",
+        "method": "NAMEPATTERN"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L52",
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_GRP_MAP.GRP_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L45",
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_GRP.GRP_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L194",
+          "endpoint": "L1.DB.COLUMN.TB_COMM_CD.GRP_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "GRP_CD 라는 이름이 두 테이블에서 PK(또는 복합 PK 구성)로 쓰인다. 이름만으로는 어느 쪽인지 결정할 수 없다. 하나를 골라 확정하면 오답이며, 후보 2개와 함께 AMBIGUOUS 로 남겨야 통과다(I1 P3). 이 항목이 I1 §4.1 의 '모호 사례 AMBIGUOUS 처리율 100%' 게이트의 실제 시험대다."
+    },
+    {
+      "id": "L2.DB.NEG.USE_YN",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "ABSENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_CUST_MST.USE_YN",
+        "right": "L1.DB.COLUMN.TB_VNDR_MST.USE_YN"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L14",
+          "endpoint": "L1.DB.COLUMN.TB_CUST_MST.USE_YN",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L30",
+          "endpoint": "L1.DB.COLUMN.TB_VNDR_MST.USE_YN",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "USE_YN 은 4개 테이블에 나오는 범용 플래그다. 이름이 같다는 이유로 묶으면 '이름 유사도만으로 확정' 금지(I1 §2.3)에 정면으로 걸린다. 어느 쪽도 상대의 PK 가 아니라는 점이 결정적 신호다."
+    },
+    {
+      "id": "L2.DB.NEG.SEQ_SUFFIX",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "ABSENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_CUST_ADDR.ADDR_SEQ",
+        "right": "L1.DB.COLUMN.TB_ORD_DTL.ORD_SEQ"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L19",
+          "endpoint": "L1.DB.COLUMN.TB_CUST_ADDR.ADDR_SEQ",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L91",
+          "endpoint": "L1.DB.COLUMN.TB_ORD_DTL.ORD_SEQ",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "둘 다 _SEQ 접미사의 정수형 일련번호지만 아무 관계가 없다. 접미사 일치만으로 묶는 휴리스틱을 잡는 자리."
+    },
+    {
+      "id": "L2.DB.NEG.STAT_CODE",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "ABSENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_ORD_HD.ORD_STAT",
+        "right": "L1.DB.COLUMN.TB_DLVR_HD.DLVR_STAT"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L84",
+          "endpoint": "L1.DB.COLUMN.TB_ORD_HD.ORD_STAT",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L103",
+          "endpoint": "L1.DB.COLUMN.TB_DLVR_HD.DLVR_STAT",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "같은 CHAR(2) 상태코드지만 값 도메인이 다르다. 타입+접미사 일치로 묶으면 오연결."
+    },
+    {
+      "id": "L2.DB.NEG.LOG_HIST.TBL_NM",
+      "layer": "L2",
+      "track": "db",
+      "type": "LINK",
+      "expect": "ABSENT",
+      "value": {
+        "left": "L1.DB.COLUMN.TB_LOG_HIST.TBL_NM",
+        "right": "L1.DB.TABLE.TB_ORD_HD"
+      },
+      "refs": [
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L208",
+          "endpoint": "L1.DB.COLUMN.TB_LOG_HIST.TBL_NM",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "db:legacy-sample",
+          "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L80-L87",
+          "endpoint": "L1.DB.TABLE.TB_ORD_HD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "TBL_NM 은 테이블 **이름을 값으로 담는** 컬럼이다. 스키마 수준의 정체성 링크가 아니라 데이터 수준의 참조이며, L2 링크로 올리면 스키마와 데이터의 층이 섞인다. (값 수준 참조를 다루기로 결정한다면 그건 계약 개정 사항이지 이 케이스의 정답 변경이 아니다.)"
+    },
+    {
+      "id": "L2.CODE.OVR.DdlSource.extract",
+      "layer": "L2",
+      "track": "code",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.CODE.METHOD.DdlSource.extract",
+        "right": "L1.CODE.METHOD.SchemaSource.extract",
+        "status": "EXTRACTED",
+        "method": "FK",
+        "relation": "OVERRIDES"
+      },
+      "refs": [
+        {
+          "sourceId": "code:rdb/SchemaSource.kt",
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L22",
+          "endpoint": "L1.CODE.METHOD.DdlSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "code:rdb/SchemaSource.kt",
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L12",
+          "endpoint": "L1.CODE.METHOD.SchemaSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "`override` 키워드 + 선언된 상위타입이라는 **명시** 근거가 있으므로 EXTRACTED 다. method 어휘(FK/NAMEPATTERN/AI/MANUAL)에는 코드용 값이 없어 '명시 선언'을 FK 로 적었다 — 어휘 확장이 필요하다는 신호이며 본 계약 §8 에 개정 안건으로 올렸다. 이름이 같다는 이유로 INFERRED 를 붙이면 오답이다."
+    },
+    {
+      "id": "L2.CODE.OVR.LiveJdbcSource.extract",
+      "layer": "L2",
+      "track": "code",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.CODE.METHOD.LiveJdbcSource.extract",
+        "right": "L1.CODE.METHOD.SchemaSource.extract",
+        "status": "EXTRACTED",
+        "method": "FK",
+        "relation": "OVERRIDES"
+      },
+      "refs": [
+        {
+          "sourceId": "code:rdb/SchemaSource.kt",
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L32-L33",
+          "endpoint": "L1.CODE.METHOD.LiveJdbcSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "code:rdb/SchemaSource.kt",
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L12",
+          "endpoint": "L1.CODE.METHOD.SchemaSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo"
+    },
+    {
+      "id": "L2.CODE.OVR.SampleSource.extract",
+      "layer": "L2",
+      "track": "code",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.CODE.METHOD.SampleSource.extract",
+        "right": "L1.CODE.METHOD.SchemaSource.extract",
+        "status": "EXTRACTED",
+        "method": "FK",
+        "relation": "OVERRIDES"
+      },
+      "refs": [
+        {
+          "sourceId": "code:rdb/SchemaSource.kt",
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L42-L43",
+          "endpoint": "L1.CODE.METHOD.SampleSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "code:rdb/SchemaSource.kt",
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L12",
+          "endpoint": "L1.CODE.METHOD.SchemaSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo"
+    },
+    {
+      "id": "L2.CODE.OVR.DdlSource.name",
+      "layer": "L2",
+      "track": "code",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "L1.CODE.PROPERTY.DdlSource.name",
+        "right": "L1.CODE.PROPERTY.SchemaSource.name",
+        "status": "EXTRACTED",
+        "method": "FK",
+        "relation": "OVERRIDES"
+      },
+      "refs": [
+        {
+          "sourceId": "code:rdb/SchemaSource.kt",
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L21",
+          "endpoint": "L1.CODE.PROPERTY.DdlSource.name",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "code:rdb/SchemaSource.kt",
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L11",
+          "endpoint": "L1.CODE.PROPERTY.SchemaSource.name",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "프로퍼티 오버라이드. 메서드만 오버라이드 체인을 만드는 구현은 여기서 누락된다."
+    },
+    {
+      "id": "L2.CODE.NEG.SIBLING_EXTRACT",
+      "layer": "L2",
+      "track": "code",
+      "type": "LINK",
+      "expect": "ABSENT",
+      "value": {
+        "left": "L1.CODE.METHOD.DdlSource.extract",
+        "right": "L1.CODE.METHOD.SampleSource.extract"
+      },
+      "refs": [
+        {
+          "sourceId": "code:rdb/SchemaSource.kt",
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L22",
+          "endpoint": "L1.CODE.METHOD.DdlSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "code:rdb/SchemaSource.kt",
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L42-L43",
+          "endpoint": "L1.CODE.METHOD.SampleSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "같은 인터페이스를 구현한 형제 메서드다. 둘의 관계는 공통 상위(SchemaSource.extract)를 통해서만 성립하며, 형제끼리 직접 정체성 링크를 만들면 구현 개수만큼 가짜 링크가 폭발한다(n개 구현 → n(n-1)/2 오연결)."
+    },
+    {
+      "id": "L2.CODE.NEG.EXTRACT_NAME_COLLISION",
+      "layer": "L2",
+      "track": "code",
+      "type": "LINK",
+      "expect": "ABSENT",
+      "value": {
+        "left": "com.ontostudio.rdb.MetadataService.extract",
+        "right": "L1.CODE.METHOD.SchemaSource.extract"
+      },
+      "refs": [
+        {
+          "sourceId": "code:rdb/MetadataService.kt",
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/MetadataService.kt#L15",
+          "endpoint": "com.ontostudio.rdb.MetadataService.extract",
+          "contentHash": "sha256:23511ddf731645539b7ba312d23fa8b0478005bde29c5154989adfd5e3906c4b",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "code:rdb/SchemaSource.kt",
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L12",
+          "endpoint": "L1.CODE.METHOD.SchemaSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "이름이 extract 로 같고 같은 패키지에 있지만 MetadataService 는 SchemaSource 를 구현하지 않는다 — 시그니처도 다르다(`extract(conn: Connection)` vs `extract()`). 좌표는 **호출 위치가 아니라 선언부**를 가리킨다: 소유 타입과 시그니처는 선언에서만 확인할 수 있고, 호출 위치는 '누가 불렀나' 이지 '무엇인가' 가 아니다. 단순 이름 일치로 묶으면 오연결이며, 그 오연결은 L1.CODE.CALL.LiveJdbcSource.extract__MetadataService.extract 를 자기 재귀 호출로 오해하게 만든다."
+    },
+    {
+      "id": "L2.CODE.NEG.FILE_TYPE_SAMENAME",
+      "layer": "L2",
+      "track": "code",
+      "type": "LINK",
+      "expect": "ABSENT",
+      "value": {
+        "left": "L1.CODE.FILE.ProvenanceVocab",
+        "right": "L1.CODE.TYPE.ProvenanceVocab"
+      },
+      "refs": [
+        {
+          "sourceId": "code:provenance/ProvenanceVocab.kt",
+          "locator": "backend/src/main/kotlin/com/ontostudio/provenance/ProvenanceVocab.kt#L1",
+          "endpoint": "L1.CODE.FILE.ProvenanceVocab",
+          "contentHash": "sha256:cc4b53b0df762e10a8ed73065460e960195e279e1d7b1de5406d6fbd6ba11aab",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        },
+        {
+          "sourceId": "code:provenance/ProvenanceVocab.kt",
+          "locator": "backend/src/main/kotlin/com/ontostudio/provenance/ProvenanceVocab.kt#L12-L22",
+          "endpoint": "L1.CODE.TYPE.ProvenanceVocab",
+          "contentHash": "sha256:cc4b53b0df762e10a8ed73065460e960195e279e1d7b1de5406d6fbd6ba11aab",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "origin": "repo",
+      "notes": "파일과 타입은 종류가 다른 관측이다. 이름이 같다고 동일 개체로 묶으면 파일 하나에 타입이 여럿인 경우(ProvenanceVocab.kt 에는 타입이 4개다) 즉시 모순이 생긴다. 관계가 필요하면 정체성이 아니라 '선언 위치' 관계여야 한다."
+    },
+    {
+      "id": "L2.DRIFT.MOVED.OrderService",
+      "layer": "L2",
+      "track": "fixture",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "fixture.alpha.OrderService@revA",
+        "right": "fixture.beta.OrderService@revB",
+        "status": "INFERRED",
+        "method": "NAMEPATTERN",
+        "relation": "MOVED"
+      },
+      "refs": [
+        {
+          "sourceId": "fixture:l2-drift/revA/OrderService.kt",
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt#L4",
+          "endpoint": "fixture.alpha.OrderService@revA",
+          "contentHash": "sha256:c8cdd4904f33dc75f7373a3dc4764efe1512197e424887a518585395d7d89962"
+        },
+        {
+          "sourceId": "fixture:l2-drift/revB/OrderService.kt",
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L10",
+          "endpoint": "fixture.beta.OrderService@revB",
+          "contentHash": "sha256:694ae81780ad24085a73c843eb890493a3ce3c0a70a66f708e97393fead34227"
+        }
+      ],
+      "origin": "fixture",
+      "notes": "패키지 이동(alpha→beta). FQN 만으로 정체성을 잡는 구현은 이동을 '삭제 + 신규'로 보고하고, 그러면 이 타입에 붙은 모든 확정 라벨(E8/E9)이 유실된다. 단순 이름만으로 잡으면 L2.DRIFT.NEG.PRICECALC_SAMENAME 에서 벌을 받는다 — 둘 다 통과하려면 이름 + 구조 신호가 필요하다."
+    },
+    {
+      "id": "L2.DRIFT.RENAMED.PriceCalc",
+      "layer": "L2",
+      "track": "fixture",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "fixture.alpha.PriceCalc@revA",
+        "right": "fixture.beta.PricingCalculator@revB",
+        "status": "INFERRED",
+        "method": "NAMEPATTERN",
+        "relation": "RENAMED"
+      },
+      "refs": [
+        {
+          "sourceId": "fixture:l2-drift/revA/PriceCalc.kt",
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/PriceCalc.kt#L4",
+          "endpoint": "fixture.alpha.PriceCalc@revA",
+          "contentHash": "sha256:f80ea3ea2e1ea75fe87b2fdb97fa6ec6e60db7451c19ae19c6ccefdb87e16683"
+        },
+        {
+          "sourceId": "fixture:l2-drift/revB/PricingCalculator.kt",
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/PricingCalculator.kt#L4",
+          "endpoint": "fixture.beta.PricingCalculator@revB",
+          "contentHash": "sha256:5671f972d86530ef9ed69e2de45c9d19ec9ae7c10cc3279066c85487373ccef0"
+        }
+      ],
+      "origin": "fixture",
+      "notes": "이름이 완전히 바뀌었고 본문은 동일하다(멤버 `calc(Int): Int` 일치). 이름 신호가 0인 대신 구조 신호가 최대인 케이스 — 이동 케이스와 정반대의 신호 조합이다."
+    },
+    {
+      "id": "L2.DRIFT.MOVED.placeOrder1",
+      "layer": "L2",
+      "track": "fixture",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "fixture.alpha.OrderService.placeOrder(String)@revA",
+        "right": "fixture.beta.OrderService.placeOrder(String)@revB",
+        "status": "INFERRED",
+        "method": "NAMEPATTERN",
+        "relation": "MOVED"
+      },
+      "refs": [
+        {
+          "sourceId": "fixture:l2-drift/revA/OrderService.kt",
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt#L6",
+          "endpoint": "fixture.alpha.OrderService.placeOrder(String)@revA",
+          "contentHash": "sha256:c8cdd4904f33dc75f7373a3dc4764efe1512197e424887a518585395d7d89962"
+        },
+        {
+          "sourceId": "fixture:l2-drift/revB/OrderService.kt",
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L12",
+          "endpoint": "fixture.beta.OrderService.placeOrder(String)@revB",
+          "contentHash": "sha256:694ae81780ad24085a73c843eb890493a3ce3c0a70a66f708e97393fead34227"
+        }
+      ],
+      "origin": "fixture",
+      "notes": "revB 에는 placeOrder 가 둘이다. 아리티(arity)를 보지 않으면 revA 의 1-인자 메서드가 revB 의 2-인자 메서드에 붙어 오연결이 된다."
+    },
+    {
+      "id": "L2.DRIFT.NEW.placeOrder2",
+      "layer": "L2",
+      "track": "fixture",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": null,
+        "right": "fixture.beta.OrderService.placeOrder(String,String)@revB",
+        "status": "INFERRED",
+        "method": "NAMEPATTERN",
+        "relation": "ADDED"
+      },
+      "refs": [
+        {
+          "sourceId": "fixture:l2-drift/revB/OrderService.kt",
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L17",
+          "endpoint": "fixture.beta.OrderService.placeOrder(String,String)@revB",
+          "contentHash": "sha256:694ae81780ad24085a73c843eb890493a3ce3c0a70a66f708e97393fead34227"
+        }
+      ],
+      "origin": "fixture",
+      "notes": "오버로드로 **추가된** 메서드다. revA 에 대응물이 없다 — 신규로 보고해야 하며, revA 의 1-인자 메서드에 붙이면 오연결이다."
+    },
+    {
+      "id": "L2.DRIFT.DELETED.legacyReport",
+      "layer": "L2",
+      "track": "fixture",
+      "type": "LINK",
+      "expect": "PRESENT",
+      "value": {
+        "left": "fixture.alpha.OrderService.legacyReport()@revA",
+        "right": null,
+        "status": "INFERRED",
+        "method": "NAMEPATTERN",
+        "relation": "DELETED"
+      },
+      "refs": [
+        {
+          "sourceId": "fixture:l2-drift/revA/OrderService.kt",
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt#L14",
+          "endpoint": "fixture.alpha.OrderService.legacyReport()@revA",
+          "contentHash": "sha256:c8cdd4904f33dc75f7373a3dc4764efe1512197e424887a518585395d7d89962"
+        }
+      ],
+      "origin": "fixture",
+      "notes": "revB 에서 사라졌다. 소유 타입은 이동했을 뿐 살아 있으므로(L2.DRIFT.MOVED.OrderService) '타입이 없어져서 멤버도 없어졌다'가 아니라 **멤버 단독 삭제**로 보고해야 한다. 삭제를 감지하지 못하면 이 메서드를 근거로 삼는 L3 Claim 이 근거 없이 살아남는다(I1 §3.3 근거 삭제 전파)."
+    },
+    {
+      "id": "L2.DRIFT.REAPPEARED.legacyReport",
+      "layer": "L2",
+      "track": "fixture",
+      "type": "LINK",
+      "expect": "AMBIGUOUS",
+      "value": {
+        "left": "fixture.alpha.OrderService.legacyReport()@revA",
+        "candidates": [
+          "fixture.beta.OrderService.legacyReport()@revC"
+        ],
+        "status": "AMBIGUOUS",
+        "method": "NAMEPATTERN",
+        "relation": "REAPPEARED"
+      },
+      "refs": [
+        {
+          "sourceId": "fixture:l2-drift/revA/OrderService.kt",
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt#L14",
+          "endpoint": "fixture.alpha.OrderService.legacyReport()@revA",
+          "contentHash": "sha256:c8cdd4904f33dc75f7373a3dc4764efe1512197e424887a518585395d7d89962"
+        },
+        {
+          "sourceId": "fixture:l2-drift/revC/OrderService.kt",
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revC/OrderService.kt#L23",
+          "endpoint": "fixture.beta.OrderService.legacyReport()@revC",
+          "contentHash": "sha256:4500b2b5ea31c3f32ab17711421c05e51557f976ffd3e2783aa7319856b73eb5"
+        }
+      ],
+      "origin": "fixture",
+      "notes": "이름·소유 타입·본문이 모두 revA 와 같지만 revB 한 세대를 건너뛰었다. **부활인지 동명의 신규인지 소스만으로는 결정할 수 없으므로 정답은 AMBIGUOUS 다** — 링크를 만들되 확정하지 않는다. 자동으로 부활 처리하면 revA 시절의 확정 라벨이 사람 확인 없이 되살아나고(I1 P2 우회 경로), 무조건 신규 처리하면 확인 이력이 끊긴다(I1 §4.1 '재수집 후 확인 이력 보존율 100%'). 둘 다 오답이며, 해소는 HUMAN_CONFIRMED 경로로만 한다. 이 판정의 후속은 L3.REAPPEAR 시나리오다."
+    },
+    {
+      "id": "L2.DRIFT.NEG.OVERLOAD_MERGE",
+      "layer": "L2",
+      "track": "fixture",
+      "type": "LINK",
+      "expect": "ABSENT",
+      "value": {
+        "left": "fixture.beta.OrderService.placeOrder(String)@revB",
+        "right": "fixture.beta.OrderService.placeOrder(String,String)@revB"
+      },
+      "refs": [
+        {
+          "sourceId": "fixture:l2-drift/revB/OrderService.kt",
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L12",
+          "endpoint": "fixture.beta.OrderService.placeOrder(String)@revB",
+          "contentHash": "sha256:694ae81780ad24085a73c843eb890493a3ce3c0a70a66f708e97393fead34227"
+        },
+        {
+          "sourceId": "fixture:l2-drift/revB/OrderService.kt",
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L17",
+          "endpoint": "fixture.beta.OrderService.placeOrder(String,String)@revB",
+          "contentHash": "sha256:694ae81780ad24085a73c843eb890493a3ce3c0a70a66f708e97393fead34227"
+        }
+      ],
+      "origin": "fixture",
+      "notes": "같은 revision·같은 타입 안의 두 오버로드다. 하나로 병합하면 메서드 수가 줄고, 이후 어느 쪽이 호출됐는지 추적이 불가능해진다."
+    },
+    {
+      "id": "L2.DRIFT.NEG.PRICECALC_SAMENAME",
+      "layer": "L2",
+      "track": "fixture",
+      "type": "LINK",
+      "expect": "ABSENT",
+      "value": {
+        "left": "fixture.alpha.PriceCalc@revA",
+        "right": "fixture.gamma.PriceCalc@revC"
+      },
+      "refs": [
+        {
+          "sourceId": "fixture:l2-drift/revA/PriceCalc.kt",
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/PriceCalc.kt#L4",
+          "endpoint": "fixture.alpha.PriceCalc@revA",
+          "contentHash": "sha256:f80ea3ea2e1ea75fe87b2fdb97fa6ec6e60db7451c19ae19c6ccefdb87e16683"
+        },
+        {
+          "sourceId": "fixture:l2-drift/revC/PriceCalc.kt",
+          "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revC/PriceCalc.kt#L8",
+          "endpoint": "fixture.gamma.PriceCalc@revC",
+          "contentHash": "sha256:3d3bc53b980111a24a472c8ccea8958a3cfdbc56fc6c940757a87ffd17e47e46"
+        }
+      ],
+      "origin": "fixture",
+      "notes": "단순 이름은 같지만(PriceCalc) 패키지도 멤버도 다르다. revA.PriceCalc 의 후신은 PricingCalculator 다. 이 쌍을 묶으면 rename 링크와 정면으로 모순되며, 둘 다 산출하면 한 개체가 두 후신을 갖는 모순 상태가 된다."
+    }
+  ]
+}

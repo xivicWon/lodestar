@@ -1,0 +1,800 @@
+{
+  "goldSetVersion": "gold-set/v0",
+  "scope": {
+    "track": "pii",
+    "closed": true,
+    "note": "세 코퍼스 파일 안의 마스킹 정답은 여기 전수 등재돼 있다. 전부 합성 값이며 실존 개인·계정·자격증명이 아니다.",
+    "files": [
+      {
+        "sourceId": "pii:corpus.sql",
+        "path": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      {
+        "sourceId": "pii:corpus.properties",
+        "path": "docs/superpowers/specs/gold/fixtures/pii/corpus.properties",
+        "contentHash": "sha256:fd8929c2ba121c907ffc3377b0e35e3aeed286f346ea75c8b6c4cbef82e14152"
+      },
+      {
+        "sourceId": "pii:corpus.log",
+        "path": "docs/superpowers/specs/gold/fixtures/pii/corpus.log",
+        "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+      }
+    ]
+  },
+  "gate": {
+    "MASKED": "미마스킹 1건이라도 있으면 L0 실격(I1 §4.1 · H2). 0건이 게이트다.",
+    "NOT_MASKED": "오탐은 게이트가 아니라 기록 대상이다(I1 §4.1). 다만 GIT_SHA·CONTENT_HASH 오탐은 revision·fixture hash 추적을 끊으므로 Run Quality Report 에 별도 표기한다."
+  },
+  "counts": {
+    "MASKED": 28,
+    "NOT_MASKED": 16,
+    "negatives": 16
+  },
+  "items": [
+    {
+      "id": "PII.POS.SQL.L18.0",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "NAME",
+        "text": "홍길동"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L18",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.SQL.L18.1",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "KR_RRN",
+        "text": "900101-1234567"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L18",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture",
+      "notes": "주민등록번호. 미마스킹 1건이면 I1 §4.1 보안 게이트 즉시 실격(H2)."
+    },
+    {
+      "id": "PII.POS.SQL.L18.2",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "EMAIL",
+        "text": "hong@example.com"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L18",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.SQL.L18.3",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "PHONE",
+        "text": "010-1234-5678"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L18",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.SQL.L18.4",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "CARD_NO",
+        "text": "4111-1111-1111-1111"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L18",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.SQL.L18.5",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "BANK_ACCOUNT",
+        "text": "110-234-567890"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L18",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.SQL.L18.6",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "ADDRESS",
+        "text": "서울시 강남구 테헤란로 152 5층"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L18",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.SQL.L20.7",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "NAME",
+        "text": "김철수"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L20",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.SQL.L20.8",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "KR_RRN",
+        "text": "851212-2345678"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L20",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture",
+      "notes": "주민등록번호. 미마스킹 1건이면 I1 §4.1 보안 게이트 즉시 실격(H2)."
+    },
+    {
+      "id": "PII.POS.SQL.L20.9",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "EMAIL",
+        "text": "kim.cs@example.co.kr"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L20",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.SQL.L20.10",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "PHONE",
+        "text": "+82-10-9876-5432"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L20",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture",
+      "notes": "두 행의 표기가 다르다(하이픈 / 국가코드). 한쪽만 잡으면 형식 의존 마스킹이다."
+    },
+    {
+      "id": "PII.POS.SQL.L20.11",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "CARD_NO",
+        "text": "5555555555554444"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L20",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture",
+      "notes": "두 행의 표기가 다르다(하이픈 / 연속 16자리)."
+    },
+    {
+      "id": "PII.POS.SQL.L20.12",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "BANK_ACCOUNT",
+        "text": "1002-345-678901"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L20",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.SQL.L20.13",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "ADDRESS",
+        "text": "부산시 해운대구 센텀중앙로 90"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L20",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.NEG.SQL.L18.14",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "INTERNAL_ID",
+        "text": "M000000001"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L18",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture",
+      "notes": "내부 회원번호. 그 자체로는 개인을 식별하지 않는다 — 마스킹하면 오탐."
+    },
+    {
+      "id": "PII.NEG.SQL.L24.15",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "INTERNAL_ID",
+        "text": "ITM000000001"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L24",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture",
+      "notes": "상품코드. 숫자 나열이지만 개인정보가 아니다."
+    },
+    {
+      "id": "PII.NEG.SQL.L26.16",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "INTERNAL_ID",
+        "text": "ORD202401000001"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L26",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.NEG.SQL.L26.17",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "TIMESTAMP",
+        "text": "2024-01-05 11:20:00"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L26",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture",
+      "notes": "업무 시각. 개인정보가 아니다."
+    },
+    {
+      "id": "PII.NEG.SQL.L28.18",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "CODE",
+        "text": "410100"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.sql",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.sql#L28",
+        "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046"
+      },
+      "origin": "fixture",
+      "notes": "계정과목 코드. 6자리 숫자라 주민번호 앞자리와 혼동될 수 있다 — 오탐 유발 자리."
+    },
+    {
+      "id": "PII.POS.PROPERTIES.L5.19",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "PASSWORD",
+        "text": "P@ssw0rd-not-real-123"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.properties",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.properties#L5",
+        "contentHash": "sha256:fd8929c2ba121c907ffc3377b0e35e3aeed286f346ea75c8b6c4cbef82e14152"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.PROPERTIES.L6.20",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "AWS_ACCESS_KEY_ID",
+        "text": "AKIAIOSFODNN7EXAMPLE"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.properties",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.properties#L6",
+        "contentHash": "sha256:fd8929c2ba121c907ffc3377b0e35e3aeed286f346ea75c8b6c4cbef82e14152"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.PROPERTIES.L7.21",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "AWS_SECRET_ACCESS_KEY",
+        "text": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.properties",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.properties#L7",
+        "contentHash": "sha256:fd8929c2ba121c907ffc3377b0e35e3aeed286f346ea75c8b6c4cbef82e14152"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.PROPERTIES.L8.22",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "JWT",
+        "text": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYWtlIn0.c2lnbmF0dXJlLW5vdC1yZWFs"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.properties",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.properties#L8",
+        "contentHash": "sha256:fd8929c2ba121c907ffc3377b0e35e3aeed286f346ea75c8b6c4cbef82e14152"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.PROPERTIES.L9.23",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "SLACK_TOKEN",
+        "text": "xoxb-0000000000-0000000000000-FAKEFAKEFAKEFAKEFAKEFAKE"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.properties",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.properties#L9",
+        "contentHash": "sha256:fd8929c2ba121c907ffc3377b0e35e3aeed286f346ea75c8b6c4cbef82e14152"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.PROPERTIES.L10.24",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "GITHUB_TOKEN",
+        "text": "ghp_FAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE0000"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.properties",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.properties#L10",
+        "contentHash": "sha256:fd8929c2ba121c907ffc3377b0e35e3aeed286f346ea75c8b6c4cbef82e14152"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.NEG.PROPERTIES.L13.25",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "CONNECTION_URL",
+        "text": "jdbc:postgresql://localhost:5432/lodestar"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.properties",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.properties#L13",
+        "contentHash": "sha256:fd8929c2ba121c907ffc3377b0e35e3aeed286f346ea75c8b6c4cbef82e14152"
+      },
+      "origin": "fixture",
+      "notes": "자격증명이 포함되지 않은 접속 URL. 통째로 가리면 스키마 추적이 불가능해진다."
+    },
+    {
+      "id": "PII.NEG.PROPERTIES.L14.26",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "DB_USERNAME",
+        "text": "lodestar_app"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.properties",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.properties#L14",
+        "contentHash": "sha256:fd8929c2ba121c907ffc3377b0e35e3aeed286f346ea75c8b6c4cbef82e14152"
+      },
+      "origin": "fixture",
+      "notes": "애플리케이션 계정명. 비밀이 아니며 provenance 추적에 필요하다."
+    },
+    {
+      "id": "PII.NEG.PROPERTIES.L15.27",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "GIT_SHA",
+        "text": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.properties",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.properties#L15",
+        "contentHash": "sha256:fd8929c2ba121c907ffc3377b0e35e3aeed286f346ea75c8b6c4cbef82e14152"
+      },
+      "origin": "fixture",
+      "notes": "40자 hex. 시크릿 정규식이 가장 흔히 오탐하는 형태이며, 이걸 가리면 I1 §1.3 revision 추적이 끊긴다."
+    },
+    {
+      "id": "PII.NEG.PROPERTIES.L16.28",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "CONTENT_HASH",
+        "text": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.properties",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.properties#L16",
+        "contentHash": "sha256:fd8929c2ba121c907ffc3377b0e35e3aeed286f346ea75c8b6c4cbef82e14152"
+      },
+      "origin": "fixture",
+      "notes": "64자 hex. 가리면 fixture hash 대조(본 계약 §6)가 불가능해진다."
+    },
+    {
+      "id": "PII.NEG.PROPERTIES.L17.29",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "TRACE_ID",
+        "text": "550e8400-e29b-41d4-a716-446655440000"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.properties",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.properties#L17",
+        "contentHash": "sha256:fd8929c2ba121c907ffc3377b0e35e3aeed286f346ea75c8b6c4cbef82e14152"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.LOG.L5.30",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "EMAIL",
+        "text": "hong@example.com"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.log",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.log#L5",
+        "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.LOG.L5.31",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "IP_ADDRESS",
+        "text": "203.0.113.47"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.log",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.log#L5",
+        "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+      },
+      "origin": "fixture",
+      "notes": "RFC 5737 문서용 대역. 접속자 IP 는 개인정보로 취급한다."
+    },
+    {
+      "id": "PII.POS.LOG.L6.32",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "PASSWORD",
+        "text": "P@ssw0rd-not-real-123"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.log",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.log#L6",
+        "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+      },
+      "origin": "fixture",
+      "notes": "구조 없는 로그 한 줄 안에 URL(음성)과 password(양성)가 함께 있다 — 줄 단위로 통째 마스킹하면 음성까지 삼킨다."
+    },
+    {
+      "id": "PII.POS.LOG.L7.33",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "CARD_NO",
+        "text": "4111111111111111"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.log",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.log#L7",
+        "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.LOG.L7.34",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "NAME",
+        "text": "홍길동"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.log",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.log#L7",
+        "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.LOG.L7.35",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "PHONE",
+        "text": "010-1234-5678"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.log",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.log#L7",
+        "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.POS.LOG.L8.36",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "JWT",
+        "text": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJmYWtlIn0.c2ln"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.log",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.log#L8",
+        "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+      },
+      "origin": "fixture",
+      "notes": "Authorization 헤더가 로그로 샌 사례."
+    },
+    {
+      "id": "PII.POS.LOG.L9.37",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "MASKED",
+      "value": {
+        "class": "KR_RRN",
+        "text": "900101-1234567"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.log",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.log#L9",
+        "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.NEG.LOG.L6.38",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "CONNECTION_URL",
+        "text": "jdbc:postgresql://db:5432/lodestar"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.log",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.log#L6",
+        "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.NEG.LOG.L12.39",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "GIT_SHA",
+        "text": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.log",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.log#L12",
+        "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.NEG.LOG.L13.40",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "TRACE_ID",
+        "text": "550e8400-e29b-41d4-a716-446655440000"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.log",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.log#L13",
+        "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.NEG.LOG.L13.41",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "INTERNAL_ID",
+        "text": "ORD202401000001"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.log",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.log#L13",
+        "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.NEG.LOG.L14.42",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "INTERNAL_ID",
+        "text": "ITM000000001"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.log",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.log#L14",
+        "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+      },
+      "origin": "fixture"
+    },
+    {
+      "id": "PII.NEG.LOG.L6.43",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "DB_USERNAME",
+        "text": "user=app"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.log",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.log#L6",
+        "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+      },
+      "origin": "fixture",
+      "notes": "같은 줄의 password 는 양성인데 이 계정명은 음성이다 — 줄 단위로 통째 마스킹하면 여기서 오탐이 난다. properties 의 lodestar_app(PII.NEG.PROPERTIES.L14.26)과 같은 부류이며, 닫힌 집합을 주장하는 이상 로그 쪽도 등재해야 한다."
+    }
+  ]
+}
