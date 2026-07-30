@@ -12,6 +12,7 @@ runId 로 남기고(I3 §5.5), 새 실행이 이전 것을 `baseline.previous` �
 probe_code.py     코드 트랙 프로브 (lodestar_codegraph 를 서브프로세스로 실행)
 build_report.py   프로브 산출물 → Run Quality Report v0 (프로브의 순수 함수)
 verify_l0.py      커밋된 증거의 적합성 확인기 V1~V14 + 결함 주입 31케이스
+test_bench_l0.py  **계측기 자체의 단위 테스트** — 귀속·게이트 산식·확인기 규칙이 거짓을 무는가
 manifest.json     규칙 범위·케이스 총계 고정
 runs/run-l0-db-3c27259-001/     probe-db.json · report.json    (#88 실측 — 보고율 0.0)
 runs/run-l0-db-3c27259-002/     probe-db.json · report.json    (#114 재측정 — 보고율 1.0 · 현행)
@@ -51,6 +52,9 @@ git diff --exit-code docs/superpowers/specs/bench/l0/runs
 # 3) 증거 적합성 확인
 python3 docs/superpowers/specs/bench/l0/verify_l0.py
 # 31 cases, 0 mismatches
+
+# 4) 계측기 자체의 테스트 (실측 없이 합성 입력으로 돈다)
+python3 -m pytest docs/superpowers/specs/bench/l0/test_bench_l0.py -q
 ```
 
 새 runId 를 처음 만들 때만 DB 프로브를 부트스트랩한다 — 그 외에는 커밋된 산출물이 없으면 테스트가 실패한다.

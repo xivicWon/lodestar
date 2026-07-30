@@ -114,8 +114,11 @@ def _code_facts(p: dict) -> dict:
 
 def gates(track: str, p: dict, f: dict) -> list[dict]:
     """I1 §4.1 의 L0 무조건 게이트 4종 — 이 레이어에 해당하는 항목만 적는다(I3 §3.6)."""
-    # 보고율 = 보고된 항목 / 보고돼야 하는 항목. 분모가 0 이면(제외·실패가 없는 실행) 1.0 이다.
-    err_visibility = round(f["reported"] / f["shouldReport"], 4) if f["shouldReport"] else 1.0
+    # 보고율 = 보고된 항목 / 보고돼야 하는 항목.
+    # 분모가 0 이면 **재지 못한 것이지 통과한 것이 아니다** — 0/0 을 1.0 으로 적으면 '보고할 것이
+    # 없었다' 와 '전부 보고했다' 가 같은 값이 되어 그 자리는 더 이상 지표가 아니다(I3 R20 이 
+    # scopeCoverage 에 건 것과 같은 규칙). 계약의 어휘로 NOT_MEASURED 를 쓰고 경고를 함께 낸다(R10).
+    err_visibility = round(f["reported"] / f["shouldReport"], 4) if f["shouldReport"] else None
     if track == "db":
         sec_observed = (
             f"코퍼스 양성 {f['piiPositives']}건 중 마스킹 {f['piiMasked']}건 "
@@ -147,7 +150,8 @@ def gates(track: str, p: dict, f: dict) -> list[dict]:
             "name": "L0 오류 가시성 (실패·제외 보고율)",
             "required": 1.0,
             "observed": err_visibility,
-            "status": "PASS" if err_visibility >= 1.0 else "FAIL",
+            "status": "NOT_MEASURED" if err_visibility is None
+                      else ("PASS" if err_visibility >= 1.0 else "FAIL"),
         },
         {
             "id": "gate-security-masking",
@@ -342,6 +346,15 @@ def build_from(track: str, p: dict) -> dict:
             "trigger": f"gates.{g['id']}",
         }
         for g in gs if g["status"] == "FAIL"
+    ]
+    # 재지 못한 게이트는 경고로 드러낸다 — 침묵하면 '통과' 와 구분되지 않는다(I3 R10).
+    warnings += [
+        {
+            "code": "METRIC_UNMEASURED",
+            "message": f"게이트를 재지 못했다(분모 0): {g['name']}",
+            "trigger": f"gates.{g['id']}",
+        }
+        for g in gs if g["status"] == "NOT_MEASURED"
     ]
 
     if track == "db":
