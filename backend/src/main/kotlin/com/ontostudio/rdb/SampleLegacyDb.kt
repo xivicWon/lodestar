@@ -66,7 +66,8 @@ class SampleLegacyDb(private val masker: SqlTextMasker = SqlTextMasker()) {
         return conn
     }
 
-    private fun isDml(stmt: String): Boolean {
+    /** 행을 쓰는 문장인가. 최소화 정책의 판정 지점이므로 테스트가 직접 본다(internal). */
+    internal fun isDml(stmt: String): Boolean {
         val head = stmt.trimStart().uppercase()
         val dml = listOf("INSERT", "UPDATE", "DELETE", "MERGE")
         if (dml.any { head.startsWith(it) }) return true

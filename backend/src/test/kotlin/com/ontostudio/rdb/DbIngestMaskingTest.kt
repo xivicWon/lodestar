@@ -4,6 +4,7 @@ import com.ontostudio.security.MaskingEngine
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -241,5 +242,41 @@ class DbIngestMaskingTest {
         val masked = DdlParser().parseMasked(pinnedSql)
         assertEquals(DdlParser(control).parse(pinnedSql), masked.schema)
         assertTrue((masked.masking["maskedTotal"] as Int) >= 11)
+    }
+}
+
+/**
+ * #115 — 최소화 정책의 DML 판정. `open()` 은 고정 리소스를 읽으므로 분류 자체를 직접 본다.
+ * 첫 키워드만 보면 `WITH … INSERT` 형태의 CTE DML 이 행을 쓰면서도 통과한다(PR 리뷰 질문).
+ */
+class SampleLegacyDbDmlClassificationTest {
+
+    private val db = SampleLegacyDb()
+
+    @Test fun `plain dml is classified as row writing`() {
+        for (stmt in listOf(
+            "INSERT INTO T VALUES (1)",
+            "  update T set a=1",
+            "DELETE FROM T",
+            "MERGE INTO T USING S ON (T.ID=S.ID) WHEN MATCHED THEN UPDATE SET T.A=S.A",
+        )) assertTrue(db.isDml(stmt), stmt)
+    }
+
+    @Test fun `cte wrapped dml is classified as row writing`() {
+        for (stmt in listOf(
+            "WITH src AS (SELECT 1 AS ID) INSERT INTO T SELECT ID FROM src",
+            "with src as (select 1) update T set a = 1 from src",
+            "WITH d AS (SELECT 1) DELETE FROM T WHERE ID IN (SELECT * FROM d)",
+        )) assertTrue(db.isDml(stmt), "CTE 로 감싼 DML 이 최소화 정책을 통과한다: $stmt")
+    }
+
+    @Test fun `ddl and read only statements are not dml`() {
+        for (stmt in listOf(
+            "CREATE TABLE T (ID INT)",
+            "CREATE VIEW V AS SELECT 1",
+            "SELECT * FROM T",
+            "WITH src AS (SELECT 1) SELECT * FROM src",
+            "COMMENT ON TABLE T IS 'inserted by hand'",
+        )) assertFalse(db.isDml(stmt), "DML 이 아닌데 최소화 정책이 건너뛴다: $stmt")
     }
 }
