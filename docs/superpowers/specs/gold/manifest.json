@@ -7,7 +7,7 @@
   },
   "sourceRevision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
   "docsRevision": "7d3db3ed77803c5603137e28a8d9069254db2771",
-  "note": "코드·DB 원본은 sourceRevision 에, 계약 문서(ADR)는 docsRevision 에 고정한다 — I1·EVL 계약은 3c27259 이후에 작성돼 sourceRevision 에 존재하지 않기 때문이다. 한 revision 으로 우겨넣으면 그 좌표는 조회되지 않는 유령 좌표가 된다. I3(#100) 계약이 요구하는 두 값을 여기서 제공한다: `fixtureHash`(실행 하나가 인용할 단일 집계 해시)와 `goldSetId`(판정 규칙까지 포함한 정답셋 신원). 둘 다 파생값이며 validate_gold.py 가 재계산해 대조한다 — 손으로 적은 값은 내용과 어긋날 수 있다.",
+  "note": "코드·DB 원본은 sourceRevision 에, 계약 문서(ADR)는 docsRevision 에 고정한다 — I1·EVL 계약은 3c27259 이후에 작성돼 sourceRevision 에 존재하지 않기 때문이다. 한 revision 으로 우겨넣으면 그 좌표는 조회되지 않는 유령 좌표가 된다. I3(#100) 계약이 요구하는 두 값을 여기서 제공한다: `fixtureHash`(실행 하나가 인용할 단일 집계 해시)와 `goldSetId`(판정 규칙까지 포함한 정답셋 신원). 둘 다 파생값이며 validate_gold.py 가 재계산해 대조한다 — 손으로 적은 값은 내용과 어긋날 수 있다. 각 repo 소스는 `axis` 로 어느 고정 축에 속하는지 명시한다 — 축을 검사하지 않으면 제품 코드가 docsRevision 으로 조용히 밀려도 해시만 맞으면 통과한다.",
   "pinnedSources": [
     {
       "sourceId": "db:legacy-sample",
@@ -15,7 +15,8 @@
       "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
       "origin": "repo",
       "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
-      "lines": 262
+      "lines": 262,
+      "axis": "source"
     },
     {
       "sourceId": "code:provenance/ProvenanceVocab.kt",
@@ -23,7 +24,8 @@
       "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
       "origin": "repo",
       "contentHash": "sha256:cc4b53b0df762e10a8ed73065460e960195e279e1d7b1de5406d6fbd6ba11aab",
-      "lines": 22
+      "lines": 22,
+      "axis": "source"
     },
     {
       "sourceId": "code:rdb/SchemaModel.kt",
@@ -31,7 +33,8 @@
       "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
       "origin": "repo",
       "contentHash": "sha256:1d1f3796ac738470c618a91491deb31152c350178193a7ffcd045b6f28feaf73",
-      "lines": 20
+      "lines": 20,
+      "axis": "source"
     },
     {
       "sourceId": "code:rdb/SchemaSource.kt",
@@ -39,7 +42,8 @@
       "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
       "origin": "repo",
       "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
-      "lines": 44
+      "lines": 44,
+      "axis": "source"
     },
     {
       "sourceId": "code:rdb/SqlTypeMapping.kt",
@@ -47,7 +51,8 @@
       "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
       "origin": "repo",
       "contentHash": "sha256:2d4e082071042d625a2a1cf8bae72d92a8ffbce89be1a2e449dc078eca24f9b9",
-      "lines": 19
+      "lines": 19,
+      "axis": "source"
     },
     {
       "sourceId": "code:rdb/DdlParser.kt",
@@ -55,7 +60,8 @@
       "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
       "origin": "repo",
       "contentHash": "sha256:0f052080a26277ce86f43219d8e4eb17a69ceeef9cbf9f719062fef73d97440b",
-      "lines": 64
+      "lines": 64,
+      "axis": "source"
     },
     {
       "sourceId": "code:rdb/SampleLegacyDb.kt",
@@ -63,7 +69,8 @@
       "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
       "origin": "repo",
       "contentHash": "sha256:ad73e8b8c69c0fd8ab450c114294df7b86bb6cb45330bb5f8e47ffa3dfee9a03",
-      "lines": 31
+      "lines": 31,
+      "axis": "source"
     },
     {
       "sourceId": "test:rdb/DdlParserTest.kt",
@@ -71,7 +78,8 @@
       "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
       "origin": "repo",
       "contentHash": "sha256:de03001d0536ac98c33e4f8a35c426184565e0bdb12ee3f613952e0926380846",
-      "lines": 52
+      "lines": 52,
+      "axis": "source"
     },
     {
       "sourceId": "test:rdb/LegacySampleFixtureTest.kt",
@@ -79,7 +87,8 @@
       "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
       "origin": "repo",
       "contentHash": "sha256:68b186b628452344e7f7d7073822c09b9352f336c6f09cbf6c8743a78a5a5b6a",
-      "lines": 39
+      "lines": 39,
+      "axis": "source"
     },
     {
       "sourceId": "code:codegraph/README.md",
@@ -87,7 +96,8 @@
       "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
       "origin": "repo",
       "contentHash": "sha256:ec14a9f29efac78b7e0dc5e83353cb7dbe94be1bef4308e41e738be359ede777",
-      "lines": 16
+      "lines": 16,
+      "axis": "source"
     },
     {
       "sourceId": "adr:e17-code-source-collector",
@@ -95,7 +105,8 @@
       "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
       "origin": "repo",
       "contentHash": "sha256:f1b73a4ca7b5870ad602d7d72405144d20d1eafabd249a1493a2adf4d5b0942c",
-      "lines": 206
+      "lines": 206,
+      "axis": "source"
     },
     {
       "sourceId": "adr:m0-i1-baseline-contract",
@@ -103,7 +114,8 @@
       "revision": "7d3db3ed77803c5603137e28a8d9069254db2771",
       "origin": "repo",
       "contentHash": "sha256:94b3cb45df238760b625576724d83349ca31e3b78b33364ba7ac2aa6e144886f",
-      "lines": 291
+      "lines": 291,
+      "axis": "docs"
     },
     {
       "sourceId": "adr:evl-answer-shape-contract",
@@ -111,7 +123,8 @@
       "revision": "7d3db3ed77803c5603137e28a8d9069254db2771",
       "origin": "repo",
       "contentHash": "sha256:cf4c5441ebd9a564b4e0004d590b4263694be525361f1fde4497720a065f644b",
-      "lines": 480
+      "lines": 480,
+      "axis": "docs"
     },
     {
       "sourceId": "fixture:l2-drift/revA/OrderService.kt",
@@ -175,12 +188,21 @@
       "origin": "fixture",
       "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046",
       "lines": 28
+    },
+    {
+      "sourceId": "code:rdb/MetadataService.kt",
+      "path": "backend/src/main/kotlin/com/ontostudio/rdb/MetadataService.kt",
+      "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+      "origin": "repo",
+      "axis": "source",
+      "contentHash": "sha256:23511ddf731645539b7ba312d23fa8b0478005bde29c5154989adfd5e3906c4b",
+      "lines": 68
     }
   ],
   "goldFiles": [
     {
       "path": "evl/questions.json",
-      "sha256": "sha256:2804c5f5e2131b80646386279560540224f73fc1f27ec80d7a35d17abcc26753"
+      "sha256": "sha256:c61019a5e4e6ad828a589ee78defe969c0e43dee583418e35aa3c17954efad0a"
     },
     {
       "path": "failures.json",
@@ -188,11 +210,11 @@
     },
     {
       "path": "gold.docs.v0.schema.json",
-      "sha256": "sha256:3c0b3a5d1d5e414f0dac6457e5c0c0238634eb3e1e3e9ea3bcabe85b5026e7ce"
+      "sha256": "sha256:d3322abe6cc60676150949ddbef8cfec6586acc25b0d0b0fa49928472f07abbc"
     },
     {
       "path": "gold.v0.schema.json",
-      "sha256": "sha256:7d66f285468512857af6a1f6e7e213f947dad7ae2748b97853831f7747c81a16"
+      "sha256": "sha256:4f8ab50b662fc35511983ef419186f86982a4332e0ba79abdd8232e97d54eaa1"
     },
     {
       "path": "l1/code.json",
@@ -204,23 +226,23 @@
     },
     {
       "path": "l2/links.json",
-      "sha256": "sha256:9e11b9bf9df7b2dee7a121d09c368a7a4b79ff8bdbe4c36d36ba24f9926ab334"
+      "sha256": "sha256:cb63f8276b542c2d5f44ff29e568141f086cf01bf517330d0533ca8bf7a76127"
     },
     {
       "path": "l3/claims.json",
-      "sha256": "sha256:721786ca9c0f04462d963359ed1bfe62602dd281821b4305f94ffaa9f8eb19e4"
+      "sha256": "sha256:a26e2b4c83b5b30362babfdf7e71f49be52a39bd5dbd409e41cbe3942d79e345"
     },
     {
       "path": "manifest.v0.schema.json",
-      "sha256": "sha256:e738a8576ddab08551be019566d7b5e80fd1dccf81c7906b0e25b43a3bc1263b"
+      "sha256": "sha256:efad04828aa0918ac1aa57a2e9cb4dde92c4cdea8ec9672bf75a79008fbb9bb0"
     },
     {
       "path": "pii.json",
-      "sha256": "sha256:b6a3fcadd2f588c9b41223f755c9452d0ab104a3092349b6c20c51a248200d49"
+      "sha256": "sha256:899612c4e95542534b0274bb90c59877bb0b4477abd133fbaa2f6eaaca37a5f7"
     },
     {
       "path": "validate_gold.py",
-      "sha256": "sha256:12a51f3da16708ea9d181ce07a8d698e593307a82b9f0aa1d49a7808a2988aa3"
+      "sha256": "sha256:0f1ea5b98f257149cf12b661879b6c4cce29c7cf023a7df159d2e59f0caa3fe8"
     }
   ],
   "fixtures": [
@@ -286,5 +308,5 @@
     }
   ],
   "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
-  "goldSetId": "gold-set/v0+02073015d794"
+  "goldSetId": "gold-set/v0+63a4779238e9"
 }

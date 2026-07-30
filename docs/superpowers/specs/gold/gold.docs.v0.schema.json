@@ -33,6 +33,11 @@
         "revision": {
           "type": "string",
           "pattern": "^[0-9a-f]{40}$"
+        },
+        "docsRevision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "description": "계약 문서(ADR) 근거가 고정된 축. EVL 질문은 제품 원본과 ADR 을 함께 인용하므로 revision 하나로는 어느 축의 좌표인지 구분할 수 없다(§6)."
         }
       }
     },

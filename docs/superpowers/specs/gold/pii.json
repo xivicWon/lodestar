@@ -28,8 +28,8 @@
   },
   "counts": {
     "MASKED": 28,
-    "NOT_MASKED": 15,
-    "negatives": 15
+    "NOT_MASKED": 16,
+    "negatives": 16
   },
   "items": [
     {
@@ -777,6 +777,24 @@
         "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
       },
       "origin": "fixture"
+    },
+    {
+      "id": "PII.NEG.LOG.L6.43",
+      "layer": "L0",
+      "track": "pii",
+      "type": "MASK_SPAN",
+      "expect": "NOT_MASKED",
+      "value": {
+        "class": "DB_USERNAME",
+        "text": "user=app"
+      },
+      "ref": {
+        "sourceId": "pii:corpus.log",
+        "locator": "docs/superpowers/specs/gold/fixtures/pii/corpus.log#L6",
+        "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c"
+      },
+      "origin": "fixture",
+      "notes": "같은 줄의 password 는 양성인데 이 계정명은 음성이다 — 줄 단위로 통째 마스킹하면 여기서 오탐이 난다. properties 의 lodestar_app(PII.NEG.PROPERTIES.L14.26)과 같은 부류이며, 닫힌 집합을 주장하는 이상 로그 쪽도 등재해야 한다."
     }
   ]
 }

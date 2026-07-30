@@ -120,7 +120,8 @@
             "TB_ITEM_GRP_MAP.GRP_CD 의 대상에 대해 상충하는 Claim 이 병존한다 (→TB_ITEM_GRP.GRP_CD / →TB_COMM_CD.GRP_CD)",
             "두 Claim 모두 evidenceIds 를 갖고, 근거가 L2 의 AMBIGUOUS 링크를 가리킨다",
             "두 Claim 모두 자동 확정되지 않는다 (status ≠ HUMAN_CONFIRMED)",
-            "충돌 사실이 조회 가능한 형태로 기록된다"
+            "충돌 사실이 조회 가능한 형태로 기록된다",
+            "충돌의 status 가 NEEDS_CHECK 다 — COEXIST 로 선언하면 '둘 다 참' 을 주장하는 것인데, GRP_CD 의 대상은 둘 중 하나이므로 거짓이다(EVL §2.4)"
           ],
           "mustNot": [
             "둘 중 하나만 남고 다른 하나가 조용히 사라진다 (I1 P4)",
@@ -139,7 +140,8 @@
             "채택된 Claim 이 HUMAN_CONFIRMED 가 된다",
             "탈락한 Claim 이 남아 있고 supersedes 또는 동등한 관계로 연결된다",
             "해소 시점과 해소자가 기록된다",
-            "채택된 Claim 의 대상이 입력한 keep 값과 정확히 같다 (R-L3-2 예외)"
+            "채택된 Claim 의 대상이 입력한 keep 값과 정확히 같다 (R-L3-2 예외)",
+            "해소 후 충돌의 status 가 RESOLVED 이고 resolvedBy 근거가 있다"
           ],
           "mustNot": [
             "탈락한 Claim 이 물리 삭제된다",

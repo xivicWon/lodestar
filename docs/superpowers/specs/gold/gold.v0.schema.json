@@ -93,10 +93,16 @@
           "minLength": 1
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "minProperties": 1
     },
     "gate": {
-      "type": "object"
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "counts": {
       "type": "object",
@@ -128,7 +134,8 @@
       "type": "object",
       "required": [
         "sourceId",
-        "locator"
+        "locator",
+        "contentHash"
       ],
       "additionalProperties": false,
       "properties": {
@@ -145,7 +152,8 @@
           "$ref": "#/$defs/revision"
         },
         "contentHash": {
-          "$ref": "#/$defs/contentHash"
+          "$ref": "#/$defs/contentHash",
+          "description": "**필수다.** 선택으로 두면 이 필드를 생략한 ref 는 G6 의 대조를 통째로 건너뛰고, '전 항목의 해시를 대조한다' 는 계약이 절반만 참이 된다."
         },
         "endpoint": {
           "type": "string",

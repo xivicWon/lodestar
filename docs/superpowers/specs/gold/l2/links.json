@@ -10,7 +10,8 @@
     "R-L2-1": "expect=PRESENT 는 그 status·method 로 산출돼야 통과다. 같은 쌍을 더 강한 등급으로 올리면(예: INFERRED 를 EXTRACTED 로) I1 P2 위반이며 오답이다.",
     "R-L2-2": "expect=AMBIGUOUS 는 후보를 임의로 하나 고르면 오답이다. 후보 목록과 함께 AMBIGUOUS 로 남겨야 통과(I1 P3).",
     "R-L2-3": "expect=ABSENT 쌍을 링크로 산출하면 오연결이다. confidence ≥ 0.8 로 산출하면 '고신뢰 오연결'로 별도 집계한다(I1 §4.2 · H4 등급 판단의 입력).",
-    "R-L2-4": "drift 케이스(revA↔revB↔revC)의 정답은 픽스처 3벌 사이의 대응 관계다. 리포의 고정 revision 과 무관하며, 픽스처 파일 해시로 고정된다."
+    "R-L2-4": "drift 케이스(revA↔revB↔revC)의 정답은 픽스처 3벌 사이의 대응 관계다. 리포의 고정 revision 과 무관하며, 픽스처 파일 해시로 고정된다.",
+    "R-L2-5": "DB 트랙에서 `status=EXTRACTED` 인 정답 링크는 **정확히 1건**(FK_ORD_MEMO)이다. 이 코퍼스에 명시 FK 가 하나뿐이므로 둘째가 생기면 그것은 추론을 명시로 승격한 것이다(I1 P2). 종전에는 이 불변식이 notes 산문에만 있어 아무도 검사하지 않았다 — 규칙으로 올려 확인기가 센다."
   },
   "counts": {
     "PRESENT": 22,
@@ -35,12 +36,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L217",
-          "endpoint": "L1.DB.COLUMN.TB_ORD_MEMO.ORD_NO"
+          "endpoint": "L1.DB.COLUMN.TB_ORD_MEMO.ORD_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L81",
-          "endpoint": "L1.DB.COLUMN.TB_ORD_HD.ORD_NO"
+          "endpoint": "L1.DB.COLUMN.TB_ORD_HD.ORD_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
@@ -62,12 +67,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L82",
-          "endpoint": "L1.DB.COLUMN.TB_ORD_HD.CUST_NO"
+          "endpoint": "L1.DB.COLUMN.TB_ORD_HD.CUST_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L8",
-          "endpoint": "L1.DB.COLUMN.TB_CUST_MST.CUST_NO"
+          "endpoint": "L1.DB.COLUMN.TB_CUST_MST.CUST_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
@@ -89,12 +98,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L90",
-          "endpoint": "L1.DB.COLUMN.TB_ORD_DTL.ORD_NO"
+          "endpoint": "L1.DB.COLUMN.TB_ORD_DTL.ORD_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L81",
-          "endpoint": "L1.DB.COLUMN.TB_ORD_HD.ORD_NO"
+          "endpoint": "L1.DB.COLUMN.TB_ORD_HD.ORD_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
@@ -116,12 +129,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L92",
-          "endpoint": "L1.DB.COLUMN.TB_ORD_DTL.ITEM_CD"
+          "endpoint": "L1.DB.COLUMN.TB_ORD_DTL.ITEM_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L35",
-          "endpoint": "L1.DB.COLUMN.TB_ITEM_MST.ITEM_CD"
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_MST.ITEM_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo"
@@ -142,12 +159,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L57",
-          "endpoint": "L1.DB.COLUMN.TB_STOK_QTY.WH_CD"
+          "endpoint": "L1.DB.COLUMN.TB_STOK_QTY.WH_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L65",
-          "endpoint": "L1.DB.COLUMN.TB_WH_MST.WH_CD"
+          "endpoint": "L1.DB.COLUMN.TB_WH_MST.WH_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
@@ -169,12 +190,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L58",
-          "endpoint": "L1.DB.COLUMN.TB_STOK_QTY.ITEM_CD"
+          "endpoint": "L1.DB.COLUMN.TB_STOK_QTY.ITEM_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L35",
-          "endpoint": "L1.DB.COLUMN.TB_ITEM_MST.ITEM_CD"
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_MST.ITEM_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo"
@@ -195,12 +220,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L40",
-          "endpoint": "L1.DB.COLUMN.TB_ITEM_MST.VNDR_CD"
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_MST.VNDR_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L27",
-          "endpoint": "L1.DB.COLUMN.TB_VNDR_MST.VNDR_CD"
+          "endpoint": "L1.DB.COLUMN.TB_VNDR_MST.VNDR_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo"
@@ -221,12 +250,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L38",
-          "endpoint": "L1.DB.COLUMN.TB_ITEM_MST.UNIT_CD"
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_MST.UNIT_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L202",
-          "endpoint": "L1.DB.COLUMN.TB_UNIT_CD.UNIT_CD"
+          "endpoint": "L1.DB.COLUMN.TB_UNIT_CD.UNIT_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
@@ -248,12 +281,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L133",
-          "endpoint": "L1.DB.COLUMN.TB_ACCT_SLIP.ACCT_CD"
+          "endpoint": "L1.DB.COLUMN.TB_ACCT_SLIP.ACCT_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L140",
-          "endpoint": "L1.DB.COLUMN.TB_ACCT_CD.ACCT_CD"
+          "endpoint": "L1.DB.COLUMN.TB_ACCT_CD.ACCT_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo"
@@ -274,12 +311,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L167",
-          "endpoint": "L1.DB.COLUMN.TB_DEPT_MST.UP_DEPT_CD"
+          "endpoint": "L1.DB.COLUMN.TB_DEPT_MST.UP_DEPT_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L165",
-          "endpoint": "L1.DB.COLUMN.TB_DEPT_MST.DEPT_CD"
+          "endpoint": "L1.DB.COLUMN.TB_DEPT_MST.DEPT_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
@@ -301,12 +342,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L47",
-          "endpoint": "L1.DB.COLUMN.TB_ITEM_GRP.UP_GRP_CD"
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_GRP.UP_GRP_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L45",
-          "endpoint": "L1.DB.COLUMN.TB_ITEM_GRP.GRP_CD"
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_GRP.GRP_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo"
@@ -327,12 +372,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L160",
-          "endpoint": "L1.DB.COLUMN.TB_EMP_MST.MGR_EMP_NO"
+          "endpoint": "L1.DB.COLUMN.TB_EMP_MST.MGR_EMP_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L155",
-          "endpoint": "L1.DB.COLUMN.TB_EMP_MST.EMP_NO"
+          "endpoint": "L1.DB.COLUMN.TB_EMP_MST.EMP_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo"
@@ -353,12 +402,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L210",
-          "endpoint": "L1.DB.COLUMN.TB_LOG_HIST.ACT_EMP_NO"
+          "endpoint": "L1.DB.COLUMN.TB_LOG_HIST.ACT_EMP_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L155",
-          "endpoint": "L1.DB.COLUMN.TB_EMP_MST.EMP_NO"
+          "endpoint": "L1.DB.COLUMN.TB_EMP_MST.EMP_NO",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
@@ -383,17 +436,23 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L52",
-          "endpoint": "L1.DB.COLUMN.TB_ITEM_GRP_MAP.GRP_CD"
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_GRP_MAP.GRP_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L45",
-          "endpoint": "L1.DB.COLUMN.TB_ITEM_GRP.GRP_CD"
+          "endpoint": "L1.DB.COLUMN.TB_ITEM_GRP.GRP_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L194",
-          "endpoint": "L1.DB.COLUMN.TB_COMM_CD.GRP_CD"
+          "endpoint": "L1.DB.COLUMN.TB_COMM_CD.GRP_CD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
@@ -413,12 +472,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L14",
-          "endpoint": "L1.DB.COLUMN.TB_CUST_MST.USE_YN"
+          "endpoint": "L1.DB.COLUMN.TB_CUST_MST.USE_YN",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L30",
-          "endpoint": "L1.DB.COLUMN.TB_VNDR_MST.USE_YN"
+          "endpoint": "L1.DB.COLUMN.TB_VNDR_MST.USE_YN",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
@@ -438,12 +501,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L19",
-          "endpoint": "L1.DB.COLUMN.TB_CUST_ADDR.ADDR_SEQ"
+          "endpoint": "L1.DB.COLUMN.TB_CUST_ADDR.ADDR_SEQ",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L91",
-          "endpoint": "L1.DB.COLUMN.TB_ORD_DTL.ORD_SEQ"
+          "endpoint": "L1.DB.COLUMN.TB_ORD_DTL.ORD_SEQ",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
@@ -463,12 +530,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L84",
-          "endpoint": "L1.DB.COLUMN.TB_ORD_HD.ORD_STAT"
+          "endpoint": "L1.DB.COLUMN.TB_ORD_HD.ORD_STAT",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L103",
-          "endpoint": "L1.DB.COLUMN.TB_DLVR_HD.DLVR_STAT"
+          "endpoint": "L1.DB.COLUMN.TB_DLVR_HD.DLVR_STAT",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
@@ -488,12 +559,16 @@
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L208",
-          "endpoint": "L1.DB.COLUMN.TB_LOG_HIST.TBL_NM"
+          "endpoint": "L1.DB.COLUMN.TB_LOG_HIST.TBL_NM",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "db:legacy-sample",
           "locator": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L80-L87",
-          "endpoint": "L1.DB.TABLE.TB_ORD_HD"
+          "endpoint": "L1.DB.TABLE.TB_ORD_HD",
+          "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
@@ -516,12 +591,16 @@
         {
           "sourceId": "code:rdb/SchemaSource.kt",
           "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L22",
-          "endpoint": "L1.CODE.METHOD.DdlSource.extract"
+          "endpoint": "L1.CODE.METHOD.DdlSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "code:rdb/SchemaSource.kt",
           "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L12",
-          "endpoint": "L1.CODE.METHOD.SchemaSource.extract"
+          "endpoint": "L1.CODE.METHOD.SchemaSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
@@ -544,12 +623,16 @@
         {
           "sourceId": "code:rdb/SchemaSource.kt",
           "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L32-L33",
-          "endpoint": "L1.CODE.METHOD.LiveJdbcSource.extract"
+          "endpoint": "L1.CODE.METHOD.LiveJdbcSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "code:rdb/SchemaSource.kt",
           "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L12",
-          "endpoint": "L1.CODE.METHOD.SchemaSource.extract"
+          "endpoint": "L1.CODE.METHOD.SchemaSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo"
@@ -571,12 +654,16 @@
         {
           "sourceId": "code:rdb/SchemaSource.kt",
           "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L42-L43",
-          "endpoint": "L1.CODE.METHOD.SampleSource.extract"
+          "endpoint": "L1.CODE.METHOD.SampleSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "code:rdb/SchemaSource.kt",
           "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L12",
-          "endpoint": "L1.CODE.METHOD.SchemaSource.extract"
+          "endpoint": "L1.CODE.METHOD.SchemaSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo"
@@ -598,12 +685,16 @@
         {
           "sourceId": "code:rdb/SchemaSource.kt",
           "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L21",
-          "endpoint": "L1.CODE.PROPERTY.DdlSource.name"
+          "endpoint": "L1.CODE.PROPERTY.DdlSource.name",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "code:rdb/SchemaSource.kt",
           "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L11",
-          "endpoint": "L1.CODE.PROPERTY.SchemaSource.name"
+          "endpoint": "L1.CODE.PROPERTY.SchemaSource.name",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
@@ -623,12 +714,16 @@
         {
           "sourceId": "code:rdb/SchemaSource.kt",
           "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L22",
-          "endpoint": "L1.CODE.METHOD.DdlSource.extract"
+          "endpoint": "L1.CODE.METHOD.DdlSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "code:rdb/SchemaSource.kt",
           "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L42-L43",
-          "endpoint": "L1.CODE.METHOD.SampleSource.extract"
+          "endpoint": "L1.CODE.METHOD.SampleSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
@@ -646,18 +741,22 @@
       },
       "refs": [
         {
-          "sourceId": "code:rdb/SchemaSource.kt",
-          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L33",
-          "endpoint": "com.ontostudio.rdb.MetadataService.extract"
+          "sourceId": "code:rdb/MetadataService.kt",
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/MetadataService.kt#L15",
+          "endpoint": "com.ontostudio.rdb.MetadataService.extract",
+          "contentHash": "sha256:23511ddf731645539b7ba312d23fa8b0478005bde29c5154989adfd5e3906c4b",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "code:rdb/SchemaSource.kt",
           "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SchemaSource.kt#L12",
-          "endpoint": "L1.CODE.METHOD.SchemaSource.extract"
+          "endpoint": "L1.CODE.METHOD.SchemaSource.extract",
+          "contentHash": "sha256:26e5cd19b872b5787a284641b8454d0176e286b3a952d3888936dfac780f5d78",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
-      "notes": "이름이 extract 로 같고 같은 패키지에 있지만 MetadataService 는 SchemaSource 를 구현하지 않는다(시그니처도 다르다 — Connection 을 받는다). 단순 이름 일치로 묶으면 오연결이며, 이 오연결은 L1.CODE.CALL.LiveJdbcSource.extract__MetadataService.extract 를 자기 재귀 호출로 오해하게 만든다."
+      "notes": "이름이 extract 로 같고 같은 패키지에 있지만 MetadataService 는 SchemaSource 를 구현하지 않는다 — 시그니처도 다르다(`extract(conn: Connection)` vs `extract()`). 좌표는 **호출 위치가 아니라 선언부**를 가리킨다: 소유 타입과 시그니처는 선언에서만 확인할 수 있고, 호출 위치는 '누가 불렀나' 이지 '무엇인가' 가 아니다. 단순 이름 일치로 묶으면 오연결이며, 그 오연결은 L1.CODE.CALL.LiveJdbcSource.extract__MetadataService.extract 를 자기 재귀 호출로 오해하게 만든다."
     },
     {
       "id": "L2.CODE.NEG.FILE_TYPE_SAMENAME",
@@ -673,12 +772,16 @@
         {
           "sourceId": "code:provenance/ProvenanceVocab.kt",
           "locator": "backend/src/main/kotlin/com/ontostudio/provenance/ProvenanceVocab.kt#L1",
-          "endpoint": "L1.CODE.FILE.ProvenanceVocab"
+          "endpoint": "L1.CODE.FILE.ProvenanceVocab",
+          "contentHash": "sha256:cc4b53b0df762e10a8ed73065460e960195e279e1d7b1de5406d6fbd6ba11aab",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         },
         {
           "sourceId": "code:provenance/ProvenanceVocab.kt",
           "locator": "backend/src/main/kotlin/com/ontostudio/provenance/ProvenanceVocab.kt#L12-L22",
-          "endpoint": "L1.CODE.TYPE.ProvenanceVocab"
+          "endpoint": "L1.CODE.TYPE.ProvenanceVocab",
+          "contentHash": "sha256:cc4b53b0df762e10a8ed73065460e960195e279e1d7b1de5406d6fbd6ba11aab",
+          "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e"
         }
       ],
       "origin": "repo",
@@ -701,12 +804,14 @@
         {
           "sourceId": "fixture:l2-drift/revA/OrderService.kt",
           "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt#L4",
-          "endpoint": "fixture.alpha.OrderService@revA"
+          "endpoint": "fixture.alpha.OrderService@revA",
+          "contentHash": "sha256:c8cdd4904f33dc75f7373a3dc4764efe1512197e424887a518585395d7d89962"
         },
         {
           "sourceId": "fixture:l2-drift/revB/OrderService.kt",
           "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L10",
-          "endpoint": "fixture.beta.OrderService@revB"
+          "endpoint": "fixture.beta.OrderService@revB",
+          "contentHash": "sha256:694ae81780ad24085a73c843eb890493a3ce3c0a70a66f708e97393fead34227"
         }
       ],
       "origin": "fixture",
@@ -729,12 +834,14 @@
         {
           "sourceId": "fixture:l2-drift/revA/PriceCalc.kt",
           "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/PriceCalc.kt#L4",
-          "endpoint": "fixture.alpha.PriceCalc@revA"
+          "endpoint": "fixture.alpha.PriceCalc@revA",
+          "contentHash": "sha256:f80ea3ea2e1ea75fe87b2fdb97fa6ec6e60db7451c19ae19c6ccefdb87e16683"
         },
         {
           "sourceId": "fixture:l2-drift/revB/PricingCalculator.kt",
           "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/PricingCalculator.kt#L4",
-          "endpoint": "fixture.beta.PricingCalculator@revB"
+          "endpoint": "fixture.beta.PricingCalculator@revB",
+          "contentHash": "sha256:5671f972d86530ef9ed69e2de45c9d19ec9ae7c10cc3279066c85487373ccef0"
         }
       ],
       "origin": "fixture",
@@ -757,12 +864,14 @@
         {
           "sourceId": "fixture:l2-drift/revA/OrderService.kt",
           "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt#L6",
-          "endpoint": "fixture.alpha.OrderService.placeOrder(String)@revA"
+          "endpoint": "fixture.alpha.OrderService.placeOrder(String)@revA",
+          "contentHash": "sha256:c8cdd4904f33dc75f7373a3dc4764efe1512197e424887a518585395d7d89962"
         },
         {
           "sourceId": "fixture:l2-drift/revB/OrderService.kt",
           "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L12",
-          "endpoint": "fixture.beta.OrderService.placeOrder(String)@revB"
+          "endpoint": "fixture.beta.OrderService.placeOrder(String)@revB",
+          "contentHash": "sha256:694ae81780ad24085a73c843eb890493a3ce3c0a70a66f708e97393fead34227"
         }
       ],
       "origin": "fixture",
@@ -785,7 +894,8 @@
         {
           "sourceId": "fixture:l2-drift/revB/OrderService.kt",
           "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L17",
-          "endpoint": "fixture.beta.OrderService.placeOrder(String,String)@revB"
+          "endpoint": "fixture.beta.OrderService.placeOrder(String,String)@revB",
+          "contentHash": "sha256:694ae81780ad24085a73c843eb890493a3ce3c0a70a66f708e97393fead34227"
         }
       ],
       "origin": "fixture",
@@ -808,7 +918,8 @@
         {
           "sourceId": "fixture:l2-drift/revA/OrderService.kt",
           "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt#L14",
-          "endpoint": "fixture.alpha.OrderService.legacyReport()@revA"
+          "endpoint": "fixture.alpha.OrderService.legacyReport()@revA",
+          "contentHash": "sha256:c8cdd4904f33dc75f7373a3dc4764efe1512197e424887a518585395d7d89962"
         }
       ],
       "origin": "fixture",
@@ -833,12 +944,14 @@
         {
           "sourceId": "fixture:l2-drift/revA/OrderService.kt",
           "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/OrderService.kt#L14",
-          "endpoint": "fixture.alpha.OrderService.legacyReport()@revA"
+          "endpoint": "fixture.alpha.OrderService.legacyReport()@revA",
+          "contentHash": "sha256:c8cdd4904f33dc75f7373a3dc4764efe1512197e424887a518585395d7d89962"
         },
         {
           "sourceId": "fixture:l2-drift/revC/OrderService.kt",
           "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revC/OrderService.kt#L23",
-          "endpoint": "fixture.beta.OrderService.legacyReport()@revC"
+          "endpoint": "fixture.beta.OrderService.legacyReport()@revC",
+          "contentHash": "sha256:4500b2b5ea31c3f32ab17711421c05e51557f976ffd3e2783aa7319856b73eb5"
         }
       ],
       "origin": "fixture",
@@ -858,12 +971,14 @@
         {
           "sourceId": "fixture:l2-drift/revB/OrderService.kt",
           "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L12",
-          "endpoint": "fixture.beta.OrderService.placeOrder(String)@revB"
+          "endpoint": "fixture.beta.OrderService.placeOrder(String)@revB",
+          "contentHash": "sha256:694ae81780ad24085a73c843eb890493a3ce3c0a70a66f708e97393fead34227"
         },
         {
           "sourceId": "fixture:l2-drift/revB/OrderService.kt",
           "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revB/OrderService.kt#L17",
-          "endpoint": "fixture.beta.OrderService.placeOrder(String,String)@revB"
+          "endpoint": "fixture.beta.OrderService.placeOrder(String,String)@revB",
+          "contentHash": "sha256:694ae81780ad24085a73c843eb890493a3ce3c0a70a66f708e97393fead34227"
         }
       ],
       "origin": "fixture",
@@ -883,12 +998,14 @@
         {
           "sourceId": "fixture:l2-drift/revA/PriceCalc.kt",
           "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revA/PriceCalc.kt#L4",
-          "endpoint": "fixture.alpha.PriceCalc@revA"
+          "endpoint": "fixture.alpha.PriceCalc@revA",
+          "contentHash": "sha256:f80ea3ea2e1ea75fe87b2fdb97fa6ec6e60db7451c19ae19c6ccefdb87e16683"
         },
         {
           "sourceId": "fixture:l2-drift/revC/PriceCalc.kt",
           "locator": "docs/superpowers/specs/gold/fixtures/l2-drift/revC/PriceCalc.kt#L8",
-          "endpoint": "fixture.gamma.PriceCalc@revC"
+          "endpoint": "fixture.gamma.PriceCalc@revC",
+          "contentHash": "sha256:3d3bc53b980111a24a472c8ccea8958a3cfdbc56fc6c940757a87ffd17e47e46"
         }
       ],
       "origin": "fixture",

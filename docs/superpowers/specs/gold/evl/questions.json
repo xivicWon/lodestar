@@ -5,7 +5,8 @@
     "track": "evl",
     "closed": false,
     "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
-    "note": "EVL 계약(2026-07-29-evl-answer-shape-contract.md) §8 이 #99 에 요구한 케이스 종류를 채운다: calibration · conflict(양성+음성) · coverage 클래스 · abstention · 반대 증거. 질문은 전부 고정 revision 의 커밋된 파일만으로 답할 수 있게 만들었다 — 외부 조회가 필요한 질문을 넣으면 정답이 시간에 따라 변해 결정성(I1 H1)이 깨진다."
+    "note": "EVL 계약(2026-07-29-evl-answer-shape-contract.md) §8 이 #99 에 요구한 케이스 종류를 채운다: calibration · conflict(양성+음성) · coverage 클래스 · abstention · 반대 증거. 질문은 전부 고정 revision 의 커밋된 파일만으로 답할 수 있게 만들었다 — 외부 조회가 필요한 질문을 넣으면 정답이 시간에 따라 변해 결정성(I1 H1)이 깨진다. 근거 좌표는 **두 축**에 걸친다: 제품 코드·DB·테스트는 `revision`(제품 축), I1·EVL 계약 문서는 `docsRevision`(문서 축). 한 축으로 적으면 ADR 좌표가 조회되지 않는 유령 좌표가 된다.",
+    "docsRevision": "7d3db3ed77803c5603137e28a8d9069254db2771"
   },
   "collectionScope": {
     "declared": {
@@ -134,7 +135,7 @@
           "source": "test",
           "locator": "backend/src/test/kotlin/com/ontostudio/rdb/LegacySampleFixtureTest.kt#L18",
           "stance": "supports",
-          "fact": "테스트는 `>= 25` 만 단언한다 — 27 과 28 어느 쪽도 반증하지 못한다"
+          "fact": "테스트는 `schema.tables.size >= 25` 만 단언한다 — 27 도 28 도 통과하므로 **어느 쪽도 지지하지 않는 중립 근거**다. `test` 클래스가 present 임을 뒷받침할 뿐 개수 주장의 편을 들지 않는다. v0 stance 어휘에 중립이 없어 부득이 supports 로 적었다(§8.4 어휘 개정 안건)."
         }
       ],
       "notes": "**실재하는 충돌이다.** I1 §1.1(L40)·§1.1 설명(L44)이 28 이라고 적었지만 원문의 CREATE TABLE 문은 27건이다 — 28번째 일치는 L221 의 한국어 주석 'CREATE TABLE 만 처리하므로 스킵되어야 함' 이다. 테스트는 하한만 단언해 중재하지 못한다. 근거를 갖춰 닫기 전에는 답하지 않는 것이 정답이며(EVL §6.2 조건 3), 27 이든 28 이든 자신 있게 답하면 이 층이 죽이려는 거짓 확신 그 자체다. 해소 경로는 §8 의 I1 개정이다."

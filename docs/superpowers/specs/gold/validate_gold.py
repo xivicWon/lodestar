@@ -15,6 +15,7 @@ import pathlib
 import re
 import subprocess
 import sys
+from datetime import datetime
 
 from jsonschema import Draft202012Validator
 
@@ -30,6 +31,25 @@ ITEM_FILES = ["l1/db.json", "l1/code.json", "l2/links.json", "pii.json"]
 OTHER_FILES = ["l3/claims.json", "evl/questions.json", "failures.json"]
 
 COVERAGE_KEYS = {"code", "issue", "adr", "test", "runtime"}
+# 모양만으로 분류가 결정되는 값들. 마스킹 분류가 틀리면 탐지했더라도 **어느 등급으로
+# 가릴지가 달라지므로** 분류 자체가 정답의 일부다 — RRN 을 INTERNAL_ID 로 적으면
+# '개인식별정보를 찾았다' 는 집계가 통째로 거짓이 된다.
+PII_SHAPES = {
+    "KR_RRN": r"\d{6}-\d{7}",
+    "EMAIL": r"[^@\s']+@[^@\s']+\.[A-Za-z]{2,}",
+    # 구분자 있는 형태만 모양으로 단정한다. 맨 16자리는 송장·일련번호와 구분되지
+    # 않아 정상 식별자를 오분류로 몰기 때문에, 그쪽은 Luhn 검사로 따로 본다.
+    "CARD_NO": r"(?:\d{4}-){3}\d{4}",
+    "IP_ADDRESS": r"\d{1,3}(?:\.\d{1,3}){3}",
+    "GIT_SHA": r"[0-9a-f]{40}",
+    "CONTENT_HASH": r"sha256:[0-9a-f]{64}",
+    "TRACE_ID": r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}",
+    "AWS_ACCESS_KEY_ID": r"AKIA[0-9A-Z]{16}",
+    "SLACK_TOKEN": r"xox[bpasr]-[\w-]+",
+    "GITHUB_TOKEN": r"gh[pousr]_[A-Za-z0-9]+",
+    "JWT": r"eyJ[\w-]+\.[\w-]+\.[\w-]+",
+    "CONNECTION_URL": r"jdbc:[^\s]+",
+}
 WARNING_CODES = {
     "NO_CODE", "NO_ISSUE", "NO_ADR", "NO_TEST", "NO_RUNTIME", "NOT_COLLECTED",
     "CONFLICT_UNRESOLVED", "LOW_CORROBORATION", "STALE_EVIDENCE",
@@ -43,6 +63,13 @@ CORE_CLASSES = {
 
 errors = []
 covered = set()
+# 규칙이 실제로 **몇 개를 들여다봤는지**. covered 만으로는 본문이 빈 규칙도 통과한다 —
+# '규칙이 실행됐다' 와 '규칙이 검사했다' 는 다르며, 후자를 세지 않으면 커버리지가 거짓이 된다.
+inspected = {}
+
+
+def touched(rid, n):
+    inspected[rid] = inspected.get(rid, 0) + n
 
 
 def rule(rid):
@@ -60,6 +87,22 @@ def rule(rid):
                           f"{type(e).__name__}: {e}")
         return fn
     return deco
+
+
+def luhn(s):
+    """카드번호 판정용. 맨 16자리 숫자를 모양만으로 카드로 단정하면 송장번호 같은
+    정상 식별자가 오분류로 몰린다 — 체크섬까지 맞아야 카드라고 말한다."""
+    ds = [int(c) for c in s if c.isdigit()]
+    if len(ds) < 13:
+        return False
+    tot = 0
+    for i, d in enumerate(reversed(ds)):
+        if i % 2:
+            d *= 2
+            if d > 9:
+                d -= 9
+        tot += d
+    return tot % 10 == 0
 
 
 def sha(path):
@@ -111,7 +154,7 @@ def derive_fixture_hash(m):
     I3 는 실행 하나당 해시 하나를 적게 돼 있는데(sha256:<64hex> 또는 UNPINNED),
     I2 가 고정하는 것은 픽스처 15개의 개별 해시다. 그 사이를 잇는 집계 규칙이
     없으면 각 실행이 제멋대로 대표값을 골라 적게 되고, 그러면 `fixtureHash` 가
-    같다는 것이 같은 입력이었음을 보장하지 못한다(I3 §비교가능성 조건 2).
+    같다는 것이 같은 입력이었음을 보장하지 못한다(I3 §3.8 의 비교가능 조건 2).
 
     규칙: `"<경로> <sha256:...>"` 줄을 **경로 사전순**으로 정렬해 개행으로 잇고
     마지막에 개행 하나를 붙인 뒤 sha256. 정렬을 못박는 이유는 파일 열거 순서가
@@ -168,6 +211,7 @@ def _g1():
              for k in set(branch.values())}
     for rel in ITEM_FILES + OTHER_FILES:
         v = doc_v[branch[rel]] if rel in branch else item_v
+        touched("G1", 1)
         for e in sorted(v.iter_errors(DOCS[rel]), key=lambda e: list(e.path)):
             # 최상위 제약(anyOf 등)이 실패하면 jsonschema 가 문서 전체를 메시지에 담는다.
             # 읽을 수 없는 오류는 보고되지 않은 것과 크게 다르지 않으므로 잘라낸다.
@@ -183,6 +227,7 @@ def _g2():
         if it["id"] in seen:
             yield f"중복 id {it['id']} ({seen[it['id']]} · {rel})"
         seen[it["id"]] = rel
+        touched("G2", 1)
 
 
 # --- G3 선언 개수 = 실제 개수 -----------------------------------------------
@@ -203,6 +248,7 @@ def _g3():
         if "negatives" not in d["counts"]:
             yield f"{rel}: counts 에 negatives 선언이 없다 — 음성 항목 수가 조용히 변할 수 있다"
         for key, want in d["counts"].items():
+            touched("G3", 1)
             got = n_neg if key == "negatives" else by_type.get(key, by_expect.get(key))
             if got is None:
                 yield f"{rel}: counts 의 '{key}' 가 type·expect 어느 축에도 없다"
@@ -214,6 +260,7 @@ def _g3():
 @rule("G4")
 def _g4():
     for entry in MANIFEST["goldFiles"] + MANIFEST["fixtures"]:
+        touched("G4", 1)
         p = HERE / entry["path"]
         if not p.exists():
             yield f"매니페스트에 있으나 파일이 없다: {entry['path']}"
@@ -226,14 +273,23 @@ def _g4():
             if rel not in pinned:
                 yield f"고정되지 않은 픽스처: {rel} (I1 §1.3 — fixture hash 없는 실행은 baseline 이 아니다)"
     listed = {e["path"] for e in MANIFEST["goldFiles"]}
+    # 확인기 자신도 필수다. 빠지면 goldSetId 가 판정 규칙을 더는 덮지 않게 되고,
+    # 그 뒤로는 규칙을 고쳐도 신원이 그대로여서 다른 기준으로 잰 수치가 같은 id 로 비교된다.
     for rel in (ITEM_FILES + OTHER_FILES + ["gold.v0.schema.json",
-                                        "gold.docs.v0.schema.json",
-                                        "manifest.v0.schema.json"]):
+                                            "gold.docs.v0.schema.json",
+                                            "manifest.v0.schema.json",
+                                            "validate_gold.py"]):
         if rel not in listed:
             yield f"매니페스트 goldFiles 에서 누락: {rel}"
     # I3 로 넘기는 파생값은 **재계산 가능해야** 한다. 손으로 적어 둔 값이 내용과
     # 어긋나면 Run Quality Report 가 실제와 다른 입력을 가리키게 되고, 그 보고서끼리의
-    # 비교가 성립하지 않는다(I3 §비교가능성).
+    # 비교가 성립하지 않는다(I3 §3.8).
+    at = MANIFEST["status"].get("approvedAt")
+    if at:
+        try:
+            datetime.fromisoformat(at.replace("Z", "+00:00").replace(":60", ":59"))
+        except ValueError:
+            yield f"status.approvedAt 이 달력상 실재하지 않는 시각이다 ({at})"
     for key, fn in (("fixtureHash", derive_fixture_hash), ("goldSetId", derive_gold_set_id)):
         want = fn(MANIFEST)
         if key not in MANIFEST:
@@ -276,13 +332,15 @@ def _g5():
             elif fx["sha256"] != s["contentHash"]:
                 yield (f"{sid}: fixtures[].sha256({fx['sha256']}) 와 "
                        f"pinnedSources.contentHash({s['contentHash']}) 가 다르다")
+            touched("G5", 1)
             continue
         # 고정 축은 둘뿐이다(§6). 항목별 revision 과 contentHash 를 함께 다른 커밋 값으로
         # 바꾸면 해시는 맞아떨어지므로, 축 자체를 검사하지 않으면 임의 커밋으로 슬쩍
         # 옮겨진 원본이 통과한다 — 그 순간 "고정 revision 의 gold" 라는 주장이 거짓이 된다.
-        if s["revision"] not in (MANIFEST["sourceRevision"], MANIFEST["docsRevision"]):
-            yield (f"{sid}: revision 이 선언된 두 축(sourceRevision·docsRevision) 어느 쪽도 "
-                   f"아니다 ({s['revision'][:7]})")
+        want = MANIFEST["sourceRevision"] if s["axis"] == "source" else MANIFEST["docsRevision"]
+        if s["revision"] != want:
+            yield (f"{sid}: axis={s['axis']} 인데 revision 이 그 축({want[:7]})과 다르다 "
+                   f"({s['revision'][:7]})")
         try:
             data = blob(sid)
         except (subprocess.CalledProcessError, FileNotFoundError) as e:
@@ -291,6 +349,12 @@ def _g5():
         got = "sha256:" + hashlib.sha256(data).hexdigest()
         if got != s["contentHash"]:
             yield f"{sid}: {s['revision']} 의 실제 해시 {got} ≠ 고정값 {s['contentHash']}"
+        # G7 은 좌표 범위를 이 `lines` 로 판정한다. 여기서 대조하지 않으면 매니페스트의
+        # 큰 숫자 하나로 모든 범위 검사가 무력해진다.
+        real = len(data.decode().splitlines())
+        if s.get("lines") != real:
+            yield f"{sid}: lines 선언 {s.get('lines')} ≠ 실제 {real} (G7 의 범위 판정이 헐거워진다)"
+        touched("G5", 1)
 
 
 # --- G6 항목의 contentHash = 매니페스트의 소스 해시 --------------------------
@@ -302,6 +366,7 @@ def _g6():
             if sid not in SOURCES:
                 yield f"{it['id']}: 등록되지 않은 sourceId '{sid}'"
                 continue
+            touched("G6", 1)
             if "contentHash" in r and r["contentHash"] != SOURCES[sid]["contentHash"]:
                 yield f"{it['id']}: contentHash 가 {sid} 의 고정값과 다르다"
             if "revision" in r and r["revision"] != SOURCES[sid].get("revision"):
@@ -320,12 +385,16 @@ def _g7():
             if path != SOURCES[sid]["path"]:
                 yield f"{it['id']}: locator 경로 {path} ≠ {sid} 의 등록 경로 {SOURCES[sid]['path']}"
                 continue
-            n = SOURCES[sid]["lines"]
+            # 매니페스트의 숫자가 아니라 **고정 blob 을 직접 센다** — 문서가 "모든 원본
+            # 대조는 고정 blob 을 읽는다" 고 약속했고, 중간 숫자를 믿으면 그 숫자 하나로
+            # 모든 범위 검사가 무력해진다.
+            n = len(blob_lines(sid))
             nums = [int(x) for x in re.findall(r"L(\d+)", frag)]
             if any(x < 1 or x > n for x in nums):
                 yield f"{it['id']}: {frag} 가 파일 범위(1..{n})를 벗어난다 — 유령 좌표"
             if len(nums) == 2 and nums[0] > nums[1]:
                 yield f"{it['id']}: {frag} 의 시작 행이 끝 행보다 크다"
+            touched("G7", 1)
     # EVL 질문의 근거 좌표도 같은 기준으로 본다 — 여기서 유령 좌표를 허용하면
     # '좌표를 지어내 커버리지를 present 로 위조' 하는 실패를 gold 자신이 저지르게 된다.
     by_path = {s["path"]: s for s in SOURCES.values()}
@@ -335,7 +404,8 @@ def _g7():
             if path not in by_path:
                 yield f"{q['id']}: 고정되지 않은 근거 파일 {path} (매니페스트 pinnedSources 에 없다)"
                 continue
-            n = by_path[path]["lines"]
+            n = len(blob_lines(by_path[path]["sourceId"]))
+            touched("G7", 1)
             if any(x < 1 or x > n for x in [int(x) for x in re.findall(r"L(\d+)", frag)]):
                 yield f"{q['id']}: {ev['locator']} 가 파일 범위(1..{n})를 벗어난다"
 
@@ -348,6 +418,15 @@ def _g8():
         name = pathlib.Path(r["locator"].split("#")[0]).name
         ln = int(re.search(r"L(\d+)", r["locator"]).group(1))
         lines = blob_lines(r["sourceId"])
+        touched("G8", 1)
+        # 모양이 곧 분류인 값은 라벨이 그 분류여야 한다. 라벨을 검사하지 않으면
+        # 탐지는 맞고 분류만 틀린 구현이 만점을 받는다.
+        cls, txt = it["value"]["class"], it["value"]["text"]
+        for want, rx in PII_SHAPES.items():
+            if re.fullmatch(rx, txt) and cls != want:
+                yield f"{it['id']}: '{txt}' 는 {want} 모양인데 class 가 {cls} 다"
+        if re.fullmatch(r"\d{16}", txt) and luhn(txt) and cls != "CARD_NO":
+            yield f"{it['id']}: '{txt}' 는 Luhn 을 통과하는 16자리 — class 가 {cls} 다"
         path = type("P", (), {"name": name})
         # 범위를 먼저 본다 — 여기서 색인 예외가 나면 확인기가 죽고, 죽은 확인기의
         # 침묵은 '문제 없음' 과 구분되지 않는다.
@@ -362,6 +441,7 @@ def _g8():
 def _g9():
     lines = blob_lines("db:legacy-sample")
     for it in DOCS["l1/db.json"]["items"]:
+        touched("G9", 1)
         ln = int(re.search(r"L(\d+)", it["ref"]["locator"]).group(1))
         if ln > len(lines):
             yield f"{it['id']}: 인용 행 L{ln} 이 파일 범위(1..{len(lines)})를 벗어난다"
@@ -381,6 +461,40 @@ def _g9():
         if name and name not in lines[ln - 1]:
             yield f"{it['id']}: '{name}' 가 인용 행 L{ln} 에 없다 — gold 좌표가 원본과 어긋난다"
 
+    # 코드 트랙도 같은 대조를 받는다. DB 만 검사하면 fqn·members 를 지어내도 통과한다.
+    for it in DOCS["l1/code.json"]["items"]:
+        touched("G9", 1)
+        r = it["ref"]
+        src = blob_lines(r["sourceId"])
+        nums = [int(x) for x in re.findall(r"L(\d+)", r["locator"])]
+        seg = "\n".join(src[nums[0] - 1: (nums[1] if len(nums) > 1 else nums[0])])
+        if not seg.strip():
+            yield f"{it['id']}: 인용 구간이 비어 있다 — 근거가 없는 좌표"
+            continue
+        if it["expect"] != "PRESENT":
+            continue
+        v, ty = it["value"], it["type"]
+        # 인용 구간에서 실제로 확인되어야 하는 토큰들
+        want = []
+        if ty == "TYPE":
+            want = [v["fqn"].split(".")[-1]] + list(v.get("members", []))
+        elif ty in ("METHOD", "PROPERTY"):
+            want = [v["name"]]
+        elif ty == "CALL":
+            tail = v["callee"].split(".")
+            want = [tail[-2] if tail[-1] == "<init>" else tail[-1]]
+        elif ty == "FILE":
+            # 좌표가 L1 일 때만 검사하면, 좌표를 옮기는 것만으로 package 대조가
+            # 통째로 사라진다. 선언은 파일 어딘가에 있으므로 파일 전체에서 본다.
+            if not re.search(r"^\s*package\s+" + re.escape(v["package"]) + r"\b",
+                             "\n".join(src), re.M):
+                yield f"{it['id']}: package 선언 '{v['package']}' 가 파일에 없다"
+            want = []
+        for w in want:
+            if w not in seg:
+                yield (f"{it['id']}: '{w}' 가 인용 구간 {r['locator'].split('#')[-1]} 에 없다 "
+                       f"— gold 가 원본에 없는 것을 주장한다")
+
 
 # --- G10 상호참조가 해소된다 -------------------------------------------------
 @rule("G10")
@@ -393,6 +507,7 @@ def _g10():
     for it in DOCS["l2/links.json"]["items"]:
         ends = [v for k in ("left", "right") if isinstance(v := it["value"].get(k), str)]
         ends += it["value"].get("candidates", [])
+        touched("G10", 1)
         for v in ends:
             yield from check(it["id"], v)
         # L2 좌표는 **L1 gold 에서 유도**되어야 한다. 손으로 적으면 L1 이 정정돼도
@@ -409,10 +524,47 @@ def _g10():
             if g and g["ref"]["locator"] != r["locator"]:
                 yield (f"{it['id']}: refs[{i}] 좌표가 {ep} 의 좌표와 다르다 "
                        f"({r['locator'].split('#')[-1]} ≠ {g['ref']['locator'].split('#')[-1]})")
+            # gold id 가 아닌 대상(픽스처 심볼·리포 FQN)은 G9 의 대조를 받지 못한다.
+            # 이름이 인용 구간에 실재하는지 여기서 본다 — 없으면 지어낸 심볼이다.
+            if g is None:
+                sym = ep.split("@")[0].split("(")[0].split(".")[-1]
+                nn = [int(x) for x in re.findall(r"L(\d+)", r["locator"])]
+                seg = "\n".join(blob_lines(r["sourceId"])[
+                    nn[0] - 1: (nn[1] if len(nn) > 1 else nn[0])])
+                if sym and sym not in seg:
+                    yield f"{it['id']}: refs[{i}] 의 '{sym}' 가 인용 구간에 없다"
+        # relation 은 left/right 의 유무와 맞아야 한다. 검사하지 않으면 MOVED 를
+        # RENAMED 로 바꿔 적어도 통과하고 drift 판정의 정답이 뒤바뀐다.
+        rel_ = it["value"].get("relation")
+        has_l = isinstance(it["value"].get("left"), str)
+        has_r = isinstance(it["value"].get("right"), str) or bool(it["value"].get("candidates"))
+        need = {"DELETED": (True, False), "ADDED": (False, True)}
+        if rel_ in need and (has_l, has_r) != need[rel_]:
+            yield f"{it['id']}: relation={rel_} 인데 left/right 구성이 맞지 않다"
+        if rel_ in ("MOVED", "RENAMED", "REAPPEARED", "OVERRIDES") and not (has_l and has_r):
+            yield f"{it['id']}: relation={rel_} 은 양쪽 대상이 모두 있어야 한다"
+    # R-L2-5: DB 트랙에서 EXTRACTED 정답은 1건뿐이다. 종전에는 notes 산문에만 있어
+    # 둘째가 생겨도 아무도 세지 않았다 — 추론을 명시로 승격한 것이 그대로 통과한다(I1 P2).
+    ext = [it["id"] for it in DOCS["l2/links.json"]["items"]
+           if it["track"] == "db" and it["expect"] == "PRESENT"
+           and it["value"].get("status") == "EXTRACTED"]
+    touched("G10", 1)
+    if len(ext) != 1:
+        yield f"R-L2-5 위반: DB 트랙 EXTRACTED 정답이 {len(ext)}건이다 (1건이어야 한다) {ext}"
+
     for tier in DOCS["evl/questions.json"]["calibrationPool"]["tiers"]:
         for m in tier["members"]:
+            touched("G10", 1)
             if m not in ITEM_BY_ID:
                 yield f"calibrationPool/{tier['tier']}: 존재하지 않는 gold id '{m}'"
+                continue
+            # tier 의 expectedVerdict 와 항목의 실제 정오가 어긋나면 곡선의 한 bin 이
+            # 통째로 뒤집힌다. trap 에는 '산출하면 오답' 인 항목만 들어갈 수 있다.
+            neg = ITEM_BY_ID[m]["expect"] in ("ABSENT", "NOT_MASKED")
+            if neg != (tier["expectedVerdict"] == "INCORRECT"):
+                yield (f"calibrationPool/{tier['tier']}(expectedVerdict="
+                       f"{tier['expectedVerdict']}): '{m}' 의 expect="
+                       f"{ITEM_BY_ID[m]['expect']} 와 어긋난다")
 
 
 # --- G11 EVL: coverage 어휘 · 경고 어휘 · 보류 양방향 ------------------------
@@ -426,7 +578,12 @@ def _g11():
     unresolved = {c["id"] for c in evl["conflictGold"]["positive"]
                   if c.get("status", "NEEDS_CHECK") == "NEEDS_CHECK"}
     for q in evl["questions"]:
+        touched("G11", 1)
         qid = q["id"]
+        for k, decl in evl["collectionScope"]["declared"].items():
+            if decl.startswith("NOT_COLLECTED") and q["coverage"].get(k) != "not_collected":
+                yield (f"{qid}: 수집 범위가 {k} 를 NOT_COLLECTED 로 선언했는데 "
+                       f"coverage.{k}={q['coverage'].get(k)} 다 — 수집하지 않은 것을 찾을 수는 없다")
         if set(q["coverage"]) != COVERAGE_KEYS:
             yield f"{qid}: coverage 키가 5개 클래스와 다르다"
         for v in q["coverage"].values():
@@ -483,6 +640,24 @@ def _g11():
             for cid in q["expectedConflicts"]:
                 if q.get("expectedConflictStatus", {}).get(cid) not in ("COEXIST", "RESOLVED"):
                     yield f"{qid}: 비보류 질문의 충돌 '{cid}' 에 닫힌 상태(COEXIST/RESOLVED) 선언이 없다"
+        # 질문이 선언한 충돌 상태는 conflictGold 의 정본과 같아야 한다. 대조하지 않으면
+        # 질문 쪽에서만 RESOLVED 로 적어 보류를 면제받을 수 있다 — 근거 없는 해소다(I1 P4).
+        for cid, st in (q.get("expectedConflictStatus") or {}).items():
+            real = next((c.get("status") for c in evl["conflictGold"]["positive"]
+                         if c["id"] == cid), None)
+            if real is None:
+                yield f"{qid}: expectedConflictStatus 가 conflictGold 에 없는 '{cid}' 를 가리킨다"
+            elif real != st:
+                yield f"{qid}: 충돌 '{cid}' 상태가 conflictGold({real})와 다르다 ({st})"
+        # 충돌을 주장하면서 반대 증거가 하나도 없으면 그 충돌은 응답만으로 성립하지
+        # 않는다(EVL A14 의 gold 판). 종전에는 stance 가 스키마 열거만 받고 아무도
+        # 의미를 보지 않아, 반대 증거를 supports 로 바꿔도 통과했다.
+        if q["expectedConflicts"] and not any(
+                e.get("stance") == "contradicts" for e in q["requiredEvidence"]):
+            yield f"{qid}: 충돌을 주장하는데 stance=contradicts 근거가 하나도 없다"
+        if not q["expectedConflicts"] and any(
+                e.get("stance") == "contradicts" for e in q["requiredEvidence"]):
+            yield f"{qid}: 반대 증거가 있는데 대응하는 충돌이 선언되지 않았다 (EVL A14)"
         for cid in q["expectedConflicts"]:
             if cid not in conflict_ids:
                 yield f"{qid}: conflictGold 에 없는 충돌 id '{cid}'"
@@ -515,6 +690,7 @@ def _g12():
         "CONFLICT_NEGATIVE": len(evl["conflictGold"]["negative"]),
     }
     for k, want in c.items():
+        touched("G12", 1)
         if got[k] != want:
             yield f"evl counts['{k}']={want} 인데 실제 {got[k]}건"
 
@@ -527,6 +703,7 @@ def _g13():
     if d["counts"]["SCENARIO"] != len(d["scenarios"]):
         yield f"l3 counts 선언 {d['counts']['SCENARIO']} ≠ 실제 {len(d['scenarios'])}"
     for s in d["scenarios"]:
+        touched("G13", 1)
         cases.add(s["case"])
         for f in ("id", "case", "title", "why", "steps"):
             if not s.get(f):
@@ -536,6 +713,16 @@ def _g13():
         nums = [st.get("step") for st in s["steps"]]
         if nums != list(range(1, len(nums) + 1)):
             yield f"{s['id']}: step 이 배열 순서대로 1..{len(nums)} 가 아니다 (got {nums})"
+        # mustHold/mustNot 문장 안에 적힌 gold id 는 그 단계의 **근거 참조**다.
+        # 산문이라는 이유로 검사하지 않으면 존재하지 않는 근거를 가진 시나리오가
+        # 정답으로 승인되고, 채점자는 대조할 대상이 없어 통과 처리하게 된다.
+        for st in s["steps"]:
+            for sent in st.get("mustHold", []) + st.get("mustNot", []):
+                for tok in re.findall(r"\bL[123]\.[A-Za-z0-9._가-힣]+", sent):
+                    tok = tok.rstrip(".")
+                    if tok not in ITEM_BY_ID:
+                        yield (f"{s['id']} step{st.get('step')}: 문장이 존재하지 않는 gold id "
+                               f"'{tok}' 를 참조한다")
         for st in s["steps"]:
             if not st.get("mustHold"):
                 yield f"{s['id']} step{st.get('step')}: mustHold 가 비어 있다 — 판정할 것이 없는 단계"
@@ -562,6 +749,7 @@ def _g14():
         yield f"failures counts 선언 {d['counts']['FIXTURE']} ≠ 실제 {len(d['fixtures'])}"
     kinds = set()
     for f in d["fixtures"]:
+        touched("G14", 1)
         kinds.add(f["kind"])
         p = REPO / f["path"]
         if not p.exists():
@@ -584,6 +772,33 @@ def _g14():
                        f"— 유령 좌표")
             elif len(nums) == 2 and nums[0] > nums[1]:
                 yield f"{f['id']}: 보고 좌표 {r['locator']} 의 시작 행이 끝 행보다 크다"
+        # R-F-1 은 "extracted 는 그 입력에서 산출되어야 하는 사실의 전부" 라고 적어놓고
+        # 아무도 읽지 않았다 — 픽스처에 없는 이름을 지어내도 통과했다.
+        body = p.read_text()
+        for ex in f["extracted"]:
+            name = ex.get("name") or ex.get("fqn", "").split(".")[-1]
+            if name and not re.search(r"\b" + re.escape(name) + r"\b", body):
+                yield f"{f['id']}: extracted 의 '{name}' 가 픽스처 본문에 없다"
+            for col in ex.get("columns", []) + ex.get("primaryKey", []):
+                if not re.search(r"\b" + re.escape(col) + r"\b", body):
+                    yield f"{f['id']}: extracted 의 컬럼 '{col}' 가 픽스처 본문에 없다"
+        # kind 는 보고 종류·추출 유무와 맞아야 한다. 라벨만 바꿔도 통과하면
+        # '요구 3종이 다 있다' 는 검사가 라벨 돌려막기로 충족된다.
+        kr = {r["kind"] for r in f["reported"]}
+        if f["kind"] == "부분 추출" and not f["extracted"]:
+            yield f"{f['id']}: kind=부분 추출 인데 extracted 가 비어 있다"
+        if f["kind"] != "부분 추출" and f["extracted"]:
+            yield f"{f['id']}: kind={f['kind']} 인데 extracted 가 있다 (그것이 부분 추출이다)"
+        # 정확 일치를 요구하면 '파싱 실패가 주지만 미지원 구문도 섞인' 정상 픽스처를
+        # 만들 수 없다. 대표 종류가 있는지(포함)와 어휘 밖이 없는지(부분집합)로 본다.
+        ALLOWED = {"파싱 실패": ({"PARSE_ERROR", "UNSUPPORTED_STATEMENT"}, "PARSE_ERROR"),
+                   "미지원 문법": ({"UNSUPPORTED_STATEMENT", "UNSUPPORTED_LANGUAGE"}, None),
+                   "부분 추출": ({"PARSE_ERROR", "UNSUPPORTED_STATEMENT"}, None)}
+        allowed, must = ALLOWED[f["kind"]]
+        if not kr <= allowed:
+            yield f"{f['id']}: kind={f['kind']} 인데 보고 종류에 {sorted(kr - allowed)} 가 있다"
+        if must and must not in kr:
+            yield f"{f['id']}: kind={f['kind']} 인데 {must} 보고가 없다"
     for need in ("파싱 실패", "미지원 문법", "부분 추출"):
         if need not in kinds:
             yield f"이슈 #99 가 요구한 실패 종류 '{need}' 가 없다"
@@ -597,6 +812,11 @@ def rehash():
     검사 실패를 이걸로 덮으면 fixture hash 고정이 하는 일이 없어진다(I1 §1.3).
     """
     m = json.loads((HERE / "manifest.json").read_text())
+    # 무엇을 정당화했는지 **말하고** 넘어간다. 조용히 해시만 맞추면 이 명령은
+    # "내용이 바뀐 사실" 자체를 지우는 도구가 되고, 리뷰어는 diff 를 보기 전까지
+    # 무엇이 legitimize 됐는지 알 수 없다.
+    changed = [e["path"] for e in m["goldFiles"] + m["fixtures"]
+               if e["sha256"] != sha(HERE / e["path"])]
     for e in m["goldFiles"] + m["fixtures"]:
         e["sha256"] = sha(HERE / e["path"])
     for s in m["pinnedSources"]:
@@ -608,7 +828,15 @@ def rehash():
     m["fixtureHash"] = derive_fixture_hash(m)
     m["goldSetId"] = derive_gold_set_id(m)
     (HERE / "manifest.json").write_text(json.dumps(m, ensure_ascii=False, indent=2) + "\n")
-    print("manifest 재고정 완료 — validate_gold.py 를 다시 실행하고 리뷰어 승인을 받을 것")
+    if changed:
+        print(f"내용이 바뀐 파일 {len(changed)}건을 재고정했다:")
+        for c in sorted(changed):
+            print(f"  - {c}")
+    else:
+        print("내용이 바뀐 파일 없음 (파생값만 갱신)")
+    print(f"  fixtureHash = {m['fixtureHash']}")
+    print(f"  goldSetId   = {m['goldSetId']}")
+    print("재고정은 검사가 아니다 — validate_gold.py 를 다시 실행하고 리뷰어 승인을 받을 것")
     return 0
 
 
@@ -617,6 +845,10 @@ def main():
     missing = expected - covered
     if missing:
         errors.append(f"[META] 실행되지 않은 규칙: {sorted(missing)}")
+    idle = sorted(r for r in expected - missing if not inspected.get(r))
+    if idle:
+        errors.append(f"[META] 실행됐지만 아무것도 검사하지 않은 규칙: {idle} "
+                      f"— 본문이 비어도 '규칙 N개' 로 집계되던 구멍")
     if errors:
         print(f"FAIL — {len(errors)}건\n")
         for e in errors:
