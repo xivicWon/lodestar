@@ -174,3 +174,16 @@ def test_bogus_revision_override_is_rejected(tmp_path):
     root = write_scope(tmp_path, **{"A.kt": "class A\n"})
     with pytest.raises(ValueError):
         main([str(root), "-o", str(tmp_path / "cg.json"), "--revision", "HEAD"])
+
+
+def test_collector_version_tracks_the_source_tree_pyproject():
+    """손으로 적은 버전은 올려도 티가 나지 않는다 — 실행 중인 소스 트리의 pyproject 를 따라야 한다.
+
+    낡은 editable 설치가 남아 있으면 설치 메타데이터가 실제 실행 중인 코드보다 뒤처진다.
+    """
+    import pathlib
+    import tomllib
+
+    pyproject = pathlib.Path(prov.__file__).resolve().parents[2] / "pyproject.toml"
+    declared = tomllib.loads(pyproject.read_text())["project"]["version"]
+    assert prov.collector_version().split("+")[0] == f"lodestar-codegraph@{declared}"

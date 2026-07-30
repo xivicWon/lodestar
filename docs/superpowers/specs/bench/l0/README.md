@@ -10,11 +10,15 @@ build_report.py   프로브 산출물 → Run Quality Report v0 (프로브의 �
 verify_l0.py      커밋된 증거의 적합성 확인기 V1~V10 + 결함 주입 20케이스
 manifest.json     규칙 범위·케이스 총계 고정
 runs/run-l0-db-3c27259-001/     probe-db.json · report.json
-runs/run-l0-code-3c27259-001/   probe-code.json · report.json
+runs/run-l0-code-3c27259-001/   probe-code.json · report.json  (#88 실측 — 결정성 0.3333 · H1)
+runs/run-l0-code-3c27259-002/   probe-code.json · report.json  (#112 재측정 — 결정성 1.0 · 현행)
 
 metadata_completeness.py        #113 게이트 재측정 (코드 트랙 실측 + DB 트랙 결과 확인)
 metadata/completeness-{db,code}.json   그 결과
 ```
+
+코드 트랙의 **현행 실행은 002** 다(`build_report.RUNS` · `probe_code.RUN_DIR`). 001 은 기준선으로 남겨
+002 가 `baseline.previous` 로 인용한다 — 덮어쓰지 않는다(I3 §5.5).
 
 DB 트랙 프로브는 수집기가 Kotlin 이므로 백엔드 테스트가 겸한다 —
 `backend/src/test/kotlin/com/ontostudio/rdb/L0DbSourceProbeTest.kt`.
@@ -37,7 +41,7 @@ git diff --exit-code docs/superpowers/specs/bench/l0/runs
 
 # 3) 증거 적합성 확인
 python3 docs/superpowers/specs/bench/l0/verify_l0.py
-# 24 cases, 0 mismatches
+# 29 cases, 0 mismatches
 ```
 
 새 runId 를 처음 만들 때만 DB 프로브를 부트스트랩한다 — 그 외에는 커밋된 산출물이 없으면 테스트가 실패한다.
@@ -47,27 +51,30 @@ python3 docs/superpowers/specs/bench/l0/verify_l0.py
 ```
 
 프로브를 다시 돌려 수치가 달라지면 보고서를 덮어쓰지 않고 **새 runId 로 새 보고서를 남긴다**(I3 §5.5).
-`determinismObserved` 블록만은 프로세스마다 값이 달라지므로 표류 검사에서 제외한다 — 대신 같은 프로브가
-`determinismRootCause`(시드 통제 실험)를 남기고 확인기가 그 재현을 요구한다.
+#88 때는 `determinismObserved` 가 프로세스마다 달라져 표류 검사에서 제외했지만, #112 로 그 원인이
+사라져 예외를 없앴다 — 이제 `--check` 는 산출물 전체의 표류에 더해 **결정성 1.0** 과
+`determinismControl.seedIndependent`(PYTHONHASHSEED 를 바꿔도 동일)를 요구한다.
 
-## baseline 프로브의 재현 조건 (#113 이후)
+## 기존 실행의 재현 조건 (#113 이후)
 
 코드 트랙 프로브의 **입력이 `backend/src/main/kotlin` 그 자체**다. 그래서 L0-fix 로 백엔드 코드가
-바뀌면 워킹트리에서의 `probe_code.py --check` 는 더 이상 3c27259 를 재지 못하고 실패한다 — 고장이
-아니라 그 프로브가 **입력 신원을 검사하고 있다는 증거**다. baseline 을 재현하려면 그 revision 을 꺼낸다.
+바뀌면 워킹트리에서의 `probe_code.py --check` 는 더 이상 고정 입력을 재지 못하고 실패한다 — 고장이
+아니라 그 프로브가 **입력 신원을 검사하고 있다는 증거**다(#113 은 `SchemaModel.kt` 등 그 범위 안의
+파일을 바꾼다). 기존 실행을 재현하려면 **그 실행을 만든 커밋**을 꺼낸다. 입력만이 아니라 수집기까지
+그 시점이어야 한다 — run-001 은 `lodestar-codegraph@0.1.0`, run-002 는 `0.1.1` 이 잰 것이다.
 
 ```bash
-git worktree add /tmp/l0-baseline 3c27259
-python3 -m venv /tmp/l0-baseline-venv          # 격리된 인터프리터에서 돌린다
-/tmp/l0-baseline-venv/bin/pip install -q -e /tmp/l0-baseline/codegraph
-( cd /tmp/l0-baseline && /tmp/l0-baseline-venv/bin/python docs/superpowers/specs/bench/l0/probe_code.py --check )
+git worktree add /tmp/l0-run <그 실행을 만든 커밋>
+python3 -m venv /tmp/l0-run-venv               # 격리된 인터프리터에서 돌린다
+/tmp/l0-run-venv/bin/pip install -q -e /tmp/l0-run/codegraph
+( cd /tmp/l0-run && /tmp/l0-run-venv/bin/python docs/superpowers/specs/bench/l0/probe_code.py --check )
 ```
 
 venv 를 쓰는 이유: 현재 워킹트리에서 `pip install -e codegraph` 를 해 두면 editable 설치의 import
 훅이 `sys.path` 보다 먼저 걸려, **역사적 입력에 현재 수집기**를 물릴 수 있다. 그러면 재현이 아니다.
 
 커밋된 증거 자체의 적합성(`verify_l0.py`)은 워킹트리와 무관하다 — 커밋된 산출물만 읽으므로
-현재 브랜치에서도 그대로 24 cases / 0 mismatches 여야 한다.
+현재 브랜치에서도 그대로 29 cases / 0 mismatches 여야 한다.
 
 ## #113 게이트 재측정
 
@@ -82,5 +89,6 @@ python3 docs/superpowers/specs/bench/l0/metadata_completeness.py           # 코
 최초 생성은 각각 `-DL0_METADATA_BOOTSTRAP=true` · `--bootstrap` 이다. 두 결과의 `volatile` 블록은
 입력 내용·리비전에 따라 달라지므로 표류 검사에서 제외한다.
 
-L0 **전체 판정**은 여전히 `BLOCKED` 이다 — 결정성(H1)·PII 마스킹(H2)·오류 가시성이 남아 있다.
-전체 판정을 움직이려면 그것들까지 고친 뒤 **새 runId 로 전 트랙을 다시 재는** 별도 실행이 필요하다.
+L0 **전체 판정**은 여전히 `BLOCKED` 이다 — #112 로 결정성(H1)은 해소됐지만 PII 마스킹(H2)과
+오류 가시성이 남아 있다. 전체 판정을 움직이려면 그것들까지 고친 뒤 **새 runId 로 전 트랙을 다시 재는**
+별도 실행이 필요하다.

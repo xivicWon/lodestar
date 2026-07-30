@@ -23,16 +23,27 @@ SCHEMAS = REPO / "docs/superpowers/specs/schemas"
 
 RUNS = {
     "db": HERE / "runs/run-l0-db-3c27259-001",
-    "code": HERE / "runs/run-l0-code-3c27259-001",
+    "code": HERE / "runs/run-l0-code-3c27259-002",
 }
 PROBE_NAME = {"db": "probe-db.json", "code": "probe-code.json"}
-RUN_ID = {"db": "run-l0-db-3c27259-001", "code": "run-l0-code-3c27259-001"}
+RUN_ID = {"db": "run-l0-db-3c27259-001", "code": "run-l0-code-3c27259-002"}
+# 이전 실행 — 있으면 그 보고서를 읽어 비교한다. 수치를 여기 적지 않는다: 손으로 옮긴 기준선은
+# 원본과 어긋나도 아무도 모른다(V2 가 보고서를 프로브+이 상수들에서 다시 만들어 대조한다).
+PREVIOUS = {
+    "db": None,
+    "code": HERE / "runs/run-l0-code-3c27259-001",
+}
 # 실측 세션의 시각 (RFC 3339 축소 프로파일). 보고서를 다시 만들어도 흔들리지 않도록 못박는다 —
 # 사후 수정은 새 runId 로 남긴다(I3 §5.5).
 TIMES = {
     "db": ("2026-07-30T09:05:00Z", "2026-07-30T09:07:00Z"),
-    "code": ("2026-07-30T09:10:00Z", "2026-07-30T09:16:00Z"),
+    # code 002 는 실측이 끝난 시각(커밋된 probe-code.json 이 쓰인 시각)과 그 실행의 소요(약 2초)다 —
+    # 프로브가 시각을 산출물에 넣으면 매 실행이 표류하므로 여기 못박되, 지어내지 않는다.
+    "code": ("2026-07-30T09:16:12Z", "2026-07-30T09:16:14Z"),
 }
+# 비교 가능성은 신원이 같을 때만 성립한다(I3 R17).
+IDENTITY = ("projectId", "layer", "track", "sourceRevision", "fixtureHash")
+COMPARED_METRICS = ("determinism", "provenanceCompleteness", "scopeCoverage")
 
 
 def measurement(status: str, value, note: str) -> dict:
@@ -148,9 +159,9 @@ def halt_rules(gs: list[dict]) -> list[str]:
 def coverage_classes(track: str, p: dict) -> list[dict]:
     """`deterministic` 은 **state 의 3회 안정성**이며 산출물 해시 결정성이 아니다(EVL §7.1 · I3 §3.5).
 
-    code 트랙의 산출물 결정성은 실패했지만(H1) 'code 클래스를 봤다' 는 state 는 3회 모두 같았다 —
-    두 값을 한 필드에 섞으면 어느 쪽도 측정할 수 없게 된다. 그래서 프로브가 state 를 따로 재고
-    여기서는 그 측정을 옮겨 적는다(하드코딩 금지).
+    #88 에서 code 트랙은 산출물 해시가 갈리는 와중에도(H1) 'code 클래스를 봤다' 는 state 는 3회 모두
+    같았다 — 두 값을 한 필드에 섞으면 어느 쪽도 측정할 수 없게 된다. #112 로 산출물 결정성이 회복된
+    뒤에도 정의는 그대로다. 그래서 프로브가 state 를 따로 재고 여기서는 그 측정을 옮겨 적는다(하드코딩 금지).
     """
     if track == "code":
         cs = p["coverageState"]
@@ -164,6 +175,55 @@ def coverage_classes(track: str, p: dict) -> list[dict]:
         out.append({"class": c, "state": state, "deterministic": stable_,
                     "warned": state != "present"})
     return out
+
+
+def baseline_block(track: str, run: dict, schema_version: str, metrics: dict,
+                   eligible: bool) -> dict:
+    """이전 기준선 대비 변화(I3 R17). 비교 대상이 없으면 '변화 없음' 이 아니라 '비교 불가' 다."""
+    prev_dir = PREVIOUS.get(track)
+    if prev_dir is None:
+        return {
+            "previous": None,
+            "comparable": False,
+            "reason": "L0 첫 실측이라 비교 대상이 없다. fixtureHash 는 I2(#99) 승인으로 고정됐고 적용 대상 "
+                      "버전이 전부 PINNED 이므로 이 보고서는 다음 실행의 기준선이 될 수 있다(I3 R12).",
+            "eligibleAsBaseline": eligible,
+            "deltas": [],
+        }
+
+    prev = json.loads((prev_dir / "report.json").read_text())
+    ident = {**{k: prev["run"][k] for k in IDENTITY},
+             "runId": prev["run"]["runId"], "schemaVersion": prev["schemaVersion"]}
+    same = all(prev["run"][k] == run[k] for k in IDENTITY) and \
+        prev["schemaVersion"] == schema_version and \
+        prev["run"]["reportKind"] == "BASELINE" and \
+        prev["baseline"]["eligibleAsBaseline"]
+    if not same:
+        return {
+            "previous": ident,
+            "comparable": False,
+            "reason": f"{ident['runId']} 과 신원(project·layer·track·revision·fixture·schema) 또는 "
+                      "기준선 자격이 달라 직접 비교하지 않는다(I1 §7.4 · I3 R12).",
+            "eligibleAsBaseline": eligible,
+            "deltas": [],
+        }
+
+    deltas = []
+    for m in COMPARED_METRICS:
+        a, b = prev["metrics"].get(m, {}), metrics.get(m, {})
+        if a.get("status") != "MEASURED" or b.get("status") != "MEASURED":
+            continue
+        deltas.append({"metric": m, "previous": a["value"], "current": b["value"],
+                       "delta": round(b["value"] - a["value"], 4)})
+    return {
+        "previous": ident,
+        "comparable": True,
+        "reason": f"{ident['runId']} 과 project·layer·track·sourceRevision·fixtureHash·schemaVersion 이 "
+                  "같다 — 같은 입력을 같은 계약으로 잰 실행이므로 수치를 직접 비교한다. 달라진 것은 "
+                  "수집기 버전이며(#112 결정성 수정), 그 변화량이 아래 deltas 다.",
+        "eligibleAsBaseline": eligible,
+        "deltas": deltas,
+    }
 
 
 def feature_judgments(track: str, run_id: str, f: dict) -> list[dict]:
@@ -194,16 +254,26 @@ def feature_judgments(track: str, run_id: str, f: dict) -> list[dict]:
                 "evidenceRefs": [run_id],
             },
         ]
+    if f["determinism"] < 1.0:
+        rationale = (
+            f"수집 범위 {f['input']}개 파일을 전량 파싱했고 노드·엣지·좌표는 재현됐다. 그러나 동일 입력 3회 "
+            f"실행의 산출물이 서로 달라 결정성 {f['determinism']} (군집 라벨 비결정 — cluster.py 의 집합 순회 "
+            "순서). H1 이 발동하는 상태이므로 Core 판정 불가, 원인이 국소적이고 수정 가능하므로 Retire 도 아니다."
+        )
+    else:
+        rationale = (
+            f"수집 범위 {f['input']}개 파일을 전량 파싱했고, #112 로 군집 라벨의 집합 순회 순서 의존을 없애 "
+            f"결정성 {f['determinism']} 이 됐다 (PYTHONHASHSEED 무관 · H1 해소). 그래도 Core 는 아니다 — 필수 식별 "
+            f"{int(f['provenance'] * 5)}/5 이고, 보고돼야 할 실패·제외 {f['shouldReport']}건 중 산출물에 남는 것이 "
+            f"0건이다(픽스처 {f['markedFullySucceeded']}건은 오히려 전량 성공으로 표시된다). 추적 가능성·정직성 "
+            "게이트가 남아 있으므로 Lab."
+        )
     return [
         {
             "featureId": "E17",
             "judgment": "Lab",
             "measured": True,
-            "rationale": (
-                f"수집 범위 {f['input']}개 파일을 전량 파싱했고 노드·엣지·좌표는 재현됐다. 그러나 동일 입력 3회 "
-                f"실행의 산출물이 서로 달라 결정성 {f['determinism']} (군집 라벨 비결정 — cluster.py 의 집합 순회 "
-                "순서). H1 이 발동하는 상태이므로 Core 판정 불가, 원인이 국소적이고 수정 가능하므로 Retire 도 아니다."
-            ),
+            "rationale": rationale,
             "evidenceRefs": [run_id],
         },
     ]
@@ -229,11 +299,6 @@ def build_from(track: str, p: dict) -> dict:
         }
         for g in gs if g["status"] == "FAIL"
     ]
-    warnings.append({
-        "code": "BASELINE_NOT_COMPARABLE",
-        "message": "L0 첫 실측이라 비교 대상 실행이 없다 — 변화량을 산출하지 않았다",
-        "trigger": "baseline",
-    })
 
     if track == "db":
         collector_version = "DdlParser+SampleLegacyDb@3c27259"
@@ -247,19 +312,26 @@ def build_from(track: str, p: dict) -> dict:
             "따라 HALT 쪽으로 읽었다."
         )
     else:
-        collector_version = "lodestar-codegraph@0.1.0+3c27259"
+        collector_version = p["collector"]["citedVersion"]
         notes = (
-            "L0 코드 트랙 실측. 프로브 산출물: probe-code.json (probe_code.py --check 로 표류·근본 원인 재현). "
-            "determinism 은 기본 인터프리터 설정 3회 실행의 최대 동일 그룹/3 이다. PYTHONHASHSEED 를 고정하면 "
-            "동일해지고 시드를 바꾸면 달라진다는 통제 실험이 프로브에 함께 남아 있어, 이 수치는 재실행 시 "
-            "우연히 0.6667 로 보일 수 있어도 '재현 보장 없음' 이라는 사실은 바뀌지 않는다. "
-            "precision/recall 은 L1(#89)의 몫이라 NOT_APPLICABLE 이다."
+            "L0 코드 트랙 재실측(#112). 프로브 산출물: probe-code.json (probe_code.py --check 로 표류 검사 + "
+            "결정성 1.0·시드 무관 확인). determinism 은 기본 인터프리터 설정 3회 실행의 최대 동일 그룹/3 이며, "
+            "PYTHONHASHSEED 를 바꾼 실행까지 산출물이 같다는 통제 실험이 프로브에 함께 남아 있다"
+            "(determinismControl.seedIndependent). 입력은 run-l0-code-3c27259-001 과 같은 고정 revision 이고 "
+            "달라진 것은 수집기 버전뿐이라 두 실행은 직접 비교된다. 남은 게이트 3종(메타데이터·오류 가시성·보안)은 "
+            "그대로 실패이며 H2 로 판정은 여전히 BLOCKED 다. precision/recall 은 L1(#89)의 몫이라 "
+            "NOT_APPLICABLE 이다."
         )
 
-    report = {
-        "schemaVersion": "run-quality-report/v0",
-        "run": {
-            "runId": run_id,
+    schema_version = "run-quality-report/v0"
+    versions = {
+        "collector": {"status": "PINNED", "value": collector_version},
+        "extractor": {"status": "NOT_APPLICABLE", "value": None},
+        "model": {"status": "NOT_APPLICABLE", "value": None},
+        "prompt": {"status": "NOT_APPLICABLE", "value": None},
+    }
+    run_obj = {
+        "runId": run_id,
             "projectId": "lodestar",
             "layer": "L0",
             "track": track,
@@ -269,35 +341,51 @@ def build_from(track: str, p: dict) -> dict:
             "startedAt": started,
             "completedAt": completed,
             "executedBy": "claude-code agent (Claude Opus 4.8) — 판정 승인권자는 @xivicWon (I1 §1.2)",
-        },
-        "versions": {
-            "collector": {"status": "PINNED", "value": collector_version},
-            "extractor": {"status": "NOT_APPLICABLE", "value": None},
-            "model": {"status": "NOT_APPLICABLE", "value": None},
-            "prompt": {"status": "NOT_APPLICABLE", "value": None},
-        },
+    }
+    metrics = {
+        "precision": measurement("NOT_APPLICABLE", None,
+                                 "L0 은 사실을 산출하지 않는다 — 명시 사실 정확도는 L1(#89)에서 잰다"),
+        "recall": measurement("NOT_APPLICABLE", None,
+                              "L0 은 사실을 산출하지 않는다 — 재현율은 L1(#89)에서 잰다"),
+        "scopeCoverage": measurement(
+            "MEASURED" if scope_cov is not None else "NOT_APPLICABLE", scope_cov,
+            f"counts.output/counts.input = {f['output']}/{f['input']}"),
+        "determinism": measurement(
+            "MEASURED", f["determinism"],
+            "동일 revision 3회 실행 산출물 해시의 최대 동일 그룹 / 3"),
+        "provenanceCompleteness": measurement(
+            "MEASURED", f["provenance"],
+            "필수 식별 5필드(projectId·sourceId·revision·contentHash·collectorVersion) 중 "
+            "산출물에서 소스 단위로 조회 가능한 비율"),
+    }
+    # R12 — 재현할 수 없는 실행은 기준선이 아니다.
+    eligible = (run_obj["fixtureHash"] != "UNPINNED" and run_obj["reportKind"] == "BASELINE"
+                and not [v for v in versions.values() if v["status"] == "UNPINNED"])
+    bl = baseline_block(track, run_obj, schema_version, metrics, eligible)
+    if not bl["comparable"]:
+        # 경고 문구는 실제 사유에서 나와야 한다 — '비교 대상이 없다' 와 '비교 대상은 있으나 신원이
+        # 다르다' 는 다른 사실이고, previous 가 채워진 보고서에 전자를 적으면 그 자체가 거짓이다.
+        message = ("L0 첫 실측이라 비교 대상 실행이 없다 — 변화량을 산출하지 않았다"
+                   if bl["previous"] is None else
+                   f"{bl['previous']['runId']} 과 신원·기준선 자격이 달라 비교할 수 없다 — "
+                   "변화량을 산출하지 않았다")
+        warnings.append({
+            "code": "BASELINE_NOT_COMPARABLE",
+            "message": message,
+            "trigger": "baseline",
+        })
+
+    report = {
+        "schemaVersion": schema_version,
+        "run": run_obj,
+        "versions": versions,
         "counts": {
             "input": f["input"], "output": f["output"],
             "failed": f["failed"], "excluded": f["excluded"],
         },
         "exclusions": f["exclusions"],
         "failures": [],
-        "metrics": {
-            "precision": measurement("NOT_APPLICABLE", None,
-                                     "L0 은 사실을 산출하지 않는다 — 명시 사실 정확도는 L1(#89)에서 잰다"),
-            "recall": measurement("NOT_APPLICABLE", None,
-                                  "L0 은 사실을 산출하지 않는다 — 재현율은 L1(#89)에서 잰다"),
-            "scopeCoverage": measurement(
-                "MEASURED" if scope_cov is not None else "NOT_APPLICABLE", scope_cov,
-                f"counts.output/counts.input = {f['output']}/{f['input']}"),
-            "determinism": measurement(
-                "MEASURED", f["determinism"],
-                "동일 revision 3회 실행 산출물 해시의 최대 동일 그룹 / 3"),
-            "provenanceCompleteness": measurement(
-                "MEASURED", f["provenance"],
-                "필수 식별 5필드(projectId·sourceId·revision·contentHash·collectorVersion) 중 "
-                "산출물에서 소스 단위로 조회 가능한 비율"),
-        },
+        "metrics": metrics,
         "evl": {
             "confidenceCalibration": {
                 "status": "NOT_APPLICABLE", "population": None, "ece": None,
@@ -311,14 +399,7 @@ def build_from(track: str, p: dict) -> dict:
             "coverageClasses": coverage_classes(track, p),
         },
         "gates": gs,
-        "baseline": {
-            "previous": None,
-            "comparable": False,
-            "reason": "L0 첫 실측이라 비교 대상이 없다. fixtureHash 는 I2(#99) 승인으로 고정됐고 적용 대상 "
-                      "버전이 전부 PINNED 이므로 이 보고서는 다음 실행의 기준선이 될 수 있다(I3 R12).",
-            "eligibleAsBaseline": True,
-            "deltas": [],
-        },
+        "baseline": bl,
         "verdict": {
             "value": "BLOCKED" if halts else "PASS",
             "haltRules": halts,

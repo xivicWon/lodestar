@@ -26,6 +26,17 @@ _PLACEHOLDERS = {"unknown", "n/a", "na", "null", "none", "todo", "tbd", "-", "?"
 
 
 def _version() -> str:
+    """수집기 버전은 손으로 적지 않는다 — 설치 메타데이터, 없으면 pyproject 에서 읽는다.
+
+    손으로 옮긴 버전은 올려도 티가 나지 않고, 그러면 `collectorVersion` 이 재현 대상을 잘못 가리킨다.
+    """
+    # 소스 트리에서 돌고 있으면 **그 트리의 pyproject** 가 정본이다. 설치 메타데이터를 먼저 보면
+    # 낡은 editable 설치(0.1.0)가 실제 실행 중인 코드(0.1.1)를 가리는 일이 생긴다.
+    pyproject = os.path.join(os.path.dirname(__file__), "..", "..", "pyproject.toml")
+    if os.path.isfile(pyproject):
+        import tomllib
+        with open(pyproject, "rb") as f:
+            return tomllib.load(f)["project"]["version"]
     try:
         from importlib.metadata import PackageNotFoundError, version
         try:
@@ -34,8 +45,8 @@ def _version() -> str:
             pass
     except ImportError:  # pragma: no cover
         pass
-    # 설치되지 않은 채(PYTHONPATH) 실행되는 경우 — pyproject 의 버전과 같이 움직인다.
-    return "0.1.0"
+    raise RuntimeError(
+        "수집기 버전을 확정할 수 없다 — 모르는 버전을 지어내지 않는다(#113 계약 §2.1)")
 
 
 def collector_version() -> str:
