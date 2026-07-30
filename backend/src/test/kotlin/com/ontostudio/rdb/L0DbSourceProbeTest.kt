@@ -325,30 +325,62 @@ class L0DbSourceProbeTest {
                 "(not_collected) 결과이며 마스킹 단계는 존재하지 않는다")
         }
 
-        // 7) 샘플 적재 경로 — 행 데이터가 저장소에 원문으로 들어가는가
+        // 7) 샘플 적재 경로 — (a) MetadataService 수집 산출물 (b) 저장소에 남는 행 데이터
         val ingest = probe.putObject("ingestStore")
         SampleLegacyDb().open().use { conn ->
-            ingest.put("probe", "SampleLegacyDb.open() 후 저장소 질의")
+            ingest.put("probe", "SampleLegacyDb.open() → MetadataService.extract(conn) + 저장소 질의")
             ingest.put("statementsExecuted", inv.size)
+
+            // (a) JDBC 메타데이터 수집 경로를 실제로 돌린다 — DDL 텍스트 경로와 별개의 수집기다.
+            val metadata = MetadataService()
+            val jdbcHashes = (1..3).map { sha256(canonical(metadata.extract(conn)).toByteArray()) }
+            val jdbcModel = metadata.extract(conn)
+            val jdbcNames = jdbcModel.tables.map { it.name }.sorted()
+            val jdbcArtifact = canonical(jdbcModel)
+            val jdbcGroup = jdbcHashes.groupingBy { it }.eachCount().values.max()
+            val jdbcMeta = ingest.putObject("metadataService").apply {
+                put("probe", "MetadataService.extract(conn) — DatabaseMetaData 경로를 3회 실행")
+                put("acquiredTables", jdbcNames.size)
+                put("sameTableSetAsDdlPath", jdbcNames == acquiredNames.sorted())
+                put("viewAcquired", jdbcNames.contains("VW_ORD_SUMMARY"))
+                put("viewReported", false)
+                put("viewExclusionNote", "getTables(..., arrayOf(\"TABLE\")) 가 뷰를 타입 필터로 걸러낸다" +
+                    "(MetadataService.kt#L21) — DDL 텍스트 경로와 같은 조용한 제외이며 사유가 산출물에 남지 않는다")
+                put("foreignKeys", jdbcModel.tables.sumOf { it.foreignKeys.size })
+                put("runs", 3)
+                putArray("artifactHashes").also { a -> jdbcHashes.forEach { a.add(it) } }
+                put("largestIdenticalGroup", jdbcGroup)
+                put("determinismRate", jdbcGroup.toDouble() / 3.0)
+                put("provenanceRate", present.size.toDouble() / requiredProvenanceFields.size)
+                put("note", "DDL 텍스트 경로와 같은 SchemaModel 로 수렴하므로 provenance·보고 채널 결과도 같다 " +
+                    "— 두 경로의 결함은 산출물 타입에서 공유된다")
+            }
+            // (b) 저장소에 남는 행 데이터. 값은 산출물에 적지 않고 메모리에서만 쓴다.
             val rowProbes = ingest.putArray("piiShapedColumns")
+            val storedValues = mutableListOf<String>()
             for ((table, cols) in listOf(
                 "TB_CUST_MST" to listOf("CUST_NM" to "ORG_NAME", "RPRS_NM" to "NAME", "TEL_NO" to "TEL", "BIZ_NO" to "BIZ_NO"),
                 "TB_EMP_MST" to listOf("EMP_NM" to "NAME"),
             )) {
                 for ((col, cls) in cols) {
                     conn.createStatement().use { st ->
-                        st.executeQuery("SELECT COUNT($col) FROM $table WHERE $col IS NOT NULL").use { rs ->
-                            rs.next()
-                            val n = mapper.createObjectNode()
-                            n.put("table", table); n.put("column", col); n.put("class", cls)
-                            n.put("retrievableValues", rs.getInt(1))
-                            n.put("masked", false)
-                            n.put("locator", "$pinnedSqlPath#L229-L262")
-                            rowProbes.add(n)
+                        st.executeQuery("SELECT $col FROM $table WHERE $col IS NOT NULL").use { rs ->
+                            var n = 0
+                            while (rs.next()) { storedValues.add(rs.getString(1)); n++ }
+                            val node = mapper.createObjectNode()
+                            node.put("table", table); node.put("column", col); node.put("class", cls)
+                            node.put("retrievableValues", n)
+                            node.put("masked", false)
+                            node.put("locator", "$pinnedSqlPath#L229-L262")
+                            rowProbes.add(node)
                         }
                     }
                 }
             }
+            // 적재된 행 값이 수집 산출물 표면으로 새는가 (구조만 실리므로 0 이 기대값이다)
+            jdbcMeta.put("storedRowValuesLeakedIntoArtifact",
+                storedValues.count { jdbcArtifact.contains(it) })
+            ingest.put("retrievableUnmaskedValues", storedValues.size)
             ingest.put("note", "적재는 CREATE 뿐 아니라 INSERT 까지 전 문장을 실행한다(SampleLegacyDb.kt#L20-L28). " +
                 "행 데이터가 마스킹 없이 저장소에 남으므로, 값에 PII 가 있는 소스는 그대로 노출된다. " +
                 "값은 여기 적지 않고 좌표만 남긴다.")
@@ -369,7 +401,13 @@ class L0DbSourceProbeTest {
         outFile.parentFile.mkdirs()
         outFile.writeText(json)
 
+        // 증거는 **실재해야** 한다. 없을 때 조용히 통과하면 증거를 지우는 것이 검사를 지우는 것이 된다.
+        // 새 runId 를 처음 만들 때만 -DL0_PROBE_BOOTSTRAP=true 로 1회 우회하고, 그 흔적은 커밋 diff 에 남는다.
         val committed = File(runDir, "probe-db.json")
+        val bootstrap = System.getProperty("L0_PROBE_BOOTSTRAP") == "true"
+        assertTrue(committed.exists() || bootstrap,
+            "커밋된 프로브 산출물이 없다: ${committed.path} — 이 보고서는 근거를 잃었다. " +
+                "새 runId 최초 생성이면 -DL0_PROBE_BOOTSTRAP=true 로 실행하고 ${outFile.path} 를 커밋한다")
         if (committed.exists()) {
             assertEquals(committed.readText(), json,
                 "커밋된 프로브 산출물과 이번 실행 결과가 다르다 — 보고서의 근거가 표류했다. " +

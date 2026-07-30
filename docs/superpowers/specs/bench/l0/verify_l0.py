@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""#88 L0 Source — 커밋된 실측 증거의 적합성 확인기 (V1~V10).
+"""#88 L0 Source — 커밋된 실측 증거의 적합성 확인기 (V1~V11).
 
 보고서 하나가 스키마를 통과하는 것으로는 부족하다. 확인해야 하는 것은 **보고서의 수치가 프로브
 산출물에서 나왔고, 프로브의 입력이 고정 revision·gold 해시와 같고, 보고서가 가리키는 좌표가 실제로
@@ -7,7 +7,7 @@
 
     pip install jsonschema
     python3 docs/superpowers/specs/bench/l0/verify_l0.py
-    # 20 cases, 0 mismatches   (= manifest.json 의 caseCount)
+    # 24 cases, 0 mismatches   (= manifest.json 의 caseCount)
 
 각 규칙은 **결함 주입 케이스**를 가진다 — 규칙만 적고 검사가 없는 상태를 막는 장치다(I2 §5 · I3 §4.1
 과 같은 원칙). 규칙이 예외를 던지면 그 규칙의 실패로 기록하고 나머지 규칙을 계속 실행한다.
@@ -36,7 +36,7 @@ import validate_rqr  # noqa: E402
 from jsonschema import Draft202012Validator  # noqa: E402
 
 TRACKS = ("db", "code")
-MAX_RULE = 10
+MAX_RULE = 11
 L0_COLLECTOR_FEATURES = {"db": {"P-ddl-parser", "E1"}, "code": {"E17"}}
 
 
@@ -94,9 +94,17 @@ def v3_input_identity(ctx):
     c = ctx["probes"]["code"]
     seen += 1
     if not c["input"]["allPinnedMatch"] or c["input"]["pinnedMismatched"]:
-        errs.append(f"code: 고정 원본과 다른 파일: {c['input']['pinnedMismatched']}")
+        errs.append(f"code: gold 고정 원본과 다른 파일: {c['input']['pinnedMismatched']}")
     if c["input"]["pinnedComparedCount"] < 1:
-        errs.append("code: 고정 원본과 대조한 파일이 0건이다 — 입력 신원이 확인되지 않았다")
+        errs.append("code: gold 고정 원본과 대조한 파일이 0건이다 — 입력 신원이 확인되지 않았다")
+    # gold 는 범위의 일부만 고정한다(59파일 중 7건). 나머지는 고정 revision blob 과 **전수** 대조해야
+    # '고정 revision 을 쟀다' 가 성립한다 — 경로 집합까지 같은지 프로브가 양방향으로 본다.
+    seen += 1
+    if not c["input"]["allFilesMatchRevision"] or c["input"]["revisionMismatched"]:
+        errs.append(f"code: 고정 revision 과 다른 파일: {c['input']['revisionMismatched']}")
+    if c["input"]["revisionFileCount"] != c["input"]["fileCount"]:
+        errs.append(f"code: 범위 파일 수({c['input']['fileCount']})와 고정 revision 의 파일 수"
+                    f"({c['input']['revisionFileCount']})가 다르다")
     for t in TRACKS:
         seen += 1
         if not ctx["probes"][t]["readOnly"]["unchanged"]:
@@ -171,6 +179,16 @@ def v6_failure_fixtures_registered(ctx):
                 errs.append(f"{t}: 프로브가 해시 불일치를 기록했다: {fx['path']}")
             if fx["id"] not in gold_failures:
                 errs.append(f"{t}: gold failures.json 에 없는 픽스처 id: {fx['id']}")
+            else:
+                # id 의 존재만 보면 다른 픽스처의 id 를 바꿔 붙여도 통과한다 — **귀속**을 본다.
+                g = gold_failures[fx["id"]]
+                if g["path"] != fx["path"]:
+                    errs.append(f"{t}: 픽스처 id 와 경로의 귀속이 다르다: {fx['id']} → "
+                                f"gold={g['path']} / 프로브={fx['path']}")
+                if g["contentHash"] != fx["contentHash"]:
+                    errs.append(f"{t}: {fx['id']} 의 해시가 gold 선언과 다르다")
+                if g["reported"] and fx["expectedReported"] != len(g["reported"]):
+                    errs.append(f"{t}: {fx['id']} 의 기대 보고 건수가 gold 와 다르다")
     if seen != 6:
         errs.append(f"실패 픽스처 6건을 모두 돌려야 한다 — 실행된 것 {seen}건")
     return errs, seen
@@ -256,6 +274,33 @@ def v10_baseline_eligibility(ctx):
     return errs, seen
 
 
+def v11_declared_paths_measured(ctx):
+    """V11 선언한 수집 경로가 **전부** 계측됐다 — 재지 않은 경로를 실측 주장에 넣는 것을 막는다."""
+    errs, seen = [], 0
+    db = ctx["probes"]["db"]
+    seen += 1
+    # db 는 두 경로다: DDL 텍스트(DdlParser) + JDBC 메타데이터(SampleLegacyDb→MetadataService).
+    if "acquisition" not in db or not db["acquisition"]["acquired"]:
+        errs.append("db: DDL 텍스트 경로의 수집 결과가 없다")
+    md = db.get("ingestStore", {}).get("metadataService")
+    if not md:
+        errs.append("db: 선언한 MetadataService 경로가 계측되지 않았다 — 저장소 질의만으로는 "
+                    "그 수집기의 산출물·게이트 특성을 잰 것이 아니다")
+    else:
+        for key in ("acquiredTables", "determinismRate", "provenanceRate", "runs"):
+            if key not in md:
+                errs.append(f"db: MetadataService 계측에 {key} 가 없다")
+        if md.get("runs", 0) < 3:
+            errs.append("db: MetadataService 결정성을 3회 실행으로 재지 않았다")
+    code = ctx["probes"]["code"]
+    seen += 1
+    if not code.get("inventory", {}).get("walked"):
+        errs.append("code: 수집기 실행 결과가 없다")
+    if "coverageState" not in code:
+        errs.append("code: 커버리지 state 를 재지 않았다 — 보고서의 deterministic 이 근거를 잃는다")
+    return errs, seen
+
+
 RULES = {
     "V1": v1_schema_and_i3_rules,
     "V2": v2_report_derives_from_probe,
@@ -267,6 +312,7 @@ RULES = {
     "V8": v8_collector_judgments,
     "V9": v9_tracks_separated,
     "V10": v10_baseline_eligibility,
+    "V11": v11_declared_paths_measured,
 }
 
 
@@ -348,6 +394,21 @@ def injections() -> list[tuple[str, str, callable]]:
     def unpinned_collector_baseline(c):
         c["reports"]["db"]["versions"]["collector"] = {"status": "UNPINNED", "value": None}
 
+    def revision_drift(c):
+        c["probes"]["code"]["input"]["revisionMismatched"] = [
+            "backend/src/main/kotlin/com/ontostudio/rdb/DdlParser.kt"]
+        c["probes"]["code"]["input"]["allFilesMatchRevision"] = False
+
+    def swapped_fixture_id(c):
+        fx = c["probes"]["db"]["failureFixtures"]
+        fx[0]["id"], fx[1]["id"] = fx[1]["id"], fx[0]["id"]
+
+    def metadata_path_unmeasured(c):
+        c["probes"]["db"]["ingestStore"].pop("metadataService")
+
+    def coverage_state_unmeasured(c):
+        c["probes"]["code"].pop("coverageState")
+
     return [
         ("V1", "판정 어휘 위반", bad_schema),
         ("V1", "counts 합 불일치(I3 R2)", bad_i3),
@@ -369,6 +430,10 @@ def injections() -> list[tuple[str, str, callable]]:
         ("V8", "근거가 이 실행을 가리키지 않음", judgment_without_evidence),
         ("V9", "두 트랙을 한 트랙으로 표기", merged_tracks),
         ("V10", "버전 미고정인데 baseline 자격 주장", unpinned_collector_baseline),
+        ("V3", "고정 revision 과 다른 파일이 범위에 있음", revision_drift),
+        ("V6", "픽스처 id 를 바꿔 붙임(귀속 위조)", swapped_fixture_id),
+        ("V11", "선언한 MetadataService 경로를 재지 않음", metadata_path_unmeasured),
+        ("V11", "커버리지 state 를 재지 않음", coverage_state_unmeasured),
     ]
 
 

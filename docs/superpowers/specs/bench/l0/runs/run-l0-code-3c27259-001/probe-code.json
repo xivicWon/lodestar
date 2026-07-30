@@ -18,6 +18,9 @@
     "pinnedComparedCount": 7,
     "pinnedMismatched": [],
     "allPinnedMatch": true,
+    "revisionFileCount": 59,
+    "revisionMismatched": [],
+    "allFilesMatchRevision": true,
     "scopeHash": "sha256:85d30a2256f8c6ee13a0b45ff2a569eba570e1fedfc19da448367134a4b27c6a"
   },
   "inventory": {
@@ -32,6 +35,16 @@
     "edgeCount": 717,
     "externalCalls": 1372
   },
+  "coverageState": {
+    "note": "산출물 해시 결정성이 아니라 '봤는가/있었는가' state 의 3회 안정성이다(EVL §7.1)",
+    "codeStateRuns": [
+      "present",
+      "present",
+      "present"
+    ],
+    "codeState": "present",
+    "codeStateStable": true
+  },
   "determinismObserved": {
     "note": "기본 설정(해시 랜덤화 on) 3회 실행. 이 블록은 프로세스마다 값이 달라지므로 표류 검사 대상이 아니다.",
     "runs": 3,
@@ -39,7 +52,6 @@
     "largestIdenticalGroup": 1,
     "rate": 0.3333,
     "divergingPaths": [
-      "meta.community_count",
       "nodes[].community"
     ]
   },
@@ -221,7 +233,7 @@
       "PII.POS.LOG.L9.37"
     ],
     "walked": 0,
-    "goldGap": "gold v0 의 양성 44건은 전부 .sql/.properties/.log 에 있다 — 코드 수집기가 실제로 읽는 확장자(.kt/.java) 안에 양성이 없어, 수집된 표면에서의 마스킹 동작은 이 gold 로 측정할 수 없다. 픽스처를 여기서 만들지 않고 I2 개정 안건으로 남긴다."
+    "goldGap": "gold v0 의 양성 28건(전체 항목 44건 = 양성 28 + 음성 16)은 전부 .sql/.properties/.log 에 있다 — 코드 수집기가 실제로 읽는 확장자(.kt/.java) 안에 양성이 없어, 수집된 표면에서의 마스킹 동작은 이 gold 로 측정할 수 없다. 픽스처를 여기서 만들지 않고 I2 개정 안건으로 남긴다."
   },
   "maskingCapability": {
     "searchDirs": [

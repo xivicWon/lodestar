@@ -117,6 +117,18 @@ def nondeterministic_paths(a: dict, b: dict) -> list[str]:
     return sorted(paths)
 
 
+def blob_tree(revision: str, prefix: str) -> dict[str, str]:
+    """고정 revision 의 `prefix` 아래 파일 전부의 blob 해시. 작업 트리가 아니라 revision 이 정본이다."""
+    listing = subprocess.run(["git", "ls-tree", "-r", "--format=%(path)", revision, prefix],
+                             cwd=REPO, capture_output=True, text=True, check=True).stdout
+    out = {}
+    for path in filter(None, (l.strip() for l in listing.split("\n"))):
+        content = subprocess.run(["git", "show", f"{revision}:{path}"],
+                                 cwd=REPO, capture_output=True, check=True).stdout
+        out[path] = sha256_bytes(content)
+    return out
+
+
 def walk_all_files(root: pathlib.Path, ignore: list[str]) -> list[pathlib.Path]:
     """M-CODE-1 의 분모 — 수집기의 디렉토리 프루닝만 따르고 확장자 필터는 적용하지 않는다."""
     out = []
@@ -154,7 +166,9 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
         },
     }
 
-    # 1) 입력 신원 — 고정 원본 해시 대조
+    # 1) 입력 신원 — gold 고정 해시 대조 + **고정 revision blob 전수 대조**
+    #    gold 가 고정한 것은 범위 59파일 중 7건뿐이다. 나머지 52건이 무검증으로 남으면
+    #    "고정 revision 을 쟀다" 는 주장이 성립하지 않으므로, 전 파일을 blob 과 직접 대조한다.
     ignore = ["build", ".gradle", ".git", "node_modules"]
     all_files = walk_all_files(scope, ignore)
     hashes = {str(p.relative_to(REPO)): sha256_file(p) for p in all_files}
@@ -162,12 +176,19 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
               if s.get("origin") == "repo" and s["path"].startswith(SCOPE_ROOT)}
     mismatched = sorted(p for p, s in pinned.items()
                         if hashes.get(p) != s["contentHash"])
+    rev = manifest["sourceRevision"]
+    rev_files = {p: h for p, h in blob_tree(rev, SCOPE_ROOT).items()}
+    rev_mismatched = sorted(p for p in set(hashes) | set(rev_files)
+                            if hashes.get(p) != rev_files.get(p))
     probe["input"] = {
         "scopeRoot": SCOPE_ROOT,
         "fileCount": len(all_files),
         "pinnedComparedCount": len(pinned),
         "pinnedMismatched": mismatched,
         "allPinnedMatch": not mismatched,
+        "revisionFileCount": len(rev_files),
+        "revisionMismatched": rev_mismatched,
+        "allFilesMatchRevision": not rev_mismatched,
         "scopeHash": sha256_bytes(
             "\n".join(f"{p} {h}" for p, h in sorted(hashes.items())).encode() + b"\n"),
     }
@@ -200,6 +221,16 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
     largest = max(run_hashes.count(h) for h in run_hashes)
     struct_hashes = {sha256_bytes(strip_communities(d)) for d in runs}
     diverge = sorted({p for i in range(1, 3) for p in nondeterministic_paths(runs[0], runs[i])})
+    # 커버리지 state 의 결정성(EVL §7.1)은 **산출물 결정성과 다른 것**이다 — 3회 실행에서 code 클래스의
+    # state 가 같았는가만 본다. 하드코딩하지 않고 여기서 재서 보고서에 넘긴다.
+    code_states = ["present" if d["meta"]["walked"] > 0 else "not_collected" for d in runs]
+    probe["coverageState"] = {
+        "note": "산출물 해시 결정성이 아니라 '봤는가/있었는가' state 의 3회 안정성이다(EVL §7.1)",
+        "codeStateRuns": code_states,
+        "codeState": code_states[0],
+        "codeStateStable": len(set(code_states)) == 1,
+    }
+
     probe["determinismObserved"] = {
         "note": "기본 설정(해시 랜덤화 on) 3회 실행. 이 블록은 프로세스마다 값이 달라지므로 표류 검사 대상이 아니다.",
         "runs": 3,
@@ -310,7 +341,8 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
         "unmaskedInArtifact": unmasked,
         "notCollected": [i["id"] for i in positives if i["id"] not in unmasked],
         "walked": pout["meta"]["walked"],
-        "goldGap": "gold v0 의 양성 44건은 전부 .sql/.properties/.log 에 있다 — 코드 수집기가 "
+        "goldGap": "gold v0 의 양성 28건(전체 항목 44건 = 양성 28 + 음성 16)은 전부 "
+                   ".sql/.properties/.log 에 있다 — 코드 수집기가 "
                    "실제로 읽는 확장자(.kt/.java) 안에 양성이 없어, 수집된 표면에서의 마스킹 동작은 "
                    "이 gold 로 측정할 수 없다. 픽스처를 여기서 만들지 않고 I2 개정 안건으로 남긴다.",
     }
@@ -356,9 +388,20 @@ def main() -> int:
     ap.add_argument("--out", default=str(OUT))
     args = ap.parse_args()
 
+    out = pathlib.Path(args.out).resolve()
+    if args.check:
+        # 기준 증거를 **먼저** 읽는다. 쓰고 나서 비교하면 --out 을 기준 파일로 지정해
+        # 표류한 결과로 기준을 갱신한 뒤 자기 자신과 비교하는 거짓 통과가 가능하다.
+        if out == COMMITTED.resolve():
+            print(f"[FAIL] --check 는 기준 파일에 쓸 수 없다: {out}")
+            return 1
+        if not COMMITTED.exists():
+            print(f"[FAIL] 커밋된 산출물이 없다: {COMMITTED}")
+            return 1
+        baseline = stable(json.loads(COMMITTED.read_text()))
+
     probe = measure()
     text = json.dumps(probe, ensure_ascii=False, indent=2) + "\n"
-    out = pathlib.Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text)
     print(f"[probe] {out}")
@@ -368,11 +411,7 @@ def main() -> int:
           f"diverging={obs['divergingPaths']}")
 
     if args.check:
-        if not COMMITTED.exists():
-            print(f"[FAIL] 커밋된 산출물이 없다: {COMMITTED}")
-            return 1
-        want = stable(json.loads(COMMITTED.read_text()))
-        got = stable(probe)
+        want, got = baseline, stable(probe)
         if want != got:
             diff = [k for k in sorted(set(want) | set(got)) if want.get(k) != got.get(k)]
             print(f"[FAIL] 프로브 산출물 표류 — 블록: {diff}")

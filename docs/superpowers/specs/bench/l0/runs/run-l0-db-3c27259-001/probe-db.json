@@ -116,8 +116,24 @@
     "note" : "'미마스킹 0건' 이 곧 마스킹 성공이 아니다 — 양성이 산출물 표면에 도달하지 못한 (not_collected) 결과이며 마스킹 단계는 존재하지 않는다"
   },
   "ingestStore" : {
-    "probe" : "SampleLegacyDb.open() 후 저장소 질의",
+    "probe" : "SampleLegacyDb.open() → MetadataService.extract(conn) + 저장소 질의",
     "statementsExecuted" : 36,
+    "metadataService" : {
+      "probe" : "MetadataService.extract(conn) — DatabaseMetaData 경로를 3회 실행",
+      "acquiredTables" : 27,
+      "sameTableSetAsDdlPath" : true,
+      "viewAcquired" : false,
+      "viewReported" : false,
+      "viewExclusionNote" : "getTables(..., arrayOf(\"TABLE\")) 가 뷰를 타입 필터로 걸러낸다(MetadataService.kt#L21) — DDL 텍스트 경로와 같은 조용한 제외이며 사유가 산출물에 남지 않는다",
+      "foreignKeys" : 1,
+      "runs" : 3,
+      "artifactHashes" : [ "sha256:14ba8c063b4555d8bb108ce49f9aa1ae0ffe8dfbddeb9c3465bdf398f73f96f7", "sha256:14ba8c063b4555d8bb108ce49f9aa1ae0ffe8dfbddeb9c3465bdf398f73f96f7", "sha256:14ba8c063b4555d8bb108ce49f9aa1ae0ffe8dfbddeb9c3465bdf398f73f96f7" ],
+      "largestIdenticalGroup" : 3,
+      "determinismRate" : 1.0,
+      "provenanceRate" : 0.0,
+      "note" : "DDL 텍스트 경로와 같은 SchemaModel 로 수렴하므로 provenance·보고 채널 결과도 같다 — 두 경로의 결함은 산출물 타입에서 공유된다",
+      "storedRowValuesLeakedIntoArtifact" : 0
+    },
     "piiShapedColumns" : [ {
       "table" : "TB_CUST_MST",
       "column" : "CUST_NM",
@@ -154,6 +170,7 @@
       "masked" : false,
       "locator" : "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L229-L262"
     } ],
+    "retrievableUnmaskedValues" : 14,
     "note" : "적재는 CREATE 뿐 아니라 INSERT 까지 전 문장을 실행한다(SampleLegacyDb.kt#L20-L28). 행 데이터가 마스킹 없이 저장소에 남으므로, 값에 PII 가 있는 소스는 그대로 노출된다. 값은 여기 적지 않고 좌표만 남긴다."
   },
   "readOnly" : {

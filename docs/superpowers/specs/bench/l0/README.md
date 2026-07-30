@@ -22,8 +22,10 @@ DB 트랙 프로브는 수집기가 Kotlin 이므로 백엔드 테스트가 겸�
 pip install jsonschema
 pip install -e codegraph                      # tree-sitter 수집기 의존성
 
-# 1) 프로브 재실행 + 커밋된 산출물 표류 검사
-cd backend && ./gradlew test --tests 'com.ontostudio.rdb.L0DbSourceProbeTest' && cd ..
+# 1) 프로브 재실행 + 커밋된 산출물 표류 검사 (모든 명령은 리포 루트에서 실행한다)
+#    서브셸로 격리한다 — `cd backend && ... && cd ..` 는 gradle 이 실패하면 backend 에 남아
+#    이후 docs/... 경로가 전부 어긋난다.
+( cd backend && ./gradlew test --tests 'com.ontostudio.rdb.L0DbSourceProbeTest' )
 python3 docs/superpowers/specs/bench/l0/probe_code.py --check
 
 # 2) 보고서 재생성 (프로브에서 결정적으로 파생된다 — diff 가 나오면 근거가 표류했다)
@@ -32,7 +34,13 @@ git diff --exit-code docs/superpowers/specs/bench/l0/runs
 
 # 3) 증거 적합성 확인
 python3 docs/superpowers/specs/bench/l0/verify_l0.py
-# 20 cases, 0 mismatches
+# 24 cases, 0 mismatches
+```
+
+새 runId 를 처음 만들 때만 DB 프로브를 부트스트랩한다 — 그 외에는 커밋된 산출물이 없으면 테스트가 실패한다.
+
+```bash
+( cd backend && ./gradlew test --tests '*L0DbSourceProbeTest' -DL0_PROBE_BOOTSTRAP=true )
 ```
 
 프로브를 다시 돌려 수치가 달라지면 보고서를 덮어쓰지 않고 **새 runId 로 새 보고서를 남긴다**(I3 §5.5).

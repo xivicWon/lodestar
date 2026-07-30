@@ -26,5 +26,12 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
-tasks.test { useJUnitPlatform() }
+tasks.test {
+    useJUnitPlatform()
+    // L0 프로브(#88)는 리포에 커밋된 증거와 대조한다. 그 파일을 입력으로 선언하지 않으면
+    // 증거가 바뀌거나 사라져도 gradle 이 UP-TO-DATE 로 판단해 검사를 조용히 건너뛴다.
+    inputs.files(fileTree(File(rootDir.parentFile, "docs/superpowers/specs/bench/l0/runs")))
+        .withPropertyName("l0BenchEvidence")
+        .optional()
+}
 kotlin { jvmToolchain(21) }

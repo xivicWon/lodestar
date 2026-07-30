@@ -145,12 +145,24 @@ def halt_rules(gs: list[dict]) -> list[str]:
     return rules
 
 
-def coverage_classes(track: str) -> list[dict]:
-    present = {"code"} if track == "code" else set()
+def coverage_classes(track: str, p: dict) -> list[dict]:
+    """`deterministic` 은 **state 의 3회 안정성**이며 산출물 해시 결정성이 아니다(EVL §7.1 · I3 §3.5).
+
+    code 트랙의 산출물 결정성은 실패했지만(H1) 'code 클래스를 봤다' 는 state 는 3회 모두 같았다 —
+    두 값을 한 필드에 섞으면 어느 쪽도 측정할 수 없게 된다. 그래서 프로브가 state 를 따로 재고
+    여기서는 그 측정을 옮겨 적는다(하드코딩 금지).
+    """
+    if track == "code":
+        cs = p["coverageState"]
+        measured = {"code": (cs["codeState"], cs["codeStateStable"])}
+    else:
+        # db 트랙 실행은 DDL 만 봤다 — 5클래스 어느 것도 수집하지 않았고, 3회 실행에서 동일했다.
+        measured = {}
     out = []
     for c in ["code", "issue", "adr", "test", "runtime"]:
-        state = "present" if c in present else "not_collected"
-        out.append({"class": c, "state": state, "deterministic": True, "warned": state != "present"})
+        state, stable_ = measured.get(c, ("not_collected", True))
+        out.append({"class": c, "state": state, "deterministic": stable_,
+                    "warned": state != "present"})
     return out
 
 
@@ -296,7 +308,7 @@ def build_from(track: str, p: dict) -> dict:
                 "recall": measurement("NOT_APPLICABLE", None, "L0 은 충돌 판정을 만들지 않는다"),
                 "goldSetId": p["goldSetId"],
             },
-            "coverageClasses": coverage_classes(track),
+            "coverageClasses": coverage_classes(track, p),
         },
         "gates": gs,
         "baseline": {
@@ -351,6 +363,14 @@ def main() -> int:
             print(text, end="")
         else:
             out = RUNS[track] / "report.json"
+            # 보고서는 프로브의 순수 함수이므로 재생성은 멱등이다. 내용이 달라졌다면 근거가 바뀐 것이며,
+            # 그때 기존 보고서를 덮어쓰면 이전 실행이 사라진다 — 새 runId 로 남긴다(I3 §5.5).
+            if out.exists() and out.read_text() != text:
+                rc = 1
+                print(f"[FAIL] {out.relative_to(REPO)} 를 덮어쓰지 않았다 — 재생성 결과가 커밋된 "
+                      f"보고서와 다르다. 근거가 바뀌었으면 RUN_ID/TIMES 에 새 runId 를 추가해 "
+                      f"새 보고서로 남긴다(I3 §5.5).")
+                continue
             out.write_text(text)
             print(f"[ok] {out.relative_to(REPO)} — verdict={report['verdict']['value']} "
                   f"halt={report['verdict']['haltRules']}")
