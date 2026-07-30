@@ -52,9 +52,20 @@ class SampleSource(
 ) : SchemaSource {
     override val name: String = "legacy"
 
-    /** gold manifest 가 고정한 sourceId 와 같은 값을 쓴다 — 증거가 이어지려면 같은 이름이어야 한다(I2 §6.1). */
     override fun extract(): SchemaModel =
         sampleDb.open().use { conn: Connection ->
-            metadata.extract(conn, sourceId = "db:legacy-sample", revisionScheme = "bundle")
+            metadata.extract(conn, sourceId = SOURCE_ID, revisionScheme = REVISION_SCHEME)
         }
+
+    companion object {
+        /**
+         * gold manifest 가 고정한 sourceId — 증거가 이어지려면 같은 이름이어야 한다(I2 §6.1).
+         * 번들 샘플을 읽는 곳은 **전부 이 상수**를 쓴다. 문자열을 각자 적으면 한쪽만 바뀌어도
+         * 같은 소스가 두 신원으로 갈리고, 그건 호출부에서 보이지 않는다.
+         */
+        const val SOURCE_ID = "db:legacy-sample"
+
+        /** 리포에 번들된 리소스다 — 커밋 sha 를 지어내지 않는다. */
+        const val REVISION_SCHEME = "bundle"
+    }
 }

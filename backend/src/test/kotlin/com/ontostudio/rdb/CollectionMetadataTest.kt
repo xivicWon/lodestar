@@ -94,6 +94,22 @@ class CollectionMetadataTest {
         valid().copy(collectorVersion = DbCollector.version())
     }
 
+    @Test fun `build revision falls through to the next candidate when one is unusable`() {
+        // `?:` 로 이으면 비어 있거나 형식에 맞지 않는 속성 하나가 유효한 환경변수를 가려,
+        // 산출물에서 커밋 식별자가 통째로 사라진다.
+        val sha = "3c27259"
+        for (unusable in listOf(null, "", "   ", "HEAD", "not-a-sha", "zzzzzzz")) {
+            assertEquals("lodestar-rdb-collector@${DbCollector.VERSION}+$sha",
+                DbCollector.version(unusable, sha),
+                "쓸 수 없는 후보 '$unusable' 가 유효한 다음 후보를 가렸다")
+        }
+        // 앞 후보가 유효하면 그것을 쓴다(우선순위는 유지된다).
+        assertEquals("lodestar-rdb-collector@${DbCollector.VERSION}+abc1234",
+            DbCollector.version("ABC1234", sha))
+        // 유효한 후보가 하나도 없으면 커밋 없이 이름·semver 만 남는다 — 지어내지 않는다.
+        assertEquals("lodestar-rdb-collector@${DbCollector.VERSION}", DbCollector.version(null, ""))
+    }
+
     // ---- 2) 모든 수집 경로가 다섯 필드를 채우는가 ----------------------------------------
 
     private fun assertComplete(m: CollectionMetadata) {
@@ -127,7 +143,7 @@ class CollectionMetadataTest {
         val m = SampleSource(SampleLegacyDb(), MetadataService()).extract().metadata
         assertComplete(m)
         // gold manifest 가 고정한 id 와 같아야 증거가 이어진다(I2 §6.1).
-        assertEquals("db:legacy-sample", m.sourceId)
+        assertEquals(SampleSource.SOURCE_ID, m.sourceId)
         assertTrue(m.revision.startsWith("bundle:"), "번들 리소스는 커밋 sha 를 지어내지 않는다: ${m.revision}")
         // 접두어만 보면 revision 이 고정값으로 굳거나 다른 스냅샷에서 계산돼도 통과한다.
         assertEquals("bundle:" + m.contentHash.removePrefix("sha256:").take(12), m.revision)
@@ -136,6 +152,20 @@ class CollectionMetadataTest {
                 SchemaCanonical.bytes(SampleSource(SampleLegacyDb(), MetadataService()).extract().tables)),
             m.contentHash,
             "번들 경로의 contentHash 가 수집한 카탈로그의 정규화 스냅샷에서 나오지 않았다")
+    }
+
+    @Test fun `bundled sample identity matches the pinned gold manifest`() {
+        // 번들 샘플을 읽는 곳(SampleSource · SemanticEnricher)이 같은 상수를 쓰고, 그 상수가
+        // gold 가 고정한 sourceId 와 같아야 증거가 이어진다(I2 §6.1). 문자열을 각자 적으면
+        // 한쪽만 바뀌어도 같은 소스가 두 신원으로 갈리고, 그건 호출부에서 보이지 않는다.
+        var dir = java.io.File("").absoluteFile
+        while (!java.io.File(dir, ".git").exists()) dir = dir.parentFile ?: error("리포 루트를 찾지 못했다")
+        val manifest = com.fasterxml.jackson.databind.ObjectMapper()
+            .readTree(java.io.File(dir, "docs/superpowers/specs/gold/manifest.json"))
+        val pinned = manifest["pinnedSources"].map { it["sourceId"].asText() }
+        assertTrue(SampleSource.SOURCE_ID in pinned,
+            "gold 가 고정한 sourceId 중에 없다: ${SampleSource.SOURCE_ID} (gold=$pinned)")
+        assertEquals("bundle", SampleSource.REVISION_SCHEME)
     }
 
     @Test fun `canonical bytes are injective against delimiter injection`() {
@@ -165,6 +195,22 @@ class CollectionMetadataTest {
             h(listOf(TableInfo("x\nC\tfake\tint\ttrue", emptyList(), emptyList(), emptyList()))),
             h(listOf(TableInfo("x", listOf(ColumnInfo("fake", "int", true)), emptyList(), emptyList()))),
             "테이블 이름에 넣은 개행이 컬럼 레코드를 위조한다")
+    }
+
+    @Test fun `fk ordering does not depend on input order when names contain the sort separator`() {
+        // 정렬 키를 공백으로 이으면, 이름에 든 공백이 키 경계를 밀어 **서로 다른 FK 가 같은 키**가 된다.
+        // 같은 키의 정렬은 입력 순서를 그대로 두므로(stable), JDBC 반환 순서에 따라 해시가 갈린다.
+        fun h(fks: List<ForeignKeyInfo>) = CollectionMetadata.sha256(
+            SchemaCanonical.bytes(listOf(
+                TableInfo("t", listOf(ColumnInfo("c", "int", true)), emptyList(), fks))))
+
+        val a = ForeignKeyInfo(listOf("a b"), "r", listOf("c"))   // 컬럼 이름에 공백
+        val b = ForeignKeyInfo(listOf("b"), "r a", listOf("c"))   // 테이블 이름에 공백
+        assertEquals(h(listOf(a, b)), h(listOf(b, a)),
+            "이름에 공백이 있으면 FK 정렬이 입력 순서에 따라 달라진다 — 같은 카탈로그가 다른 신원을 낸다")
+
+        // 두 FK 는 실제로 다르므로, 집합이 다르면 신원도 달라야 한다.
+        assertNotEquals(h(listOf(a)), h(listOf(b)))
     }
 
     @Test fun `canonical bytes follow column order and fk target columns`() {

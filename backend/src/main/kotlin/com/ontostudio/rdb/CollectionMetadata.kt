@@ -105,12 +105,16 @@ object DbCollector {
      * 빌드가 커밋을 알면 `+<sha>` 를 붙인다 — 산출물만으로 재현 대상을 특정할 수 있게 하는 부분이다.
      * (`-Dlodestar.build.revision=<sha>` 또는 환경변수 `LODESTAR_BUILD_REVISION`)
      */
-    fun version(): String {
-        // 시스템 속성이 **비어 있거나 형식에 맞지 않으면** 환경변수로 넘어간다. `?:` 로 이으면
-        // 빈 속성 하나가 유효한 환경변수를 가려 산출물에서 커밋 식별자가 통째로 사라진다.
-        val commit = listOfNotNull(
-            System.getProperty("lodestar.build.revision"), System.getenv("LODESTAR_BUILD_REVISION"),
-        ).firstNotNullOfOrNull { it.trim().lowercase().takeIf(COMMIT::matches) }
+    fun version(): String = version(
+        System.getProperty("lodestar.build.revision"), System.getenv("LODESTAR_BUILD_REVISION"))
+
+    /**
+     * 후보를 순서대로 보되 **유효한 첫 값**을 쓴다. `?:` 로 이으면 비어 있거나 형식에 맞지 않는
+     * 속성 하나가 유효한 환경변수를 가려, 산출물에서 커밋 식별자가 통째로 사라진다.
+     */
+    internal fun version(vararg commitCandidates: String?): String {
+        val commit = commitCandidates.filterNotNull()
+            .firstNotNullOfOrNull { it.trim().lowercase().takeIf(COMMIT::matches) }
         return if (commit != null) "$NAME@$VERSION+$commit" else "$NAME@$VERSION"
     }
 }

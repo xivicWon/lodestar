@@ -7,6 +7,7 @@ import com.ontostudio.core.OntologyMapper
 import com.ontostudio.dto.ApiException
 import com.ontostudio.rdb.MetadataService
 import com.ontostudio.rdb.SampleLegacyDb
+import com.ontostudio.rdb.SampleSource
 import com.ontostudio.rdb.SchemaToOwlMapper
 import com.ontostudio.savepoint.ConfirmationStore
 import org.semanticweb.owlapi.model.IRI
@@ -58,7 +59,8 @@ class SemanticEnricher(
      */
     internal fun buildPrompt(conn: Connection): Pair<String, Set<String>> {
         // 번들 샘플을 적재한 커넥션이다(enrichSample → sampleDb.open) — gold 가 고정한 신원을 쓴다.
-        val schema = metadata.extract(conn, sourceId = "db:legacy-sample", revisionScheme = "bundle")
+        val schema = metadata.extract(
+            conn, sourceId = SampleSource.SOURCE_ID, revisionScheme = SampleSource.REVISION_SCHEME)
         val confirmedHere = schema.tables.filter { confirmations.isConfirmed(classIri(it.name)) }
         val targets = schema.tables.filter { !confirmations.isConfirmed(classIri(it.name)) }
         val labelByIri = confirmations.all().associate { it.iri to it.label }

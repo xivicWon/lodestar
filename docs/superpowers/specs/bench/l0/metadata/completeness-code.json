@@ -95,10 +95,10 @@
   "volatile": {
     "note": "값은 수집 범위의 내용·리비전에 따라 달라진다 — 표류 검사 대상이 아니다",
     "projectId": "lodestar",
-    "revision": "dirty:7dbd97626585",
-    "contentHash": "sha256:7dbd9762658562b3a264d55bd55db8e391202aac53c01d481367384d6808d307",
+    "revision": "dirty:bbed9111c4ca",
+    "contentHash": "sha256:bbed9111c4ca12141d851537681e624891fedf3621fbd2d22650e537c5ebd663",
     "collectorVersion": "lodestar-codegraph@0.1.1",
-    "nodeCount": 366,
+    "nodeCount": 371,
     "walked": 60
   }
 }
