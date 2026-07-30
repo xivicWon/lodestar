@@ -382,7 +382,8 @@ def _g4():
     for rel in (ITEM_FILES + OTHER_FILES + ["gold.v0.schema.json",
                                             "gold.docs.v0.schema.json",
                                             "manifest.v0.schema.json",
-                                            "validate_gold.py"]):
+                                            "validate_gold.py",
+                                            "fire.py", "firing.json"]):
         if rel not in listed:
             yield f"매니페스트 goldFiles 에서 누락: {rel}"
     # I3 로 넘기는 파생값은 **재계산 가능해야** 한다. 손으로 적어 둔 값이 내용과
@@ -980,6 +981,23 @@ def main():
                               f"— 검사를 늘렸으면 문서에도 적어야 한다")
     for sid in sorted(set(re.findall(r"\bG1?[0-9]\.[0-9]+", CONTRACT_DOC)) - declared):
         errors.append(f"[META] 문서에 '{sid}' 가 있으나 확인기에 그런 하위 불변식이 없다")
+    # 선언 ↔ **발화 사례**의 결속. 문서에 적혀 있다는 것은 "검사한다고 주장했다" 까지이고,
+    # 그 주장이 참인지는 깨뜨려 봐야 안다(fire.py). 여기서는 사례의 **존재**만 정적으로
+    # 확인하고, 실제 발화는 fire.py 가 한다 — 확인기가 매번 61개를 깨뜨려 보면 느려서
+    # 아무도 돌리지 않게 되고, 돌지 않는 검사는 없는 검사다.
+    try:
+        fs = json.loads((HERE / "firing.json").read_text())
+        cased = {c["subcheck"] for c in fs["cases"]} | set(fs["waivers"])
+        for miss in sorted(declared - cased):
+            errors.append(f"[META] '{miss}' 에 발화 사례도 면제도 없다 — "
+                          f"검사한다고 적어만 둔 것과 구분되지 않는다")
+        for ghost in sorted(cased - declared):
+            errors.append(f"[META] firing.json 의 '{ghost}' 가 확인기에 없다")
+        for w, why in fs["waivers"].items():
+            if not str(why).strip():
+                errors.append(f"[META] 면제 '{w}' 에 사유가 없다 — 사유 없는 면제는 구멍이다")
+    except Exception as e:
+        errors.append(f"[META] firing.json 을 읽을 수 없다: {type(e).__name__}: {e}")
     if errors:
         print(f"FAIL — {len(errors)}건\n")
         for e in errors:

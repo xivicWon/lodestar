@@ -251,6 +251,14 @@
       "sha256": "sha256:ca63e75371174170c9ad10b33a68d887b485151970348660b6f222ea78d5d6c7"
     },
     {
+      "path": "fire.py",
+      "sha256": "sha256:79ff847b187c6572b89539cf30a9087d3eaf83a67a1429745dc91b064637afb5"
+    },
+    {
+      "path": "firing.json",
+      "sha256": "sha256:be031838b4b3f8395df939177e6d6d35b8b30cc5849e0187b369fe49ccbdb76a"
+    },
+    {
       "path": "gold.docs.v0.schema.json",
       "sha256": "sha256:524135d33cbd4b2d9334ecaad771b2c4648d258a4cc6007c740923ad18ae12cb"
     },
@@ -284,7 +292,7 @@
     },
     {
       "path": "validate_gold.py",
-      "sha256": "sha256:4cb29e628838a143b08e23e1a21d31e5d92da02b369a4634aef1da39497a8489"
+      "sha256": "sha256:aa2c43304701e9df38107bc021275577846fe190ac4b4a37a9414e3705b89abd"
     }
   ],
   "fixtures": [
@@ -350,7 +358,7 @@
     }
   ],
   "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
-  "goldSetId": "gold-set/v0+de835c17d201",
+  "goldSetId": "gold-set/v0+f20edbad6bad",
   "expectedCounts": {
     "l1/db.json": 178,
     "l1/code.json": 47,
