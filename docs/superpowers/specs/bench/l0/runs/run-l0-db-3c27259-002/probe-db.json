@@ -39,6 +39,9 @@
     "failed" : 0,
     "excluded" : 9,
     "reported" : 9,
+    "reportableByInventory" : 9,
+    "reportedByInventory" : 9,
+    "unreportedByInventory" : [ ],
     "partial" : 0,
     "missing" : [ ],
     "exclusions" : [ {

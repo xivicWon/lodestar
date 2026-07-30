@@ -57,10 +57,15 @@ def probe(track: str) -> dict:
 def _db_facts(p: dict) -> dict:
     acq = p["acquisition"]
     fixtures = p["failureFixtures"]
-    should_report = acq["excluded"] + acq["failed"] + sum(f["expectedReported"] for f in fixtures)
-    # 보고 건수는 프로브가 잰 **귀속** 이다. 반환형에 채널이 없던 실행(v1 프로브)에는 이 자리가
-    # 없으므로 0 으로 읽는다 — 그것이 그 실행의 측정 결과다.
-    reported = acq.get("reported", 0) + sum(f.get("actualReported", 0) for f in fixtures)
+    # 분모는 **프로브가 독립적으로 센 것** 이다: 인벤토리가 '수집 대상이 아니다' 로 분류한 문장 수와
+    # gold 가 선언한 픽스처 기대 보고 항목. 수집기 신고를 분모로 쓰면 "보고한 것을 보고했다" 는
+    # 자기 인증이 된다. 그 자리가 없던 실행(v1 프로브)은 excluded+failed 로 읽는다.
+    should_report = (acq.get("reportableByInventory", acq["excluded"] + acq["failed"])
+                     + sum(f["expectedReported"] for f in fixtures))
+    # 분자도 귀속으로 센다 — 인벤토리 문장을 덮는 항목이 사유와 함께 있는가, 픽스처 기대 항목이
+    # 좌표 겹침으로 귀속되는가.
+    reported = (acq.get("reportedByInventory", 0)
+                + sum(f.get("actualReported", 0) for f in fixtures))
     ingest_values = sum(c["retrievableValues"] for c in p["ingestStore"]["piiShapedColumns"])
     return {
         "input": p["statementInventory"]["total"],
@@ -93,9 +98,12 @@ def _code_facts(p: dict) -> dict:
         "exclusions": inv["exclusions"],
         "determinism": p["determinismObserved"]["rate"],
         "provenance": p["provenance"]["rate"],
-        "shouldReport": (inv["excludedByExtensionFilter"] + inv.get("failedReportedByCollector", 0)
+        # db 트랙과 같은 규칙: 분모는 프로브가 직접 센 '수집기가 읽지 않은 파일' 과 gold 픽스처의
+        # 기대 보고 항목이고, 분자는 그 각각이 사유와 함께 산출물에 남았는지다(자기 인증 방지).
+        "shouldReport": (inv.get("notCollectedCount", inv["excludedByExtensionFilter"])
                          + sum(f["expectedReported"] for f in fixtures)),
-        "reported": inv.get("reported", 0) + sum(f.get("actualReported", 0) for f in fixtures),
+        "reported": (inv.get("reportedNotCollected", 0)
+                     + sum(f.get("actualReported", 0) for f in fixtures)),
         "markedFullySucceeded": sum(1 for f in fixtures if f["markedAsFullySucceeded"]),
         "piiPositives": p["pii"]["positives"],
         "piiMasked": p["pii"]["masked"],

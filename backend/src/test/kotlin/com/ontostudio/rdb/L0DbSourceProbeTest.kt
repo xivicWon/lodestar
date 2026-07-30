@@ -287,6 +287,18 @@ class L0DbSourceProbeTest {
             put("collectorAccountedTotal", parsed.tables.size + parsed.issues.size)
             put("accountingMatchesInventory", parsed.tables.size + parsed.issues.size == inv.size)
         }
+        // 보고율의 분모는 **프로브가 독립적으로 센 것** 이어야 한다. 분자·분모를 모두 수집기 신고에서
+        // 가져오면 "보고한 것을 보고했다" 는 자기 인증이 되어 아무것도 재지 못한다. 그래서 인벤토리
+        // 규칙(M-DB-1·M-DB-3)으로 '수집 대상이 아닌 문장' 을 직접 세고, 그 문장의 시작 행을 덮는
+        // 항목이 산출물에 사유와 함께 있는지 본다.
+        val reportable = inv.filter { kindOf(it.second) != "CREATE_TABLE" }
+        val reportedLines = parsed.issues
+            .filter { it.reason.isNotBlank() && it.target.isNotBlank() }
+            .mapNotNull { lineRange(it.locator) }
+        val unreportedByInventory = reportable.filter { (line, _) ->
+            reportedLines.none { line >= it.first && line <= it.second }
+        }.map { "$pinnedSqlPath#L${it.first}" }
+
         probe.putObject("acquisition").apply {
             put("acquired", parsed.tables.size)
             put("failed", failures.size)
@@ -295,6 +307,9 @@ class L0DbSourceProbeTest {
             put("reported", parsed.issues.count {
                 it.reason.isNotBlank() && lineRange(it.locator) != null && it.target.isNotBlank()
             })
+            put("reportableByInventory", reportable.size)
+            put("reportedByInventory", reportable.size - unreportedByInventory.size)
+            putArray("unreportedByInventory").also { a -> unreportedByInventory.forEach { a.add(it) } }
             put("partial", parsed.partials.size)
             putArray("missing").also { a -> missing.forEach { a.add(it) } }
             putArray("exclusions").also { arr ->
@@ -537,6 +552,11 @@ class L0DbSourceProbeTest {
             probe["acquisition"]["excluded"].asInt() + probe["acquisition"]["failed"].asInt(),
             probe["acquisition"]["reported"].asInt(),
             "제외·실패는 전부 사유·좌표와 함께 보고돼야 한다(I1 §4.1 오류 가시성 100%)")
+        assertEquals(
+            probe["acquisition"]["reportableByInventory"].asInt(),
+            probe["acquisition"]["reportedByInventory"].asInt(),
+            "인벤토리가 '수집 대상이 아니다' 로 센 문장 중 산출물에 사유와 함께 남지 않은 것: " +
+                probe["acquisition"]["unreportedByInventory"])
         assertTrue(probe["failureFixtures"].size() == 3, "DB 실패 픽스처 3건을 모두 돌려야 한다")
         assertTrue(probe["failureFixtures"].all { it["hashMatchesPinned"].asBoolean() },
             "실패 픽스처 해시가 gold 고정값과 다르다")

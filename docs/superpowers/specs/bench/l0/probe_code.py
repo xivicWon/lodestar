@@ -273,6 +273,15 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
     # 제외·실패는 프로브가 다시 분류하지 않고 **산출물이 스스로 말한 것** 을 읽는다.
     issues = doc["meta"]["issues"]
     reported = [i for i in issues if i["reason"] and line_range(i["locator"]) and i["target"]]
+    # 보고율의 분모는 **프로브가 독립적으로 센 것** 이어야 한다. 분자·분모를 모두 수집기 신고에서
+    # 가져오면 "보고한 것을 보고했다" 는 자기 인증이 되어 아무것도 재지 못한다. 그래서 범위 안에서
+    # 수집기가 읽지 않은 파일(walked 에 없는 파일)을 프로브가 직접 세고, 그 각각에 대해 사유가 달린
+    # 항목이 산출물에 있는지 본다.
+    walked_rel = {n["path"] for n in doc["nodes"] if n["kind"] == "file"}
+    not_collected = sorted(r for p_, r in rel_of.items()
+                           if str(pathlib.PurePosixPath(r).relative_to(SCOPE_ROOT)) not in walked_rel)
+    reported_paths = {f"{SCOPE_ROOT}/{i['locator'].split('#')[0]}" for i in reported}
+    reported_not_collected = [r for r in not_collected if r in reported_paths]
     grouped: dict[str, list[str]] = {}
     for i in issues:
         if i["kind"] != "skipped":
@@ -290,6 +299,10 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
         "excludedReportedByCollector": doc["meta"]["excluded"],
         "failedReportedByCollector": doc["meta"]["failed"],
         "partialReportedByCollector": doc["meta"]["partial"],
+        "notCollected": not_collected,
+        "notCollectedCount": len(not_collected),
+        "reportedNotCollected": len(reported_not_collected),
+        "unreportedNotCollected": [r for r in not_collected if r not in reported_paths],
         "reported": len(reported),
         "exclusions": [{"reason": r, "count": len(v), "examples": v} for r, v in grouped.items()],
         "issues": issues,
