@@ -38,7 +38,7 @@ git diff --exit-code docs/superpowers/specs/bench/l0/runs
 
 # 3) 증거 적합성 확인
 python3 docs/superpowers/specs/bench/l0/verify_l0.py
-# 26 cases, 0 mismatches
+# 29 cases, 0 mismatches
 ```
 
 새 runId 를 처음 만들 때만 DB 프로브를 부트스트랩한다 — 그 외에는 커밋된 산출물이 없으면 테스트가 실패한다.

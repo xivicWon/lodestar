@@ -37,7 +37,9 @@ PREVIOUS = {
 # 사후 수정은 새 runId 로 남긴다(I3 §5.5).
 TIMES = {
     "db": ("2026-07-30T09:05:00Z", "2026-07-30T09:07:00Z"),
-    "code": ("2026-07-30T13:40:00Z", "2026-07-30T13:46:00Z"),
+    # code 002 는 실측이 끝난 시각(커밋된 probe-code.json 이 쓰인 시각)과 그 실행의 소요(약 2초)다 —
+    # 프로브가 시각을 산출물에 넣으면 매 실행이 표류하므로 여기 못박되, 지어내지 않는다.
+    "code": ("2026-07-30T09:16:12Z", "2026-07-30T09:16:14Z"),
 }
 # 비교 가능성은 신원이 같을 때만 성립한다(I3 R17).
 IDENTITY = ("projectId", "layer", "track", "sourceRevision", "fixtureHash")
@@ -157,9 +159,9 @@ def halt_rules(gs: list[dict]) -> list[str]:
 def coverage_classes(track: str, p: dict) -> list[dict]:
     """`deterministic` 은 **state 의 3회 안정성**이며 산출물 해시 결정성이 아니다(EVL §7.1 · I3 §3.5).
 
-    code 트랙의 산출물 결정성은 실패했지만(H1) 'code 클래스를 봤다' 는 state 는 3회 모두 같았다 —
-    두 값을 한 필드에 섞으면 어느 쪽도 측정할 수 없게 된다. 그래서 프로브가 state 를 따로 재고
-    여기서는 그 측정을 옮겨 적는다(하드코딩 금지).
+    #88 에서 code 트랙은 산출물 해시가 갈리는 와중에도(H1) 'code 클래스를 봤다' 는 state 는 3회 모두
+    같았다 — 두 값을 한 필드에 섞으면 어느 쪽도 측정할 수 없게 된다. #112 로 산출물 결정성이 회복된
+    뒤에도 정의는 그대로다. 그래서 프로브가 state 를 따로 재고 여기서는 그 측정을 옮겨 적는다(하드코딩 금지).
     """
     if track == "code":
         cs = p["coverageState"]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""#88 L0 Source — 커밋된 실측 증거의 적합성 확인기 (V1~V12).
+"""#88 L0 Source — 커밋된 실측 증거의 적합성 확인기 (V1~V13).
 
 보고서 하나가 스키마를 통과하는 것으로는 부족하다. 확인해야 하는 것은 **보고서의 수치가 프로브
 산출물에서 나왔고, 프로브의 입력이 고정 revision·gold 해시와 같고, 보고서가 가리키는 좌표가 실제로
@@ -7,7 +7,7 @@
 
     pip install jsonschema
     python3 docs/superpowers/specs/bench/l0/verify_l0.py
-    # 26 cases, 0 mismatches   (= manifest.json 의 caseCount)
+    # 29 cases, 0 mismatches   (= manifest.json 의 caseCount)
 
 각 규칙은 **결함 주입 케이스**를 가진다 — 규칙만 적고 검사가 없는 상태를 막는 장치다(I2 §5 · I3 §4.1
 과 같은 원칙). 규칙이 예외를 던지면 그 규칙의 실패로 기록하고 나머지 규칙을 계속 실행한다.
@@ -37,7 +37,7 @@ import validate_rqr  # noqa: E402
 from jsonschema import Draft202012Validator  # noqa: E402
 
 TRACKS = ("db", "code")
-MAX_RULE = 12
+MAX_RULE = 13
 L0_COLLECTOR_FEATURES = {"db": {"P-ddl-parser", "E1"}, "code": {"E17"}}
 
 
@@ -326,6 +326,51 @@ def v12_determinism_contract(ctx):
     return errs, seen
 
 
+def v13_cited_baseline_resolves(ctx):
+    """V13 인용한 이전 실행이 실제로 조회되고, 그 증거 자체가 계약을 통과한다(#112).
+
+    `baseline.previous` 는 다른 실행을 근거로 끌어오는 포인터다. 그 실행이 사라지거나 손상돼도
+    현재 보고서는 형식상 멀쩡하다 — V5 가 제외 좌표에 하는 일을 실행 인용에도 한다.
+    현재 실행만 검사하는 V1 은 인용된 실행을 보지 않는다.
+    """
+    errs, seen = [], 0
+    schema = json.loads((SCHEMAS / "run-quality-report.v0.schema.json").read_text())
+    for t, rep in ctx["reports"].items():
+        prev = rep["baseline"]["previous"]
+        if prev is None:
+            continue
+        seen += 1
+        cited = None
+        for d in sorted((HERE / "runs").iterdir()):
+            f = d / "report.json"
+            if f.is_file():
+                r = json.loads(f.read_text())
+                if r["run"]["runId"] == prev["runId"]:
+                    cited = r
+                    break
+        if cited is None:
+            errs.append(f"{t}: 인용한 이전 실행의 보고서가 없다: {prev['runId']}")
+            continue
+        for k in ("projectId", "layer", "track", "sourceRevision", "fixtureHash"):
+            if cited["run"][k] != prev[k]:
+                errs.append(f"{t}: baseline.previous.{k} 가 인용한 실행의 실제 값과 다르다 "
+                            f"({prev[k]!r} / 실제 {cited['run'][k]!r})")
+        if cited["schemaVersion"] != prev["schemaVersion"]:
+            errs.append(f"{t}: baseline.previous.schemaVersion 이 인용한 실행과 다르다")
+        # 인용된 증거가 그 자체로 계약을 통과하지 못하면 비교의 기준이 될 수 없다.
+        for e in Draft202012Validator(schema).iter_errors(cited):
+            errs.append(f"{t}: 인용한 {prev['runId']} 가 스키마를 어긴다 — {e.json_path}: {e.message}")
+        for e in validate_rqr.cross_field_errors(cited):
+            errs.append(f"{t}: 인용한 {prev['runId']} 가 I3 규칙을 어긴다 — {e}")
+        # deltas 의 previous 값은 인용한 보고서의 지표와 같아야 한다.
+        for d in rep["baseline"]["deltas"]:
+            got = cited["metrics"].get(d["metric"], {}).get("value")
+            if got != d["previous"]:
+                errs.append(f"{t}: deltas[{d['metric']}].previous={d['previous']} 인데 "
+                            f"{prev['runId']} 의 값은 {got} 다")
+    return errs, seen
+
+
 RULES = {
     "V1": v1_schema_and_i3_rules,
     "V2": v2_report_derives_from_probe,
@@ -339,6 +384,7 @@ RULES = {
     "V10": v10_baseline_eligibility,
     "V11": v11_declared_paths_measured,
     "V12": v12_determinism_contract,
+    "V13": v13_cited_baseline_resolves,
 }
 
 
@@ -447,6 +493,17 @@ def injections() -> list[tuple[str, str, callable]]:
         c["probes"]["code"]["determinismObserved"].update(
             {"rate": 0.6667, "distinctHashes": 2, "divergingPaths": ["nodes[].community"]})
 
+    def phantom_baseline(c):
+        c["reports"]["code"]["baseline"]["previous"]["runId"] = "run-l0-code-3c27259-999"
+
+    def forged_delta_baseline(c):
+        for d in c["reports"]["code"]["baseline"]["deltas"]:
+            if d["metric"] == "determinism":
+                d["previous"] = 0.9  # 개선폭을 작게 보이도록 기준선을 손봄
+
+    def baseline_identity_lie(c):
+        c["reports"]["code"]["baseline"]["previous"]["sourceRevision"] = "deadbee"
+
     def seed_dependent(c):
         # 3회는 우연히 같았지만 시드를 바꾸면 갈리는 실행 — 재현 보장이 없다.
         c["probes"]["code"]["determinismControl"]["seedIndependent"] = False
@@ -478,6 +535,9 @@ def injections() -> list[tuple[str, str, callable]]:
         ("V11", "커버리지 state 를 재지 않음", coverage_state_unmeasured),
         ("V12", "결정성이 다시 갈렸는데 게이트는 PASS", determinism_regressed),
         ("V12", "시드를 바꾸면 산출물이 달라짐", seed_dependent),
+        ("V13", "인용한 이전 실행이 실재하지 않음", phantom_baseline),
+        ("V13", "deltas 의 기준선 값을 손으로 고침", forged_delta_baseline),
+        ("V13", "인용한 실행의 신원을 다르게 적음", baseline_identity_lie),
     ]
 
 

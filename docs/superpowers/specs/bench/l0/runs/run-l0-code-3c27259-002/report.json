@@ -8,8 +8,8 @@
     "reportKind": "BASELINE",
     "sourceRevision": "3c27259",
     "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
-    "startedAt": "2026-07-30T13:40:00Z",
-    "completedAt": "2026-07-30T13:46:00Z",
+    "startedAt": "2026-07-30T09:16:12Z",
+    "completedAt": "2026-07-30T09:16:14Z",
     "executedBy": "claude-code agent (Claude Opus 4.8) — 판정 승인권자는 @xivicWon (I1 §1.2)"
   },
   "versions": {
