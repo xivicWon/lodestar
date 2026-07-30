@@ -96,8 +96,18 @@ data class CollectionMetadata(
 object DbCollector {
     const val NAME = "lodestar-rdb-collector"
 
-    /** backend 모듈 버전과 같이 움직인다(build.gradle.kts `version`). */
-    const val VERSION = "0.1.0"
+    /**
+     * backend 모듈 버전 — **빌드가 넣어준다**(`processResources` 가 `lodestar-build.properties` 를
+     * 채운다). 손으로 적으면 gradle 버전을 올려도 티가 나지 않고, 그러면 `collectorVersion` 이
+     * 재현 대상을 잘못 가리킨다. 못 읽으면 지어내지 않고 실패한다(codegraph 쪽과 같은 규칙).
+     */
+    val VERSION: String by lazy {
+        val props = java.util.Properties()
+        DbCollector::class.java.getResourceAsStream("/lodestar-build.properties")?.use(props::load)
+            ?: error("빌드 버전 리소스가 없다 — processResources 가 lodestar-build.properties 를 만들지 않았다")
+        props.getProperty("version")?.trim()?.takeIf { it.isNotEmpty() && !it.contains("\${") }
+            ?: error("빌드 버전이 채워지지 않았다: ${props.getProperty("version")}")
+    }
 
     private val COMMIT = Regex("^[0-9a-f]{7,40}$")
 

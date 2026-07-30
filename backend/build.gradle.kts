@@ -26,6 +26,13 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
+// 수집기 버전을 손으로 적지 않게 한다 — 손으로 옮긴 버전은 올려도 티가 나지 않고, 그러면
+// collectorVersion 이 재현 대상을 잘못 가리킨다(#112 가 codegraph 에서 고친 것과 같은 결함).
+// 대상 파일만 지정한다: 전체 expand 는 legacy-sample.sql 같은 리소스의 ${...} 를 망가뜨린다.
+tasks.processResources {
+    filesMatching("lodestar-build.properties") { expand("version" to project.version) }
+}
+
 tasks.test {
     useJUnitPlatform()
     // L0 프로브(#88)는 리포에 커밋된 증거와 대조한다. 그 파일을 입력으로 선언하지 않으면

@@ -94,6 +94,19 @@ class CollectionMetadataTest {
         valid().copy(collectorVersion = DbCollector.version())
     }
 
+    @Test fun `collector version comes from the build, not a hand-copied constant`() {
+        // 손으로 적으면 gradle 버전을 올려도 티가 나지 않고, collectorVersion 이 재현 대상을
+        // 잘못 가리킨다 — #112 가 codegraph 에서 고친 것과 같은 결함이다. 빌드가 넣어준 값이
+        // build.gradle.kts 의 선언과 같은지 본다.
+        val declared = Regex("^version\\s*=\\s*\"([^\"]+)\"", RegexOption.MULTILINE)
+            .find(java.io.File(RepoRoot.path, "backend/build.gradle.kts").readText())
+            ?.groupValues?.get(1)
+        assertEquals(declared, DbCollector.VERSION,
+            "수집기 버전이 빌드 선언과 다르다 — 손으로 적힌 상수가 표류했다")
+        assertTrue(Regex("^\\d+\\.\\d+\\.\\d+$").matches(DbCollector.VERSION),
+            "semver 가 아니다: ${DbCollector.VERSION}")
+    }
+
     @Test fun `build revision falls through to the next candidate when one is unusable`() {
         // `?:` 로 이으면 비어 있거나 형식에 맞지 않는 속성 하나가 유효한 환경변수를 가려,
         // 산출물에서 커밋 식별자가 통째로 사라진다.
