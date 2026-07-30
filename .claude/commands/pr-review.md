@@ -1,7 +1,7 @@
 ---
 description: 이슈의 PR을 리뷰하고, 사용자 승인이 있으면 머지·정리 — 메인 세션 전용
 argument-hint: "<이슈번호 또는 PR번호>"
-allowed-tools: Bash, Read, Grep
+allowed-tools: Bash, Read, Grep, Task
 ---
 
 # /pr-review — PR 리뷰 → (사용자 승인) → 머지·정리
@@ -20,7 +20,9 @@ allowed-tools: Bash, Read, Grep
 6. **머지·정리**(승인 후에만):
    ```bash
    gh pr merge <PR> --squash --delete-branch
-   git worktree remove ../lodestar-issue-<N>
+   # 실제 worktree 경로를 조회해 제거(고정 경로 가정 금지 — head 브랜치로 매칭)
+   WT=$(git worktree list --porcelain | awk -v b="refs/heads/feat/<N>-" '/^worktree /{p=substr($0,10)} /^branch /{if(index($0,b))print p}')
+   [ -n "$WT" ] && git worktree remove "$WT"
    /Applications/cmux.app/Contents/Resources/bin/cmux close-workspace --workspace issue-<N>
    ```
 7. **후속**: 이슈 자동 close 확인(Closes #). Epic 체크리스트 갱신 필요 시 안내.

@@ -4,6 +4,7 @@
 set -euo pipefail
 
 N="${1:?사용법: dispatch.sh <issue-number> [slug]}"
+[[ "$N" =~ ^[0-9]+$ ]] || { echo "❌ 이슈번호는 정수여야 함: '$N'"; exit 1; }  # 주입 방지
 SLUG="${2:-}"
 # 리포 루트를 스크립트 위치(.claude/pipeline/)에서 파생 — 이식 가능
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -26,7 +27,7 @@ WT="${ROOT}/../lodestar-issue-${N}"
 WS="issue-${N}"
 
 # worktree (origin/main 기준, 없으면 로컬 main)
-if git -C "$ROOT" worktree list | grep -q "lodestar-issue-${N}"; then
+if git -C "$ROOT" worktree list --porcelain | grep -qE "^worktree .*/lodestar-issue-${N}$"; then
   echo "ℹ️  worktree 재사용: $WT"
 else
   git -C "$ROOT" fetch origin --quiet 2>/dev/null || true
@@ -34,8 +35,11 @@ else
     # 브랜치가 이미 있으면(중단·정리된 세션 복구) 새로 만들지 말고 연결
     git -C "$ROOT" worktree add "$WT" "$BRANCH"
   else
-    git -C "$ROOT" worktree add "$WT" -b "$BRANCH" origin/main 2>/dev/null \
-      || git -C "$ROOT" worktree add "$WT" -b "$BRANCH"
+    # 시작점 고정: origin/main → 로컬 main → 없으면 중단 (현재 HEAD 오염 방지)
+    if   git -C "$ROOT" show-ref --verify --quiet refs/remotes/origin/main; then base=origin/main
+    elif git -C "$ROOT" show-ref --verify --quiet refs/heads/main;          then base=main
+    else echo "❌ origin/main·로컬 main 기준을 찾을 수 없음"; exit 1; fi
+    git -C "$ROOT" worktree add "$WT" -b "$BRANCH" "$base"
   fi
 fi
 
