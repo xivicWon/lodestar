@@ -333,7 +333,9 @@ def injections() -> list[tuple[str, str, callable]]:
         c["reports"]["db"]["counts"]["excluded"] += 1
 
     def handmade_metric(c):
-        c["reports"]["code"]["metrics"]["determinism"]["value"] = 1.0
+        # 실패한 게이트의 수치를 손으로 통과시킨 모양. (#112 이후 determinism 은 실제로 1.0 이라
+        # 그 값을 1.0 으로 바꾸는 주입은 아무것도 바꾸지 않는다 — 아직 실패인 지표를 고른다.)
+        c["reports"]["code"]["metrics"]["provenanceCompleteness"]["value"] = 1.0
 
     def handmade_gate(c):
         for g in c["reports"]["db"]["gates"]:
@@ -373,6 +375,11 @@ def injections() -> list[tuple[str, str, callable]]:
                                          if g["id"] != "gate-security-masking"]
 
     def halt_dropped(c):
+        # 결정성이 다시 깨진 실행인데 H1 을 달지 않은 보고서.
+        for g in c["reports"]["code"]["gates"]:
+            if g["id"] == "gate-determinism":
+                g["status"] = "FAIL"
+                g["observed"] = 0.6667
         c["reports"]["code"]["verdict"]["haltRules"] = ["H2"]
 
     def pass_with_failed_gate(c):
