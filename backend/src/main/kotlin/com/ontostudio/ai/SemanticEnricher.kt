@@ -8,6 +8,7 @@ import com.ontostudio.dto.ApiException
 import com.ontostudio.rdb.MetadataService
 import com.ontostudio.security.MaskingEngine
 import com.ontostudio.rdb.SampleLegacyDb
+import com.ontostudio.rdb.SampleSource
 import com.ontostudio.rdb.SchemaToOwlMapper
 import com.ontostudio.savepoint.ConfirmationStore
 import org.semanticweb.owlapi.model.IRI
@@ -59,7 +60,9 @@ class SemanticEnricher(
      * 확정된 테이블은 추정 대상에서 제외하고, 확정 라벨을 "이미 확정된 사실" 앵커로 주입한다(E8 그라운딩).
      */
     internal fun buildPrompt(conn: Connection): Pair<String, Set<String>> {
-        val schema = metadata.extract(conn)
+        // 번들 샘플을 적재한 커넥션이다(enrichSample → sampleDb.open) — gold 가 고정한 신원을 쓴다.
+        val schema = metadata.extract(
+            conn, sourceId = SampleSource.SOURCE_ID, revisionScheme = SampleSource.REVISION_SCHEME)
         val confirmedHere = schema.tables.filter { confirmations.isConfirmed(classIri(it.name)) }
         val targets = schema.tables.filter { !confirmations.isConfirmed(classIri(it.name)) }
         val labelByIri = confirmations.all().associate { it.iri to it.label }

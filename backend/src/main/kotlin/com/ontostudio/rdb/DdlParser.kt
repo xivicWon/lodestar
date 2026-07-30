@@ -20,15 +20,35 @@ data class MaskedSchema(val schema: SchemaModel, val masking: Map<String, Any>)
 @Component
 class DdlParser(private val masker: SqlTextMasker = SqlTextMasker()) {
 
-    fun parse(sql: String): SchemaModel = parseMasked(sql).schema
+    /**
+     * [sourceId]·[projectId] 는 산출물의 수집 신원이 된다(#113 계약 v0).
+     * DDL 텍스트는 커밋된 적 없는 입력이므로 revision 은 입력 바이트에서 파생한 `inline:` 이다.
+     */
+    fun parse(
+        sql: String,
+        sourceId: String = "db:ddl:schema",
+        projectId: String = CollectionMetadata.DEFAULT_PROJECT_ID,
+    ): SchemaModel = parseMasked(sql, sourceId, projectId).schema
 
-    fun parseMasked(sql: String): MaskedSchema {
+    fun parseMasked(
+        sql: String,
+        sourceId: String = "db:ddl:schema",
+        projectId: String = CollectionMetadata.DEFAULT_PROJECT_ID,
+    ): MaskedSchema {
         val ledger = MaskLedger()
         val masked = masker.mask(sql, ledger)
-        return MaskedSchema(parseInternal(masked), ledger.summary())
+        // 파싱은 마스킹된 텍스트로, 신원은 **원문 바이트**로 만든다(#113). 마스킹된 바이트로 신원을
+        // 잡으면 PII 만 다른 두 입력이 같은 revision 으로 접혀 서로 다른 수집이 구분되지 않는다.
+        // 해시는 단방향이라 원문이 산출물에 남지 않는다.
+        return MaskedSchema(parseInternal(masked, sql, sourceId, projectId), ledger.summary())
     }
 
-    private fun parseInternal(sql: String): SchemaModel {
+    private fun parseInternal(
+        sql: String,
+        identityBytes: String,
+        sourceId: String,
+        projectId: String,
+    ): SchemaModel {
         val tables = mutableListOf<TableInfo>()
         // ';' 기준으로 개별 문장 분리 후 하나씩 파싱 → 트리거/함수 등 미지원 구문은 건너뛴다.
         for (raw in sql.split(";")) {
@@ -37,7 +57,11 @@ class DdlParser(private val masker: SqlTextMasker = SqlTextMasker()) {
             val parsed = try { CCJSqlParserUtil.parse(stmt) } catch (e: Exception) { null } ?: continue
             if (parsed is CreateTable) tables.add(toTableInfo(parsed))
         }
-        return SchemaModel(tables)
+        // 신원은 수집기가 **실제로 읽은 바이트**(입력 SQL)에서 나온다 — 파싱 결과가 아니라.
+        return SchemaModel(
+            tables,
+            CollectionMetadata.fromContent(sourceId, identityBytes.toByteArray(), "inline", projectId),
+        )
     }
 
     private fun unquote(s: String): String = s.trim().trim('"', '`', '[', ']')

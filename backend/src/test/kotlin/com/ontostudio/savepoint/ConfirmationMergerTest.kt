@@ -32,7 +32,7 @@ class ConfirmationMergerTest {
     private fun buildSampleInto(holder: OntologyHolder) {
         val schemaMapper = SchemaToOwlMapper()
         val baseIri = "http://lodestar/rdb/legacy#"
-        val schema = SampleLegacyDb().open().use { conn -> MetadataService().extract(conn) }
+        val schema = SampleLegacyDb().open().use { conn -> MetadataService().extract(conn, "db:legacy-sample", revisionScheme = "bundle") }
         holder.replace(schemaMapper.build(schema, baseIri), baseIri)
     }
 

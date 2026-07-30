@@ -98,7 +98,7 @@ class DbIngestMaskingTest {
         // 이름·건수만 비교하면 특정 컬럼·FK 유실을 놓친다(리뷰 LOD-068). 마스킹 유무로 **구조 전체**를 대조한다.
         fun structure(policy: IngestPolicy): List<TableInfo> =
             SampleLegacyDb().open(policy).use { conn ->
-                MetadataService().extract(conn).tables.sortedBy { it.name }
+                MetadataService().extract(conn, SampleSource.SOURCE_ID).tables.sortedBy { it.name }
                     .map { t -> t.copy(columns = t.columns.sortedBy { it.name },
                         foreignKeys = t.foreignKeys.sortedBy { it.refTable + it.fkColumns.joinToString() }) }
             }
@@ -128,7 +128,7 @@ class DbIngestMaskingTest {
         val db = SampleLegacyDb()
         db.open(IngestPolicy(minimizeRowData = true)).use { conn ->
             // 등록된 컬럼만 보면 다른 테이블에 남은 행을 놓친다(리뷰 LOD-075) — 전 테이블을 센다.
-            val tables = MetadataService().extract(conn).tables.map { it.name }
+            val tables = MetadataService().extract(conn, SampleSource.SOURCE_ID).tables.map { it.name }
             assertTrue(tables.size >= 27, "수집 테이블이 줄었다: ${tables.size}")
             for (t in tables) {
                 conn.createStatement().use { st ->
@@ -141,7 +141,7 @@ class DbIngestMaskingTest {
             // 구조는 유지된다 — 최소화는 '수집을 줄이는 것' 이 아니라 '행 데이터를 두지 않는 것' 이다.
             assertEquals(
                 DdlParser().parse(pinnedSql).tables.map { it.name }.sorted(),
-                MetadataService().extract(conn).tables.map { it.name }.sorted(),
+                MetadataService().extract(conn, SampleSource.SOURCE_ID).tables.map { it.name }.sorted(),
             )
         }
         assertEquals(8, db.lastSkippedDml, "legacy-sample 의 INSERT 8문장을 건너뛰어야 한다")
@@ -192,7 +192,7 @@ class DbIngestMaskingTest {
             out.put("policyExclusionNote", "ORG_NAME(법인명)은 개인정보가 아니므로 클래스를 도입하지 " +
                 "않았다 — #88 F7 이 센 14건 = 마스킹 11 + 정책상 제외 3. 정책상 제외를 0건으로 " +
                 "보이게 하려고 분모를 고르지 않는다")
-            out.put("collectedTables", MetadataService().extract(conn).tables.size)
+            out.put("collectedTables", MetadataService().extract(conn, SampleSource.SOURCE_ID).tables.size)
         }
         // 최소화 정책(#85 기본 원칙)을 켜면 행이 아예 없다 — 정책이 실제로 동작함을 증거로 남긴다.
         val minimizing = SampleLegacyDb()
@@ -200,7 +200,7 @@ class DbIngestMaskingTest {
             out.putObject("minimizePolicy").apply {
                 put("skippedDmlStatements", minimizing.lastSkippedDml)
                 put("retrievableValues", piiShapedColumns.sumOf { (t, c, _) -> storedValues(conn, t, c).size })
-                put("collectedTables", MetadataService().extract(conn).tables.size)
+                put("collectedTables", MetadataService().extract(conn, SampleSource.SOURCE_ID).tables.size)
                 put("default", false)
                 put("note", "기본값 전환은 #88 baseline 계측기의 관측 대상을 바꾸므로 L0 재측정이 필요하다")
             }

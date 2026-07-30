@@ -1,6 +1,6 @@
 [project]
 name = "lodestar-codegraph"
-version = "0.1.0"
+version = "0.1.1"
 description = "Lodestar code source collector — source → codegraph.json (tree-sitter)"
 requires-python = ">=3.11"
 dependencies = [

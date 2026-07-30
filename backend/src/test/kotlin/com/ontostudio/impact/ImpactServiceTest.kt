@@ -25,7 +25,7 @@ class ImpactServiceTest {
 
     @Test fun `impact of B has downstream C and upstream A via A to B to C object properties`() {
         // A --FK--> B --FK--> C  (each FK becomes an ObjectProperty domain→range)
-        val schema = SchemaModel(listOf(
+        val schema = SchemaModel.of(sourceId = "db:test:impactservicetest", tables = listOf(
             TableInfo("A",
                 listOf(ColumnInfo("ID", "int", false),
                        ColumnInfo("B_ID", "int", true)),
