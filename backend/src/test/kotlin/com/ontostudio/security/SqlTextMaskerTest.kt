@@ -22,12 +22,44 @@ class SqlTextMaskerTest {
         assertEquals("INSERT INTO TB_CUST (NM, TEL) VALUES ('***', '*************');", out)
     }
 
-    @Test fun `preserves byte offsets so locators stay valid`() {
+    /**
+     * 좌표 보존의 단위는 **문자와 행**이다(규칙 스펙 `maskToken.note`). 다중 바이트 문자를 ASCII '*'
+     * 로 바꾸므로 UTF-8 바이트 오프셋은 보존되지 않으며(리뷰 LOD-055), 근거 좌표는 `path#Lnn` 즉
+     * 행 기준이므로 검사할 불변식은 **행 번호 안정성**이다.
+     */
+    @Test fun `preserves char offsets and line numbers so locators stay valid`() {
         val sql = "-- 담당 hong@example.com\nCREATE TABLE T (ID CHAR(10));"
         val out = masker.mask(sql)
         assertEquals(sql.length, out.length)
         assertEquals(sql.indexOf("CREATE"), out.indexOf("CREATE"))
+        assertEquals(sql.lines().indexOfFirst { it.startsWith("CREATE") },
+            out.lines().indexOfFirst { it.startsWith("CREATE") })
         assertFalse(out.contains("hong@example.com"))
+    }
+
+    @Test fun `multiline literal keeps line numbers`() {
+        // 여러 줄 값(PEM 개인 키)을 통째로 '*' 로 덮으면 개행이 사라져 뒤따르는 행 좌표가 밀린다.
+        val pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAfake0000\n-----END RSA PRIVATE KEY-----"
+        val sql = "INSERT INTO T VALUES ('$pem');\n-- MARKER\nCREATE TABLE U (ID INT);"
+        val out = masker.mask(sql)
+        assertFalse(out.contains("MIIEowIBAAKCAQEAfake0000"), "개인 키 본문이 남았다")
+        assertEquals(sql.count { it == '\n' }, out.count { it == '\n' })
+        assertEquals(sql.lines().indexOfFirst { it.contains("MARKER") },
+            out.lines().indexOfFirst { it.contains("MARKER") })
+    }
+
+    @Test fun `postgres escape strings do not end the literal early`() {
+        // E'\'' 를 종료로 읽으면 그 뒤가 리터럴 밖으로 분류돼 민감 값이 마스킹되지 않는다.
+        val sql = "INSERT INTO T VALUES (E'o\\'brien', '900101-1234567');"
+        val out = masker.mask(sql)
+        assertFalse(out.contains("900101-1234567"), "이스케이프 문자열 뒤의 값이 새어나갔다: $out")
+    }
+
+    @Test fun `nested block comments stay inside the comment`() {
+        val sql = "/* outer /* inner */ rrn=900101-1234567 */ CREATE TABLE T (ID INT);"
+        val out = masker.mask(sql)
+        assertFalse(out.contains("900101-1234567"), "중첩 주석 안의 값이 새어나갔다: $out")
+        assertTrue(out.endsWith("CREATE TABLE T (ID INT);"))
     }
 
     @Test fun `does not touch identifiers that look like rules`() {

@@ -10,11 +10,11 @@
   "gates": [
     {
       "id": "gate-security-masking",
-      "name": "테스트 시크릿·PII 미마스킹 0건 (gold 코퍼스)",
+      "name": "테스트 시크릿·PII 미마스킹 0건 + 부분 마스킹 0건 (gold 코퍼스)",
       "required": 0,
       "observed": 0,
       "status": "PASS",
-      "scope": "gold PII 코퍼스 3파일 전문(문맥 포함) · 양성 28건"
+      "scope": "gold PII 코퍼스 3파일 전문(문맥 포함) · 양성 28건 · 좌표 완전 피복 요구"
     },
     {
       "id": "gate-engine-parity",
@@ -46,7 +46,8 @@
       "required": 0,
       "observed": 0,
       "status": "PASS",
-      "scope": "증거 5종 + 이 보고서 전문 대조는 verify_masking.py M9"
+      "scope": "증거 5종 + 보고서 전문 × 양성 28건 = 168회 대조",
+      "hits": []
     }
   ],
   "gold": {
@@ -110,7 +111,7 @@
       "spans": 28
     },
     "parity": true,
-    "ruleSpecHash": "sha256:504dc885fa905824d7f75ab8e6074664023d05bb14f58861b437cb848365e43d"
+    "ruleSpecHash": "sha256:053293aea2f573387998923bdf8e549a01a3a51462bcb67b102fcedb56c40de7"
   },
   "collectionPaths": {
     "db": {
@@ -140,7 +141,7 @@
       }
     },
     "code": {
-      "probe": "lodestar_codegraph.emit.build_and_write — 산출물 텍스트 필드(label·qualified_name·path·meta)",
+      "probe": "lodestar_codegraph.emit.build_and_write — 기록된 산출물 파일의 텍스트 자리 전부",
       "gateVariant": "withLineContext",
       "goldGap": "gold v0 의 양성 28건은 전부 .sql/.properties/.log 에 있어 코드 수집기가 읽는 확장자(.kt/.java) 안에 양성이 없다(#88 F8). 따라서 실제 수집 실행이 아니라 산출 단계에 양성을 심어 마스킹 관문의 동작을 측정한다 — gold 개정(I2 §8.2) 전까지의 한계다.",
       "variants": {
@@ -166,7 +167,7 @@
   "evidenceRefs": {
     "emitCode": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-code-001/emit-code.json",
-      "contentHash": "sha256:0894293ffffbb20906a80bdb3010a43927063b952557a467f2aec22c038f5427"
+      "contentHash": "sha256:c585b36611a8c8429f887d5fbd165feba9414c5c744734a7c59dd0d0999ff90d"
     },
     "engineKotlin": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-gold-001/engine-kotlin.json",
@@ -186,7 +187,7 @@
     },
     "ruleSpec": {
       "path": "docs/superpowers/specs/security/masking-rules.v0.json",
-      "contentHash": "sha256:504dc885fa905824d7f75ab8e6074664023d05bb14f58861b437cb848365e43d"
+      "contentHash": "sha256:053293aea2f573387998923bdf8e549a01a3a51462bcb67b102fcedb56c40de7"
     }
   }
 }

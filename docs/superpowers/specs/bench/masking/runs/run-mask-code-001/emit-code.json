@@ -1,7 +1,7 @@
 {
   "evidenceVersion": "mask-emit-evidence/v2",
   "track": "code",
-  "probe": "lodestar_codegraph.emit.build_and_write — 산출물 텍스트 필드(label·qualified_name·path·meta)",
+  "probe": "lodestar_codegraph.emit.build_and_write — 기록된 산출물 파일의 텍스트 자리 전부",
   "specVersion": "masking-rules/v0",
   "goldGap": "gold v0 의 양성 28건은 전부 .sql/.properties/.log 에 있어 코드 수집기가 읽는 확장자(.kt/.java) 안에 양성이 없다(#88 F8). 따라서 실제 수집 실행이 아니라 산출 단계에 양성을 심어 마스킹 관문의 동작을 측정한다 — gold 개정(I2 §8.2) 전까지의 한계다.",
   "gateVariant": "withLineContext",
@@ -95,6 +95,13 @@
       }
     }
   },
+  "sinks": [
+    "label",
+    "qualified_name",
+    "path",
+    "alternatives",
+    "meta"
+  ],
   "planted": [
     {
       "goldId": "PII.POS.SQL.L18.0",
@@ -114,62 +121,62 @@
     {
       "goldId": "PII.POS.SQL.L18.3",
       "class": "PHONE",
-      "field": "label"
+      "field": "alternatives"
     },
     {
       "goldId": "PII.POS.SQL.L18.4",
       "class": "CARD_NO",
-      "field": "qualified_name"
+      "field": "meta"
     },
     {
       "goldId": "PII.POS.SQL.L18.5",
       "class": "BANK_ACCOUNT",
-      "field": "path"
+      "field": "label"
     },
     {
       "goldId": "PII.POS.SQL.L18.6",
       "class": "ADDRESS",
-      "field": "label"
+      "field": "qualified_name"
     },
     {
       "goldId": "PII.POS.SQL.L20.7",
       "class": "NAME",
-      "field": "qualified_name"
+      "field": "path"
     },
     {
       "goldId": "PII.POS.SQL.L20.8",
       "class": "KR_RRN",
-      "field": "path"
+      "field": "alternatives"
     },
     {
       "goldId": "PII.POS.SQL.L20.9",
       "class": "EMAIL",
-      "field": "label"
+      "field": "meta"
     },
     {
       "goldId": "PII.POS.SQL.L20.10",
       "class": "PHONE",
-      "field": "qualified_name"
+      "field": "label"
     },
     {
       "goldId": "PII.POS.SQL.L20.11",
       "class": "CARD_NO",
-      "field": "path"
+      "field": "qualified_name"
     },
     {
       "goldId": "PII.POS.SQL.L20.12",
       "class": "BANK_ACCOUNT",
-      "field": "label"
+      "field": "path"
     },
     {
       "goldId": "PII.POS.SQL.L20.13",
       "class": "ADDRESS",
-      "field": "qualified_name"
+      "field": "alternatives"
     },
     {
       "goldId": "PII.POS.PROPERTIES.L5.19",
       "class": "PASSWORD",
-      "field": "path"
+      "field": "meta"
     },
     {
       "goldId": "PII.POS.PROPERTIES.L6.20",
@@ -189,52 +196,52 @@
     {
       "goldId": "PII.POS.PROPERTIES.L9.23",
       "class": "SLACK_TOKEN",
-      "field": "label"
+      "field": "alternatives"
     },
     {
       "goldId": "PII.POS.PROPERTIES.L10.24",
       "class": "GITHUB_TOKEN",
-      "field": "qualified_name"
+      "field": "meta"
     },
     {
       "goldId": "PII.POS.LOG.L5.30",
       "class": "EMAIL",
-      "field": "path"
+      "field": "label"
     },
     {
       "goldId": "PII.POS.LOG.L5.31",
       "class": "IP_ADDRESS",
-      "field": "label"
+      "field": "qualified_name"
     },
     {
       "goldId": "PII.POS.LOG.L6.32",
       "class": "PASSWORD",
-      "field": "qualified_name"
+      "field": "path"
     },
     {
       "goldId": "PII.POS.LOG.L7.33",
       "class": "CARD_NO",
-      "field": "path"
+      "field": "alternatives"
     },
     {
       "goldId": "PII.POS.LOG.L7.34",
       "class": "NAME",
-      "field": "label"
+      "field": "meta"
     },
     {
       "goldId": "PII.POS.LOG.L7.35",
       "class": "PHONE",
-      "field": "qualified_name"
+      "field": "label"
     },
     {
       "goldId": "PII.POS.LOG.L8.36",
       "class": "JWT",
-      "field": "path"
+      "field": "qualified_name"
     },
     {
       "goldId": "PII.POS.LOG.L9.37",
       "class": "KR_RRN",
-      "field": "label"
+      "field": "path"
     }
   ]
 }

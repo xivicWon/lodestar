@@ -82,15 +82,18 @@ def build() -> dict:
 
     parity = span_view(kotlin) == span_view(python)
     code_gate = code["variants"][code["gateVariant"]]
+    partial = [i["id"] for i in positives if not i["fullyCovered"]]
 
     gates = [
         {
             "id": "gate-security-masking",
-            "name": "테스트 시크릿·PII 미마스킹 0건 (gold 코퍼스)",
+            "name": "테스트 시크릿·PII 미마스킹 0건 + 부분 마스킹 0건 (gold 코퍼스)",
             "required": 0,
-            "observed": len(unmasked),
-            "status": "PASS" if not unmasked else "FAIL",
-            "scope": "gold PII 코퍼스 3파일 전문(문맥 포함) · 양성 %d건" % len(positives),
+            # 원문 소멸만으로는 부족하다 — 스팬이 양성 구간을 **완전히** 덮었는지도 게이트에 넣는다.
+            # 부분 마스킹은 값의 일부가 남는 것이며 "가렸다" 고 부를 수 없다(리뷰 질문 3).
+            "observed": len(unmasked) + len(partial),
+            "status": "PASS" if not unmasked and not partial else "FAIL",
+            "scope": "gold PII 코퍼스 3파일 전문(문맥 포함) · 양성 %d건 · 좌표 완전 피복 요구" % len(positives),
         },
         {
             "id": "gate-engine-parity",
@@ -116,17 +119,9 @@ def build() -> dict:
             "status": "PASS" if code_gate["unmasked"] == 0 else "FAIL",
             "scope": "emit 단계 · %s 변형 · 심은 양성 %d건" % (code["gateVariant"], code_gate["plantedPositives"]),
         },
-        {
-            "id": "gate-no-plaintext-in-records",
-            "name": "증거·보고서에 원문 미기록 (#85)",
-            "required": 0,
-            "observed": 0,  # verify_masking.py M9 가 전수 확인한다
-            "status": "PASS",
-            "scope": "증거 5종 + 이 보고서 전문 대조는 verify_masking.py M9",
-        },
     ]
 
-    return {
+    body = {
         "reportVersion": "masking-run-report/v0",
         "issue": 115,
         "note": "이 보고서는 Run Quality Report(I3)가 아니며 L0 레이어 판정을 갱신하지 않는다. "
@@ -192,6 +187,28 @@ def build() -> dict:
             for k, p in sorted(EVIDENCE.items())
         },
     }
+
+    # 원문 미기록 게이트는 **계산한다** — 고정 PASS 로 적으면 게이트가 아니라 주장이다(리뷰 질문 5).
+    # 대상: 증거 5종(규칙 스펙은 정규식이며 값이 아니다) + 이 보고서의 나머지 전문.
+    scanned = {k: json.dumps(load(k), ensure_ascii=False) for k in EVIDENCE if k != "ruleSpec"}
+    scanned["report(body)"] = json.dumps(body, ensure_ascii=False)
+    plaintexts = [i["value"]["text"] for i in pii["items"] if i["expect"] == "MASKED"]
+    hits = sorted(
+        f"{name}:{text[:4]}…"  # 어느 문서에서 걸렸는지만 남긴다 — 여기에 원문을 적으면 같은 위반이다
+        for name, blob in scanned.items() for text in plaintexts if text in blob
+    )
+    gates.append({
+        "id": "gate-no-plaintext-in-records",
+        "name": "증거·보고서에 원문 미기록 (#85)",
+        "required": 0,
+        "observed": len(hits),
+        "status": "PASS" if not hits else "FAIL",
+        "scope": "증거 %d종 + 보고서 전문 × 양성 %d건 = %d회 대조"
+                 % (len(scanned) - 1, len(plaintexts), len(scanned) * len(plaintexts)),
+        "hits": hits,
+    })
+    body["gates"] = gates
+    return body
 
 
 def main() -> int:

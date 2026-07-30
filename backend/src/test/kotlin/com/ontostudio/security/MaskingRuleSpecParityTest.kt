@@ -4,6 +4,7 @@ import java.io.File
 import java.security.MessageDigest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -39,8 +40,31 @@ class MaskingRuleSpecParityTest {
             val p = r.regex.pattern
             assertTrue(!p.contains("\\d") && !p.contains("\\w"),
                 "${r.id}: \\d·\\w 는 Python 에서 유니코드까지 먹어 두 엔진 결과가 갈린다")
-            assertTrue(!p.contains("(?P<"), "${r.id}: 이름있는 그룹 문법이 언어마다 다르다")
+            assertTrue(!p.contains("(?P<"), "${r.id}: Python 형식 이름있는 그룹")
+            // Java/Kotlin 형식도 거부한다 — Kotlin 에서는 컴파일되지만 Python 에서는 실패한다(리뷰 LOD-053).
+            // 역참조 lookbehind `(?<!`·`(?<=` 는 허용해야 하므로 '<' 뒤에 문자가 오는 경우만 잡는다.
+            assertFalse(Regex("\\(\\?<[A-Za-z]").containsMatchIn(p),
+                "${r.id}: Java 형식 이름있는 그룹은 Python re 에서 컴파일되지 않는다")
         }
-        assertTrue(rules.allow.isNotEmpty() && rules.detect.size >= 10)
+    }
+
+    /**
+     * 사본 3종을 **똑같이** 잘못 바꾸면 해시 검사는 통과한다(리뷰 LOD-054). 규칙 구성 자체를 못박는다.
+     * 이 목록과 Python 쪽 같은 목록(`test_rule_set_is_exactly_the_contracted_one`)은 서로 독립적인
+     * 두 자리이며, 규칙을 늘리거나 줄이려면 두 곳을 의도적으로 고쳐야 한다.
+     */
+    @Test fun `rule set is exactly the contracted one`() {
+        val rules = MaskingRules.load()
+        assertEquals(
+            listOf("ALLOW.MASK_TOKEN", "ALLOW.GIT_SHA", "ALLOW.CONTENT_HASH", "ALLOW.UUID",
+                "ALLOW.JDBC_URL", "ALLOW.TIMESTAMP", "ALLOW.INTERNAL_ID"),
+            rules.allow.map { it.id })
+        assertEquals(
+            listOf("SECRET.AWS_ACCESS_KEY_ID", "SECRET.GITHUB_TOKEN", "SECRET.SLACK_TOKEN",
+                "SECRET.JWT", "SECRET.PRIVATE_KEY_BLOCK", "SECRET.URL_CREDENTIAL",
+                "SECRET.KEYED_VALUE", "PII.KR_RRN", "PII.EMAIL", "PII.KR_PHONE",
+                "PII.CARD_NO_DELIMITED", "PII.CARD_NO_PLAIN", "PII.KR_BANK_ACCOUNT",
+                "PII.KR_BIZ_NO", "PII.IP_ADDRESS", "PII.KR_ADDRESS", "PII.KR_NAME"),
+            rules.detect.map { it.id })
     }
 }

@@ -40,15 +40,29 @@ class SqlTextMasker(
         return sb.toString()
     }
 
-    /** 문자열 리터럴('' 이스케이프 인식) · 라인 주석(--) · 블록 주석(/* */) 의 본문 구간. */
+    /**
+     * 문자열 리터럴 · 라인 주석(`--`) · 블록 주석(`/* */`) 의 본문 구간.
+     *
+     * 구간을 조기에 끝내면 그 뒤의 민감 값이 마스킹 범위 밖으로 빠진다. 그래서 다음을 처리한다.
+     * - `''` 이스케이프 (표준)
+     * - `E'...'` 의 백슬래시 이스케이프 (PostgreSQL) — `E'\''` 를 리터럴 종료로 읽지 않는다
+     * - **중첩** 블록 주석 (PostgreSQL) — `/* /* x */ y */` 의 `y` 가 주석 밖으로 새지 않는다
+     *
+     * 달러 인용(`$$ … $$`) 본문은 별도 구간으로 잡지 않는다 — 그 안의 따옴표 리터럴은 이 스캐너가
+     * 그대로 리터럴로 인식하므로 값은 여전히 마스킹된다.
+     */
     private fun segments(sql: String): List<Segment> {
         val out = mutableListOf<Segment>()
         var i = 0
         while (i < sql.length) {
             when {
                 sql[i] == '\'' -> {
+                    // 바로 앞 토큰이 E/e 면 백슬래시 이스케이프가 유효한 문자열이다.
+                    val escaped = i > 0 && (sql[i - 1] == 'E' || sql[i - 1] == 'e') &&
+                        (i == 1 || !sql[i - 2].isLetterOrDigit() && sql[i - 2] != '_')
                     var j = i + 1
                     while (j < sql.length) {
+                        if (escaped && sql[j] == '\\') { j += 2; continue }
                         if (sql[j] == '\'') {
                             if (j + 1 < sql.length && sql[j + 1] == '\'') j += 2 else break
                         } else j++
@@ -62,9 +76,18 @@ class SqlTextMasker(
                     i = nl
                 }
                 sql.startsWith("/*", i) -> {
-                    val close = sql.indexOf("*/", i + 2).let { if (it < 0) sql.length else it }
-                    out.add(Segment(i + 2, close, "COMMENT"))
-                    i = minOf(close + 2, sql.length)
+                    var depth = 1
+                    var j = i + 2
+                    while (j < sql.length && depth > 0) {
+                        when {
+                            sql.startsWith("/*", j) -> { depth++; j += 2 }
+                            sql.startsWith("*/", j) -> { depth--; j += 2 }
+                            else -> j++
+                        }
+                    }
+                    val end = if (depth == 0) j - 2 else sql.length
+                    out.add(Segment(i + 2, end, "COMMENT"))
+                    i = minOf(if (depth == 0) j else sql.length, sql.length)
                 }
                 else -> i++
             }

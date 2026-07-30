@@ -37,8 +37,8 @@ CODE_OUT = RUNS / "run-mask-code-001" / "emit-code.json"
 
 sys.path.insert(0, str(REPO / "codegraph/src"))
 from lodestar_codegraph.emit import build_and_write  # noqa: E402
-from lodestar_codegraph.mask import detect, load_rules, mask_text  # noqa: E402
-from lodestar_codegraph.model import Node  # noqa: E402
+from lodestar_codegraph.mask import detect, load_rules, mask_text, utf16_offset  # noqa: E402
+from lodestar_codegraph.model import EXTRACTED, Edge, Node  # noqa: E402
 
 
 def sha256_bytes(b: bytes) -> str:
@@ -61,10 +61,11 @@ def engine_evidence() -> dict:
             # 마스킹 결과는 해시로만 남긴다 — 원문·마스킹 텍스트를 증거에 적지 않는다(#85).
             "maskedTextHash": sha256_bytes(result.text.encode("utf-8")),
             "maskedSpans": len(result.spans),
+            # 좌표 단위는 UTF-16 코드 단위다(규칙 스펙 `spanContract`) — Kotlin 문자열 인덱스와 맞춘다.
             "spans": [
                 {
-                    "start": s.start,
-                    "end": s.end,
+                    "start": utf16_offset(raw, s.start),
+                    "end": utf16_offset(raw, s.end),
                     "ruleId": s.rule_id,
                     "class": s.cls,
                     "line": 1 + raw[: s.start].count("\n"),
@@ -83,11 +84,19 @@ def engine_evidence() -> dict:
     }
 
 
+# 산출물이 텍스트를 실을 수 있는 모든 자리 — 하나라도 관문 밖이면 그 자리로 원문이 새어나간다.
+SINKS = ("label", "qualified_name", "path", "alternatives", "meta")
+
+
+def field_for(index: int) -> str:
+    return SINKS[index % len(SINKS)]
+
+
 def _plant(texts: list[str], meta_text: str) -> tuple[str, dict, bool]:
-    """텍스트를 산출물의 텍스트 필드(label·qualified_name·path·meta)에 심고 emit 을 돌린다."""
-    nodes = []
+    """텍스트를 산출물의 텍스트 자리 전부에 돌려 심고 emit 을 돌린 뒤 **기록된 파일**을 읽는다."""
+    nodes, edges, meta_notes = [], [], []
     for n, text in enumerate(texts):
-        field = ("label", "qualified_name", "path")[n % 3]
+        field = field_for(n)
         nodes.append(Node(
             id=f"type:P{n:03d}",
             kind="type",
@@ -96,9 +105,16 @@ def _plant(texts: list[str], meta_text: str) -> tuple[str, dict, bool]:
             path=text if field == "path" else f"src/P{n:03d}.kt",
             lang="kotlin",
         ))
+        if field == "alternatives":
+            edges.append(Edge(n, f"type:P{n:03d}", f"type:P{n:03d}", "calls", EXTRACTED, 1.0, [text]))
+        if field == "meta":
+            meta_notes.append(text)
     with tempfile.TemporaryDirectory() as tmp:
         out = pathlib.Path(tmp) / "codegraph.json"
-        doc = build_and_write(nodes, [], {"source_root": meta_text}, str(out))
+        doc = build_and_write(
+            nodes, edges, {"source_root": meta_text, "notes": meta_notes}, str(out)
+        )
+        # 반환값이 아니라 **디스크에 기록된 산출물**을 검사한다 — 새어나가는 자리는 파일이다.
         artifact = out.read_text(encoding="utf-8")
     ids_ok = [n["id"] for n in doc["nodes"]] == sorted(n.id for n in nodes)
     return artifact, doc["meta"]["masking"], ids_ok
@@ -146,16 +162,16 @@ def code_path_evidence() -> dict:
     return {
         "evidenceVersion": "mask-emit-evidence/v2",
         "track": "code",
-        "probe": "lodestar_codegraph.emit.build_and_write — 산출물 텍스트 필드(label·qualified_name·path·meta)",
+        "probe": "lodestar_codegraph.emit.build_and_write — 기록된 산출물 파일의 텍스트 자리 전부",
         "specVersion": load_rules().spec_version,
         "goldGap": "gold v0 의 양성 28건은 전부 .sql/.properties/.log 에 있어 코드 수집기가 읽는 확장자"
                    "(.kt/.java) 안에 양성이 없다(#88 F8). 따라서 실제 수집 실행이 아니라 산출 단계에"
                    " 양성을 심어 마스킹 관문의 동작을 측정한다 — gold 개정(I2 §8.2) 전까지의 한계다.",
         "gateVariant": "withLineContext",
         "variants": variants,
+        "sinks": list(SINKS),
         "planted": [
-            {"goldId": i["id"], "class": i["value"]["class"],
-             "field": ("label", "qualified_name", "path")[n % 3]}
+            {"goldId": i["id"], "class": i["value"]["class"], "field": field_for(n)}
             for n, i in enumerate(positives)
         ],
     }

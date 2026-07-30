@@ -31,6 +31,17 @@ _spec = importlib.util.spec_from_file_location("build_masking_report", HERE / "b
 builder = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(builder)
 
+CONTRACTED_ALLOW = [
+    "ALLOW.MASK_TOKEN", "ALLOW.GIT_SHA", "ALLOW.CONTENT_HASH", "ALLOW.UUID",
+    "ALLOW.JDBC_URL", "ALLOW.TIMESTAMP", "ALLOW.INTERNAL_ID",
+]
+CONTRACTED_DETECT = [
+    "SECRET.AWS_ACCESS_KEY_ID", "SECRET.GITHUB_TOKEN", "SECRET.SLACK_TOKEN", "SECRET.JWT",
+    "SECRET.PRIVATE_KEY_BLOCK", "SECRET.URL_CREDENTIAL", "SECRET.KEYED_VALUE",
+    "PII.KR_RRN", "PII.EMAIL", "PII.KR_PHONE", "PII.CARD_NO_DELIMITED", "PII.CARD_NO_PLAIN",
+    "PII.KR_BANK_ACCOUNT", "PII.KR_BIZ_NO", "PII.IP_ADDRESS", "PII.KR_ADDRESS", "PII.KR_NAME",
+]
+
 RULE_COPIES = [
     REPO / "backend/src/main/resources/com/ontostudio/security/masking-rules.v0.json",
     REPO / "codegraph/src/lodestar_codegraph/masking-rules.v0.json",
@@ -56,6 +67,12 @@ def load_ctx() -> dict:
 # ---- 규칙 -----------------------------------------------------------------------------------
 # 각 규칙: (ok, inspected, detail)
 
+def derive_fixture_hash(entries) -> str:
+    """gold `validate_gold.py#derive_fixture_hash` 와 같은 산식 — 경로 사전순 `"<경로> <sha256>"` 집계."""
+    lines = sorted(f"{path} {digest}" for path, digest in entries)
+    return sha256_bytes(("\n".join(lines) + "\n").encode())
+
+
 def m1_gold_identity(ctx):
     pii, man = ctx["pii"], ctx["goldManifest"]
     n = 0
@@ -63,6 +80,17 @@ def m1_gold_identity(ctx):
         n += 1
         if sha256_bytes(ctx["corpus"][f["sourceId"]].encode("utf-8")) != f["contentHash"]:
             return False, n, f"코퍼스 해시 불일치: {f['sourceId']}"
+    # 승인된 fixtureHash 를 **디스크의 실제 픽스처**에서 다시 계산해 대조한다 — manifest 의 선언값만
+    # 비교하면 승인되지 않은 픽스처 변경을 잡지 못한다(리뷰 질문 8).
+    entries = []
+    for e in man["fixtures"]:
+        n += 1
+        path = GOLD / e["path"]   # manifest 의 픽스처 경로는 gold 디렉토리 기준이다
+        if not path.exists():
+            return False, n, f"픽스처가 없다: {e['path']}"
+        entries.append((e["path"], sha256_bytes(path.read_bytes())))
+    if derive_fixture_hash(entries) != man["fixtureHash"]:
+        return False, n, "실제 픽스처에서 재계산한 fixtureHash 가 승인값과 다르다"
     if man["status"]["state"] != "APPROVED":
         return False, n, "gold 가 승인 상태가 아니다"
     if man["expectedCounts"]["pii.json"] != len(pii["items"]):
@@ -124,9 +152,10 @@ def m5_gate_arithmetic(ctx):
     if sorted(ids) != sorted(required):
         return False, len(ids), f"게이트 목록이 다르다: {ids}"
     by_id = {g["id"]: g for g in rep["gates"]}
-    if bool(rep["gold"]["unmasked"]) == (by_id["gate-security-masking"]["status"] == "PASS"):
-        return False, len(ids), "미마스킹 건수와 게이트 상태가 어긋난다"
-    if by_id["gate-security-masking"]["observed"] != len(rep["gold"]["unmasked"]):
+    broken = rep["gold"]["unmasked"] + rep["gold"]["partiallyCovered"]
+    if bool(broken) == (by_id["gate-security-masking"]["status"] == "PASS"):
+        return False, len(ids), "미마스킹·부분마스킹 건수와 게이트 상태가 어긋난다"
+    if by_id["gate-security-masking"]["observed"] != len(broken):
         return False, len(ids), "게이트 관측값이 판정 목록과 다르다"
     db = ctx["ingestDb"]["retrievableUnmaskedPiiValues"]
     if (by_id["gate-db-ingest-masking"]["status"] == "PASS") != (db == 0):
@@ -167,8 +196,16 @@ def m7_rule_spec_single_source(ctx):
         n += 1
         if "\\d" in r["regex"] or "\\w" in r["regex"] or "(?P<" in r["regex"]:
             return False, n, f"{r['id']}: 이식성 제약 위반"
+        # Java 형식 이름있는 그룹은 Python 에서 컴파일되지 않는다(리뷰 LOD-053). lookbehind 는 허용한다.
+        if re.search(r"\(\?<[A-Za-z]", r["regex"]):
+            return False, n, f"{r['id']}: Java 형식 이름있는 그룹"
         re.compile(r["regex"])
-    return True, n, f"사본 {len(RULE_COPIES)}종 + 규칙 {len(spec['allow']) + len(spec['detect'])}개"
+    # 사본 3종을 똑같이 잘못 바꾸면 해시는 일치한다 — 규칙 구성 자체를 못박는다(리뷰 LOD-054).
+    if [r["id"] for r in spec["allow"]] != CONTRACTED_ALLOW:
+        return False, n, "allow 규칙 구성이 계약과 다르다"
+    if [r["id"] for r in spec["detect"]] != CONTRACTED_DETECT:
+        return False, n, "detect 규칙 구성이 계약과 다르다"
+    return True, n, f"사본 {len(RULE_COPIES)}종 + 규칙 {len(spec['allow']) + len(spec['detect'])}개(구성 일치)"
 
 
 def m8_deterministic_and_idempotent(ctx):
@@ -202,7 +239,12 @@ def m9_no_plaintext_in_records(ctx):
                 return False, n, f"{name} 에 원문이 남았다"
     if not n:
         return False, 0, "검사 대상이 없다"
-    return True, n, f"{len(texts) - 1}개 문서 × 양성 {len(positives)}건 대조"
+    gate = next((g for g in ctx["report"]["gates"] if g["id"] == "gate-no-plaintext-in-records"), None)
+    if gate is None:
+        return False, n, "원문 미기록 게이트가 보고서에 없다"
+    if gate["observed"] != 0 or gate["status"] != "PASS" or gate.get("hits") != []:
+        return False, n, "게이트가 원문 기록을 보고하는데 확인기는 찾지 못했다 — 둘 중 하나가 틀렸다"
+    return True, n, f"{len(texts) - 1}개 문서 × 양성 {len(positives)}건 대조 + 게이트 관측 대조"
 
 
 def m10_declared_paths_are_measured(ctx):
@@ -274,6 +316,14 @@ CASES = [
     ("C24", "M10", lambda c: c["ingestDb"]["minimizePolicy"].__setitem__("retrievableValues", 5)),
     ("C25", "M10", lambda c: c["emitCode"]["variants"]["bareValue"].__setitem__("idsPreserved", False)),
     ("C26", "M10", lambda c: c["report"]["collectionPaths"].pop("code")),
+    ("C27", "M1", lambda c: c["goldManifest"]["fixtures"].__setitem__(
+        0, {**c["goldManifest"]["fixtures"][0], "path": "docs/superpowers/specs/gold/pii.json"})),
+    ("C28", "M5", lambda c: c["report"]["gold"]["partiallyCovered"].append("PII.POS.SQL.L18.6")),
+    ("C29", "M7", lambda c: c["ruleSpec"]["detect"].pop()),
+    ("C30", "M7", lambda c: c["ruleSpec"]["allow"][1].__setitem__("regex", "(?<name>[0-9a-f]{40})")),
+    ("C31", "M9", lambda c: next(
+        g for g in c["report"]["gates"] if g["id"] == "gate-no-plaintext-in-records"
+    ).__setitem__("observed", 2)),
 ]
 
 

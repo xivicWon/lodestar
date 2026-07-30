@@ -6,6 +6,7 @@ gold(#99) 코퍼스 전수 검증은 tests/test_mask_gold.py 가 맡는다. 여�
 from __future__ import annotations
 
 import pathlib
+import re
 
 from lodestar_codegraph.mask import MaskPolicy, load_rules, mask_text
 
@@ -85,3 +86,58 @@ def test_rules_are_portable_ascii_boundary():
     for r in rules.allow + rules.detect:
         assert "\\d" not in r.regex and "\\w" not in r.regex, r.id
         assert "(?P<" not in r.regex, r.id
+        # Java/Kotlin 형식의 이름있는 그룹도 거부한다 — Python 에서 컴파일되지 않는다(리뷰 LOD-053).
+        # 역참조 lookbehind `(?<!`·`(?<=` 는 허용해야 하므로 '<' 뒤에 문자가 오는 경우만 잡는다.
+        assert not re.search(r"\(\?<[A-Za-z]", r.regex), r.id
+
+
+def test_rule_set_is_exactly_the_contracted_one():
+    """사본 3종을 똑같이 잘못 바꾸면 해시 검사는 통과한다 — 규칙 구성 자체를 못박는다(리뷰 LOD-054)."""
+    rules = load_rules()
+    assert [r.id for r in rules.allow] == [
+        "ALLOW.MASK_TOKEN", "ALLOW.GIT_SHA", "ALLOW.CONTENT_HASH", "ALLOW.UUID",
+        "ALLOW.JDBC_URL", "ALLOW.TIMESTAMP", "ALLOW.INTERNAL_ID",
+    ]
+    assert [r.id for r in rules.detect] == [
+        "SECRET.AWS_ACCESS_KEY_ID", "SECRET.GITHUB_TOKEN", "SECRET.SLACK_TOKEN", "SECRET.JWT",
+        "SECRET.PRIVATE_KEY_BLOCK", "SECRET.URL_CREDENTIAL", "SECRET.KEYED_VALUE",
+        "PII.KR_RRN", "PII.EMAIL", "PII.KR_PHONE", "PII.CARD_NO_DELIMITED", "PII.CARD_NO_PLAIN",
+        "PII.KR_BANK_ACCOUNT", "PII.KR_BIZ_NO", "PII.IP_ADDRESS", "PII.KR_ADDRESS", "PII.KR_NAME",
+    ]
+
+
+PEM = """-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEAxTOaWJ7fake0000000000000000000000000000000000000
+AAAAB3NzaC1yc2EAAAADAQABAAABgQfake111111111111111111111111111111
+-----END RSA PRIVATE KEY-----"""
+
+
+def test_private_key_block_body_is_masked_not_just_the_header():
+    """헤더만 가리면 본문이 그대로 남는다 — 리뷰 LOD-052 의 회귀 테스트."""
+    r = mask_text(f"key = '''{PEM}'''")
+    assert "MIIEowIBAAKCAQEA" not in r.text
+    assert "-----END RSA PRIVATE KEY-----" not in r.text
+    assert r.counts == {"SECRET.PRIVATE_KEY_BLOCK": 1}
+
+
+def test_private_key_variants_are_masked():
+    for kind in ("RSA ", "EC ", "OPENSSH ", "PGP ", ""):
+        body = f"-----BEGIN {kind}PRIVATE KEY-----\nSECRETBODY0000\n-----END {kind}PRIVATE KEY-----"
+        assert "SECRETBODY0000" not in mask_text(body).text, kind
+
+
+def test_truncated_private_key_masks_the_header_only():
+    """END 가 없는 잘린 입력에서 뒤를 끝까지 삼키면 무관한 내용까지 지운다."""
+    out = mask_text("-----BEGIN PRIVATE KEY-----\nTAIL_MARKER").text
+    assert "BEGIN PRIVATE KEY" not in out
+    assert "TAIL_MARKER" in out
+
+
+def test_length_preserving_keeps_newlines_so_line_numbers_hold():
+    """여러 줄 값을 '*' 로 통째로 덮으면 개행이 사라져 뒤따르는 행 좌표가 밀린다."""
+    text = f"a\n'{PEM}'\nMARKER"
+    out = mask_text(text, MaskPolicy(length_preserving=True)).text
+    assert len(out) == len(text)
+    assert out.count("\n") == text.count("\n")
+    assert out.split("\n").index("MARKER") == text.split("\n").index("MARKER")
+    assert "MIIEowIBAAKCAQEA" not in out

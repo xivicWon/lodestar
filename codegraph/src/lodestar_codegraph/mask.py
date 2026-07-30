@@ -119,9 +119,12 @@ def _luhn(digits: str) -> bool:
 
 
 def _token(rules: Rules, cls: str, original: str, length_preserving: bool) -> str:
-    if length_preserving:
-        return rules.fill_char * max(1, len(original))
-    return rules.template.replace("{class}", cls)
+    if not length_preserving:
+        return rules.template.replace("{class}", cls)
+    if not original:
+        return rules.fill_char
+    # 개행은 보존한다 — 여러 줄 값(PEM 개인 키 등)을 통째로 덮으면 뒤따르는 `path#Lnn` 좌표가 밀린다.
+    return "".join("\n" if c == "\n" else rules.fill_char for c in original)
 
 
 def detect(text: str, policy: MaskPolicy | None = None,
@@ -213,3 +216,13 @@ class MaskLedger:
 
 def with_length_preserving(policy: MaskPolicy | None) -> MaskPolicy:
     return replace(policy or MaskPolicy(), length_preserving=True)
+
+
+def utf16_offset(text: str, index: int) -> int:
+    """코드포인트 인덱스 → **UTF-16 코드 단위** 오프셋.
+
+    스팬 좌표의 공식 단위는 UTF-16 코드 단위다(규칙 스펙 `spanContract`). Kotlin/Java 문자열
+    인덱스가 그 단위이며, Python 은 코드포인트로 세므로 증거를 쓸 때 변환해야 BMP 밖 문자
+    (이모지 등)가 앞에 있어도 두 엔진의 스팬이 같다.
+    """
+    return len(text[:index].encode("utf-16-le")) // 2

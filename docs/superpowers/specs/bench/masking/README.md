@@ -28,10 +28,10 @@ python3 docs/superpowers/specs/bench/masking/build_masking_report.py --check
 
 ```bash
 python3 docs/superpowers/specs/bench/masking/verify_masking.py
-# 10 rules, 26 cases, 0 mismatches   (= manifest.json 의 ruleRange·caseCount)
+# 10 rules, 31 cases, 0 mismatches   (= manifest.json 의 ruleRange·caseCount)
 ```
 
-규칙 M1~M10 과 결함 주입 26케이스는 [`verify_masking.py`](verify_masking.py) 상단에 선언돼 있고,
+규칙 M1~M10 과 결함 주입 31케이스는 [`verify_masking.py`](verify_masking.py) 상단에 선언돼 있고,
 판정·정책·잔여 위험은 [`specs/2026-07-30-m0-l0-fix5-masking.md`](../../2026-07-30-m0-l0-fix5-masking.md)
 에 있다.
 

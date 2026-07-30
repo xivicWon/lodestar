@@ -137,7 +137,7 @@ class MaskingEngine(private val rules: MaskingRules = MaskingRules.load()) {
         val spans = detect(text, policy)
         val sb = StringBuilder(text)
         for (s in spans.asReversed()) {
-            sb.replace(s.start, s.end, token(s.cls, s.end - s.start, policy.lengthPreserving))
+            sb.replace(s.start, s.end, token(s.cls, text.substring(s.start, s.end), policy.lengthPreserving))
         }
         return MaskResult(sb.toString(), spans)
     }
@@ -150,9 +150,12 @@ class MaskingEngine(private val rules: MaskingRules = MaskingRules.load()) {
         return r.text
     }
 
-    private fun token(cls: String, length: Int, lengthPreserving: Boolean): String =
-        if (lengthPreserving) rules.fillChar.repeat(maxOf(1, length))
-        else rules.template.replace("{class}", cls)
+    private fun token(cls: String, original: String, lengthPreserving: Boolean): String {
+        if (!lengthPreserving) return rules.template.replace("{class}", cls)
+        if (original.isEmpty()) return rules.fillChar
+        // 개행은 보존한다 — 여러 줄 값(PEM 개인 키 등)을 통째로 덮으면 뒤따르는 `path#Lnn` 좌표가 밀린다.
+        return original.map { if (it == '\n') "\n" else rules.fillChar }.joinToString("")
+    }
 
     private fun luhn(digits: String): Boolean {
         var sum = 0
