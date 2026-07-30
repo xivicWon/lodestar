@@ -37,6 +37,8 @@ REQUIRED = ["projectId", "sourceId", "revision", "contentHash", "collectorVersio
 HASH_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 REV_RE = re.compile(r"^(?:[0-9a-f]{7,40}|(?:inline|bundle|live|dirty|nogit):[0-9a-f]{12})$")
 VER_RE = re.compile(r"^[a-z0-9][a-z0-9-]*@\d+\.\d+\.\d+(?:\+[0-9a-f]{7,40})?$")
+#: 실행 단위 sourceId 는 `<스킴>:<이름>` 이다(계약 §3). 소스 단위 값은 상대경로라 대상이 아니다.
+SOURCE_ID_RE = re.compile(r"^[a-z][a-z0-9-]*:\S")
 
 #: 키가 있는 것만 세면 빈 값·플레이스홀더도 5/5 가 된다 — 게이트가 통과를 뜻하지 않게 된다.
 PLACEHOLDERS = {"unknown", "n/a", "na", "null", "none", "todo", "tbd", "-", "?"}
@@ -96,6 +98,14 @@ def measure_code() -> dict:
         elif hashlib.sha256(src.read_bytes()).hexdigest() != (n.get("content_hash") or "").removeprefix("sha256:"):
             wrong_hash.append(f"{n['id']}: 해시가 파일 바이트와 다르다")
 
+    # 노드 수를 고정하면 소스가 바뀔 때마다 기준을 갱신해야 하고, 그렇다고 "1건 이상" 만 보면
+    # 범위가 통째로 줄어도 통과한다. 대신 **범위 안의 수집 가능한 파일을 다 봤는가**를 본다.
+    collectable = sorted(
+        str(p.relative_to(scope)) for p in scope.rglob("*")
+        if p.is_file() and p.suffix in {".kt", ".kts", ".java"}
+        and not any(part in {"build", ".gradle", ".git", "node_modules"} for part in p.parts))
+    walked = meta.get("walked")
+
     return {
         "measurementVersion": "l0-metadata-completeness/v1",
         "issue": 113,
@@ -117,9 +127,18 @@ def measure_code() -> dict:
             "nodesMissingSourceId": missing_source_id,
             "nodesMissingContentHash": missing_hash,
             "nodesWithWrongContentHash": wrong_hash,
+            "scope": {
+                "probe": "범위 안의 수집 가능한 파일을 다 봤는가 — 노드 수 고정 대신 범위 회귀를 잡는다",
+                "collectableFiles": len(collectable),
+                "walked": walked,
+                "allCollected": walked == len(collectable),
+                "missed": [f for f in collectable
+                           if f not in {n.get("source_id") for n in nodes}][:5],
+            },
             "formats": {
                 "metaProjectId": usable(meta.get("project_id")),
-                "metaSourceId": usable(meta.get("source_id")),
+                # 존재만 보면 아무 문자열이나 통과한다 — 실행 단위 sourceId 는 스킴을 갖는다(계약 §3).
+                "metaSourceId": bool(SOURCE_ID_RE.match(meta.get("source_id") or "")),
                 "metaContentHash": bool(HASH_RE.match(meta.get("content_hash", ""))),
                 "metaRevision": bool(REV_RE.match(meta.get("revision", ""))),
                 "collectorVersion": bool(VER_RE.match(meta.get("collector_version", ""))),
@@ -164,6 +183,10 @@ def check_code(m: dict) -> list[str]:
         errs.append(f"code: sourceId 없는 노드 {len(m['perSource']['nodesMissingSourceId'])}건")
     if m["perSource"]["nodesMissingContentHash"]:
         errs.append(f"code: contentHash 없는 노드 {len(m['perSource']['nodesMissingContentHash'])}건")
+    sc = m["perSource"].get("scope") or {}
+    if sc and not sc.get("allCollected"):
+        errs.append(f"code: 수집 범위가 줄었다 — 수집 가능 {sc.get('collectableFiles')}건 중 "
+                    f"{sc.get('walked')}건만 봤다 (예: {sc.get('missed')})")
     if m["perSource"].get("nodesWithWrongContentHash"):
         wrong = m["perSource"]["nodesWithWrongContentHash"]
         errs.append(f"code: contentHash 가 실제 파일 바이트와 다른 노드 {len(wrong)}건: {wrong[:3]}")

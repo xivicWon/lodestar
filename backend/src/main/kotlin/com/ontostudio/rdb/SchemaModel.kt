@@ -56,7 +56,12 @@ object SchemaCanonical {
         .replace("\\", "\\\\").replace("\t", "\\t").replace("\n", "\\n").replace("\r", "\\r")
         .replace(",", "\\c")
 
-    private fun escList(items: List<String>): String = items.joinToString(",") { esc(it) }
+    /**
+     * 개수를 앞에 적는다. 그러지 않으면 `emptyList()` 와 `listOf("")` 가 **둘 다 빈 문자열**이 되어
+     * 구별되지 않는다 — 키가 없는 테이블과 이름이 빈 키를 가진 테이블이 같은 신원을 갖게 된다.
+     */
+    private fun escList(items: List<String>): String =
+        items.size.toString() + ":" + items.joinToString(",") { esc(it) }
 
     fun bytes(tables: List<TableInfo>): ByteArray = buildString {
         for (t in tables.sortedBy { it.name }) {

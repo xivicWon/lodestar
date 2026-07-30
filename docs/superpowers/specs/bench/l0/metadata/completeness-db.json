@@ -46,9 +46,9 @@
     "basis" : "min(타입 그래프에 자리가 있는 필드 수, 수집 경로별로 채워진 필드 수의 최소값)"
   },
   "volatile" : {
-    "note" : "값은 수집기 버전·입력에 따라 달라진다 — 표류 검사 대상이 아니다",
-    "sampleContentHash" : "sha256:c927031d689a5c37b8652387ade433ebc06880ea26421e947155483145bc43a6",
-    "sampleRevision" : "bundle:c927031d689a",
+    "note" : "입력 내용에 따라 달라지는 값만 둔다 — 표류 검사 대상이 아니다. projectId·collectorVersion 은 계약이 고정하는 신원이므로 identity 블록에 있다",
+    "sampleContentHash" : "sha256:03bcefc79a188755c09cb8e6c655ff1bee3fb1c90bbbefb0d74a6e2d5d14b269",
+    "sampleRevision" : "bundle:03bcefc79a18",
     "ddlContentHash" : "sha256:af16a259a6f47280c751fd7e475876ebd66fdf1139a571026c08859b2e167d3b"
   }
 }

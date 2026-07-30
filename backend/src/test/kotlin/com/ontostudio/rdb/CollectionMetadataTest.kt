@@ -158,10 +158,8 @@ class CollectionMetadataTest {
         // 번들 샘플을 읽는 곳(SampleSource · SemanticEnricher)이 같은 상수를 쓰고, 그 상수가
         // gold 가 고정한 sourceId 와 같아야 증거가 이어진다(I2 §6.1). 문자열을 각자 적으면
         // 한쪽만 바뀌어도 같은 소스가 두 신원으로 갈리고, 그건 호출부에서 보이지 않는다.
-        var dir = java.io.File("").absoluteFile
-        while (!java.io.File(dir, ".git").exists()) dir = dir.parentFile ?: error("리포 루트를 찾지 못했다")
         val manifest = com.fasterxml.jackson.databind.ObjectMapper()
-            .readTree(java.io.File(dir, "docs/superpowers/specs/gold/manifest.json"))
+            .readTree(java.io.File(RepoRoot.path, "docs/superpowers/specs/gold/manifest.json"))
         val pinned = manifest["pinnedSources"].map { it["sourceId"].asText() }
         assertTrue(SampleSource.SOURCE_ID in pinned,
             "gold 가 고정한 sourceId 중에 없다: ${SampleSource.SOURCE_ID} (gold=$pinned)")
@@ -211,6 +209,35 @@ class CollectionMetadataTest {
 
         // 두 FK 는 실제로 다르므로, 집합이 다르면 신원도 달라야 한다.
         assertNotEquals(h(listOf(a)), h(listOf(b)))
+    }
+
+    @Test fun `empty list and list of empty string are different identities`() {
+        // 개수를 적지 않으면 emptyList() 와 listOf("") 가 둘 다 빈 문자열이 되어 구별되지 않는다 —
+        // 키가 없는 테이블과 이름이 빈 키를 가진 테이블이 같은 신원을 갖는다.
+        fun h(pk: List<String>, fk: List<ForeignKeyInfo>) = CollectionMetadata.sha256(
+            SchemaCanonical.bytes(listOf(
+                TableInfo("t", listOf(ColumnInfo("c", "int", true)), pk, fk))))
+        assertNotEquals(h(emptyList(), emptyList()), h(listOf(""), emptyList()))
+        assertNotEquals(
+            h(emptyList(), listOf(ForeignKeyInfo(emptyList(), "r", listOf("p")))),
+            h(emptyList(), listOf(ForeignKeyInfo(listOf(""), "r", listOf("p")))))
+    }
+
+    @Test fun `live jdbc source id normalizes like the jdbc url does`() {
+        // 같은 연결을 가리키는 입력이 서로 다른 sourceId 를 만들면 한 소스가 여러 신원으로 갈린다.
+        val canonical = ConnectionInfo("db.prod", 5432, "app", "u", "p", vendor = "postgresql")
+        for (variant in listOf(
+            canonical.copy(vendor = "PostgreSQL"),
+            canonical.copy(vendor = " postgresql "),
+            canonical.copy(database = " app "),
+            canonical.copy(host = " db.prod "),
+        )) {
+            assertEquals(LiveJdbcSource.sourceId(canonical), LiveJdbcSource.sourceId(variant),
+                "같은 연결인데 sourceId 가 갈린다: $variant")
+        }
+        // 정규화가 서로 다른 대상을 뭉개서는 안 된다.
+        assertNotEquals(LiveJdbcSource.sourceId(canonical),
+            LiveJdbcSource.sourceId(canonical.copy(database = "app2")))
     }
 
     @Test fun `canonical bytes follow column order and fk target columns`() {

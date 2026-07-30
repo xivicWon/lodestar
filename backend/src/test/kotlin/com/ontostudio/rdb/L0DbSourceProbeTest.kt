@@ -40,9 +40,7 @@ class L0DbSourceProbeTest {
         listOf("failure", "failed", "error", "excluded", "exclusion", "skipped", "warning", "reported")
 
     private val repoRoot: File by lazy {
-        var d = File("").absoluteFile
-        while (!File(d, ".git").exists()) d = d.parentFile ?: error("리포 루트를 찾지 못했다")
-        d
+        RepoRoot.path
     }
     private val goldDir get() = File(repoRoot, "docs/superpowers/specs/gold")
     private val runDir get() = File(repoRoot, "docs/superpowers/specs/bench/l0/runs/run-l0-db-3c27259-001")

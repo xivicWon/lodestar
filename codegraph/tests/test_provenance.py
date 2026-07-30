@@ -296,3 +296,25 @@ def test_non_ascii_paths_do_not_break_the_head_comparison(tmp_path):
     (root / "한글파일.kt").write_text("class A { }\n", encoding="utf-8")
     assert prov.detect_revision(
         str(root), prov.scope_hash(str(root), files), rels).startswith("dirty:")
+
+
+def test_scope_root_equal_to_repo_root_still_resolves_to_head(tmp_path):
+    """수집 루트가 저장소 루트와 같을 때도 clean 이면 커밋 sha 여야 한다.
+
+    ls-tree/ls-files 에 절대경로 pathspec 을 넘기므로, prefix 가 빈 문자열인 이 경우가
+    조용히 항상 dirty 로 떨어질 수 있다.
+    """
+    root = tmp_path
+    (root / "A.kt").write_text("class A\n", encoding="utf-8")
+    git = ["git", "-C", str(root)]
+    subprocess.run(git + ["init", "-q"], check=True)
+    subprocess.run(git + ["config", "user.email", "t@t"], check=True)
+    subprocess.run(git + ["config", "user.name", "t"], check=True)
+    subprocess.run(git + ["add", "-A"], check=True)
+    subprocess.run(git + ["commit", "-qm", "x"], check=True)
+    head = subprocess.run(git + ["rev-parse", "HEAD"], capture_output=True, text=True,
+                          check=True).stdout.strip()
+
+    rev = prov.detect_revision(str(root), prov.scope_hash(str(root), [str(root / "A.kt")]), ["A.kt"])
+    assert rev == head, rev
+    assert prov.scope_id(str(root)) == "."

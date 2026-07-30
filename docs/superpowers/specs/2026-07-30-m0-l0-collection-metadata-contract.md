@@ -69,6 +69,10 @@ git 커밋이 정본인 소스는 커밋 sha 를 그대로 쓴다. 아니면 접
 SchemaModel(tables: List<TableInfo>, metadata: CollectionMetadata)
 ```
 
+- **알려진 한계 — 라이브 스냅샷에 catalog/schema 소속이 없다.** `TableInfo` 가 테이블 이름만
+  담으므로(이 이슈 이전부터), 스키마가 다른 동명 테이블은 모델 단계에서 이미 구별되지 않는다.
+  따라서 테이블이 스키마 사이를 옮겨도 `contentHash` 는 바뀌지 않는다. 신원 계약의 결함이 아니라
+  **수집 모델의 한계**이며, 고치려면 `TableInfo` 에 소속을 넣어야 한다 — L0-fix 후속 안건으로 남긴다.
 - `contentHash` — DDL 경로는 **입력 SQL 바이트**, JDBC 경로는 **정규화 스냅샷 바이트**
   (`SchemaCanonical.bytes`, 테이블/컬럼/키를 결정적으로 직렬화한 것). JDBC 에는 읽은 원본 바이트라는
   것이 없으므로 "수집기가 실제로 본 것" 의 정규화 표현을 해싱하고, `revision` 의 `live:` 접두어가

@@ -28,9 +28,7 @@ class L0DbMetadataCompletenessTest {
     private val mapper = ObjectMapper()
 
     private val repoRoot: File by lazy {
-        var d = File("").absoluteFile
-        while (!File(d, ".git").exists()) d = d.parentFile ?: error("리포 루트를 찾지 못했다")
-        d
+        RepoRoot.path
     }
     private val committed get() =
         File(repoRoot, "docs/superpowers/specs/bench/l0/metadata/completeness-db.json")
@@ -127,7 +125,8 @@ class L0DbMetadataCompletenessTest {
                 put("basis", "min(타입 그래프에 자리가 있는 필드 수, 수집 경로별로 채워진 필드 수의 최소값)")
             }
             putObject("volatile").apply {
-                put("note", "값은 수집기 버전·입력에 따라 달라진다 — 표류 검사 대상이 아니다")
+                put("note", "입력 내용에 따라 달라지는 값만 둔다 — 표류 검사 대상이 아니다. " +
+                    "projectId·collectorVersion 은 계약이 고정하는 신원이므로 identity 블록에 있다")
                 put("sampleContentHash", sample.contentHash)
                 put("sampleRevision", sample.revision)
                 put("ddlContentHash", ddl.contentHash)

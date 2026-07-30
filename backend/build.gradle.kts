@@ -38,6 +38,9 @@ tasks.test {
         .optional()
     // 부트스트랩 스위치는 gradle JVM 이 아니라 **테스트 JVM** 이 읽어야 한다.
     // 전달하지 않으면 문서에 적힌 `-DL0_PROBE_BOOTSTRAP=true` 가 조용히 무시된다.
+    // 리포 루트를 **명시적으로** 넘긴다. 테스트가 .git 을 찾아 올라가면 .git 이 없는 소스 아카이브에서
+    // 환경 때문에 붉어진다(worktree 는 .git 이 파일이라 exists() 로 잘 찾지만, 아카이브는 아예 없다).
+    systemProperty("lodestar.repo.root", rootDir.parentFile.absolutePath)
     // providers.systemProperty 로 읽는다 — System.getProperty 를 구성 단계에서 직접 읽으면
     // configuration cache 가 추적하지 못하는 입력이 된다.
     for (key in listOf("L0_PROBE_BOOTSTRAP", "L0_METADATA_BOOTSTRAP", "L0_METADATA_FORCE")) {

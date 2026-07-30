@@ -64,7 +64,8 @@ python3 docs/superpowers/specs/bench/l0/verify_l0.py
 그 시점이어야 한다 — run-001 은 `lodestar-codegraph@0.1.0`, run-002 는 `0.1.1` 이 잰 것이다.
 
 ```bash
-git worktree add /tmp/l0-run <그 실행을 만든 커밋>
+RUN_COMMIT=3944e50            # 그 실행을 만든 커밋 (run-002 는 #112 머지 커밋)
+git worktree add /tmp/l0-run "$RUN_COMMIT"
 python3 -m venv /tmp/l0-run-venv               # 격리된 인터프리터에서 돌린다
 /tmp/l0-run-venv/bin/pip install -q -e /tmp/l0-run/codegraph
 ( cd /tmp/l0-run && /tmp/l0-run-venv/bin/python docs/superpowers/specs/bench/l0/probe_code.py --check )

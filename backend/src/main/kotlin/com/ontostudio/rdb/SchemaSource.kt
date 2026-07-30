@@ -40,8 +40,17 @@ class LiveJdbcSource(
         }
 
     companion object {
-        fun sourceId(info: ConnectionInfo): String =
-            "db:jdbc:${info.vendor}://${info.host}:${info.port}/${info.database}"
+        /**
+         * vendor·database 를 **JDBC URL 과 같은 규칙**으로 정규화한다(DbConnector.jdbcUrl).
+         * 그러지 않으면 같은 연결을 가리키는 `Postgresql` / `postgresql ` 같은 입력이 서로 다른
+         * sourceId 를 만들어, 한 소스가 여러 신원으로 갈린다.
+         */
+        fun sourceId(info: ConnectionInfo): String {
+            val vendor = info.vendor.trim().lowercase()
+            val host = info.host.trim()
+            val database = info.database.trim()
+            return "db:jdbc:$vendor://$host:${info.port}/$database"
+        }
     }
 }
 
