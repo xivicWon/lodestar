@@ -103,19 +103,26 @@ def _blob_sha(path: str) -> str:
 
 
 def _head_blobs(root: str, prefix: str) -> dict[str, str] | None:
-    """HEAD 가 담고 있는 `root` 아래 파일의 blob id — 경로는 root 기준 상대경로."""
-    # --full-name 이 없으면 경로가 **CWD 기준**으로 나와 prefix 제거와 어긋난다.
-    listing = _git(root, "ls-tree", "-r", "--full-name",
-                   "--format=%(objectname) %(path)", "HEAD", "--", root)
+    """HEAD 가 담고 있는 `root` 아래 파일의 blob id — 경로는 root 기준 상대경로.
+
+    `-z` 의 **기본 출력 형식**으로 읽는다(`<mode> <type> <sha>\\t<path>`). 그래야 경로가 그대로
+    나온다 — `--format=%(path)` 는 `-z` 를 줘도 비ASCII·공백·개행이 든 경로를 따옴표로 감싸고
+    8진 이스케이프해서 내보내므로, 문자열 비교가 어긋나 **깨끗한 파일이 dirty 로 오판**된다.
+    `--full-name` 이 없으면 경로가 CWD 기준으로 나와 prefix 제거와 어긋난다.
+    """
+    listing = _git(root, "ls-tree", "-r", "-z", "--full-name", "HEAD", "--", root)
     if listing is None:
         return None
     out = {}
-    for line in listing.split("\n"):
-        if not line.strip():
+    for record in listing.split("\0"):
+        if not record.strip():
             continue
-        sha, _, path = line.partition(" ")
+        meta, _, path = record.partition("\t")
+        parts = meta.split()
+        if len(parts) < 3:
+            continue
         if path.startswith(prefix):
-            out[path[len(prefix):]] = sha
+            out[path[len(prefix):]] = parts[2]
     return out
 
 

@@ -125,6 +125,13 @@ def measure_code() -> dict:
                 "collectorVersion": bool(VER_RE.match(meta.get("collector_version", ""))),
             },
         },
+        # projectId·collectorVersion 은 입력이 바뀐다고 달라지지 않는다 — 계약이 고정하는 신원이므로
+        # **표류 검사 대상**이다. volatile 에 두면 프로젝트 식별자나 수집기 버전이 몰래 바뀌어도
+        # 증거가 그것을 잡지 못한다. 바뀌었다면 의도된 변경이고, 그러면 diff 에 남아야 한다.
+        "identity": {
+            "projectId": meta.get("project_id"),
+            "collectorVersion": meta.get("collector_version"),
+        },
         "completeness": {
             "present": len(present),
             "required": len(REQUIRED),
@@ -132,10 +139,8 @@ def measure_code() -> dict:
         },
         VOLATILE: {
             "note": "값은 수집 범위의 내용·리비전에 따라 달라진다 — 표류 검사 대상이 아니다",
-            "projectId": meta.get("project_id"),
             "revision": meta.get("revision"),
             "contentHash": meta.get("content_hash"),
-            "collectorVersion": meta.get("collector_version"),
             "nodeCount": len(nodes),
             "walked": meta.get("walked"),
         },
@@ -210,6 +215,13 @@ def main() -> int:
         errs += check_db(json.loads(DB_COMMITTED.read_text()))
 
     if args.bootstrap:
+        # **검증에 실패한 측정은 기준이 될 수 없다.** 실패한 결과를 baseline 으로 남기면 잘못된 증거가
+        # 커밋되고, 이후의 정상 실행이 그 기준과 달라 표류로 잡힌다 — 고장난 쪽이 기준이 되는 것이다.
+        if errs:
+            print("[FAIL] 검증에 실패한 측정은 기준으로 기록하지 않는다:")
+            for line in errs:
+                print(f"  - {line}")
+            return 1
         # 이미 있는 증거를 조용히 덮어쓰지 않는다. 덮어쓸 수 있으면 --bootstrap 은 "초록으로 만드는
         # 버튼" 이 되고, 그 습관이 결국 아무도 보지 않는 baseline 을 만든다(probe_code.py 가 --check 로
         # 기준 파일에 쓰는 것을 거부하는 것과 같은 이유).

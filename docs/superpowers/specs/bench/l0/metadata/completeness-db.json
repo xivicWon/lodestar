@@ -29,11 +29,15 @@
       "rate" : 1.0
     }, {
       "path" : "live-jdbc",
-      "sourceId" : "db:jdbc:h2/meta_completeness",
+      "sourceId" : "db:jdbc:postgresql://db.example:5432/meta_completeness",
       "present" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
       "absent" : [ ],
       "rate" : 1.0
     } ]
+  },
+  "identity" : {
+    "projectId" : "lodestar",
+    "collectorVersion" : "lodestar-rdb-collector@0.1.0"
   },
   "completeness" : {
     "present" : 5,
@@ -43,7 +47,6 @@
   },
   "volatile" : {
     "note" : "값은 수집기 버전·입력에 따라 달라진다 — 표류 검사 대상이 아니다",
-    "collectorVersion" : "lodestar-rdb-collector@0.1.0",
     "sampleContentHash" : "sha256:c927031d689a5c37b8652387ade433ebc06880ea26421e947155483145bc43a6",
     "sampleRevision" : "bundle:c927031d689a",
     "ddlContentHash" : "sha256:af16a259a6f47280c751fd7e475876ebd66fdf1139a571026c08859b2e167d3b"

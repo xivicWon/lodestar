@@ -270,3 +270,29 @@ def test_explicit_non_vcs_revision_must_derive_from_content_hash():
     assert prov.build_metadata("lodestar", ".", files, revision=ok)["revision"] == ok
     # 커밋 sha 는 외부 좌표이므로 파생 검사의 대상이 아니다.
     assert prov.build_metadata("lodestar", ".", files, revision="a" * 40)["revision"] == "a" * 40
+
+
+def test_non_ascii_paths_do_not_break_the_head_comparison(tmp_path):
+    """git 은 비ASCII·공백이 든 경로를 따옴표로 감싸 8진 이스케이프해서 내보낸다.
+
+    그걸 그대로 문자열 비교하면 **깨끗한 파일이 dirty 로 오판**되어, VCS 가 정본인 입력조차
+    커밋 sha 를 받지 못한다.
+    """
+    root = write_scope(tmp_path, **{"한글파일.kt": "class A\n", "space name.kt": "class B\n"})
+    git = ["git", "-C", str(tmp_path)]
+    subprocess.run(git + ["init", "-q"], check=True)
+    subprocess.run(git + ["config", "user.email", "t@t"], check=True)
+    subprocess.run(git + ["config", "user.name", "t"], check=True)
+    subprocess.run(git + ["add", "-A"], check=True)
+    subprocess.run(git + ["commit", "-qm", "x"], check=True)
+    head = subprocess.run(git + ["rev-parse", "HEAD"], capture_output=True, text=True,
+                          check=True).stdout.strip()
+
+    rels = ["한글파일.kt", "space name.kt"]
+    files = [str(root / r) for r in rels]
+    assert prov.detect_revision(str(root), prov.scope_hash(str(root), files), rels) == head
+
+    # 그 경로의 내용이 실제로 바뀌면 여전히 dirty 여야 한다 — 검사가 무력화된 게 아니다.
+    (root / "한글파일.kt").write_text("class A { }\n", encoding="utf-8")
+    assert prov.detect_revision(
+        str(root), prov.scope_hash(str(root), files), rels).startswith("dirty:")

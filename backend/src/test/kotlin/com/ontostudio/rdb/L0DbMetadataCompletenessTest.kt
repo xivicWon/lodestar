@@ -59,15 +59,24 @@ class L0DbMetadataCompletenessTest {
         }
     }
 
+    /**
+     * **운영 진입점([LiveJdbcSource].extract)을 그대로 돌린다.** 여기서 MetadataService 에 sourceId 를
+     * 직접 주입하면, LiveJdbcSource 의 신원 생성이나 전달이 깨져도 게이트가 통과한다 — 재지 않은
+     * 경로를 잰 것으로 세게 된다. 커넥션 공급만 H2 로 갈아끼운다.
+     */
     private fun liveMetadata(): CollectionMetadata {
         val url = "jdbc:h2:mem:meta_completeness;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1"
-        return DriverManager.getConnection(url, "sa", "").use { conn ->
-            conn.createStatement().use { st ->
-                st.execute("DROP ALL OBJECTS")
-                st.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name VARCHAR(100))")
-            }
-            MetadataService().extract(conn, sourceId = "db:jdbc:h2/meta_completeness").metadata
+        val info = ConnectionInfo("db.example", 5432, "meta_completeness", "sa", "")
+        val connector = object : DbConnector() {
+            override fun open(info: ConnectionInfo) =
+                DriverManager.getConnection(url, "sa", "").also { c ->
+                    c.createStatement().use { st ->
+                        st.execute("DROP ALL OBJECTS")
+                        st.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name VARCHAR(100))")
+                    }
+                }
         }
+        return LiveJdbcSource(info, connector, MetadataService()).extract().metadata
     }
 
     @Test fun `db track records all five identifying fields on every collection path`() {
@@ -103,6 +112,11 @@ class L0DbMetadataCompletenessTest {
                 put("probe", "각 SchemaSource 를 실제로 돌려 산출물의 metadata 값을 센다")
                 putArray("paths").also { a -> paths.forEach { (l, m) -> a.add(pathNode(l, m)) } }
             }
+            putObject("identity").apply {
+                // 계약이 고정하는 신원이므로 표류 검사 대상이다 — volatile 에 두면 몰래 바뀌어도 못 잡는다.
+                put("projectId", CollectionMetadata.DEFAULT_PROJECT_ID)
+                put("collectorVersion", DbCollector.version())
+            }
             putObject("completeness").apply {
                 // 타입에 자리가 있는가(typeGraph)와 그 자리가 실제로 채워지는가(collectionPaths)는
                 // 다른 질문이다. 게이트 수치는 **둘 중 낮은 쪽**이어야 한다 — 자리만 세면
@@ -114,7 +128,6 @@ class L0DbMetadataCompletenessTest {
             }
             putObject("volatile").apply {
                 put("note", "값은 수집기 버전·입력에 따라 달라진다 — 표류 검사 대상이 아니다")
-                put("collectorVersion", DbCollector.version())
                 put("sampleContentHash", sample.contentHash)
                 put("sampleRevision", sample.revision)
                 put("ddlContentHash", ddl.contentHash)

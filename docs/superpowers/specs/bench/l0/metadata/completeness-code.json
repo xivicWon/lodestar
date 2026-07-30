@@ -87,6 +87,10 @@
       "collectorVersion": true
     }
   },
+  "identity": {
+    "projectId": "lodestar",
+    "collectorVersion": "lodestar-codegraph@0.1.1"
+  },
   "completeness": {
     "present": 5,
     "required": 5,
@@ -94,10 +98,8 @@
   },
   "volatile": {
     "note": "값은 수집 범위의 내용·리비전에 따라 달라진다 — 표류 검사 대상이 아니다",
-    "projectId": "lodestar",
-    "revision": "dirty:bbed9111c4ca",
-    "contentHash": "sha256:bbed9111c4ca12141d851537681e624891fedf3621fbd2d22650e537c5ebd663",
-    "collectorVersion": "lodestar-codegraph@0.1.1",
+    "revision": "dirty:7e74b780f75d",
+    "contentHash": "sha256:7e74b780f75d59d9eb8be850ecfd21e6486d09a2ca06c08d221892fa7f7d75a1",
     "nodeCount": 371,
     "walked": 60
   }
