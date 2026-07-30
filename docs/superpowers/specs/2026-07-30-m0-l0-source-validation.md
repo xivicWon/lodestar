@@ -151,7 +151,8 @@ L0 은 "수집이 잘 되는가" 가 아니라 **수집된 것이 추적 가능�
   (`codegraph/src/lodestar_codegraph/cluster.py:8`). 문자열 해시 랜덤화로 집합 순회 순서가 프로세스마다
   달라지고, Louvain 은 노드 순서에 의존하므로 **`seed=42` 를 고정해도** 군집 배정이 갈린다.
 - 통제 실험(증거): `PYTHONHASHSEED=0` 두 번은 동일, 시드를 `1` 로 바꾸면 달라진다
-  (`probe-code.json#determinismRootCause`). 즉 이 수치는 재실행 시 우연히 `0.6667` 로 보일 수 있어도
+  (`runs/run-l0-code-3c27259-001/probe-code.json#determinismRootCause` — 이 키는 run-001 에만 있다.
+  재측정한 run-002 는 같은 실험을 `determinismControl` 로 남긴다). 즉 이 수치는 재실행 시 우연히 `0.6667` 로 보일 수 있어도
   **"재현 보장 없음" 이라는 사실은 바뀌지 않는다.**
 - 폭발 반경: 사실 자체가 아니라 사실에 붙는 **군집 라벨**이 흔들린다. 그래도 게이트는 산출물 단위이며,
   하류가 `community` 를 읽는 한 상위 결과가 실행마다 달라진다.
