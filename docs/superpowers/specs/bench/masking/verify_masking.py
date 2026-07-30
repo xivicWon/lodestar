@@ -57,6 +57,7 @@ def load_ctx() -> dict:
     ctx["report"] = json.loads((HERE / "report.json").read_text(encoding="utf-8"))
     ctx["pii"] = json.loads((GOLD / "pii.json").read_text(encoding="utf-8"))
     ctx["goldManifest"] = json.loads((GOLD / "manifest.json").read_text(encoding="utf-8"))
+    ctx["parityFixture"] = json.loads(builder.EVIDENCE["parityFixture"].read_text(encoding="utf-8"))
     ctx["corpus"] = {
         f["sourceId"]: (REPO / f["path"]).read_text(encoding="utf-8")
         for f in ctx["pii"]["scope"]["files"]
@@ -109,10 +110,25 @@ def m2_engine_parity(ctx):
         return False, 0, "비교할 스팬이 없다"
     if k != p:
         diff = [a["sourceId"] for a, b in zip(k, p) if a != b]
-        return False, spans, f"엔진 결과 불일치: {diff or 'file set'}"
+        return False, spans, f"엔진 결과 불일치(gold): {diff or 'file set'}"
     if ctx["report"]["engines"]["parity"] is not True:
         return False, spans, "보고서가 불일치를 일치로 적었다"
-    return True, spans, f"두 엔진 스팬 {spans}건 동일"
+
+    # gold 는 새 분기를 지나가지 않는다 — 패리티 픽스처에서도 두 엔진이 같아야 한다.
+    pk, pp = ctx["parityKotlin"], ctx["parityPython"]
+    cases = len(pk["cases"])
+    if not cases:
+        return False, spans, "패리티 케이스가 없다"
+    vk, vp = builder.parity_view(pk), builder.parity_view(pp)
+    if vk != vp:
+        diff = [a.get("id") for a, b in zip(vk, vp) if a != b]
+        return False, spans + cases, f"엔진 결과 불일치(패리티): {diff or 'case set'}"
+    fixture_hash = sha256_bytes(builder.EVIDENCE["parityFixture"].read_bytes())
+    if not (pk["fixtureHash"] == pp["fixtureHash"] == fixture_hash):
+        return False, spans + cases, "두 증거가 가리키는 패리티 픽스처가 서로 다르거나 변조됐다"
+    if ctx["report"]["engines"]["branchParity"]["identical"] is not True:
+        return False, spans + cases, "보고서가 분기 불일치를 일치로 적었다"
+    return True, spans + cases, f"gold 스팬 {spans}건 + 패리티 {cases}케이스×정책 {len(pk['policies'])}종 동일"
 
 
 def m3_report_is_pure_function(ctx):
@@ -147,8 +163,8 @@ def m4_positive_locators_resolve(ctx):
 def m5_gate_arithmetic(ctx):
     rep = ctx["report"]
     ids = [g["id"] for g in rep["gates"]]
-    required = ["gate-security-masking", "gate-engine-parity", "gate-db-ingest-masking",
-                "gate-code-emit-masking", "gate-no-plaintext-in-records"]
+    required = ["gate-security-masking", "gate-engine-parity", "gate-engine-parity-branches",
+                "gate-db-ingest-masking", "gate-code-emit-masking", "gate-no-plaintext-in-records"]
     if sorted(ids) != sorted(required):
         return False, len(ids), f"게이트 목록이 다르다: {ids}"
     by_id = {g["id"]: g for g in rep["gates"]}
@@ -160,6 +176,9 @@ def m5_gate_arithmetic(ctx):
     db = ctx["ingestDb"]["retrievableUnmaskedPiiValues"]
     if (by_id["gate-db-ingest-masking"]["status"] == "PASS") != (db == 0):
         return False, len(ids), "적재 경로 게이트가 관측과 어긋난다"
+    branch = by_id["gate-engine-parity-branches"]
+    if (branch["status"] == "PASS") != (branch["observed"] is True):
+        return False, len(ids), "분기 패리티 게이트가 관측과 어긋난다"
     return True, len(ids), f"게이트 {len(ids)}종 산식 일치"
 
 
@@ -269,6 +288,32 @@ def m10_declared_paths_are_measured(ctx):
     return True, n, f"경로 관측 {n}종"
 
 
+def m11_parity_fixture_covers_new_branches(ctx):
+    """픽스처가 새 분기를 실제로 지나가는가 — 지나가지 않으면 이 증거는 아무것도 막지 못한다.
+
+    또한 길이 보존 모드가 케이스마다 문자 수·행 수를 유지하는지 증거에서 확인한다(개행 보존 계약).
+    """
+    pk = ctx["parityKotlin"]
+    fixture = ctx["parityFixture"]
+    rules = {s["ruleId"] for c in pk["cases"] for name in pk["policies"] for s in c[name]["spans"]}
+    required = {"SECRET.KEYED_VALUE", "SECRET.URL_CREDENTIAL", "SECRET.PRIVATE_KEY_BLOCK"}
+    missing = required - rules
+    n = len(pk["cases"])
+    if missing:
+        return False, n, f"픽스처가 지나가지 않는 분기: {sorted(missing)}"
+    if not any(any(ord(ch) > 0xFFFF for ch in c["text"]) for c in fixture["cases"]):
+        return False, n, "BMP 밖 문자가 없어 좌표 단위 계약이 검증되지 않는다"
+    if not any("\n" in c["text"] for c in fixture["cases"]):
+        return False, n, "여러 줄 입력이 없어 개행 보존 계약이 검증되지 않는다"
+    for c in pk["cases"]:
+        lp = c["lengthPreserving"]
+        if lp["maskedChars"] != c["inputChars"] or lp["maskedLines"] != c["inputLines"]:
+            return False, n, f"{c['id']}: 길이 보존 모드가 문자 수·행 수를 바꿨다"
+    if len({c["id"] for c in pk["cases"]}) != n:
+        return False, n, "패리티 케이스 id 가 중복된다"
+    return True, n, f"패리티 {n}케이스가 분기 {len(required)}종·BMP 밖·여러 줄을 지나간다"
+
+
 RULES = {
     "M1": ("gold 신원 — 코퍼스 해시·승인 상태·항목 수·fixtureHash", m1_gold_identity),
     "M2": ("두 엔진의 결과가 같다 (Kotlin ↔ Python)", m2_engine_parity),
@@ -280,6 +325,7 @@ RULES = {
     "M8": ("결정성·멱등성이 재현된다", m8_deterministic_and_idempotent),
     "M9": ("증거·보고서에 원문이 없다", m9_no_plaintext_in_records),
     "M10": ("선언한 수집 경로가 전부 계측됐다", m10_declared_paths_are_measured),
+    "M11": ("패리티 픽스처가 새 분기를 지나가고 길이·행을 보존한다", m11_parity_fixture_covers_new_branches),
 }
 
 
@@ -324,6 +370,21 @@ CASES = [
     ("C31", "M9", lambda c: next(
         g for g in c["report"]["gates"] if g["id"] == "gate-no-plaintext-in-records"
     ).__setitem__("observed", 2)),
+    ("C32", "M2", lambda c: c["parityKotlin"]["cases"][0]["default"]["spans"].pop()),
+    ("C33", "M2", lambda c: c["parityKotlin"]["cases"][7]["lengthPreserving"].__setitem__(
+        "maskedTextHash", "sha256:" + "4" * 64)),
+    ("C34", "M2", lambda c: c["parityPython"].__setitem__("fixtureHash", "sha256:" + "5" * 64)),
+    ("C35", "M2", lambda c: c["report"]["engines"]["branchParity"].__setitem__("identical", True)
+     if c["parityKotlin"]["cases"][1].__setitem__("inputChars", 999) else None),
+    ("C36", "M11", lambda c: c["parityFixture"].__setitem__(
+        "cases", [x for x in c["parityFixture"]["cases"] if "ASTRAL" not in x["id"]])),
+    ("C37", "M11", lambda c: [
+        cc[name].__setitem__("spans", [s for s in cc[name]["spans"]
+                                       if s["ruleId"] != "SECRET.PRIVATE_KEY_BLOCK"])
+        for cc in c["parityKotlin"]["cases"] for name in c["parityKotlin"]["policies"]]),
+    ("C38", "M11", lambda c: c["parityKotlin"]["cases"][7]["lengthPreserving"].__setitem__(
+        "maskedLines", 1)),
+    ("C39", "M11", lambda c: c["parityKotlin"]["cases"].append(c["parityKotlin"]["cases"][0])),
 ]
 
 

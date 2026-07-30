@@ -1,0 +1,100 @@
+{
+  "fixtureVersion": "mask-parity-fixture/v1",
+  "issue": 115,
+  "purpose": "두 엔진(Kotlin `com.ontostudio.security.MaskingEngine` · Python `lodestar_codegraph.mask`)이 **같은 입력에 같은 결과**를 내는지 보는 픽스처다. gold(#99)와 성격이 다르다: gold 는 승인된 **정답**이고 정오를 판정하지만, 이 픽스처에는 정답이 없다 — 여기서 확정하는 것은 '두 엔진이 갈리지 않는다' 하나다. 정확성 판정은 gold 가 한다.",
+  "why": "gold 코퍼스는 이번에 신설·수정된 분기를 지나가지 않는다: 따옴표로 묶인 키드 시크릿(대안 그룹), '@' 가 든 URL 비밀번호, 여러 줄 PEM 블록, 잘린 PEM, BMP 밖 문자(스팬 좌표 단위), 길이 보존 모드의 개행 보존. 그 분기에서 두 엔진이 갈려도 gold 증거만으로는 조용히 통과한다.",
+  "values": "전부 합성 값이며 실존 개인·계정·자격증명이 아니다. gold 와 겹치지 않는 값을 골라 이 픽스처가 정답셋으로 오인되지 않게 했다.",
+  "policies": ["default", "lengthPreserving"],
+  "cases": [
+    {
+      "id": "PARITY.KEYED.QUOTED_DOUBLE",
+      "note": "따옴표 안 공백 — 공백에서 끊으면 뒤가 평문으로 남는다(대안 그룹 1)",
+      "text": "spring.datasource.password = \"pw with spaces\" other=keep"
+    },
+    {
+      "id": "PARITY.KEYED.QUOTED_SINGLE",
+      "note": "홑따옴표 변형(대안 그룹 2)",
+      "text": "app.secret = 'multi word secret' tail=keep"
+    },
+    {
+      "id": "PARITY.KEYED.JSON",
+      "note": "JSON 형태 — 키가 따옴표에 묶인 경우 + 같은 줄의 음성(user)",
+      "text": "{\"apiKey\": \"tok en 456\", \"user\": \"svc_app\"}"
+    },
+    {
+      "id": "PARITY.KEYED.BARE",
+      "note": "따옴표 없는 값(대안 그룹 3) — 토큰 경계까지만 가린다",
+      "text": "password=Pw-9zzz-not-real, next=keep"
+    },
+    {
+      "id": "PARITY.URL.AT_IN_PASSWORD",
+      "note": "비밀번호에 '@' — 첫 '@' 에서 끊으면 나머지가 남는다",
+      "text": "postgres://svc:Pw@zz-9@db.internal:5432/app"
+    },
+    {
+      "id": "PARITY.URL.COLON_IN_PASSWORD",
+      "note": "비밀번호에 ':'",
+      "text": "mysql://admin:aa:bb-99@db/app"
+    },
+    {
+      "id": "PARITY.URL.NO_CREDENTIAL",
+      "note": "자격증명 없는 접속 URL — 가리면 오탐(allowlist 가 이긴다)",
+      "text": "jdbc:postgresql://localhost:5432/lodestar"
+    },
+    {
+      "id": "PARITY.PEM.FULL_BLOCK",
+      "note": "여러 줄 PEM — 헤더만 가리면 본문이 남는다. 길이 보존 모드에서 개행도 유지돼야 한다",
+      "text": "cfg:\n-----BEGIN EC PRIVATE KEY-----\nAAAAfakebodyline1111111111111111111\nBBBBfakebodyline2222222222222222222\n-----END EC PRIVATE KEY-----\nTAIL_MARKER"
+    },
+    {
+      "id": "PARITY.PEM.TRUNCATED",
+      "note": "END 가 없는 잘린 블록 — 뒤를 끝까지 삼키면 무관한 내용까지 지운다",
+      "text": "-----BEGIN OPENSSH PRIVATE KEY-----\nCCCCfakebody3333\nTAIL_MARKER_2"
+    },
+    {
+      "id": "PARITY.ASTRAL.BEFORE_MATCH",
+      "note": "BMP 밖 문자(서로게이트 페어)가 앞에 있는 경우 — 스팬 좌표 단위가 갈리는 자리",
+      "text": "🎉🎉 contact=park.sj@example.net rrn=880202-2345678"
+    },
+    {
+      "id": "PARITY.ASTRAL.BETWEEN_MATCHES",
+      "note": "매치 사이에 BMP 밖 문자",
+      "text": "ip=198.51.100.9 🚀 card=5105105105105100 🧪 tel=010-2222-3333"
+    },
+    {
+      "id": "PARITY.HANGUL.NAME_DELIMITERS",
+      "note": "인명 규칙의 구분자 제약 — 값 자리의 3음절만 잡고 산문은 남긴다",
+      "text": "owner=박서준, '최민수' 그리고 마스킹 대상 아닌 산문 정답은 여기"
+    },
+    {
+      "id": "PARITY.LUHN.BOUNDARY",
+      "note": "구분자 없는 16자리는 Luhn 통과만 카드로 본다",
+      "text": "card=5105105105105100 qty=1234567812345678"
+    },
+    {
+      "id": "PARITY.SCHEME.BEARER",
+      "note": "Bearer 접두는 스킴이므로 남고 토큰만 가린다",
+      "text": "authorization=Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJwYXJpdHkifQ.c2ln"
+    },
+    {
+      "id": "PARITY.IDEMPOTENCE.MASK_TOKEN",
+      "note": "이미 가려진 자리를 다시 가리지 않는다",
+      "text": "password=[MASKED:PASSWORD] rrn=880202-2345678"
+    },
+    {
+      "id": "PARITY.ALLOWLIST.TRACKING_VALUES",
+      "note": "가리면 추적이 끊기는 값들 — 전부 남아야 한다",
+      "text": "build=3c27259fe6c979e00912c5e3686c611a28cb977e trace=550e8400-e29b-41d4-a716-446655440000 hash=sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94 id=ITM000000009"
+    },
+    {
+      "id": "PARITY.MULTILINE.MIXED",
+      "note": "여러 줄 · 양성과 음성이 섞인 입력 — 길이 보존 모드에서 행 번호가 보존돼야 한다",
+      "text": "line1 ok\nline2 mail=park.sj@example.net\nline3 build=3c27259fe6c979e00912c5e3686c611a28cb977e\nline4 tel=010-2222-3333\nLAST_LINE"
+    },
+    {
+      "id": "PARITY.EMPTY.EDGE",
+      "note": "빈 값·경계 — 스팬이 0폭이면 만들지 않는다",
+      "text": "password= secret=\"\" token=''"
+    }
+  ]
+}

@@ -37,7 +37,9 @@ CODE_OUT = RUNS / "run-mask-code-001" / "emit-code.json"
 
 sys.path.insert(0, str(REPO / "codegraph/src"))
 from lodestar_codegraph.emit import build_and_write  # noqa: E402
-from lodestar_codegraph.mask import detect, load_rules, mask_text, utf16_offset  # noqa: E402
+from lodestar_codegraph.mask import (  # noqa: E402
+    MaskPolicy, detect, load_rules, mask_text, utf16_offset,
+)
 from lodestar_codegraph.model import EXTRACTED, Edge, Node  # noqa: E402
 
 
@@ -177,6 +179,55 @@ def code_path_evidence() -> dict:
     }
 
 
+PARITY_FIXTURE = HERE / "fixtures/parity-cases.json"
+PARITY_OUT = RUNS / "run-mask-parity-001" / "engine-python.json"
+
+
+def parity_evidence() -> dict:
+    """교차 엔진 패리티 증거 — gold 가 지나가지 않는 분기를 두 엔진에 같은 입력으로 통과시킨다.
+
+    정답은 없다(픽스처 설명 참조). 확정하는 것은 "두 엔진이 갈리지 않는다" 하나이며, 정확성 판정은
+    gold 가 한다. 두 정책(기본 · 길이 보존)을 각각 잰다 — 길이 보존 토큰의 개행 처리도 두 엔진에서
+    같아야 한다.
+    """
+    fixture = json.loads(PARITY_FIXTURE.read_text(encoding="utf-8"))
+    cases = []
+    for case in fixture["cases"]:
+        text = case["text"]
+        entry = {
+            "id": case["id"],
+            "inputHash": sha256_bytes(text.encode("utf-8")),
+            # 문자 수도 UTF-16 코드 단위다 — 코드포인트로 세면 이모지가 든 케이스에서 Kotlin 과 갈린다.
+            "inputChars": utf16_offset(text, len(text)),
+            "inputLines": text.count("\n") + 1,
+        }
+        for policy_name, policy in (("default", MaskPolicy()),
+                                    ("lengthPreserving", MaskPolicy(length_preserving=True))):
+            result = mask_text(text, policy)
+            entry[policy_name] = {
+                # 원문·마스킹 텍스트는 적지 않는다 — 해시와 좌표만 남긴다(#85).
+                "maskedTextHash": sha256_bytes(result.text.encode("utf-8")),
+                "maskedChars": utf16_offset(result.text, len(result.text)),
+                "maskedLines": result.text.count("\n") + 1,
+                "spans": [
+                    {"start": utf16_offset(text, s.start), "end": utf16_offset(text, s.end),
+                     "ruleId": s.rule_id, "class": s.cls}
+                    for s in result.spans
+                ],
+                "byRule": result.counts,
+            }
+        cases.append(entry)
+    return {
+        "evidenceVersion": "mask-parity-evidence/v1",
+        "engine": "python:lodestar_codegraph.mask",
+        "specVersion": load_rules().spec_version,
+        "fixtureVersion": fixture["fixtureVersion"],
+        "fixtureHash": sha256_bytes(PARITY_FIXTURE.read_bytes()),
+        "policies": fixture["policies"],
+        "cases": cases,
+    }
+
+
 def gold_item_verdicts() -> dict:
     """gold 항목별 판정 — 게이트(양성 미마스킹 0건)와 오탐(음성이 가려짐)을 항목 단위로 센다."""
     pii = gold_pii()
@@ -257,6 +308,7 @@ def main() -> int:
     rc |= write(ENGINE_OUT, engine_evidence(), args.check)
     rc |= write(CODE_OUT, code_path_evidence(), args.check)
     rc |= write(RUNS / "run-mask-gold-001" / "gold-verdicts.json", gold_item_verdicts(), args.check)
+    rc |= write(PARITY_OUT, parity_evidence(), args.check)
     return rc
 
 

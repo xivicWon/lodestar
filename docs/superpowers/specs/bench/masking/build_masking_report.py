@@ -30,6 +30,9 @@ EVIDENCE = {
     "goldVerdicts": RUNS / "run-mask-gold-001/gold-verdicts.json",
     "emitCode": RUNS / "run-mask-code-001/emit-code.json",
     "ingestDb": RUNS / "run-mask-ingest-001/ingest-db.json",
+    "parityKotlin": RUNS / "run-mask-parity-001/engine-kotlin.json",
+    "parityPython": RUNS / "run-mask-parity-001/engine-python.json",
+    "parityFixture": HERE / "fixtures/parity-cases.json",
     "ruleSpec": REPO / "docs/superpowers/specs/security/masking-rules.v0.json",
 }
 
@@ -60,6 +63,11 @@ def span_view(evidence: dict) -> list:
     ]
 
 
+def parity_view(evidence: dict) -> list:
+    """패리티 비교용 정규화 — 엔진 이름만 다르고 케이스별 관측이 전부 같아야 한다."""
+    return [{k: v for k, v in case.items()} for case in evidence["cases"]]
+
+
 def merge_counts(evidence: dict, key: str) -> dict:
     out: dict[str, int] = {}
     for f in evidence["files"]:
@@ -81,6 +89,9 @@ def build() -> dict:
     false_positives = [i["id"] for i in negatives if i["verdict"] == "FALSE_POSITIVE"]
 
     parity = span_view(kotlin) == span_view(python)
+    pk, pp = load("parityKotlin"), load("parityPython")
+    branch_parity = (parity_view(pk) == parity_view(pp)
+                     and pk["fixtureHash"] == pp["fixtureHash"] == sha256_file(EVIDENCE["parityFixture"]))
     code_gate = code["variants"][code["gateVariant"]]
     partial = [i["id"] for i in positives if not i["fullyCovered"]]
 
@@ -101,7 +112,16 @@ def build() -> dict:
             "required": True,
             "observed": parity,
             "status": "PASS" if parity else "FAIL",
-            "scope": "스팬 좌표·클래스·규칙 id·마스킹 결과 해시",
+            "scope": "gold 코퍼스 3파일 · 스팬 좌표·클래스·규칙 id·마스킹 결과 해시",
+        },
+        {
+            "id": "gate-engine-parity-branches",
+            "name": "gold 가 지나가지 않는 분기에서도 두 엔진이 같다",
+            "required": True,
+            "observed": branch_parity,
+            "status": "PASS" if branch_parity else "FAIL",
+            "scope": "패리티 픽스처 %d케이스 × 정책 %d종(기본·길이보존) · 대안 그룹·PEM·BMP 밖 문자·개행 보존"
+                     % (len(pk["cases"]), len(pk["policies"])),
         },
         {
             "id": "gate-db-ingest-masking",
@@ -155,6 +175,18 @@ def build() -> dict:
             "kotlin": {"engine": kotlin["engine"], "spans": sum(f["maskedSpans"] for f in kotlin["files"])},
             "python": {"engine": python["engine"], "spans": sum(f["maskedSpans"] for f in python["files"])},
             "parity": parity,
+            "branchParity": {
+                "fixtureVersion": pk["fixtureVersion"],
+                "fixtureHash": pk["fixtureHash"],
+                "cases": len(pk["cases"]),
+                "policies": pk["policies"],
+                "identical": branch_parity,
+                "spans": {
+                    name: sum(len(c[name]["spans"]) for c in pk["cases"]) for name in pk["policies"]
+                },
+                "note": "이 픽스처에는 정답이 없다 — 확정하는 것은 두 엔진이 갈리지 않는다는 사실 하나이며,"
+                        " 정확성 판정은 gold(#99)가 한다",
+            },
             "ruleSpecHash": sha256_file(EVIDENCE["ruleSpec"]),
         },
         "collectionPaths": {
@@ -190,9 +222,12 @@ def build() -> dict:
 
     # 원문 미기록 게이트는 **계산한다** — 고정 PASS 로 적으면 게이트가 아니라 주장이다(리뷰 질문 5).
     # 대상: 증거 5종(규칙 스펙은 정규식이며 값이 아니다) + 이 보고서의 나머지 전문.
-    scanned = {k: json.dumps(load(k), ensure_ascii=False) for k in EVIDENCE if k != "ruleSpec"}
+    scanned = {k: json.dumps(load(k), ensure_ascii=False)
+               for k in EVIDENCE if k not in ("ruleSpec", "parityFixture")}
     scanned["report(body)"] = json.dumps(body, ensure_ascii=False)
     plaintexts = [i["value"]["text"] for i in pii["items"] if i["expect"] == "MASKED"]
+    # 패리티 픽스처의 입력 텍스트도 증거에 실려서는 안 된다 — 해시·좌표만 남기는 계약이다.
+    plaintexts += [c["text"] for c in load("parityFixture")["cases"]]
     hits = sorted(
         f"{name}:{text[:4]}…"  # 어느 문서에서 걸렸는지만 남긴다 — 여기에 원문을 적으면 같은 위반이다
         for name, blob in scanned.items() for text in plaintexts if text in blob

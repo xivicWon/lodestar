@@ -22,7 +22,15 @@
       "required": true,
       "observed": true,
       "status": "PASS",
-      "scope": "스팬 좌표·클래스·규칙 id·마스킹 결과 해시"
+      "scope": "gold 코퍼스 3파일 · 스팬 좌표·클래스·규칙 id·마스킹 결과 해시"
+    },
+    {
+      "id": "gate-engine-parity-branches",
+      "name": "gold 가 지나가지 않는 분기에서도 두 엔진이 같다",
+      "required": true,
+      "observed": true,
+      "status": "PASS",
+      "scope": "패리티 픽스처 18케이스 × 정책 2종(기본·길이보존) · 대안 그룹·PEM·BMP 밖 문자·개행 보존"
     },
     {
       "id": "gate-db-ingest-masking",
@@ -46,7 +54,7 @@
       "required": 0,
       "observed": 0,
       "status": "PASS",
-      "scope": "증거 5종 + 보고서 전문 × 양성 28건 = 168회 대조",
+      "scope": "증거 7종 + 보고서 전문 × 양성 46건 = 368회 대조",
       "hits": []
     }
   ],
@@ -111,6 +119,21 @@
       "spans": 28
     },
     "parity": true,
+    "branchParity": {
+      "fixtureVersion": "mask-parity-fixture/v1",
+      "fixtureHash": "sha256:c2ca0a4b3c7f174a2bcbced56d58195cc7ef46454ab56edbff8cc5ec3351173b",
+      "cases": 18,
+      "policies": [
+        "default",
+        "lengthPreserving"
+      ],
+      "identical": true,
+      "spans": {
+        "default": 21,
+        "lengthPreserving": 21
+      },
+      "note": "이 픽스처에는 정답이 없다 — 확정하는 것은 두 엔진이 갈리지 않는다는 사실 하나이며, 정확성 판정은 gold(#99)가 한다"
+    },
     "ruleSpecHash": "sha256:6210fae14e36c64fda4d16fb81dd79f0a060e09e0c0bc260056ff178782146fa"
   },
   "collectionPaths": {
@@ -184,6 +207,18 @@
     "ingestDb": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-ingest-001/ingest-db.json",
       "contentHash": "sha256:aa47d001c00026eb91cef04738c7ca436000a36d9feeda5d691e50499cff89f9"
+    },
+    "parityFixture": {
+      "path": "docs/superpowers/specs/bench/masking/fixtures/parity-cases.json",
+      "contentHash": "sha256:c2ca0a4b3c7f174a2bcbced56d58195cc7ef46454ab56edbff8cc5ec3351173b"
+    },
+    "parityKotlin": {
+      "path": "docs/superpowers/specs/bench/masking/runs/run-mask-parity-001/engine-kotlin.json",
+      "contentHash": "sha256:8bf33c86a3bc48d4ad8b32027276a4d6e6fccc2b9b702c3d5a0c9c757f14fbba"
+    },
+    "parityPython": {
+      "path": "docs/superpowers/specs/bench/masking/runs/run-mask-parity-001/engine-python.json",
+      "contentHash": "sha256:decb10f85e327524c473be16946e9ebd48b9f18b6cf3d4f67f6cd32a3f3d11b9"
     },
     "ruleSpec": {
       "path": "docs/superpowers/specs/security/masking-rules.v0.json",

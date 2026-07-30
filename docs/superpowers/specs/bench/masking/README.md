@@ -12,7 +12,8 @@
 # 최초 생성/의도한 갱신일 때만:
 (cd backend && ./gradlew test -DMASK_EVIDENCE_BOOTSTRAP=true) \
   && cp backend/build/masking/engine-kotlin.json docs/superpowers/specs/bench/masking/runs/run-mask-gold-001/ \
-  && cp backend/build/masking/ingest-db.json     docs/superpowers/specs/bench/masking/runs/run-mask-ingest-001/
+  && cp backend/build/masking/ingest-db.json     docs/superpowers/specs/bench/masking/runs/run-mask-ingest-001/ \
+  && cp backend/build/masking/parity-kotlin.json docs/superpowers/specs/bench/masking/runs/run-mask-parity-001/engine-kotlin.json
 
 # (b) Python 엔진 증거 + 코드 산출 경로 증거
 python3 docs/superpowers/specs/bench/masking/probe_masking.py
@@ -28,10 +29,10 @@ python3 docs/superpowers/specs/bench/masking/build_masking_report.py --check
 
 ```bash
 python3 docs/superpowers/specs/bench/masking/verify_masking.py
-# 10 rules, 31 cases, 0 mismatches   (= manifest.json 의 ruleRange·caseCount)
+# 11 rules, 39 cases, 0 mismatches   (= manifest.json 의 ruleRange·caseCount)
 ```
 
-규칙 M1~M10 과 결함 주입 31케이스는 [`verify_masking.py`](verify_masking.py) 상단에 선언돼 있고,
+규칙 M1~M11 과 결함 주입 39케이스는 [`verify_masking.py`](verify_masking.py) 상단에 선언돼 있고,
 판정·정책·잔여 위험은 [`specs/2026-07-30-m0-l0-fix5-masking.md`](../../2026-07-30-m0-l0-fix5-masking.md)
 에 있다.
 
@@ -44,6 +45,7 @@ python3 docs/superpowers/specs/bench/masking/verify_masking.py
 | `runs/run-mask-gold-001/gold-verdicts.json` | gold 항목 44건의 항목별 판정(양성 28 · 음성 16) |
 | `runs/run-mask-ingest-001/ingest-db.json` | DB 적재·DDL 텍스트 경로의 마스킹 집계와 컬럼별 관측 |
 | `runs/run-mask-code-001/emit-code.json` | codegraph 산출 단계(emit)의 마스킹 관문 관측 |
+| `runs/run-mask-parity-001/engine-{kotlin,python}.json` | **gold 가 지나가지 않는 분기**의 교차 엔진 패리티 (`fixtures/parity-cases.json` · 정답 없음 · 두 엔진 일치만 확정) |
 | `report.json` | 위 증거에서 파생된 마스킹 실행 보고서 |
 
 증거에는 **원문을 적지 않는다**(#85) — 좌표·규칙 id·클래스·건수·해시만 남기며, 그것을
