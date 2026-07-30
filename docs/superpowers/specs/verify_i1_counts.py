@@ -130,8 +130,31 @@ def c5_revision_history_keeps_old_value(errs: list) -> None:
         errs.append("C5: 개정 이력에 이전 값(28 → 27)이 남아 있지 않다")
 
 
+def c6_history_line_coordinates_resolve(errs: list) -> None:
+    """개정 이력이 적은 새 행 번호(L→L)가 실제로 그 내용을 가리켜야 한다.
+
+    상단에 개정 이력을 붙이면(§7.3) 이후 모든 행이 밀린다. 밀린 좌표를 적어 두는 것은 gold 의
+    문서 축(docsRevision)을 올릴 때 쓰는 안내인데, 그 좌표가 틀리면 유령 좌표를 하나 더 만든다.
+    """
+    lines = contract_text().splitlines()
+    expect = [(r"DB 행 L\d+ → L(\d+)", CONTRACT_ROW),                      # §1.1 DB 행
+              (r"FK 서술 L\d+ → L(\d+)", CONTRACT_PROSE),                   # §1.1 서술문
+              (r"파싱 실패\" 행 L\d+ → L(\d+)",
+               re.compile(r"^\| L1 무보고 파싱 실패"))]                       # §4.1 게이트 행
+    text = contract_text()
+    for pattern, target in expect:
+        m = re.search(pattern, text)
+        if not m:
+            errs.append(f"C6: 개정 이력의 행 번호 표기를 찾지 못했다 ({pattern})")
+            continue
+        no = int(m[1])
+        if not (1 <= no <= len(lines)) or not target.search(lines[no - 1]):
+            errs.append(f"C6: 개정 이력이 가리킨 L{no} 이 {target.pattern!r} 를 담고 있지 않다")
+
+
 CHECKS = [c1_contract_matches_fixture, c2_prose_matches_row, c3_gold_matches_contract,
-          c4_rqr_examples_match_contract, c5_revision_history_keeps_old_value]
+          c4_rqr_examples_match_contract, c5_revision_history_keeps_old_value,
+          c6_history_line_coordinates_resolve]
 
 
 def main() -> int:

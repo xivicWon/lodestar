@@ -40,6 +40,16 @@ L0~L3 벤치를 실행하기 전에 **모든 고정 요소를 못박는 선행 �
     고정돼 있어 **그 revision 기준으로는 여전히 유효**하다. 이 개정은 그 항목의 `resolutionPath`가
     말한 해소 경로 자체이며, gold 를 `RESOLVED` 로 바꾸는 것은 gold 개정 절차(#99 §10.4 — `--rehash`·
     G1~G14 재통과·승인)를 따르는 **별건**이다. 이 PR 은 gold 를 건드리지 않는다.
+- **행 번호 이동(좌표 인용 주의):** 이 절이 문서 상단에 추가되면서(§7.3 이 상단을 요구한다) 이후
+  모든 행이 밀렸다. **§1.1 DB 행 L40 → L84**, **§1.1 FK 서술 L44 → L92**,
+  **§4.1 "L1 무보고 파싱 실패" 행 L169 → L217**.
+  - 기존 좌표(L40·L44·L169)를 인용한 gold(`gold/evl/questions.json`)·I2 §8.1 기록은
+    `docsRevision: 7d3db3e` 기준으로 읽어야 하며, 그 revision 에서는 그대로 조회된다
+    (gold 는 문서 축을 revision·contentHash·행수까지 고정한다 — G5).
+  - 따라서 **gold 의 docsRevision 을 올리는 다음 개정에서 함께 갱신할 것**: 이 문서의
+    `contentHash`·`lines`, `adr:m0-i1-baseline-contract.md` 좌표(L40→L74 · L169→L207),
+    그리고 `CF1.TABLE_COUNT` 의 `status`(`NEEDS_CHECK` → `RESOLVED` · `resolvedBy`).
+    이 PR 은 gold 를 건드리지 않으므로 지금은 아무것도 깨지지 않는다.
 - **자동 확인:** `python3 docs/superpowers/specs/verify_i1_counts.py` (C1~C5 — 원문 실측·문서 내부
   정합·gold·RQR 예시·개정 이력 보존).
 
