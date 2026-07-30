@@ -30,8 +30,13 @@ if git -C "$ROOT" worktree list | grep -q "lodestar-issue-${N}"; then
   echo "ℹ️  worktree 재사용: $WT"
 else
   git -C "$ROOT" fetch origin --quiet 2>/dev/null || true
-  git -C "$ROOT" worktree add "$WT" -b "$BRANCH" origin/main 2>/dev/null \
-    || git -C "$ROOT" worktree add "$WT" -b "$BRANCH"
+  if git -C "$ROOT" show-ref --verify --quiet "refs/heads/${BRANCH}"; then
+    # 브랜치가 이미 있으면(중단·정리된 세션 복구) 새로 만들지 말고 연결
+    git -C "$ROOT" worktree add "$WT" "$BRANCH"
+  else
+    git -C "$ROOT" worktree add "$WT" -b "$BRANCH" origin/main 2>/dev/null \
+      || git -C "$ROOT" worktree add "$WT" -b "$BRANCH"
+  fi
 fi
 
 # 브리프 (긴 한글은 파일로 — cmux 인라인 truncation 회피)
