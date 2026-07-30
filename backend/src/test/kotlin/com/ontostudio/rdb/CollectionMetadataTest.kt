@@ -223,11 +223,11 @@ class CollectionMetadataTest {
                 st.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY)")
             }
             // 시각이 아니라 내용에서 나오므로 3회 실행이 같아야 한다(H1 결정성을 오염시키지 않는다).
-            val hashes = (1..3).map { MetadataService().extract(conn).metadata.contentHash }
+            val hashes = (1..3).map { MetadataService().extract(conn, "db:test:live").metadata.contentHash }
             assertEquals(1, hashes.toSet().size, "같은 카탈로그의 3회 수집이 다른 신원을 냈다: $hashes")
 
             conn.createStatement().use { st -> st.execute("ALTER TABLE customers ADD COLUMN note VARCHAR(10)") }
-            assertNotEquals(hashes[0], MetadataService().extract(conn).metadata.contentHash,
+            assertNotEquals(hashes[0], MetadataService().extract(conn, "db:test:live").metadata.contentHash,
                 "카탈로그가 바뀌었는데 contentHash 가 같다")
         }
     }

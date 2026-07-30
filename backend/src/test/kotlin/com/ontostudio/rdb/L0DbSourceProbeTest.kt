@@ -333,8 +333,8 @@ class L0DbSourceProbeTest {
 
             // (a) JDBC 메타데이터 수집 경로를 실제로 돌린다 — DDL 텍스트 경로와 별개의 수집기다.
             val metadata = MetadataService()
-            val jdbcHashes = (1..3).map { sha256(canonical(metadata.extract(conn)).toByteArray()) }
-            val jdbcModel = metadata.extract(conn)
+            val jdbcHashes = (1..3).map { sha256(canonical(metadata.extract(conn, "db:legacy-sample", revisionScheme = "bundle")).toByteArray()) }
+            val jdbcModel = metadata.extract(conn, "db:legacy-sample", revisionScheme = "bundle")
             val jdbcNames = jdbcModel.tables.map { it.name }.sorted()
             val jdbcArtifact = canonical(jdbcModel)
             val jdbcGroup = jdbcHashes.groupingBy { it }.eachCount().values.max()

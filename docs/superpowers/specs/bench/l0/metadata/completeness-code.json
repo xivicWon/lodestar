@@ -78,6 +78,7 @@
     "probe": "노드 하나에서 5필드가 닫히는가 — 소스를 지목하지 못하는 신원은 추적성이 아니다",
     "nodesMissingSourceId": [],
     "nodesMissingContentHash": [],
+    "nodesWithWrongContentHash": [],
     "formats": {
       "metaProjectId": true,
       "metaSourceId": true,
@@ -94,10 +95,10 @@
   "volatile": {
     "note": "값은 수집 범위의 내용·리비전에 따라 달라진다 — 표류 검사 대상이 아니다",
     "projectId": "lodestar",
-    "revision": "dirty:06751d2bcf14",
-    "contentHash": "sha256:06751d2bcf143914527a1430e515009d95ec16307d586fa2f72891d38fce8a7d",
+    "revision": "dirty:7dbd97626585",
+    "contentHash": "sha256:7dbd9762658562b3a264d55bd55db8e391202aac53c01d481367384d6808d307",
     "collectorVersion": "lodestar-codegraph@0.1.1",
-    "nodeCount": 370,
+    "nodeCount": 366,
     "walked": 60
   }
 }

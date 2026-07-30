@@ -57,7 +57,8 @@ class SemanticEnricher(
      * 확정된 테이블은 추정 대상에서 제외하고, 확정 라벨을 "이미 확정된 사실" 앵커로 주입한다(E8 그라운딩).
      */
     internal fun buildPrompt(conn: Connection): Pair<String, Set<String>> {
-        val schema = metadata.extract(conn)
+        // 번들 샘플을 적재한 커넥션이다(enrichSample → sampleDb.open) — gold 가 고정한 신원을 쓴다.
+        val schema = metadata.extract(conn, sourceId = "db:legacy-sample", revisionScheme = "bundle")
         val confirmedHere = schema.tables.filter { confirmations.isConfirmed(classIri(it.name)) }
         val targets = schema.tables.filter { !confirmations.isConfirmed(classIri(it.name)) }
         val labelByIri = confirmations.all().associate { it.iri to it.label }

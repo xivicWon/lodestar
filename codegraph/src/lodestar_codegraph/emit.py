@@ -39,12 +39,11 @@ def build_and_write(nodes: list[Node], edges: list[Edge], meta_extra: dict,
             "community_count": len(communities)}
     # 계약 위반 산출물을 파일로 내보내지 않는다. 현재 호출 경로에서는 도달하지 않지만(노드의 path 는
     # file_hashes 의 키와 같은 SourceFile.rel 이다), 도달하면 신원 없는 노드가 조용히 하류로 흘러간다.
-    if hashes:
-        orphans = sorted({d["id"] for d in node_docs if not d["content_hash"]})
-        if orphans:
-            raise ValueError(
-                f"소스 해시가 없는 노드 {len(orphans)}건 — 노드 단위 신원이 닫히지 않았다(#113 계약 §5.2): "
-                f"{orphans[:5]}")
+    orphans = sorted({d["id"] for d in node_docs if not d["content_hash"]})
+    if orphans:
+        raise ValueError(
+            f"소스 해시가 없는 노드 {len(orphans)}건 — 노드 단위 신원이 닫히지 않았다(#113 계약 §5.2): "
+            f"{orphans[:5]}")
 
     doc = {"meta": meta, "nodes": node_docs, "edges": edge_docs}
 

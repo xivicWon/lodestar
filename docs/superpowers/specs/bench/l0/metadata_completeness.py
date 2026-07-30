@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import pathlib
@@ -84,6 +85,17 @@ def measure_code() -> dict:
     missing_source_id = [n["id"] for n in nodes if not usable(n.get("source_id"))]
     missing_hash = [n["id"] for n in nodes if not HASH_RE.match(n.get("content_hash") or "")]
 
+    # 형식만 보면 형식상 유효한 **아무 해시**나 실려도 통과한다. 노드가 지목한 파일을 직접 읽어
+    # 그 바이트의 해시와 같은지 본다 — 신원이 실제 소스를 가리키는지는 이걸로만 확인된다.
+    scope = REPO / SCOPE_ROOT
+    wrong_hash = []
+    for n in nodes:
+        src = scope / (n.get("source_id") or "")
+        if not src.is_file():
+            wrong_hash.append(f"{n['id']}: 경로 없음 {n.get('source_id')!r}")
+        elif hashlib.sha256(src.read_bytes()).hexdigest() != (n.get("content_hash") or "").removeprefix("sha256:"):
+            wrong_hash.append(f"{n['id']}: 해시가 파일 바이트와 다르다")
+
     return {
         "measurementVersion": "l0-metadata-completeness/v1",
         "issue": 113,
@@ -104,6 +116,7 @@ def measure_code() -> dict:
             "probe": "노드 하나에서 5필드가 닫히는가 — 소스를 지목하지 못하는 신원은 추적성이 아니다",
             "nodesMissingSourceId": missing_source_id,
             "nodesMissingContentHash": missing_hash,
+            "nodesWithWrongContentHash": wrong_hash,
             "formats": {
                 "metaProjectId": usable(meta.get("project_id")),
                 "metaSourceId": usable(meta.get("source_id")),
@@ -146,6 +159,9 @@ def check_code(m: dict) -> list[str]:
         errs.append(f"code: sourceId 없는 노드 {len(m['perSource']['nodesMissingSourceId'])}건")
     if m["perSource"]["nodesMissingContentHash"]:
         errs.append(f"code: contentHash 없는 노드 {len(m['perSource']['nodesMissingContentHash'])}건")
+    if m["perSource"].get("nodesWithWrongContentHash"):
+        wrong = m["perSource"]["nodesWithWrongContentHash"]
+        errs.append(f"code: contentHash 가 실제 파일 바이트와 다른 노드 {len(wrong)}건: {wrong[:3]}")
     for name, ok in m["perSource"]["formats"].items():
         if not ok:
             errs.append(f"code: {name} 가 계약 형식이 아니다")

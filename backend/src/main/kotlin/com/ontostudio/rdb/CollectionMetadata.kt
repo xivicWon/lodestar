@@ -106,8 +106,11 @@ object DbCollector {
      * (`-Dlodestar.build.revision=<sha>` 또는 환경변수 `LODESTAR_BUILD_REVISION`)
      */
     fun version(): String {
-        val commit = (System.getProperty("lodestar.build.revision") ?: System.getenv("LODESTAR_BUILD_REVISION"))
-            ?.trim()?.lowercase()?.takeIf { COMMIT.matches(it) }
+        // 시스템 속성이 **비어 있거나 형식에 맞지 않으면** 환경변수로 넘어간다. `?:` 로 이으면
+        // 빈 속성 하나가 유효한 환경변수를 가려 산출물에서 커밋 식별자가 통째로 사라진다.
+        val commit = listOfNotNull(
+            System.getProperty("lodestar.build.revision"), System.getenv("LODESTAR_BUILD_REVISION"),
+        ).firstNotNullOfOrNull { it.trim().lowercase().takeIf(COMMIT::matches) }
         return if (commit != null) "$NAME@$VERSION+$commit" else "$NAME@$VERSION"
     }
 }

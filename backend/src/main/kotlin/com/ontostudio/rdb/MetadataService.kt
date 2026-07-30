@@ -13,12 +13,16 @@ class MetadataService {
     )
 
     /**
+     * [sourceId] 에 **기본값을 두지 않는다.** 기본값이 있으면 서로 다른 서버의 카탈로그가 같은 신원으로
+     * 기록될 수 있고, 그것을 호출부에서 알아채지 못한다. 라이브 경로의 값은
+     * [LiveJdbcSource.sourceId] 가 만든다(vendor·host·port·database).
+     *
      * [revisionScheme] 는 이 카탈로그가 어디서 왔는지를 드러낸다 — 라이브 DB 는 `live`,
      * 리포에 번들된 샘플을 적재한 것이면 `bundle`. 둘 다 git 커밋이 아니므로 sha 를 지어내지 않는다(#113).
      */
     fun extract(
         conn: Connection,
-        sourceId: String = "db:jdbc",
+        sourceId: String,
         projectId: String = CollectionMetadata.DEFAULT_PROJECT_ID,
         revisionScheme: String = "live",
     ): SchemaModel {

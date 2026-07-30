@@ -23,7 +23,7 @@ class MetadataServiceTest {
 
     @Test fun `extract reads tables columns pk and fk`() {
         openWithSchema().use { conn ->
-            val schema = MetadataService().extract(conn)
+            val schema = MetadataService().extract(conn, "db:test:metadataservicetest")
             val names = schema.tables.map { it.name.lowercase() }.toSet()
             assertEquals(setOf("customers", "orders"), names)
             val orders = schema.tables.first { it.name.equals("orders", ignoreCase = true) }
@@ -37,7 +37,7 @@ class MetadataServiceTest {
     @Test fun `ddl path and live path yield equivalent schema`() {
         val liveSql = "CREATE TABLE customers (id INTEGER PRIMARY KEY, name VARCHAR(100))"
         openWithSchema().use { conn ->
-            val live = MetadataService().extract(conn).tables.first { it.name.equals("customers", true) }
+            val live = MetadataService().extract(conn, "db:test:metadataservicetest").tables.first { it.name.equals("customers", true) }
             val ddl = DdlParser().parse(liveSql).tables.first { it.name == "customers" }
             assertEquals(ddl.primaryKey.map { it.lowercase() }, live.primaryKey.map { it.lowercase() })
             assertEquals(ddl.columns.map { it.name.lowercase() }.toSet(),

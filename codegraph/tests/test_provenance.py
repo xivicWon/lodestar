@@ -231,3 +231,42 @@ def test_collector_version_tracks_the_source_tree_pyproject():
     pyproject = pathlib.Path(prov.__file__).resolve().parents[2] / "pyproject.toml"
     declared = tomllib.loads(pyproject.read_text())["project"]["version"]
     assert prov.collector_version().split("+")[0] == f"lodestar-codegraph@{declared}"
+
+
+def test_assume_unchanged_edit_is_not_claimed_as_head(tmp_path):
+    """`git status` 는 assume-unchanged 로 표시된 변경을 보여주지 않는다.
+
+    status 만 믿으면 실제로 읽은 바이트와 다른 커밋을 revision 으로 적게 된다 — HEAD 의 blob 과
+    직접 대조해야 그 주장이 성립한다.
+    """
+    root = write_scope(tmp_path, **{"A.kt": "class A\n"})
+    git = ["git", "-C", str(tmp_path)]
+    subprocess.run(git + ["init", "-q"], check=True)
+    subprocess.run(git + ["config", "user.email", "t@t"], check=True)
+    subprocess.run(git + ["config", "user.name", "t"], check=True)
+    subprocess.run(git + ["add", "-A"], check=True)
+    subprocess.run(git + ["commit", "-qm", "x"], check=True)
+
+    subprocess.run(git + ["update-index", "--assume-unchanged", "src/A.kt"], check=True)
+    (root / "A.kt").write_text("class A { fun sneaky() {} }\n", encoding="utf-8")
+    assert subprocess.run(git + ["status", "--porcelain"], capture_output=True,
+                          text=True, check=True).stdout == "", "전제: status 가 변경을 숨겨야 한다"
+
+    rev = prov.detect_revision(str(root), prov.scope_hash(str(root), [str(root / "A.kt")]), ["A.kt"])
+    assert rev.startswith("dirty:"), rev
+
+
+def test_explicit_non_vcs_revision_must_derive_from_content_hash():
+    """형식만 맞는 임의의 `inline:`/`dirty:` 를 붙여 신원을 가리키지 않는 revision 을 만들 수 없다.
+
+    Kotlin 쪽 CollectionMetadata 가 강제하는 것과 같은 불변식이다 — 두 트랙이 어긋나면 계약이 아니다.
+    """
+    files = {"a.kt": "sha256:" + "a" * 64}
+    with pytest.raises(ValueError, match="파생되지 않았다"):
+        prov.build_metadata("lodestar", ".", files, revision="inline:000000000000")
+
+    real = prov.build_metadata("lodestar", ".", files)["content_hash"]
+    ok = "inline:" + real.removeprefix("sha256:")[:12]
+    assert prov.build_metadata("lodestar", ".", files, revision=ok)["revision"] == ok
+    # 커밋 sha 는 외부 좌표이므로 파생 검사의 대상이 아니다.
+    assert prov.build_metadata("lodestar", ".", files, revision="a" * 40)["revision"] == "a" * 40
