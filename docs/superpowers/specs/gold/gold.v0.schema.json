@@ -79,6 +79,16 @@
             },
             "additionalProperties": false
           }
+        },
+        "denominator": {
+          "enum": [
+            "closed",
+            "case-limited"
+          ]
+        },
+        "denominatorNote": {
+          "type": "string",
+          "minLength": 1
         }
       },
       "additionalProperties": false,

@@ -922,7 +922,8 @@
             "note",
             "requirement",
             "population",
-            "tiers"
+            "tiers",
+            "trapMembership"
           ],
           "additionalProperties": false,
           "properties": {
@@ -977,6 +978,33 @@
                       "minLength": 1
                     }
                   }
+                }
+              }
+            },
+            "trapMembership": {
+              "type": "object",
+              "required": [
+                "rule",
+                "excluded",
+                "note"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "rule": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "excluded": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": "제외 항목 → 제외 사유. 사유 없는 제외는 조용한 축소다."
+                },
+                "note": {
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }

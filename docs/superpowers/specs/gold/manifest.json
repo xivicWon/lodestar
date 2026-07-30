@@ -7,7 +7,7 @@
   },
   "sourceRevision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
   "docsRevision": "7d3db3ed77803c5603137e28a8d9069254db2771",
-  "note": "코드·DB 원본은 sourceRevision 에, 계약 문서(ADR)는 docsRevision 에 고정한다 — I1·EVL 계약은 3c27259 이후에 작성돼 sourceRevision 에 존재하지 않기 때문이다. 한 revision 으로 우겨넣으면 그 좌표는 조회되지 않는 유령 좌표가 된다. I3(#100) 계약이 요구하는 두 값을 여기서 제공한다: `fixtureHash`(실행 하나가 인용할 단일 집계 해시)와 `goldSetId`(판정 규칙까지 포함한 정답셋 신원). 둘 다 파생값이며 validate_gold.py 가 재계산해 대조한다 — 손으로 적은 값은 내용과 어긋날 수 있다. 각 repo 소스는 `axis` 로 어느 고정 축에 속하는지 명시한다 — 축을 검사하지 않으면 제품 코드가 docsRevision 으로 조용히 밀려도 해시만 맞으면 통과한다.",
+  "note": "코드·DB 원본은 sourceRevision 에, 계약 문서(ADR)는 docsRevision 에 고정한다 — I1·EVL 계약은 3c27259 이후에 작성돼 sourceRevision 에 존재하지 않기 때문이다. 한 revision 으로 우겨넣으면 그 좌표는 조회되지 않는 유령 좌표가 된다. I3(#100) 계약이 요구하는 두 값을 여기서 제공한다: `fixtureHash`(실행 하나가 인용할 단일 집계 해시)와 `goldSetId`(판정 규칙까지 포함한 정답셋 신원). 둘 다 파생값이며 validate_gold.py 가 재계산해 대조한다 — 손으로 적은 값은 내용과 어긋날 수 있다. 각 repo 소스는 `axis` 로 어느 고정 축에 속하는지 명시한다 — 축을 검사하지 않으면 제품 코드가 docsRevision 으로 조용히 밀려도 해시만 맞으면 통과한다. `expectedCounts` 는 파일별 총 항목 수를 못박는다 — `--rehash` 가 건드리지 않으므로, 정답을 지우려면 이 숫자를 손으로 줄여야 하고 그 편집이 diff 에 의도로 남는다.",
   "pinnedSources": [
     {
       "sourceId": "db:legacy-sample",
@@ -202,7 +202,7 @@
   "goldFiles": [
     {
       "path": "evl/questions.json",
-      "sha256": "sha256:c61019a5e4e6ad828a589ee78defe969c0e43dee583418e35aa3c17954efad0a"
+      "sha256": "sha256:41f27adb2b029227293d50c4c5b3ff736d60ca50d8779fe333375611dec86785"
     },
     {
       "path": "failures.json",
@@ -210,11 +210,11 @@
     },
     {
       "path": "gold.docs.v0.schema.json",
-      "sha256": "sha256:d3322abe6cc60676150949ddbef8cfec6586acc25b0d0b0fa49928472f07abbc"
+      "sha256": "sha256:3dfac6fa7e94a71474aa6e1e2d6cd57593d34f6ceafb409d44c082938dfbd29b"
     },
     {
       "path": "gold.v0.schema.json",
-      "sha256": "sha256:4f8ab50b662fc35511983ef419186f86982a4332e0ba79abdd8232e97d54eaa1"
+      "sha256": "sha256:90f1413cce8aa6ab45ba6aed2cab7c94c506383990c99147bf486b5590fde56a"
     },
     {
       "path": "l1/code.json",
@@ -226,7 +226,7 @@
     },
     {
       "path": "l2/links.json",
-      "sha256": "sha256:cb63f8276b542c2d5f44ff29e568141f086cf01bf517330d0533ca8bf7a76127"
+      "sha256": "sha256:a9596aabaddf1c4098c702356fbc94b77f8662e4b44893f853abea5ca11664f5"
     },
     {
       "path": "l3/claims.json",
@@ -234,7 +234,7 @@
     },
     {
       "path": "manifest.v0.schema.json",
-      "sha256": "sha256:efad04828aa0918ac1aa57a2e9cb4dde92c4cdea8ec9672bf75a79008fbb9bb0"
+      "sha256": "sha256:9da85e1da6ae5fa26b019b4bba9b8a0a62fc8be0fc86508e76bf6539504d792a"
     },
     {
       "path": "pii.json",
@@ -242,7 +242,7 @@
     },
     {
       "path": "validate_gold.py",
-      "sha256": "sha256:0f1ea5b98f257149cf12b661879b6c4cce29c7cf023a7df159d2e59f0caa3fe8"
+      "sha256": "sha256:972eb639aa53f1b69aff6c10a768a0625943a0e1ef4eb904d8391aadf3addf81"
     }
   ],
   "fixtures": [
@@ -308,5 +308,11 @@
     }
   ],
   "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
-  "goldSetId": "gold-set/v0+63a4779238e9"
+  "goldSetId": "gold-set/v0+5c43b89eba95",
+  "expectedCounts": {
+    "l1/db.json": 178,
+    "l1/code.json": 47,
+    "l2/links.json": 33,
+    "pii.json": 44
+  }
 }

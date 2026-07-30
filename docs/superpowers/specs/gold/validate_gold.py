@@ -61,6 +61,55 @@ CORE_CLASSES = {
     "IMPACT": {"code"}, "LOCATE": {"code"}, "HISTORY": {"issue"},
 }
 
+# ── OCP/SRP: 규칙이 무엇을 검사하는지를 **코드가 선언**하고, 계약 문서가 그것을
+# 그대로 담고 있는지 확인기가 대조한다.
+#
+# 왜 필요한가: 문서 §5 의 표를 손으로 관리하다 보니 새 불변식을 추가할 때마다 표를
+# 고쳐야 했고, 그 비용 때문에 새 검사를 기존 규칙 본문에 밀어 넣었다. 그 결과
+# G11 은 117줄·G14 는 128줄짜리 잡동사니가 됐고, "그 규칙이 무엇을 보는가" 를
+# 아무도 추적할 수 없게 됐다 — 실제로 리뷰가 "문서가 검사를 누락했다" 를 두 번 지적했다.
+# 하위 불변식마다 id 를 주고 문서에 그 id 가 있어야만 통과하게 하면, 검사를 몰래
+# 늘리는 것이 불가능해지고 새 id 를 만드는 비용도 사라진다.
+SUBCHECKS = {
+    "G1": ["G1.1 매니페스트 스키마(사전 게이트)", "G1.2 항목 파일 스키마",
+           "G1.3 문서형 파일 스키마"],
+    "G2": ["G2.1 id 전역 유일"],
+    "G3": ["G3.1 파일별 총량 = expectedCounts", "G3.2 negatives 선언 존재",
+           "G3.3 type·expect 별 counts 일치"],
+    "G4": ["G4.1 gold·픽스처 파일 실재와 해시 일치", "G4.2 고정되지 않은 픽스처 없음",
+           "G4.3 필수 gold 파일 목록 완비(확인기 자신 포함)",
+           "G4.4 approvedAt 달력 유효성", "G4.5 파생값 재계산 일치",
+           "G4.6 계약 문서의 파생값 최신"],
+    "G5": ["G5.1 픽스처 해시·행수 실물 대조", "G5.2 fixtures[] ↔ pinnedSources 교차",
+           "G5.3 repo 원본 해시 = 고정 revision blob", "G5.4 repo 원본 행수 = blob 실제",
+           "G5.5 revision 이 선언 축(axis)과 일치"],
+    "G6": ["G6.1 ref 의 sourceId 등록", "G6.2 ref 의 contentHash·revision = 소스 고정값"],
+    "G7": ["G7.1 좌표 경로 = 등록 경로", "G7.2 좌표가 blob 범위 안·시작≤끝",
+           "G7.3 EVL 근거 좌표도 동일 기준"],
+    "G8": ["G8.1 PII 원문이 인용 행에 실재", "G8.2 PII class 가 값의 모양과 일치"],
+    "G9": ["G9.1 항목 타입별 검증 명세 완비", "G9.2 DB 좌표가 빈 줄이 아님",
+           "G9.3 DB 실재 항목의 이름이 인용 행에", "G9.4 코드 인용 구간이 비어있지 않음",
+           "G9.5 코드 항목 토큰이 인용 구간에 실재", "G9.6 FILE 의 package 선언 실재"],
+    "G10": ["G10.1 상호참조 해소", "G10.2 refs endpoint ↔ value 대상 일치",
+            "G10.3 L2 좌표 = L1 항목 좌표", "G10.4 gold id 아닌 대상의 심볼 실재",
+            "G10.5 relation ↔ left/right 정합", "G10.6 R-L2-5 DB EXTRACTED 1건",
+            "G10.7 trap 계층 = 전 음성 − 명시 제외",
+            "G10.8 calibration tier ↔ 항목 정오"],
+    "G11": ["G11.1 coverage 키 집합·어휘", "G11.2 collectionScope ↔ coverage 양방향",
+            "G11.3 경고 통제어휘", "G11.4 coverage ↔ 경고 양방향(A11)",
+            "G11.5 보류 양방향·조건별 trigger(A16)", "G11.6 충돌 ↔ 반대 증거 양방향(A14)",
+            "G11.7 비보류 충돌의 닫힌 상태 선언",
+            "G11.8 expectedConflictStatus = conflictGold", "G11.9 집계 주장 대조",
+            "G11.10 conflictGold 의 question 실재"],
+    "G12": ["G12.1 EVL 선언 개수"],
+    "G13": ["G13.1 시나리오 개수·필수 필드", "G13.2 step 연속성",
+            "G13.3 CONTINUE_FROM 대상 실재", "G13.4 산문 안의 gold id 실재",
+            "G13.5 요구 5케이스 존재"],
+    "G14": ["G14.1 픽스처 실재·해시", "G14.2 reported 존재·사유 필수",
+            "G14.3 보고 좌표 범위", "G14.4 extracted 이름이 픽스처에 실재",
+            "G14.5 kind ↔ 보고 종류·추출 유무 정합", "G14.6 요구 3종 존재"],
+}
+
 errors = []
 covered = set()
 # 규칙이 실제로 **몇 개를 들여다봤는지**. covered 만으로는 본문이 빈 규칙도 통과한다 —
@@ -142,6 +191,50 @@ def blob(sid):
 
 def blob_lines(sid):
     return blob(sid).decode().splitlines()
+
+
+def seg(sid, locator):
+    """좌표가 가리키는 **고정 원본의 구간**을 돌려준다: (시작, 끝, 전체행수, 본문).
+
+    좌표 파싱이 규칙마다 흩어져 있으면 규칙마다 다른 실수를 한다 — 실제로 한 곳만
+    작업 트리를 읽어 검증이 체크아웃 상태에 의존했고(LOD-037), 다른 곳은 매니페스트의
+    `lines` 를 믿어 숫자 하나로 범위 검사가 무력해졌다. 원본 접근과 좌표 해석을
+    여기 한 군데로 모아 그런 편차가 생길 자리를 없앤다.
+    """
+    nums = [int(x) for x in re.findall(r"L(\d+)", locator)]
+    lines = blob_lines(sid)
+    a = nums[0]
+    b = nums[1] if len(nums) > 1 else a
+    return a, b, len(lines), "\n".join(lines[a - 1:b])
+
+
+# ── LSP/ISP: 항목 타입별로 '무엇이 인용 구간에 실재해야 하는가' 를 선언으로 둔다.
+#    if 체인으로 흩어져 있으면 새 타입이 조용히 아무 검사도 안 받는다 — FILE 의
+#    package 대조가 좌표 L1 일 때만 돌던 것이 그 예다.
+def _tokens_type(v):
+    return [v["fqn"].split(".")[-1]] + list(v.get("members", []))
+
+
+def _tokens_call(v):
+    tail = v["callee"].split(".")
+    return [tail[-2] if tail[-1] == "<init>" else tail[-1]]
+
+
+# 타입 -> 인용 구간에 실재해야 하는 토큰들. None 은 '구간 대조 없음(다른 규칙이 본다)'.
+VERIFY_TOKENS = {
+    "FILE": None,          # package 선언은 파일 전체에서 찾는다(구간 한정이 아니다)
+    "TYPE": _tokens_type,
+    "METHOD": lambda v: [v["name"]],
+    "PROPERTY": lambda v: [v["name"]],
+    "CALL": _tokens_call,
+    "TABLE": lambda v: [v["name"]],
+    "COLUMN": lambda v: [v["name"]],
+    "PRIMARY_KEY": lambda v: v["columns"][:1],
+    "FOREIGN_KEY": lambda v: [v["constraintName"]],
+    "VIEW": lambda v: [v["name"]],
+    "LINK": None,          # G10 이 endpoint 기준으로 본다
+    "MASK_SPAN": None,     # G8 이 원문·분류로 본다
+}
 
 
 def _digest(lines):
@@ -245,6 +338,12 @@ def _g3():
                 by_type[it["type"]] = by_type.get(it["type"], 0) + 1
             by_expect[it["expect"]] = by_expect.get(it["expect"], 0) + 1
         n_neg = sum(1 for it in d["items"] if it["expect"] in NEG)
+        want_n = MANIFEST["expectedCounts"].get(rel)
+        if want_n is None:
+            yield f"{rel}: expectedCounts 에 고정값이 없다 — 조용히 줄어들 수 있다"
+        elif want_n != len(d["items"]):
+            yield (f"{rel}: 항목 총량이 고정값과 다르다 (고정 {want_n}, 실제 {len(d['items'])}) "
+                   f"— 정답셋이 늘거나 줄었다면 expectedCounts 도 함께 고쳐 의도를 남길 것")
         if "negatives" not in d["counts"]:
             yield f"{rel}: counts 에 negatives 선언이 없다 — 음성 항목 수가 조용히 변할 수 있다"
         for key, want in d["counts"].items():
@@ -385,14 +484,10 @@ def _g7():
             if path != SOURCES[sid]["path"]:
                 yield f"{it['id']}: locator 경로 {path} ≠ {sid} 의 등록 경로 {SOURCES[sid]['path']}"
                 continue
-            # 매니페스트의 숫자가 아니라 **고정 blob 을 직접 센다** — 문서가 "모든 원본
-            # 대조는 고정 blob 을 읽는다" 고 약속했고, 중간 숫자를 믿으면 그 숫자 하나로
-            # 모든 범위 검사가 무력해진다.
-            n = len(blob_lines(sid))
-            nums = [int(x) for x in re.findall(r"L(\d+)", frag)]
-            if any(x < 1 or x > n for x in nums):
+            a, b, n, _ = seg(sid, r["locator"])
+            if a < 1 or b > n:
                 yield f"{it['id']}: {frag} 가 파일 범위(1..{n})를 벗어난다 — 유령 좌표"
-            if len(nums) == 2 and nums[0] > nums[1]:
+            if a > b:
                 yield f"{it['id']}: {frag} 의 시작 행이 끝 행보다 크다"
             touched("G7", 1)
     # EVL 질문의 근거 좌표도 같은 기준으로 본다 — 여기서 유령 좌표를 허용하면
@@ -404,9 +499,9 @@ def _g7():
             if path not in by_path:
                 yield f"{q['id']}: 고정되지 않은 근거 파일 {path} (매니페스트 pinnedSources 에 없다)"
                 continue
-            n = len(blob_lines(by_path[path]["sourceId"]))
+            a, b, n, _ = seg(by_path[path]["sourceId"], ev["locator"])
             touched("G7", 1)
-            if any(x < 1 or x > n for x in [int(x) for x in re.findall(r"L(\d+)", frag)]):
+            if a < 1 or b > n:
                 yield f"{q['id']}: {ev['locator']} 가 파일 범위(1..{n})를 벗어난다"
 
 
@@ -439,6 +534,11 @@ def _g8():
 # --- G9 L1 DB: 인용한 행에 그 이름이 실제로 있다 -----------------------------
 @rule("G9")
 def _g9():
+    # 명세에 없는 타입이 생기면 그 타입은 아무 대조도 받지 않는다 — 조용히 늘어나는
+    # 무검사 영역을 막는다.
+    for _, it in ALL_ITEMS:
+        if it["type"] not in VERIFY_TOKENS:
+            yield f"{it['id']}: 타입 '{it['type']}' 의 검증 명세가 없다 (VERIFY_TOKENS 미등록)"
     lines = blob_lines("db:legacy-sample")
     for it in DOCS["l1/db.json"]["items"]:
         touched("G9", 1)
@@ -466,32 +566,21 @@ def _g9():
         touched("G9", 1)
         r = it["ref"]
         src = blob_lines(r["sourceId"])
-        nums = [int(x) for x in re.findall(r"L(\d+)", r["locator"])]
-        seg = "\n".join(src[nums[0] - 1: (nums[1] if len(nums) > 1 else nums[0])])
-        if not seg.strip():
+        *_, body = seg(r["sourceId"], r["locator"])
+        if not body.strip():
             yield f"{it['id']}: 인용 구간이 비어 있다 — 근거가 없는 좌표"
             continue
         if it["expect"] != "PRESENT":
             continue
         v, ty = it["value"], it["type"]
-        # 인용 구간에서 실제로 확인되어야 하는 토큰들
-        want = []
-        if ty == "TYPE":
-            want = [v["fqn"].split(".")[-1]] + list(v.get("members", []))
-        elif ty in ("METHOD", "PROPERTY"):
-            want = [v["name"]]
-        elif ty == "CALL":
-            tail = v["callee"].split(".")
-            want = [tail[-2] if tail[-1] == "<init>" else tail[-1]]
-        elif ty == "FILE":
-            # 좌표가 L1 일 때만 검사하면, 좌표를 옮기는 것만으로 package 대조가
-            # 통째로 사라진다. 선언은 파일 어딘가에 있으므로 파일 전체에서 본다.
+        if ty == "FILE":
+            # 선언은 파일 어딘가에 있다. 좌표 한정으로 보면 좌표를 옮기는 것만으로
+            # 대조가 사라진다.
             if not re.search(r"^\s*package\s+" + re.escape(v["package"]) + r"\b",
                              "\n".join(src), re.M):
                 yield f"{it['id']}: package 선언 '{v['package']}' 가 파일에 없다"
-            want = []
-        for w in want:
-            if w not in seg:
+        for w in (VERIFY_TOKENS[ty](v) if VERIFY_TOKENS.get(ty) else []):
+            if w not in body:
                 yield (f"{it['id']}: '{w}' 가 인용 구간 {r['locator'].split('#')[-1]} 에 없다 "
                        f"— gold 가 원본에 없는 것을 주장한다")
 
@@ -528,10 +617,8 @@ def _g10():
             # 이름이 인용 구간에 실재하는지 여기서 본다 — 없으면 지어낸 심볼이다.
             if g is None:
                 sym = ep.split("@")[0].split("(")[0].split(".")[-1]
-                nn = [int(x) for x in re.findall(r"L(\d+)", r["locator"])]
-                seg = "\n".join(blob_lines(r["sourceId"])[
-                    nn[0] - 1: (nn[1] if len(nn) > 1 else nn[0])])
-                if sym and sym not in seg:
+                *_, body = seg(r["sourceId"], r["locator"])
+                if sym and sym not in body:
                     yield f"{it['id']}: refs[{i}] 의 '{sym}' 가 인용 구간에 없다"
         # relation 은 left/right 의 유무와 맞아야 한다. 검사하지 않으면 MOVED 를
         # RENAMED 로 바꿔 적어도 통과하고 drift 판정의 정답이 뒤바뀐다.
@@ -551,6 +638,22 @@ def _g10():
     touched("G10", 1)
     if len(ext) != 1:
         yield f"R-L2-5 위반: DB 트랙 EXTRACTED 정답이 {len(ext)}건이다 (1건이어야 한다) {ext}"
+
+    # trap 계층은 '추가만' 검사하면 조용히 줄어도 드러나지 않는다. 전 음성에서
+    # 명시적으로 제외한 것만 빠질 수 있게 못박는다 — 곡선의 오른쪽 꼬리를 친절하게
+    # 만드는 변조는 diff 한 줄이라 사람이 놓친다.
+    cp = DOCS["evl/questions.json"]["calibrationPool"]
+    all_neg = {it["id"] for rel in ("l1/db.json", "l1/code.json", "l2/links.json")
+               for it in DOCS[rel]["items"] if it["expect"] == "ABSENT"}
+    excluded = set(cp["trapMembership"]["excluded"])
+    trap = {m for tr in cp["tiers"] if tr["tier"] == "trap" for m in tr["members"]}
+    touched("G10", 1)
+    for miss in sorted(all_neg - excluded - trap):
+        yield f"trap 계층에서 빠진 음성 '{miss}' — 제외하려면 trapMembership.excluded 에 이유와 함께"
+    for gone in sorted(excluded - all_neg):
+        yield f"trapMembership.excluded 가 음성이 아닌 '{gone}' 를 가리킨다"
+    for both in sorted(excluded & trap):
+        yield f"'{both}' 가 제외 목록과 trap 계층에 동시에 있다"
 
     for tier in DOCS["evl/questions.json"]["calibrationPool"]["tiers"]:
         for m in tier["members"]:
@@ -581,9 +684,16 @@ def _g11():
         touched("G11", 1)
         qid = q["id"]
         for k, decl in evl["collectionScope"]["declared"].items():
-            if decl.startswith("NOT_COLLECTED") and q["coverage"].get(k) != "not_collected":
+            got = q["coverage"].get(k)
+            if decl.startswith("NOT_COLLECTED") and got != "not_collected":
                 yield (f"{qid}: 수집 범위가 {k} 를 NOT_COLLECTED 로 선언했는데 "
-                       f"coverage.{k}={q['coverage'].get(k)} 다 — 수집하지 않은 것을 찾을 수는 없다")
+                       f"coverage.{k}={got} 다 — 수집하지 않은 것을 찾을 수는 없다")
+            # 역방향도 막는다. 수집하기로 한 클래스를 질문 쪽에서만 not_collected 로
+            # 적으면 그 질문은 보류가 정답이 되어, 아무것도 못 찾는 구현이 공짜 정답을
+            # 얻는다 — 가장 쉬운 양성 질문을 보류 질문으로 바꾸는 변조가 실제로 통했다.
+            if decl.startswith("COLLECTED") and got == "not_collected":
+                yield (f"{qid}: 수집 범위가 {k} 를 COLLECTED 로 선언했는데 "
+                       f"coverage.{k}=not_collected 다 — 수집한 것을 안 봤다고 할 수 없다")
         if set(q["coverage"]) != COVERAGE_KEYS:
             yield f"{qid}: coverage 키가 5개 클래스와 다르다"
         for v in q["coverage"].values():
@@ -849,6 +959,18 @@ def main():
     if idle:
         errors.append(f"[META] 실행됐지만 아무것도 검사하지 않은 규칙: {idle} "
                       f"— 본문이 비어도 '규칙 N개' 로 집계되던 구멍")
+    # 규칙이 무엇을 보는지는 코드가 선언하고 문서가 담는다. 문서에 없는 하위 불변식은
+    # '몰래 늘어난 검사' 이고, 코드에 없는데 문서에만 있는 것은 '있다고 적힌 검사' 다.
+    declared = {s.split()[0] for subs in SUBCHECKS.values() for s in subs}
+    for rid, subs in sorted(SUBCHECKS.items()):
+        if rid not in expected:
+            errors.append(f"[META] SUBCHECKS 에 없는 규칙 id '{rid}'")
+        for s in subs:
+            if s.split()[0] not in CONTRACT_DOC:
+                errors.append(f"[META] 계약 문서 §5 에 '{s}' 가 없다 "
+                              f"— 검사를 늘렸으면 문서에도 적어야 한다")
+    for sid in sorted(set(re.findall(r"\bG1?[0-9]\.[0-9]+", CONTRACT_DOC)) - declared):
+        errors.append(f"[META] 문서에 '{sid}' 가 있으나 확인기에 그런 하위 불변식이 없다")
     if errors:
         print(f"FAIL — {len(errors)}건\n")
         for e in errors:
