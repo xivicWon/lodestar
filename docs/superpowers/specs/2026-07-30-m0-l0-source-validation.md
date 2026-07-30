@@ -20,7 +20,7 @@ L0 은 "수집이 잘 되는가" 가 아니라 **수집된 것이 추적 가능�
 | ✅ 확정 | 실측 결과와 게이트 판정 (Run Quality Report 2건) | §3 · `bench/l0/runs/` |
 | ✅ 확정 | 발견 F1~F10 과 각 발견의 근거 좌표 | §4 |
 | ✅ 확정 | 수집기별 Core/Lab/Parked/Retire 판정 | §5 |
-| ✅ 확정 | 증거 적합성 확인기 V1~V11 + 결함 주입 24케이스 | §7 · `bench/l0/verify_l0.py` |
+| ✅ 확정 | 증거 적합성 확인기 V1~V11 + 결함 주입 24케이스 (#112 에서 V12~V13·29케이스로 확장) | §7 · `bench/l0/verify_l0.py` |
 | ⛔ 미확정 | precision/recall 목표 수치 | L1(#89) 1차 측정 후 비준 (I1 §4.2) — L0 은 사실을 산출하지 않으므로 해당 없음 |
 | ⛔ 미확정 | 발견된 결함의 **수정** | §6 후속 이슈 — 이 이슈는 게이트이지 수정이 아니다 |
 | ⛔ 미확정 | I1·I2 계약 개정 | §8 개정 안건 — @xivicWon 승인 사항(I1 §7) |
@@ -134,6 +134,10 @@ L0 은 "수집이 잘 되는가" 가 아니라 **수집된 것이 추적 가능�
 **결과적으로 L1(#89) 은 착수할 수 없다**(I1 G1·G4). H1 은 "즉시 상위 레이어 전면 중단" 이며, 결정성이
 회복될 때까지 **어떤 정확도 수치도 인용하지 않는다**(I1 §3.2).
 
+> 위 표는 #88 시점(`run-l0-code-3c27259-001`)의 판정이며 기록으로 고정한다. L0-fix-1(#112) 이후
+> 코드 트랙을 새 runId 로 재측정한 결과는 §4 F1 의 해소 기록과 `runs/run-l0-code-3c27259-002/` 에 있다 —
+> **H1 은 해소, H2 는 그대로**이므로 code 판정은 여전히 `BLOCKED` 다.
+
 ---
 
 ## 4. 발견
@@ -147,10 +151,18 @@ L0 은 "수집이 잘 되는가" 가 아니라 **수집된 것이 추적 가능�
   (`codegraph/src/lodestar_codegraph/cluster.py:8`). 문자열 해시 랜덤화로 집합 순회 순서가 프로세스마다
   달라지고, Louvain 은 노드 순서에 의존하므로 **`seed=42` 를 고정해도** 군집 배정이 갈린다.
 - 통제 실험(증거): `PYTHONHASHSEED=0` 두 번은 동일, 시드를 `1` 로 바꾸면 달라진다
-  (`probe-code.json#determinismRootCause`). 즉 이 수치는 재실행 시 우연히 `0.6667` 로 보일 수 있어도
+  (`runs/run-l0-code-3c27259-001/probe-code.json#determinismRootCause` — 이 키는 run-001 에만 있다.
+  재측정한 run-002 는 같은 실험을 `determinismControl` 로 남긴다). 즉 이 수치는 재실행 시 우연히 `0.6667` 로 보일 수 있어도
   **"재현 보장 없음" 이라는 사실은 바뀌지 않는다.**
 - 폭발 반경: 사실 자체가 아니라 사실에 붙는 **군집 라벨**이 흔들린다. 그래도 게이트는 산출물 단위이며,
   하류가 `community` 를 읽는 한 상위 결과가 실행마다 달라진다.
+
+**[해소 — #112 · `run-l0-code-3c27259-002`]** 위 서술은 #88 시점의 기록이라 고치지 않는다. L0-fix-1 로
+`cluster.annotate` 가 노드·엣지를 정렬해 그래프를 만들고 군집 라벨을 멤버 정렬로 정규화한다
+(`lodestar-codegraph@0.1.1`). 같은 고정 입력으로 재측정한 결과는 **결정성 1.0**, `PYTHONHASHSEED` 를
+바꿔도 산출물이 동일하다(`probe-code.json#determinismControl.seedIndependent`). `gate-determinism`
+PASS · **H1 해소**, 나머지 게이트 3종(F2·F3·F7)은 그대로 실패라 판정은 여전히 `BLOCKED`(H2) 다.
+회귀는 `codegraph/tests/test_determinism.py` 가 시드를 바꾼 별도 프로세스로 잡는다.
 
 ### F2 필수 식별 필드가 없다 — 추적도 신선도 산출도 불가
 
@@ -252,7 +264,7 @@ Retire 는 하나도 없다 — 세 경로 모두 결함이 **국소적이고 �
 
 | 제안 | 내용 | 근거 | 우선순위 |
 |---|---|---|---|
-| L0-fix-1 | `cluster.annotate` 의 노드 순서 고정(정렬된 리스트로 그래프 구성) | F1 · H1 이 열려 있는 동안 M0 전체 정지 | **최우선** |
+| L0-fix-1 | `cluster.annotate` 의 노드 순서 고정(정렬된 리스트로 그래프 구성) — **완료(#112)**, 재측정 `run-l0-code-3c27259-002` 에서 결정성 1.0 | F1 · H1 이 열려 있는 동안 M0 전체 정지 | **최우선** |
 | L0-fix-2 | 수집 산출물에 provenance 헤더 도입 (`projectId`·`sourceId`·`revision`·`contentHash`·`collectorVersion` + 수집 시각) | F2 · 신선도 지표의 전제 | 높음 |
 | L0-fix-3 | 수집 결과에 **제외·실패 채널** 신설 (사유 + 원본 좌표). `DdlParser` 반환형 확장 · codegraph `meta` 에 사유별 목록 | F3·F5·F6 | 높음 |
 | L0-fix-4 | 부분 복구·부분 성공을 그대로 표기 (파싱 실패 문장은 산출하지 않고 보고, ERROR 노드 존재를 산출물에 실음) | F4·F6 | 높음 |
@@ -261,9 +273,12 @@ Retire 는 하나도 없다 — 세 경로 모두 결함이 **국소적이고 �
 L0-fix-1 이 머지되면 코드 트랙을 **새 runId 로 재측정**한다. 이번 보고서는 비교 기준선으로 남는다
 (`eligibleAsBaseline: true`).
 
+→ #112 에서 그대로 수행했다: `run-l0-code-3c27259-002` 가 `run-l0-code-3c27259-001` 을 `baseline.previous`
+로 인용하고 `determinism 0.3333 → 1.0` 을 `deltas` 에 적는다. run-001 은 지우지 않고 그대로 둔다.
+
 ---
 
-## 7. 증거 적합성 확인기 (V1~V11)
+## 7. 증거 적합성 확인기 (V1~V13)
 
 보고서가 스키마를 통과하는 것으로는 부족하다. 확인할 것은 **수치가 프로브에서 나왔고, 프로브의 입력이
 고정 revision·gold 해시와 같고, 보고서가 가리키는 좌표가 실제로 조회되는가** 다.
@@ -271,7 +286,7 @@ L0-fix-1 이 머지되면 코드 트랙을 **새 runId 로 재측정**한다. �
 ```bash
 pip install jsonschema
 python3 docs/superpowers/specs/bench/l0/verify_l0.py
-# 24 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount)
+# 29 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount)
 ```
 
 | ID | 불변식 | 위반 시 |
@@ -287,6 +302,8 @@ python3 docs/superpowers/specs/bench/l0/verify_l0.py
 | **V9** | 트랙별로 분리 산출한다 (runId 유일 · track 중복 없음 · layer=L0) | 합산이 실패를 가림(I1 §4.2) |
 | **V10** | `BASELINE` 자격 = fixture 고정 ∧ 실측 ∧ 적용 버전 전부 PINNED (I3 R12) | 재현 불가한 실행이 기준선이 됨 |
 | **V11** | **선언한 수집 경로가 전부 계측됐다** (db 는 DDL 텍스트 + JDBC 메타데이터 두 경로, code 는 수집 실행 + 커버리지 state) | 재지 않은 경로를 실측 주장에 포함 |
+| **V12** (#112) | 결정성 PASS 를 적은 실행은 프로브에서 **실제로 1.0** 이고, 게이트에 적힌 수치가 프로브와 같으며, code 트랙은 **시드 무관**까지 확인됐다 | 시드에 따라 갈리는 실행이 PASS 로 남음(#88 상태) |
+| **V13** (#112) | `baseline.previous` 가 가리키는 실행이 **실재하고**, 신원·`deltas` 의 기준선 값이 그 보고서와 같으며, 인용된 보고서 자체가 스키마·I3 규칙을 통과한다 | 조회되지 않는 기준선 인용 · 개선폭을 키운 기준선 조작 |
 
 **모든 규칙이 결함 주입 케이스를 갖는다** — 규칙만 적고 검사가 없는 상태를 막는 장치다(I2 §5 · I3 §4.1 과
 같은 원칙). 확인기는 각 규칙이 **들여다본 대상 수**도 보고하고 0건인 규칙은 실패로 처리하며, 규칙이 예외를
