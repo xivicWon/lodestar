@@ -1,0 +1,232 @@
+{
+  "schemaVersion": "run-quality-report/v0",
+  "run": {
+    "runId": "run-l0-db-3c27259-001",
+    "projectId": "lodestar",
+    "layer": "L0",
+    "track": "db",
+    "reportKind": "BASELINE",
+    "sourceRevision": "3c27259",
+    "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
+    "startedAt": "2026-07-30T09:05:00Z",
+    "completedAt": "2026-07-30T09:07:00Z",
+    "executedBy": "claude-code agent (Claude Opus 4.8) — 판정 승인권자는 @xivicWon (I1 §1.2)"
+  },
+  "versions": {
+    "collector": {
+      "status": "PINNED",
+      "value": "DdlParser+SampleLegacyDb@3c27259"
+    },
+    "extractor": {
+      "status": "NOT_APPLICABLE",
+      "value": null
+    },
+    "model": {
+      "status": "NOT_APPLICABLE",
+      "value": null
+    },
+    "prompt": {
+      "status": "NOT_APPLICABLE",
+      "value": null
+    }
+  },
+  "counts": {
+    "input": 36,
+    "output": 27,
+    "failed": 0,
+    "excluded": 9
+  },
+  "exclusions": [
+    {
+      "reason": "UNSUPPORTED_STATEMENT: CREATE VIEW 는 수집기가 처리하지 않는다 (DdlParser 는 CREATE TABLE 만 본다)",
+      "count": 1,
+      "examples": [
+        "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L223 (VW_ORD_SUMMARY)"
+      ]
+    },
+    {
+      "reason": "OUT_OF_SCOPE_BY_DESIGN: 행 데이터는 L0 최소저장 범위 밖이다 (구조·메타데이터만 보관)",
+      "count": 8,
+      "examples": [
+        "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L229 (TB_CUST_MST)",
+        "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L234 (TB_VNDR_MST)",
+        "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L238 (TB_ITEM_MST)",
+        "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L243 (TB_ORD_HD)",
+        "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L247 (TB_ORD_DTL)",
+        "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L252 (TB_EMP_MST)",
+        "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L256 (TB_DEPT_MST)",
+        "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L260 (TB_ACCT_CD)"
+      ]
+    }
+  ],
+  "failures": [],
+  "metrics": {
+    "precision": {
+      "status": "NOT_APPLICABLE",
+      "value": null,
+      "note": "L0 은 사실을 산출하지 않는다 — 명시 사실 정확도는 L1(#89)에서 잰다"
+    },
+    "recall": {
+      "status": "NOT_APPLICABLE",
+      "value": null,
+      "note": "L0 은 사실을 산출하지 않는다 — 재현율은 L1(#89)에서 잰다"
+    },
+    "scopeCoverage": {
+      "status": "MEASURED",
+      "value": 0.75,
+      "note": "counts.output/counts.input = 27/36"
+    },
+    "determinism": {
+      "status": "MEASURED",
+      "value": 1.0,
+      "note": "동일 revision 3회 실행 산출물 해시의 최대 동일 그룹 / 3"
+    },
+    "provenanceCompleteness": {
+      "status": "MEASURED",
+      "value": 0.0,
+      "note": "필수 식별 5필드(projectId·sourceId·revision·contentHash·collectorVersion) 중 산출물에서 소스 단위로 조회 가능한 비율"
+    }
+  },
+  "evl": {
+    "confidenceCalibration": {
+      "status": "NOT_APPLICABLE",
+      "population": null,
+      "ece": null,
+      "bins": [],
+      "sampleCount": 0,
+      "missingRawCount": 0
+    },
+    "conflictDetection": {
+      "precision": {
+        "status": "NOT_APPLICABLE",
+        "value": null,
+        "note": "L0 은 충돌 판정을 만들지 않는다"
+      },
+      "recall": {
+        "status": "NOT_APPLICABLE",
+        "value": null,
+        "note": "L0 은 충돌 판정을 만들지 않는다"
+      },
+      "goldSetId": "gold-set/v0+f20edbad6bad"
+    },
+    "coverageClasses": [
+      {
+        "class": "code",
+        "state": "not_collected",
+        "deterministic": true,
+        "warned": true
+      },
+      {
+        "class": "issue",
+        "state": "not_collected",
+        "deterministic": true,
+        "warned": true
+      },
+      {
+        "class": "adr",
+        "state": "not_collected",
+        "deterministic": true,
+        "warned": true
+      },
+      {
+        "class": "test",
+        "state": "not_collected",
+        "deterministic": true,
+        "warned": true
+      },
+      {
+        "class": "runtime",
+        "state": "not_collected",
+        "deterministic": true,
+        "warned": true
+      }
+    ]
+  },
+  "gates": [
+    {
+      "id": "gate-determinism",
+      "name": "결정성 (동일 입력 3회 일치율)",
+      "required": 1.0,
+      "observed": 1.0,
+      "status": "PASS"
+    },
+    {
+      "id": "gate-l0-metadata-completeness",
+      "name": "L0 메타데이터 완전성 (projectId·sourceId·revision·contentHash·collectorVersion)",
+      "required": 1.0,
+      "observed": 0.0,
+      "status": "FAIL"
+    },
+    {
+      "id": "gate-error-visibility",
+      "name": "L0 오류 가시성 (실패·제외 보고율)",
+      "required": 1.0,
+      "observed": 0.0,
+      "status": "FAIL"
+    },
+    {
+      "id": "gate-security-masking",
+      "name": "L0 보안 (테스트 시크릿·PII 미마스킹 0건)",
+      "required": "0건",
+      "observed": "코퍼스 양성 14건 중 마스킹 0건 (미마스킹 0건 · 미수집 14건) · 샘플 적재 경로에 미마스킹 PII 형태 값 14건",
+      "status": "FAIL"
+    }
+  ],
+  "baseline": {
+    "previous": null,
+    "comparable": false,
+    "reason": "L0 첫 실측이라 비교 대상이 없다. fixtureHash 는 I2(#99) 승인으로 고정됐고 적용 대상 버전이 전부 PINNED 이므로 이 보고서는 다음 실행의 기준선이 될 수 있다(I3 R12).",
+    "eligibleAsBaseline": true,
+    "deltas": []
+  },
+  "verdict": {
+    "value": "BLOCKED",
+    "haltRules": [
+      "H2"
+    ],
+    "restrictions": []
+  },
+  "featureJudgments": [
+    {
+      "featureId": "P-ddl-parser",
+      "judgment": "Lab",
+      "measured": true,
+      "rationale": "고정 입력에서 CREATE TABLE 27건을 빠짐없이 수집하고 3회 실행이 동일했다(결정성 1.0). 그러나 필수 식별 필드 0/5, 제외·실패 보고율 0.0 이며 부분 복구를 조용히 수행한 사례 1건(TB_BAD_MIDDLE — 컬럼 1개만 살려 추출)이 확인됐다. 추적 가능성과 정직성 게이트를 통과하지 못해 Core 로 올릴 수 없고, 수집 능력 자체는 쓸 만하므로 Retire 도 아니다.",
+      "evidenceRefs": [
+        "run-l0-db-3c27259-001"
+      ]
+    },
+    {
+      "featureId": "E1",
+      "judgment": "Lab",
+      "measured": true,
+      "rationale": "샘플 적재 경로(SampleLegacyDb)는 CREATE 뿐 아니라 INSERT 까지 전 문장을 실행해 행 데이터를 저장소에 원문으로 남긴다 — 미마스킹 PII 형태 값 14건이 질의로 회수됐다. L0 최소저장 원칙과 보안 게이트를 통과하지 못한다. 벤치 입력 픽스처로서의 가치는 유지되므로 Lab.",
+      "evidenceRefs": [
+        "run-l0-db-3c27259-001"
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "code": "GATE_FAILED",
+      "message": "무조건 게이트 실패: L0 메타데이터 완전성 (projectId·sourceId·revision·contentHash·collectorVersion)",
+      "trigger": "gates.gate-l0-metadata-completeness"
+    },
+    {
+      "code": "GATE_FAILED",
+      "message": "무조건 게이트 실패: L0 오류 가시성 (실패·제외 보고율)",
+      "trigger": "gates.gate-error-visibility"
+    },
+    {
+      "code": "GATE_FAILED",
+      "message": "무조건 게이트 실패: L0 보안 (테스트 시크릿·PII 미마스킹 0건)",
+      "trigger": "gates.gate-security-masking"
+    },
+    {
+      "code": "BASELINE_NOT_COMPARABLE",
+      "message": "L0 첫 실측이라 비교 대상 실행이 없다 — 변화량을 산출하지 않았다",
+      "trigger": "baseline"
+    }
+  ],
+  "notes": "L0 DB 트랙 실측. 프로브 산출물: probe-db.json (backend/src/test/kotlin/com/ontostudio/rdb/L0DbSourceProbeTest.kt 가 생성하며 표류 시 테스트가 실패한다). counts.input 은 고정 입력의 SQL 문장 36건이다 — 행 데이터(INSERT) 8건은 L0 최소저장 원칙상 제외이지만 분모에 남긴다(I3 R20). 제외가 설계상 정당하더라도 사유·좌표를 보고하지 않으면 오류 가시성 게이트는 통과하지 않는다. 수집기는 제외·실패를 실을 자리(반환형)가 없어 보고율이 구조적으로 0 이다. 게이트 판정이 애매한 구간(미마스킹 0건이지만 마스킹 단계 부재)은 I1 §3.2 에 따라 HALT 쪽으로 읽었다."
+}
