@@ -105,6 +105,13 @@ class SqlTextMaskerTest {
         assertEquals(sql.length, out.length)
     }
 
+    @Test fun `backtick identifier does not desync the scanner`() {
+        val sql = "CREATE TABLE `it's` (ID INT); INSERT INTO T VALUES ('900101-1234567');"
+        val out = masker.mask(sql)
+        assertFalse(out.contains("900101-1234567"), "백틱 식별자 뒤의 주민번호가 새어나갔다: $out")
+        assertTrue(out.contains("`it's`"), "식별자가 변조됐다: $out")
+    }
+
     @Test fun `nested block comments stay inside the comment`() {
         val sql = "/* outer /* inner */ rrn=900101-1234567 */ CREATE TABLE T (ID INT);"
         val out = masker.mask(sql)

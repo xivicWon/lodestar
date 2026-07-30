@@ -228,10 +228,13 @@ def build() -> dict:
     plaintexts = [i["value"]["text"] for i in pii["items"] if i["expect"] == "MASKED"]
     # 패리티 픽스처의 입력 텍스트도 증거에 실려서는 안 된다 — 해시·좌표만 남기는 계약이다.
     plaintexts += [c["text"] for c in load("parityFixture")["cases"]]
-    hits = sorted(
-        f"{name}:{text[:4]}…"  # 어느 문서에서 걸렸는지만 남긴다 — 여기에 원문을 적으면 같은 위반이다
-        for name, blob in scanned.items() for text in plaintexts if text in blob
-    )
+    # 어느 문서에서 몇 건 걸렸는지만 남긴다 — 원문의 앞 4자라도 적으면 같은 위반이다(리뷰).
+    hit_counts: dict[str, int] = {}
+    for name, blob in scanned.items():
+        n = sum(1 for text in plaintexts if text in blob)
+        if n:
+            hit_counts[name] = n
+    hits = [f"{name}:{n}건" for name, n in sorted(hit_counts.items())]
     gates.append({
         "id": "gate-no-plaintext-in-records",
         "name": "증거·보고서에 원문 미기록 (#85)",

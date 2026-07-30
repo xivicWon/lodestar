@@ -51,20 +51,21 @@ class SqlTextMasker(
      * - **달러 인용**(`$tag$ … $tag$`) 본문을 한 구간으로 잡는다. 본문 안의 홀따옴표(영어 축약형 등)는
      *   리터럴 시작이 아니며, 그걸 리터럴로 읽으면 스캐너가 어긋나 **그 뒤의 진짜 값이 구간 밖으로
      *   빠져 마스킹되지 않는다**
-     * - **큰따옴표 식별자**(`"it's"`) 구간은 건너뛴다 — 같은 어긋남을 만든다. 식별자는 값이 아니므로
-     *   마스킹 대상도 아니다
+     * - **큰따옴표·백틱 식별자**(`"it's"` · `` `it's` ``) 구간은 건너뛴다 — 같은 어긋남을 만든다.
+     *   식별자는 값이 아니므로 마스킹 대상도 아니다
      */
     private fun segments(sql: String): List<Segment> {
         val out = mutableListOf<Segment>()
         var i = 0
         while (i < sql.length) {
             when {
-                sql[i] == '"' -> {
-                    // 식별자 구간: 마스킹하지 않고 건너뛴다("" 이스케이프 인식).
+                sql[i] == '"' || sql[i] == '`' -> {
+                    // 식별자 구간: 마스킹하지 않고 건너뛴다(중복 인용 이스케이프 인식).
+                    val q = sql[i]
                     var j = i + 1
                     while (j < sql.length) {
-                        if (sql[j] == '"') {
-                            if (j + 1 < sql.length && sql[j + 1] == '"') j += 2 else break
+                        if (sql[j] == q) {
+                            if (j + 1 < sql.length && sql[j + 1] == q) j += 2 else break
                         } else j++
                     }
                     i = minOf(j + 1, sql.length)

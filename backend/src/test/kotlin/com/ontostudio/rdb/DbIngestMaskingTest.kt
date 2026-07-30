@@ -66,11 +66,13 @@ class DbIngestMaskingTest {
 
     @Test fun `org name is kept by policy and that decision is visible`() {
         // 정책상 제외는 '조용한 미마스킹' 과 구별돼야 한다 — 테스트가 결정을 명시하고, 증거에 건수로 남는다.
+        // '별표가 아니다' 로는 부족하다: 부분 변조도 통과한다(리뷰 LOD-062). 원문과 정확히 대조한다.
+        val expected = Regex("(?is)INSERT INTO TB_CUST_MST[^;]*;").find(pinnedSql)!!.value
+            .let { Regex("\\('([^']*)',\\s*'([^']*)'").findAll(it).map { m -> m.groupValues[2] }.toList() }
+        assertEquals(3, expected.size, "원본에서 상호 3건을 찾지 못했다")
         SampleLegacyDb().open().use { conn ->
-            val values = storedValues(conn, "TB_CUST_MST", "CUST_NM")
-            assertEquals(3, values.size)
-            assertTrue(values.none { it.all { c -> c == '*' } },
-                "법인명은 개인정보가 아니므로 가리지 않는다 — 정책을 바꾸려면 규칙 스펙에 클래스를 추가한다")
+            assertEquals(expected.sorted(), storedValues(conn, "TB_CUST_MST", "CUST_NM").sorted(),
+                "법인명은 개인정보가 아니므로 원문 그대로 남는다 — 정책을 바꾸려면 규칙 스펙에 클래스를 추가한다")
         }
     }
 
@@ -92,14 +94,19 @@ class DbIngestMaskingTest {
     }
 
     @Test fun `masking does not change the collected schema`() {
-        val fromDdl = DdlParser().parse(pinnedSql).tables.map { it.name }.sorted()
-        SampleLegacyDb().open().use { conn ->
-            val fromJdbc = MetadataService().extract(conn)
-            assertEquals(fromDdl, fromJdbc.tables.map { it.name }.sorted())
-            // 컬럼 수·FK 도 그대로 — 마스킹은 값만 건드린다.
-            assertTrue(fromJdbc.tables.all { it.columns.isNotEmpty() })
-            assertTrue(fromJdbc.tables.sumOf { it.foreignKeys.size } > 0)
-        }
+        // 이름·건수만 비교하면 특정 컬럼·FK 유실을 놓친다(리뷰 LOD-068). 마스킹 유무로 **구조 전체**를 대조한다.
+        fun structure(policy: IngestPolicy): List<TableInfo> =
+            SampleLegacyDb().open(policy).use { conn ->
+                MetadataService().extract(conn).tables.sortedBy { it.name }
+                    .map { t -> t.copy(columns = t.columns.sortedBy { it.name },
+                        foreignKeys = t.foreignKeys.sortedBy { it.refTable + it.fkColumns.joinToString() }) }
+            }
+        val masked = structure(IngestPolicy())
+        val unmasked = structure(IngestPolicy(maskRowData = false))
+        assertEquals(unmasked, masked, "마스킹이 수집 구조를 바꿨다")
+        assertEquals(DdlParser().parse(pinnedSql).tables.map { it.name }.sorted(),
+            masked.map { it.name }.sorted())
+        assertTrue(masked.sumOf { it.foreignKeys.size } > 0 && masked.all { it.columns.isNotEmpty() })
     }
 
     @Test fun `masking ledger records counts without plaintext`() {
@@ -119,8 +126,16 @@ class DbIngestMaskingTest {
     @Test fun `minimize policy stores no row data at all`() {
         val db = SampleLegacyDb()
         db.open(IngestPolicy(minimizeRowData = true)).use { conn ->
-            for ((table, col, _) in piiShapedColumns) {
-                assertTrue(storedValues(conn, table, col).isEmpty(), "$table.$col 에 행이 남았다")
+            // 등록된 컬럼만 보면 다른 테이블에 남은 행을 놓친다(리뷰 LOD-075) — 전 테이블을 센다.
+            val tables = MetadataService().extract(conn).tables.map { it.name }
+            assertTrue(tables.size >= 27, "수집 테이블이 줄었다: ${tables.size}")
+            for (t in tables) {
+                conn.createStatement().use { st ->
+                    st.executeQuery("SELECT COUNT(*) FROM \"$t\"").use { rs ->
+                        rs.next()
+                        assertEquals(0, rs.getInt(1), "$t 에 행이 남았다")
+                    }
+                }
             }
             // 구조는 유지된다 — 최소화는 '수집을 줄이는 것' 이 아니라 '행 데이터를 두지 않는 것' 이다.
             assertEquals(

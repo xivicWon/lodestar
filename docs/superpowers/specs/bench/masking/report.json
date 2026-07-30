@@ -80,6 +80,7 @@
     "byClass": {
       "ADDRESS": 2,
       "AWS_ACCESS_KEY_ID": 1,
+      "AWS_SECRET_ACCESS_KEY": 1,
       "BANK_ACCOUNT": 2,
       "CARD_NO": 3,
       "EMAIL": 3,
@@ -88,7 +89,7 @@
       "JWT": 2,
       "KR_RRN": 3,
       "NAME": 3,
-      "PASSWORD": 3,
+      "PASSWORD": 2,
       "PHONE": 3,
       "SLACK_TOKEN": 1
     },
@@ -103,9 +104,10 @@
       "PII.KR_PHONE": 3,
       "PII.KR_RRN": 3,
       "SECRET.AWS_ACCESS_KEY_ID": 1,
+      "SECRET.AWS_SECRET_ACCESS_KEY": 1,
       "SECRET.GITHUB_TOKEN": 1,
       "SECRET.JWT": 2,
-      "SECRET.KEYED_VALUE": 3,
+      "SECRET.KEYED_VALUE": 2,
       "SECRET.SLACK_TOKEN": 1
     }
   },
@@ -138,7 +140,7 @@
       },
       "note": "이 픽스처에는 정답이 없다 — 확정하는 것은 두 엔진이 갈리지 않는다는 사실 하나이며, 정확성 판정은 gold(#99)가 한다"
     },
-    "ruleSpecHash": "sha256:61af70cce2da2775931de2cf534a15ea29a40cdac284b189c88fc09932a085f5"
+    "ruleSpecHash": "sha256:240c6ac5213781a8c24c24ad713a9ec5fa50ba774e8fc061e2594f3a3f04afdf"
   },
   "collectionPaths": {
     "db": {
@@ -175,7 +177,7 @@
         "withLineContext": {
           "unmasked": 0,
           "unmaskedInArtifact": [],
-          "maskedTotal": 120,
+          "maskedTotal": 600,
           "idsPreserved": true
         },
         "bareValue": {
@@ -185,7 +187,7 @@
             "PII.POS.PROPERTIES.L7.21",
             "PII.POS.LOG.L6.32"
           ],
-          "maskedTotal": 25,
+          "maskedTotal": 125,
           "idsPreserved": true
         }
       }
@@ -194,15 +196,15 @@
   "evidenceRefs": {
     "emitCode": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-code-001/emit-code.json",
-      "contentHash": "sha256:94c4e9fa8b4406fa18ac72dc7c4b22346fd817973c776ad08c39825d25341d7c"
+      "contentHash": "sha256:f22b475e25126e2e0995246348d4ce0f0535f2a70b873454fa5f8b980092050c"
     },
     "engineKotlin": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-gold-001/engine-kotlin.json",
-      "contentHash": "sha256:fa92f7c656c3bfbf6143b7184b052d6381a006f4325bdbeaa3963f69e1992425"
+      "contentHash": "sha256:4e3b9e6342dd729ab6fd0c784fd364ee4efed1f78188fc316ff24ef5b8e83317"
     },
     "enginePython": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-gold-001/engine-python.json",
-      "contentHash": "sha256:30b985c50923bb192ab5972dca5ae115e39884b4e5aa68758c8fa7e31eea366b"
+      "contentHash": "sha256:39ab0808ebec288287af1867845764ff621ee36e3680b2309709b779e3be9a61"
     },
     "goldVerdicts": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-gold-001/gold-verdicts.json",
@@ -226,7 +228,7 @@
     },
     "ruleSpec": {
       "path": "docs/superpowers/specs/security/masking-rules.v0.json",
-      "contentHash": "sha256:61af70cce2da2775931de2cf534a15ea29a40cdac284b189c88fc09932a085f5"
+      "contentHash": "sha256:240c6ac5213781a8c24c24ad713a9ec5fa50ba774e8fc061e2594f3a3f04afdf"
     }
   }
 }

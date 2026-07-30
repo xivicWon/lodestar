@@ -14,40 +14,42 @@
       "idsPreserved": true,
       "maskingSummary": {
         "spec_version": "masking-rules/v0",
-        "masked_total": 120,
-        "masked_fields": 28,
+        "masked_total": 600,
+        "masked_fields": 140,
         "by_class": {
-          "ADDRESS": 14,
-          "AWS_ACCESS_KEY_ID": 1,
-          "BANK_ACCOUNT": 14,
-          "CARD_NO": 17,
-          "EMAIL": 16,
-          "GITHUB_TOKEN": 1,
-          "IP_ADDRESS": 2,
-          "JWT": 2,
-          "KR_RRN": 15,
-          "NAME": 17,
-          "PASSWORD": 3,
-          "PHONE": 17,
-          "SLACK_TOKEN": 1
+          "ADDRESS": 70,
+          "AWS_ACCESS_KEY_ID": 5,
+          "AWS_SECRET_ACCESS_KEY": 5,
+          "BANK_ACCOUNT": 70,
+          "CARD_NO": 85,
+          "EMAIL": 80,
+          "GITHUB_TOKEN": 5,
+          "IP_ADDRESS": 10,
+          "JWT": 10,
+          "KR_RRN": 75,
+          "NAME": 85,
+          "PASSWORD": 10,
+          "PHONE": 85,
+          "SLACK_TOKEN": 5
         },
         "by_rule": {
-          "PII.CARD_NO_DELIMITED": 7,
-          "PII.CARD_NO_PLAIN": 10,
-          "PII.EMAIL": 16,
-          "PII.IP_ADDRESS": 2,
-          "PII.KR_ADDRESS": 14,
-          "PII.KR_BANK_ACCOUNT": 14,
-          "PII.KR_NAME": 17,
-          "PII.KR_PHONE": 17,
-          "PII.KR_RRN": 15,
-          "SECRET.AWS_ACCESS_KEY_ID": 1,
-          "SECRET.GITHUB_TOKEN": 1,
-          "SECRET.JWT": 2,
-          "SECRET.KEYED_VALUE": 3,
-          "SECRET.SLACK_TOKEN": 1
+          "PII.CARD_NO_DELIMITED": 35,
+          "PII.CARD_NO_PLAIN": 50,
+          "PII.EMAIL": 80,
+          "PII.IP_ADDRESS": 10,
+          "PII.KR_ADDRESS": 70,
+          "PII.KR_BANK_ACCOUNT": 70,
+          "PII.KR_NAME": 85,
+          "PII.KR_PHONE": 85,
+          "PII.KR_RRN": 75,
+          "SECRET.AWS_ACCESS_KEY_ID": 5,
+          "SECRET.AWS_SECRET_ACCESS_KEY": 5,
+          "SECRET.GITHUB_TOKEN": 5,
+          "SECRET.JWT": 10,
+          "SECRET.KEYED_VALUE": 10,
+          "SECRET.SLACK_TOKEN": 5
         },
-        "masked_path_fields": 6
+        "masked_path_fields": 28
       }
     },
     "bareValue": {
@@ -62,38 +64,38 @@
       "idsPreserved": true,
       "maskingSummary": {
         "spec_version": "masking-rules/v0",
-        "masked_total": 25,
-        "masked_fields": 25,
+        "masked_total": 125,
+        "masked_fields": 125,
         "by_class": {
-          "ADDRESS": 2,
-          "AWS_ACCESS_KEY_ID": 1,
-          "BANK_ACCOUNT": 2,
-          "CARD_NO": 3,
-          "EMAIL": 3,
-          "GITHUB_TOKEN": 1,
-          "IP_ADDRESS": 1,
-          "JWT": 2,
-          "KR_RRN": 3,
-          "NAME": 3,
-          "PHONE": 3,
-          "SLACK_TOKEN": 1
+          "ADDRESS": 10,
+          "AWS_ACCESS_KEY_ID": 5,
+          "BANK_ACCOUNT": 10,
+          "CARD_NO": 15,
+          "EMAIL": 15,
+          "GITHUB_TOKEN": 5,
+          "IP_ADDRESS": 5,
+          "JWT": 10,
+          "KR_RRN": 15,
+          "NAME": 15,
+          "PHONE": 15,
+          "SLACK_TOKEN": 5
         },
         "by_rule": {
-          "PII.CARD_NO_DELIMITED": 1,
-          "PII.CARD_NO_PLAIN": 2,
-          "PII.EMAIL": 3,
-          "PII.IP_ADDRESS": 1,
-          "PII.KR_ADDRESS": 2,
-          "PII.KR_BANK_ACCOUNT": 2,
-          "PII.KR_NAME": 3,
-          "PII.KR_PHONE": 3,
-          "PII.KR_RRN": 3,
-          "SECRET.AWS_ACCESS_KEY_ID": 1,
-          "SECRET.GITHUB_TOKEN": 1,
-          "SECRET.JWT": 2,
-          "SECRET.SLACK_TOKEN": 1
+          "PII.CARD_NO_DELIMITED": 5,
+          "PII.CARD_NO_PLAIN": 10,
+          "PII.EMAIL": 15,
+          "PII.IP_ADDRESS": 5,
+          "PII.KR_ADDRESS": 10,
+          "PII.KR_BANK_ACCOUNT": 10,
+          "PII.KR_NAME": 15,
+          "PII.KR_PHONE": 15,
+          "PII.KR_RRN": 15,
+          "SECRET.AWS_ACCESS_KEY_ID": 5,
+          "SECRET.GITHUB_TOKEN": 5,
+          "SECRET.JWT": 10,
+          "SECRET.SLACK_TOKEN": 5
         },
-        "masked_path_fields": 5
+        "masked_path_fields": 25
       }
     }
   },
@@ -104,146 +106,315 @@
     "alternatives",
     "meta"
   ],
+  "plantingNote": "각 양성을 모든 sink 에 심는다 — 양성 28 × sink 5 조합 전부가 관문을 지난다",
   "planted": [
     {
       "goldId": "PII.POS.SQL.L18.0",
       "class": "NAME",
-      "field": "label"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.SQL.L18.1",
       "class": "KR_RRN",
-      "field": "qualified_name"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.SQL.L18.2",
       "class": "EMAIL",
-      "field": "path"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.SQL.L18.3",
       "class": "PHONE",
-      "field": "alternatives"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.SQL.L18.4",
       "class": "CARD_NO",
-      "field": "meta"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.SQL.L18.5",
       "class": "BANK_ACCOUNT",
-      "field": "label"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.SQL.L18.6",
       "class": "ADDRESS",
-      "field": "qualified_name"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.SQL.L20.7",
       "class": "NAME",
-      "field": "path"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.SQL.L20.8",
       "class": "KR_RRN",
-      "field": "alternatives"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.SQL.L20.9",
       "class": "EMAIL",
-      "field": "meta"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.SQL.L20.10",
       "class": "PHONE",
-      "field": "label"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.SQL.L20.11",
       "class": "CARD_NO",
-      "field": "qualified_name"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.SQL.L20.12",
       "class": "BANK_ACCOUNT",
-      "field": "path"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.SQL.L20.13",
       "class": "ADDRESS",
-      "field": "alternatives"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.PROPERTIES.L5.19",
       "class": "PASSWORD",
-      "field": "meta"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.PROPERTIES.L6.20",
       "class": "AWS_ACCESS_KEY_ID",
-      "field": "label"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.PROPERTIES.L7.21",
       "class": "AWS_SECRET_ACCESS_KEY",
-      "field": "qualified_name"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.PROPERTIES.L8.22",
       "class": "JWT",
-      "field": "path"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.PROPERTIES.L9.23",
       "class": "SLACK_TOKEN",
-      "field": "alternatives"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.PROPERTIES.L10.24",
       "class": "GITHUB_TOKEN",
-      "field": "meta"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.LOG.L5.30",
       "class": "EMAIL",
-      "field": "label"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.LOG.L5.31",
       "class": "IP_ADDRESS",
-      "field": "qualified_name"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.LOG.L6.32",
       "class": "PASSWORD",
-      "field": "path"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.LOG.L7.33",
       "class": "CARD_NO",
-      "field": "alternatives"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.LOG.L7.34",
       "class": "NAME",
-      "field": "meta"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.LOG.L7.35",
       "class": "PHONE",
-      "field": "label"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.LOG.L8.36",
       "class": "JWT",
-      "field": "qualified_name"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     },
     {
       "goldId": "PII.POS.LOG.L9.37",
       "class": "KR_RRN",
-      "field": "path"
+      "fields": [
+        "label",
+        "qualified_name",
+        "path",
+        "alternatives",
+        "meta"
+      ]
     }
   ]
 }

@@ -19,21 +19,30 @@ def _node(nid: str, label: str, qn: str, path: str) -> Node:
     return Node(nid, "type", label, qn, path, "kotlin")
 
 
+def _written(out) -> tuple[dict, str]:
+    """**기록된 파일**을 다시 읽는다 — 반환값만 보면 직렬화·쓰기 경로의 회귀를 놓친다(리뷰 LOD-079)."""
+    text = out.read_text(encoding="utf-8")
+    return json.loads(text), text
+
+
 def test_emitted_text_fields_are_masked(tmp_path):
     nodes = [_node("type:A", "hong@example.com", "com.acme.hong@example.com", "src/hong@example.com.kt")]
-    doc = build_and_write(nodes, [], {"source_root": "/tmp/ghp_" + "A" * 36},
-                          str(tmp_path / "cg.json"))
-    blob = json.dumps(doc, ensure_ascii=False)
+    out = tmp_path / "cg.json"
+    doc = build_and_write(nodes, [], {"source_root": "/tmp/ghp_" + "A" * 36}, str(out))
+    disk, blob = _written(out)
+    assert disk == doc, "기록된 파일과 반환값이 다르다"
     assert "hong@example.com" not in blob
     assert "ghp_" + "A" * 36 not in blob
-    assert doc["nodes"][0]["label"] == "[MASKED:EMAIL]"
-    assert doc["nodes"][0]["id"] == "type:A"  # 엣지 참조 키는 유지
+    assert disk["nodes"][0]["label"] == "[MASKED:EMAIL]"
+    assert disk["nodes"][0]["id"] == "type:A"  # 엣지 참조 키는 유지
 
 
 def test_masking_summary_is_recorded_without_plaintext(tmp_path):
     nodes = [_node("type:A", "hong@example.com", "A", "p")]
-    doc = build_and_write(nodes, [], {}, str(tmp_path / "cg.json"))
-    m = doc["meta"]["masking"]
+    out = tmp_path / "cg.json"
+    build_and_write(nodes, [], {}, str(out))
+    disk, _ = _written(out)
+    m = disk["meta"]["masking"]
     assert m["masked_total"] >= 1
     assert m["by_class"]["EMAIL"] >= 1
     assert "PII.EMAIL" in m["by_rule"]
@@ -68,7 +77,22 @@ def test_edges_still_resolve_after_masking(tmp_path):
 
 
 def test_external_call_names_are_masked(tmp_path):
-    doc = build_and_write([], [], {"external_calls": ["send(hong@example.com)", "log(x)"]},
-                          str(tmp_path / "cg.json"))
-    assert "hong@example.com" not in json.dumps(doc, ensure_ascii=False)
-    assert doc["meta"]["external_calls"] == ["send([MASKED:EMAIL])", "log(x)"]
+    out = tmp_path / "cg.json"
+    build_and_write([], [], {"external_calls": ["send(hong@example.com)", "log(x)"]}, str(out))
+    disk, blob = _written(out)
+    assert "hong@example.com" not in blob
+    assert disk["meta"]["external_calls"] == ["send([MASKED:EMAIL])", "log(x)"]
+
+
+def test_meta_keys_and_tuples_are_masked(tmp_path):
+    """키에 원문을 넣거나 tuple 로 감싸면 관문을 우회한다 — 둘 다 막는다(리뷰 LOD-073)."""
+    out = tmp_path / "cg.json"
+    build_and_write([], [], {
+        "by_owner": {"hong@example.com": 1},
+        "tags": ("ghp_" + "B" * 36, "ok"),
+    }, str(out))
+    disk, blob = _written(out)
+    assert "hong@example.com" not in blob
+    assert "ghp_" + "B" * 36 not in blob
+    assert list(disk["meta"]["by_owner"]) == ["[MASKED:EMAIL]"]
+    assert disk["meta"]["tags"] == ["[MASKED:GITHUB_TOKEN]", "ok"]

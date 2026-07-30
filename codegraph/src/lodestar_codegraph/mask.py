@@ -52,7 +52,8 @@ class MaskPolicy:
     disabled_classes: frozenset[str] = frozenset()
     allowlist_enabled: bool | None = None      # None = 규칙 스펙의 기본값
     length_preserving: bool = False            # SQL 리터럴처럼 길이 제약이 있는 자리
-    excluded_paths: tuple[str, ...] = ()       # glob — 이 경로의 텍스트는 마스킹 대상에서 제외
+    # 경로 기반 예외는 두지 않는다 — 선언만 있고 아무도 읽지 않는 설정은 "지원한다" 는 거짓 신호다
+    # (리뷰). 필요해지면 Kotlin `MaskPolicy` 와 함께 계약으로 추가한다.
 
 
 @dataclass(frozen=True)

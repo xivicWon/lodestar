@@ -95,22 +95,27 @@ def field_for(index: int) -> str:
 
 
 def _plant(texts: list[str], meta_text: str) -> tuple[str, dict, bool]:
-    """텍스트를 산출물의 텍스트 자리 전부에 돌려 심고 emit 을 돌린 뒤 **기록된 파일**을 읽는다."""
+    """텍스트를 산출물의 텍스트 자리에 심고 emit 을 돌린 뒤 **기록된 파일**을 읽는다.
+
+    각 양성을 **모든 sink 에** 심는다(양성 × sink 전 조합). 하나씩 돌려 심으면 sink 별 관문이
+    대부분 미검증으로 남는다 — sink 목록만 증거에 적히고 실제로는 5분의 1만 지나간다(리뷰 LOD-070).
+    """
     nodes, edges, meta_notes = [], [], []
     for n, text in enumerate(texts):
-        field = field_for(n)
-        nodes.append(Node(
-            id=f"type:P{n:03d}",
-            kind="type",
-            label=text if field == "label" else f"P{n:03d}",
-            qualified_name=text if field == "qualified_name" else f"com.acme.P{n:03d}",
-            path=text if field == "path" else f"src/P{n:03d}.kt",
-            lang="kotlin",
-        ))
-        if field == "alternatives":
-            edges.append(Edge(n, f"type:P{n:03d}", f"type:P{n:03d}", "calls", EXTRACTED, 1.0, [text]))
-        if field == "meta":
-            meta_notes.append(text)
+        for k, field in enumerate(SINKS):
+            nid = f"type:P{n:03d}S{k}"
+            nodes.append(Node(
+                id=nid,
+                kind="type",
+                label=text if field == "label" else f"P{n:03d}",
+                qualified_name=text if field == "qualified_name" else f"com.acme.P{n:03d}",
+                path=text if field == "path" else f"src/P{n:03d}.kt",
+                lang="kotlin",
+            ))
+            if field == "alternatives":
+                edges.append(Edge(len(edges) + 1, nid, nid, "calls", EXTRACTED, 1.0, [text]))
+            if field == "meta":
+                meta_notes.append(text)
     with tempfile.TemporaryDirectory() as tmp:
         out = pathlib.Path(tmp) / "codegraph.json"
         doc = build_and_write(
@@ -172,10 +177,10 @@ def code_path_evidence() -> dict:
         "gateVariant": "withLineContext",
         "variants": variants,
         "sinks": list(SINKS),
-        "planted": [
-            {"goldId": i["id"], "class": i["value"]["class"], "field": field_for(n)}
-            for n, i in enumerate(positives)
-        ],
+        "plantingNote": "각 양성을 모든 sink 에 심는다 — 양성 %d × sink %d 조합 전부가 관문을 지난다"
+                        % (len(positives), len(SINKS)),
+        "planted": [{"goldId": i["id"], "class": i["value"]["class"], "fields": list(SINKS)}
+                    for i in positives],
     }
 
 
@@ -235,6 +240,14 @@ def parity_evidence() -> dict:
     }
 
 
+def _occurrences(raw: str, text: str) -> list[tuple[int, int]]:
+    out, idx = [], raw.find(text)
+    while idx >= 0:
+        out.append((idx, idx + len(text)))
+        idx = raw.find(text, idx + 1)
+    return out
+
+
 def gold_item_verdicts() -> dict:
     """gold 항목별 판정 — 게이트(양성 미마스킹 0건)와 오탐(음성이 가려짐)을 항목 단위로 센다."""
     pii = gold_pii()
@@ -251,10 +264,7 @@ def gold_item_verdicts() -> dict:
         text = i["value"]["text"]
         raw = raw_text[src]
         # 이 항목의 원문 구간들이 마스킹 스팬에 완전히 덮였는가(부분 마스킹과 구별한다).
-        occurrences, idx = [], raw.find(text)
-        while idx >= 0:
-            occurrences.append((idx, idx + len(text)))
-            idx = raw.find(text, idx + 1)
+        occurrences = _occurrences(raw, text)
         covered = all(
             any(s.start <= a and s.end >= b for s in spans[src]) for a, b in occurrences
         ) if occurrences else False
@@ -279,10 +289,16 @@ def gold_item_verdicts() -> dict:
         "fixtureHash": json.loads((GOLD / "manifest.json").read_text(encoding="utf-8"))["fixtureHash"],
         "items": items,
         # 코퍼스 안에서 gold 에 등재되지 않은 스팬 = gold 로는 정오를 판정할 수 없는 마스킹이다.
+        # 총계 차감으로 세면 '미등재 스팬 1개'와 '양성 1개 미탐'이 상쇄돼 0으로 보인다(리뷰 LOD-071).
+        # 스팬 좌표를 gold 양성의 실제 구간과 대응시켜 센다.
         "spansOutsideGold": {
-            src: len(sp) - sum(
-                1 for i in pii["items"]
-                if i["ref"]["sourceId"] == src and i["expect"] == "MASKED"
+            src: sum(
+                1 for s in sp
+                if not any(
+                    s.start <= a and s.end >= b
+                    for i in pii["items"] if i["ref"]["sourceId"] == src and i["expect"] == "MASKED"
+                    for a, b in _occurrences(raw_text[src], i["value"]["text"])
+                )
             )
             for src, sp in spans.items()
         },

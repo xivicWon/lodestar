@@ -45,11 +45,15 @@ CONTRACTED_ALLOW = [
     "ALLOW.JDBC_URL", "ALLOW.TIMESTAMP", "ALLOW.INTERNAL_ID",
 ]
 CONTRACTED_DETECT = [
-    "SECRET.AWS_ACCESS_KEY_ID", "SECRET.GITHUB_TOKEN", "SECRET.SLACK_TOKEN", "SECRET.JWT",
+    "SECRET.AWS_ACCESS_KEY_ID", "SECRET.AWS_SECRET_ACCESS_KEY", "SECRET.GITHUB_TOKEN",
+    "SECRET.SLACK_TOKEN", "SECRET.JWT",
     "SECRET.PRIVATE_KEY_BLOCK", "SECRET.URL_CREDENTIAL", "SECRET.KEYED_VALUE",
     "PII.KR_RRN", "PII.EMAIL", "PII.KR_PHONE", "PII.CARD_NO_DELIMITED", "PII.CARD_NO_PLAIN",
     "PII.KR_BANK_ACCOUNT", "PII.KR_BIZ_NO", "PII.IP_ADDRESS", "PII.KR_ADDRESS", "PII.KR_NAME",
 ]
+
+# 패리티 증거가 반드시 담아야 하는 정책 — 픽스처와 프로브가 함께 줄어드는 것을 막는다.
+REQUIRED_POLICIES = ["default", "lengthPreserving", "noAllowlist", "namesDisabled"]
 
 RULE_COPIES = [
     REPO / "backend/src/main/resources/com/ontostudio/security/masking-rules.v0.json",
@@ -95,7 +99,9 @@ def m1_gold_identity(ctx):
     entries = []
     for e in man["fixtures"]:
         n += 1
-        path = GOLD / e["path"]   # manifest 의 픽스처 경로는 gold 디렉토리 기준이다
+        path = (GOLD / e["path"]).resolve()   # manifest 의 픽스처 경로는 gold 디렉토리 기준이다
+        if not path.is_relative_to(GOLD.resolve()):
+            return False, n, f"픽스처 경로가 승인 코퍼스 밖을 가리킨다: {e['path']}"
         if not path.exists():
             return False, n, f"픽스처가 없다: {e['path']}"
         entries.append((e["path"], sha256_bytes(path.read_bytes())))
@@ -162,8 +168,13 @@ def m4_positive_locators_resolve(ctx):
         line = ctx["corpus"][src].split("\n")[line_no - 1]
         if item["value"]["text"] not in line:
             return False, n, f"{item['id']}: 좌표가 원본에서 조회되지 않는다"
-        if not any(s["line"] == line_no for s in spans[src]):
+        on_line = [s for s in spans[src] if s["line"] == line_no]
+        if not on_line:
             return False, n, f"{item['id']}: 그 줄에 마스킹 스팬이 없다"
+        # 클래스까지 봐야 '엉뚱한 규칙이 우연히 덮은 것' 과 구별된다(리뷰 LOD-065).
+        if not any(s["class"] == item["value"]["class"] for s in on_line):
+            return False, n, (f"{item['id']}: 그 줄의 스팬 클래스가 gold 선언"
+                              f"({item['value']['class']})과 다르다: {[s['class'] for s in on_line]}")
     if not n:
         return False, 0, "양성이 없다"
     return True, n, f"양성 {n}건의 좌표·스팬 귀속 확인"
@@ -333,6 +344,8 @@ def m11_parity_fixture_covers_new_branches(ctx):
             return False, n, f"{c['id']}: 길이 보존 모드가 문자 수·행 수를 바꿨다"
     if len({c["id"] for c in pk["cases"]}) != n:
         return False, n, "패리티 케이스 id 가 중복된다"
+    if sorted(pk["policies"]) != sorted(REQUIRED_POLICIES):
+        return False, n, f"정책 집합이 계약과 다르다: {pk['policies']}"
     if sorted(pk["policies"]) != sorted(fixture["policies"]):
         return False, n, "증거의 정책 목록이 픽스처 선언과 다르다"
     if set(pk["policies"]) != set(probe.PARITY_POLICIES):
@@ -429,6 +442,12 @@ CASES = [
     ("C44", "M11", lambda c: c["parityKotlin"].__setitem__("policies", ["default", "lengthPreserving"])),
     ("C45", "M2", lambda c: c["parityKotlin"]["cases"][0].__setitem__("inputChars", True)
      or c["parityPython"]["cases"][0].__setitem__("inputChars", 1)),
+    ("C46", "M4", lambda c: [s.__setitem__("class", "OTHER")
+                             for s in c["enginePython"]["files"][0]["spans"]]),
+    ("C47", "M1", lambda c: c["goldManifest"]["fixtures"].__setitem__(
+        0, {**c["goldManifest"]["fixtures"][0], "path": "../../../../etc/hosts"})),
+    ("C48", "M11", lambda c: [c["parityKotlin"].__setitem__("policies", ["default", "lengthPreserving"]),
+                              c["parityFixture"].__setitem__("policies", ["default", "lengthPreserving"])]),
 ]
 
 

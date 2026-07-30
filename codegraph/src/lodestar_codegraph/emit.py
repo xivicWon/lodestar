@@ -6,13 +6,18 @@ from .model import Node, Edge
 
 
 def _mask_meta(value, ledger: MaskLedger, policy: MaskPolicy | None):
-    """meta 의 문자열 값을 재귀적으로 마스킹한다. 수·불리언은 그대로 둔다."""
+    """meta 의 문자열을 재귀적으로 마스킹한다. 수·불리언은 그대로 둔다.
+
+    **키도 마스킹한다** — 키에 원문을 넣으면 값만 가리는 관문을 우회한다(리뷰 LOD-073).
+    tuple·set 도 JSON 으로 직렬화되므로 함께 처리한다.
+    """
     if isinstance(value, str):
         return mask_field(value, ledger, policy)
-    if isinstance(value, list):
+    if isinstance(value, (list, tuple, set)):
         return [_mask_meta(v, ledger, policy) for v in value]
     if isinstance(value, dict):
-        return {k: _mask_meta(v, ledger, policy) for k, v in value.items()}
+        return {_mask_meta(k, ledger, policy) if isinstance(k, str) else k:
+                _mask_meta(v, ledger, policy) for k, v in value.items()}
     return value
 
 

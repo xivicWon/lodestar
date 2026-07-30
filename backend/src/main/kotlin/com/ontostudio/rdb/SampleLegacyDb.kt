@@ -68,7 +68,9 @@ class SampleLegacyDb(private val masker: SqlTextMasker = SqlTextMasker()) {
 
     private fun isDml(stmt: String): Boolean {
         val head = stmt.trimStart().uppercase()
-        return head.startsWith("INSERT") || head.startsWith("UPDATE") ||
-            head.startsWith("DELETE") || head.startsWith("MERGE")
+        val dml = listOf("INSERT", "UPDATE", "DELETE", "MERGE")
+        if (dml.any { head.startsWith(it) }) return true
+        // CTE 로 시작하는 DML(`WITH x AS (...) INSERT ...`)도 행을 쓴다 — 첫 키워드만 보면 통과한다.
+        return head.startsWith("WITH") && dml.any { Regex("\\b$it\\b").containsMatchIn(head) }
     }
 }

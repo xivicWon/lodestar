@@ -40,8 +40,21 @@ def test_never_records_plaintext():
 
 
 def test_deterministic():
+    """텍스트만 비교하면 좌표·규칙 집계의 비결정성을 놓친다(리뷰 LOD-064)."""
     text = "rrn=900101-1234567 mail=a.b@c.co.kr ip=203.0.113.47"
-    assert mask_text(text).text == mask_text(text).text
+    a, b = mask_text(text), mask_text(text)
+    assert a.text == b.text
+    assert a.counts == b.counts
+    assert [(s.start, s.end, s.rule_id, s.cls) for s in a.spans] == \
+           [(s.start, s.end, s.rule_id, s.cls) for s in b.spans]
+
+
+def test_github_fine_grained_pat_is_masked():
+    """classic 토큰만 보면 fine-grained PAT 가 원문으로 남는다(리뷰 LOD-078)."""
+    pat = "github_pat_" + "1" * 22 + "_" + "a" * 59
+    out = mask_text(f"github.token={pat}").text
+    assert pat not in out
+    assert out == "github.token=[MASKED:GITHUB_TOKEN]"
 
 
 def test_allowlist_beats_detection():
@@ -119,7 +132,8 @@ def test_rule_set_is_exactly_the_contracted_one():
         "ALLOW.JDBC_URL", "ALLOW.TIMESTAMP", "ALLOW.INTERNAL_ID",
     ]
     assert [r.id for r in rules.detect] == [
-        "SECRET.AWS_ACCESS_KEY_ID", "SECRET.GITHUB_TOKEN", "SECRET.SLACK_TOKEN", "SECRET.JWT",
+        "SECRET.AWS_ACCESS_KEY_ID", "SECRET.AWS_SECRET_ACCESS_KEY", "SECRET.GITHUB_TOKEN",
+        "SECRET.SLACK_TOKEN", "SECRET.JWT",
         "SECRET.PRIVATE_KEY_BLOCK", "SECRET.URL_CREDENTIAL", "SECRET.KEYED_VALUE",
         "PII.KR_RRN", "PII.EMAIL", "PII.KR_PHONE", "PII.CARD_NO_DELIMITED", "PII.CARD_NO_PLAIN",
         "PII.KR_BANK_ACCOUNT", "PII.KR_BIZ_NO", "PII.IP_ADDRESS", "PII.KR_ADDRESS", "PII.KR_NAME",

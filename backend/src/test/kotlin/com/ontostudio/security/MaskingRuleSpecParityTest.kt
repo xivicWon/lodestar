@@ -60,7 +60,8 @@ class MaskingRuleSpecParityTest {
                 "ALLOW.JDBC_URL", "ALLOW.TIMESTAMP", "ALLOW.INTERNAL_ID"),
             rules.allow.map { it.id })
         assertEquals(
-            listOf("SECRET.AWS_ACCESS_KEY_ID", "SECRET.GITHUB_TOKEN", "SECRET.SLACK_TOKEN",
+            listOf("SECRET.AWS_ACCESS_KEY_ID", "SECRET.AWS_SECRET_ACCESS_KEY",
+                "SECRET.GITHUB_TOKEN", "SECRET.SLACK_TOKEN",
                 "SECRET.JWT", "SECRET.PRIVATE_KEY_BLOCK", "SECRET.URL_CREDENTIAL",
                 "SECRET.KEYED_VALUE", "PII.KR_RRN", "PII.EMAIL", "PII.KR_PHONE",
                 "PII.CARD_NO_DELIMITED", "PII.CARD_NO_PLAIN", "PII.KR_BANK_ACCOUNT",
