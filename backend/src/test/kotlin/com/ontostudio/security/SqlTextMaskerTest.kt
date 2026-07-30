@@ -76,6 +76,35 @@ class SqlTextMaskerTest {
         assertTrue(out.contains("\"it's\""), "식별자가 변조됐다: $out")
     }
 
+    /** 새 분기(달러 인용·큰따옴표)의 엣지케이스 — 잘린 입력에서 스캐너가 폭주하지 않아야 한다. */
+    @Test fun `scanner survives unterminated dollar quote and identifier`() {
+        // 닫히지 않은 달러 인용: 본문을 끝까지 구간으로 보되 값은 가린다(구조를 넘어서 삼키지 않는다).
+        val open = "CREATE FUNCTION f() AS $$ rrn=900101-1234567"
+        val out1 = masker.mask(open)
+        assertFalse(out1.contains("900101-1234567"))
+        assertEquals(open.length, out1.length)
+
+        // 닫히지 않은 큰따옴표: 뒤를 건너뛰지만 길이·구조는 보존한다.
+        val ident = "CREATE TABLE \"unterminated (ID INT); rrn 900101-1234567"
+        val out2 = masker.mask(ident)
+        assertEquals(ident.length, out2.length)
+        assertTrue(out2.startsWith("CREATE TABLE \"unterminated"))
+
+        // '$' 가 달러 인용이 아닌 경우(파라미터 자리표시자)는 그냥 지나간다.
+        val param = "SELECT * FROM T WHERE ID = $1 AND RRN = '900101-1234567';"
+        val out3 = masker.mask(param)
+        assertFalse(out3.contains("900101-1234567"), "자리표시자를 달러 인용으로 오인했다: $out3")
+        assertTrue(out3.contains("WHERE ID = $1 AND"))
+    }
+
+    /** 값에 대안 그룹(따옴표 있는/없는)을 쓰는 규칙이 SQL 리터럴 안에서도 같게 동작한다. */
+    @Test fun `keyed secret inside a sql literal is fully masked`() {
+        val sql = "INSERT INTO CFG VALUES ('password=abc def');"
+        val out = masker.mask(sql)
+        assertFalse(out.contains("password=abc"), out)
+        assertEquals(sql.length, out.length)
+    }
+
     @Test fun `nested block comments stay inside the comment`() {
         val sql = "/* outer /* inner */ rrn=900101-1234567 */ CREATE TABLE T (ID INT);"
         val out = masker.mask(sql)
