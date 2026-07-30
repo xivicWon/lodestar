@@ -22,6 +22,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 
 HERE = pathlib.Path(__file__).resolve().parent
 REPO = HERE.parents[4]
@@ -32,6 +33,12 @@ OUT = REPO / "build/l0/probe-code.json"
 
 SCOPE_ROOT = "backend/src/main/kotlin"
 CG_ROOT = REPO / "codegraph"
+
+
+def collector_version() -> str:
+    """수집기 버전은 손으로 적지 않는다 — pyproject 에서 읽는다. 손으로 옮긴 버전은 올려도 티가 나지 않는다."""
+    return tomllib.loads((CG_ROOT / "pyproject.toml").read_text())["project"]["version"]
+
 
 # 측정 규칙 (선언)
 # M-CODE-1  입력 단위는 파일이다. 수집 범위 루트 아래의 모든 정규 파일이 분모이며,
@@ -160,8 +167,8 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
         "fixtureHash": manifest["fixtureHash"],
         "collector": {
             "impl": "lodestar_codegraph (walk → tree-sitter parse → extract → resolve → cluster → emit)",
-            "declaredVersion": "lodestar-codegraph v1 (meta.generated_by) · pyproject 0.1.1",
-            "citedVersion": "lodestar-codegraph@0.1.1",
+            "declaredVersion": f"lodestar-codegraph v1 (meta.generated_by) · pyproject {collector_version()}",
+            "citedVersion": f"lodestar-codegraph@{collector_version()}",
             "note": "산출물이 선언하는 것은 이름과 세대뿐이다 — 커밋·semver 가 없어 산출물만으로는 재현 대상을 특정할 수 없다. "
                     "입력 revision(3c27259)과 달리 수집기는 #112 의 결정성 수정이 들어간 0.1.1 이다 — 입력 신원과 수집기 버전은 다른 축이다.",
         },

@@ -361,9 +361,15 @@ def build_from(track: str, p: dict) -> dict:
                 and not [v for v in versions.values() if v["status"] == "UNPINNED"])
     bl = baseline_block(track, run_obj, schema_version, metrics, eligible)
     if not bl["comparable"]:
+        # 경고 문구는 실제 사유에서 나와야 한다 — '비교 대상이 없다' 와 '비교 대상은 있으나 신원이
+        # 다르다' 는 다른 사실이고, previous 가 채워진 보고서에 전자를 적으면 그 자체가 거짓이다.
+        message = ("L0 첫 실측이라 비교 대상 실행이 없다 — 변화량을 산출하지 않았다"
+                   if bl["previous"] is None else
+                   f"{bl['previous']['runId']} 과 신원·기준선 자격이 달라 비교할 수 없다 — "
+                   "변화량을 산출하지 않았다")
         warnings.append({
             "code": "BASELINE_NOT_COMPARABLE",
-            "message": "L0 첫 실측이라 비교 대상 실행이 없다 — 변화량을 산출하지 않았다",
+            "message": message,
             "trigger": "baseline",
         })
 
