@@ -254,7 +254,30 @@ def baseline_block(track: str, run: dict, schema_version: str, metrics: dict,
     }
 
 
-def feature_judgments(track: str, run_id: str, f: dict) -> list[dict]:
+GATE_FOLLOWUP = {
+    "gate-determinism": "L0-fix-1",
+    "gate-l0-metadata-completeness": "L0-fix-2",
+    "gate-error-visibility": "L0-fix-3·4",
+    "gate-security-masking": "L0-fix-5",
+}
+
+
+def _open_gates(gs: list[dict]) -> str:
+    """아직 열려 있는 무조건 게이트를 **게이트 결과에서** 문장으로 만든다.
+
+    판정문에 남은 게이트를 손으로 적으면, 그 게이트가 통과로 바뀐 뒤에도 보고서가 "아직 실패다" 라고
+    말한다 — 근거와 서술이 어긋나는 순간 판정문은 증거가 아니라 장식이 된다(#114 재측정에서 실제로
+    그렇게 될 뻔했다: 식별 필드가 5/5 가 됐는데 "5/5 라 추적 가능성 게이트가 남아 있다" 고 적혔다).
+    """
+    open_ = [g for g in gs if g["status"] != "PASS"]
+    if not open_:
+        return "무조건 게이트는 전부 통과했다 — Core 승격은 판정 승인권자의 몫이다(I1 §1.2)."
+    names = " · ".join(f"{g['name'].split('(')[0].strip()}({GATE_FOLLOWUP.get(g['id'], '후속')})"
+                       for g in open_)
+    return f"그래도 Core 는 아니다 — 남은 무조건 게이트: {names}. 그래서 Lab 이다."
+
+
+def feature_judgments(track: str, run_id: str, f: dict, gs: list[dict]) -> list[dict]:
     reported_all = f["reported"] >= f["shouldReport"]
     if track == "db":
         if reported_all:
@@ -262,9 +285,9 @@ def feature_judgments(track: str, run_id: str, f: dict) -> list[dict]:
                 f"고정 입력에서 CREATE TABLE 27건을 빠짐없이 수집하고 3회 실행이 동일했다"
                 f"(결정성 {f['determinism']}). #114 로 제외·실패·부분수집이 반환형에 실려 보고율 "
                 f"{f['reported']}/{f['shouldReport']} 이고 조용한 부분 복구는 {f['silentPartialRecovery']}건이다 "
-                "— TB_BAD_MIDDLE 은 부분 복구를 버리고 실패로 보고한다. 그래도 Core 는 아니다: 필수 식별 "
-                f"필드가 {int(f['provenance'] * 5)}/5 라 추적 가능성 게이트가 남아 있다(L0-fix-2). "
-                "수집 능력 자체는 쓸 만하므로 Retire 도 아니다."
+                f"— TB_BAD_MIDDLE 은 부분 복구를 버리고 실패로 보고한다. 필수 식별 필드는 "
+                f"{int(f['provenance'] * 5)}/5 다(#113). {_open_gates(gs)} 수집 능력 자체는 쓸 만하므로 "
+                "Retire 도 아니다."
             )
         else:
             ddl_rationale = (
@@ -311,10 +334,10 @@ def feature_judgments(track: str, run_id: str, f: dict) -> list[dict]:
     else:
         rationale = (
             f"수집 범위 {f['input']}개 파일을 전량 파싱했고 결정성 {f['determinism']}(#112 · H1 해소), "
-            f"#114 로 제외·실패·부분수집이 meta.issues 에 사유·좌표와 함께 실려 보고율 "
-            f"{f['reported']}/{f['shouldReport']} 이다. 파싱 오류가 있는 파일은 status 로 표시되어 완전 성공으로 "
-            f"위장된 실패 픽스처가 {f['markedFullySucceeded']}건이다. 그래도 Core 는 아니다 — 필수 식별 "
-            f"{int(f['provenance'] * 5)}/5 로 추적 가능성 게이트(L0-fix-2)와 보안 게이트(L0-fix-5)가 남아 있으므로 Lab."
+            f"필수 식별 {int(f['provenance'] * 5)}/5(#113), #114 로 제외·실패·부분수집이 meta.issues 에 "
+            f"사유·좌표와 함께 실려 보고율 {f['reported']}/{f['shouldReport']} 이다. 파싱 오류가 있는 파일은 "
+            f"status 로 표시되어 완전 성공으로 위장된 실패 픽스처가 {f['markedFullySucceeded']}건이다. "
+            f"{_open_gates(gs)}"
         )
     return [
         {
@@ -469,7 +492,7 @@ def build_from(track: str, p: dict) -> dict:
             "haltRules": halts,
             "restrictions": [],
         },
-        "featureJudgments": feature_judgments(track, run_id, f),
+        "featureJudgments": feature_judgments(track, run_id, f, gs),
         "warnings": warnings,
         "notes": notes,
     }

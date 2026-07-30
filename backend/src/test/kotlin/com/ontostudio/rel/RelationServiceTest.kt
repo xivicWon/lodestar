@@ -25,7 +25,7 @@ class RelationServiceTest {
 
     @Test fun `proposes implicit relation TB_ORD_HD to TB_CUST_MST via CUST_NO`() {
         // CUST_NO is a plain column (no declared FK) → becomes a DataProperty
-        val schema = SchemaModel(listOf(
+        val schema = SchemaModel.of(sourceId = "db:test:relationservicetest", tables = listOf(
             TableInfo("TB_ORD_HD",
                 listOf(ColumnInfo("ORD_NO", "varchar(20)", false),
                        ColumnInfo("CUST_NO", "varchar(20)", true)),
@@ -51,7 +51,7 @@ class RelationServiceTest {
 
     @Test fun `does not propose a relation from a class own PK column (false positive)`() {
         // TB_ORD_HD.ORD_NO 는 자기 PK. TB_ORD_DTL 이 있어도 ORD_NO 로 관계를 만들면 안 된다.
-        val schema = SchemaModel(listOf(
+        val schema = SchemaModel.of(sourceId = "db:test:relationservicetest", tables = listOf(
             TableInfo("TB_ORD_HD",
                 listOf(ColumnInfo("ORD_NO", "varchar(20)", false),
                        ColumnInfo("CUST_NO", "varchar(20)", true)),
@@ -74,7 +74,7 @@ class RelationServiceTest {
     }
 
     @Test fun `exact core-name match yields high confidence`() {
-        val schema = SchemaModel(listOf(
+        val schema = SchemaModel.of(sourceId = "db:test:relationservicetest", tables = listOf(
             TableInfo("TB_EMP",
                 listOf(ColumnInfo("EMP_NO", "varchar(10)", false),
                        ColumnInfo("DEPT_CD", "varchar(5)", true)),
@@ -93,7 +93,7 @@ class RelationServiceTest {
     }
 
     @Test fun `empty ontology yields no candidates`() {
-        val candidates = service(holderOf(SchemaModel(emptyList()))).suggest()
+        val candidates = service(holderOf(SchemaModel.of(emptyList(), "db:test:relationservicetest"))).suggest()
         assertTrue(candidates.isEmpty())
     }
 }

@@ -14,7 +14,7 @@ class SchemaToOwlMapperTest {
     private val base = "http://lodestar/rdb/shop#"
     private val mapper = SchemaToOwlMapper()
 
-    private fun sampleTwoTables() = SchemaModel(listOf(
+    private fun sampleTwoTables() = SchemaModel.of(sourceId = "db:test:schematoowlmappertest", tables = listOf(
         TableInfo("customers",
             listOf(ColumnInfo("id", "integer", false), ColumnInfo("name", "varchar(100)", true)),
             listOf("id"), emptyList()),
@@ -79,7 +79,7 @@ class SchemaToOwlMapperTest {
     }
 
     @Test fun `self referencing fk maps domain and range to same class`() {
-        val schema = SchemaModel(listOf(
+        val schema = SchemaModel.of(sourceId = "db:test:schematoowlmappertest", tables = listOf(
             TableInfo("employee",
                 listOf(ColumnInfo("id", "integer", false), ColumnInfo("manager_id", "integer", true)),
                 listOf("id"),

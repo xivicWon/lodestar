@@ -18,9 +18,19 @@ class DdlParser {
     private data class RawStatement(val startLine: Int, val endLine: Int, val text: String)
 
     /**
-     * @param sourcePath 좌표에 붙일 원본 경로. 없으면 좌표는 `#L11-L14` 형태로만 남는다.
+     * [sourceId]·[projectId] 는 산출물의 **수집 신원**이 된다(#113 계약 v0). DDL 텍스트는 커밋된 적 없는
+     * 입력이므로 revision 은 입력 바이트에서 파생한 `inline:` 이다.
+     *
+     * [sourcePath] 는 **보고 좌표**에 붙일 원본 경로다(#114). 신원과 좌표는 다른 축이라 따로 받는다 —
+     * 신원은 "무엇을 읽었나", 좌표는 "그 안 어디서 못 했나" 이고, 경로를 모르는 호출(요청 본문의 DDL)에서도
+     * 신원은 여전히 성립해야 한다. 경로를 모르면 좌표는 `#L11-L14` 형태로만 남는다.
      */
-    fun parse(sql: String, sourcePath: String? = null): SchemaModel {
+    fun parse(
+        sql: String,
+        sourcePath: String? = null,
+        sourceId: String = "db:ddl:schema",
+        projectId: String = CollectionMetadata.DEFAULT_PROJECT_ID,
+    ): SchemaModel {
         val tables = mutableListOf<TableInfo>()
         val issues = mutableListOf<CollectionIssue>()
 
@@ -84,7 +94,13 @@ class DdlParser {
                 sourcePath ?: "(ddl-text)")
         ) else emptyList()
 
-        return SchemaModel(tables, issues, partials)
+        // 신원은 수집기가 **실제로 읽은 바이트**(입력 SQL)에서 나온다 — 파싱 결과가 아니라.
+        return SchemaModel(
+            tables,
+            CollectionMetadata.fromContent(sourceId, sql.toByteArray(), "inline", projectId),
+            issues,
+            partials,
+        )
     }
 
     // ---- 문장 분리 -------------------------------------------------------------------------

@@ -34,7 +34,7 @@ class RelationJudgeTest {
     }
 
     // tbl_a(A_ID 자기 PK + CUST_NO·DEPT_CD 참조) → E2가 tbl_cust, tbl_dept 로 후보 2개를 낸다.
-    private fun sampleSchema() = SchemaModel(listOf(
+    private fun sampleSchema() = SchemaModel.of(sourceId = "db:test:relationjudgetest", tables = listOf(
         TableInfo("tbl_a",
             listOf(ColumnInfo("A_ID", "varchar(20)", false),
                    ColumnInfo("CUST_NO", "varchar(20)", true),
@@ -78,7 +78,7 @@ class RelationJudgeTest {
     }
 
     @Test fun `empty candidate list returns empty without calling advisor`() {
-        val holder = holderOf(SchemaModel(emptyList()))
+        val holder = holderOf(SchemaModel.of(emptyList(), "db:test:relationjudgetest"))
         val judge = RelationJudge(ThrowingAdvisor(), holder, OntologyMapper(holder))
         val judged = judge.judge(emptyList())
         assertTrue(judged.isEmpty())

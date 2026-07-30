@@ -29,7 +29,7 @@ class TrashServiceTest {
     }
 
     // TB_A(비키 컬럼 2개 + TB_B 로의 FK 1개) + TB_B
-    private fun schema() = SchemaModel(listOf(
+    private fun schema() = SchemaModel.of(sourceId = "db:test:trashservicetest", tables = listOf(
         TableInfo(
             name = "TB_A",
             columns = listOf(

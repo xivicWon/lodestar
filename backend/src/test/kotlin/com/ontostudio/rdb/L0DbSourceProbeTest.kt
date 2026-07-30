@@ -48,9 +48,7 @@ class L0DbSourceProbeTest {
             "issue", "partial")
 
     private val repoRoot: File by lazy {
-        var d = File("").absoluteFile
-        while (!File(d, ".git").exists()) d = d.parentFile ?: error("리포 루트를 찾지 못했다")
-        d
+        RepoRoot.path
     }
     private val goldDir get() = File(repoRoot, "docs/superpowers/specs/gold")
     private val runDir get() = File(repoRoot, "docs/superpowers/specs/bench/l0/runs/run-l0-db-3c27259-002")
@@ -340,17 +338,28 @@ class L0DbSourceProbeTest {
             put("rate", largestGroup.toDouble() / 3.0)
         }
 
-        // 3) provenance 필수 식별 필드 — 산출물 타입에 자리가 있는가 (리플렉션)
+        // 3) provenance — **#113 의 전용 측정을 인용한다**. 여기서 리플렉션으로 "자리가 있는가" 만
+        //    다시 재면 값이 비어 있거나 플레이스홀더여도 통과하는, 더 느슨한 근거로 같은 게이트를
+        //    판정하게 된다. 측정이 이미 있는 자리를 다시 재지 않고, 그 산출물을 좌표로 인용한다.
         val memberNames = listOf(
             SchemaModel::class, TableInfo::class, ColumnInfo::class, ForeignKeyInfo::class,
-            CollectionIssue::class
+            CollectionIssue::class, CollectionMetadata::class
         ).flatMap { k -> k.members.map { it.name } }.map { it.lowercase() }.toSet()
-        val present = requiredProvenanceFields.filter { f -> memberNames.any { it.contains(f.lowercase()) } }
+        val metadataEvidence = File(repoRoot, "docs/superpowers/specs/bench/l0/metadata/completeness-db.json")
+        val completeness = mapper.readTree(metadataEvidence)["completeness"]
         probe.putObject("provenance").apply {
-            put("probe", "kotlin-reflect — SchemaModel/TableInfo/ColumnInfo/ForeignKeyInfo/CollectionIssue 의 선언 멤버 이름")
+            put("probe", "#113 전용 측정(metadata/completeness-db.json)의 completeness 를 인용한다 — " +
+                "타입 그래프의 자리와 수집 경로별 실제 값 중 **최소값**이라 자리만 있고 값이 없는 통과를 막는다")
+            put("citedEvidence", "docs/superpowers/specs/bench/l0/metadata/completeness-db.json")
+            put("citedMeasurementVersion", mapper.readTree(metadataEvidence)["measurementVersion"].asText())
             putArray("required").also { a -> requiredProvenanceFields.forEach { a.add(it) } }
-            putArray("present").also { a -> present.forEach { a.add(it) } }
-            put("rate", present.size.toDouble() / requiredProvenanceFields.size)
+            put("present", completeness["present"].asInt())
+            put("rate", completeness["rate"].asDouble())
+            // 인용이 실재와 어긋나지 않는지 최소 확인: 산출물 타입에 자리가 없는데 5/5 일 수는 없다.
+            putArray("typeGraphPresent").also { a ->
+                requiredProvenanceFields.filter { f -> memberNames.any { it.contains(f.lowercase()) } }
+                    .forEach { a.add(it) }
+            }
         }
 
         // 4) 오류·제외 보고 채널이 산출물에 존재하는가
@@ -444,8 +453,8 @@ class L0DbSourceProbeTest {
 
             // (a) JDBC 메타데이터 수집 경로를 실제로 돌린다 — DDL 텍스트 경로와 별개의 수집기다.
             val metadata = MetadataService()
-            val jdbcHashes = (1..3).map { sha256(canonical(metadata.extract(conn)).toByteArray()) }
-            val jdbcModel = metadata.extract(conn)
+            val jdbcHashes = (1..3).map { sha256(canonical(metadata.extract(conn, "db:legacy-sample", revisionScheme = "bundle")).toByteArray()) }
+            val jdbcModel = metadata.extract(conn, "db:legacy-sample", revisionScheme = "bundle")
             val jdbcNames = jdbcModel.tables.map { it.name }.sorted()
             val jdbcArtifact = canonical(jdbcModel)
             val jdbcGroup = jdbcHashes.groupingBy { it }.eachCount().values.max()
@@ -473,7 +482,7 @@ class L0DbSourceProbeTest {
                 putArray("artifactHashes").also { a -> jdbcHashes.forEach { a.add(it) } }
                 put("largestIdenticalGroup", jdbcGroup)
                 put("determinismRate", jdbcGroup.toDouble() / 3.0)
-                put("provenanceRate", present.size.toDouble() / requiredProvenanceFields.size)
+                put("provenanceRate", completeness["rate"].asDouble())
                 put("note", "DDL 텍스트 경로와 같은 SchemaModel 로 수렴하므로 provenance·보고 채널 결과도 같다 " +
                     "— 두 경로의 결함도, 이번 수정도 산출물 타입에서 공유된다")
             }

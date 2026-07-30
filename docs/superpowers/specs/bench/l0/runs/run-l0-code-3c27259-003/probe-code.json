@@ -66,22 +66,26 @@
   "determinismControl": {
     "experiment": "PYTHONHASHSEED 를 고정한 실행 2회와 다른 시드 1회를 비교한다",
     "seed0Hashes": [
-      "sha256:53c19e14cca6e22f398f994bf2e61d35fa33fd7732f625c257fbec1cc83f5453",
-      "sha256:53c19e14cca6e22f398f994bf2e61d35fa33fd7732f625c257fbec1cc83f5453"
+      "sha256:07a145792a83c5d60a9a46c76ab8c6e76268456f6f56e6e33d3d798de0f2d92c",
+      "sha256:07a145792a83c5d60a9a46c76ab8c6e76268456f6f56e6e33d3d798de0f2d92c"
     ],
     "seed0Identical": true,
-    "seed1Hash": "sha256:53c19e14cca6e22f398f994bf2e61d35fa33fd7732f625c257fbec1cc83f5453",
+    "seed1Hash": "sha256:07a145792a83c5d60a9a46c76ab8c6e76268456f6f56e6e33d3d798de0f2d92c",
     "seedChangesArtifact": false,
     "seedIndependent": true,
     "structuralHashStable": true,
-    "structuralHash": "sha256:fc47120f4c88918555d098cbdfd66f26570dc4574be413e3952a6461610129c9",
+    "structuralHash": "sha256:61b185b78e7e287e9604f2879f91a7ba89c78c66c64f7fb2e5e24a5a179cd0a9",
     "fix": "cluster.annotate 가 노드·엣지를 정렬해서 그래프에 넣고(`g.add_nodes_from(sorted(ids))`) 군집 라벨을 멤버 정렬로 정규화한다(#112). 이전에는 집합을 그대로 넘겨 문자열 해시 랜덤화가 노드 순서를, 노드 순서가 Louvain 의 군집 배정을 바꿨다.",
     "scope": "산출물 전체(canonical)가 시드에 무관하게 동일하다. 군집 라벨을 뺀 구조 해시도 여전히 안정적이다(structuralHashStable) — 사실과 라벨이 함께 재현된다."
   },
   "provenance": {
-    "probe": "산출물(codegraph.json)의 meta·nodes 키 집합",
+    "probe": "#113 전용 측정(metadata/completeness-code.json)의 completeness 를 인용한다 — 산출물 키 존재가 아니라 소스 단위로 값이 채워졌는지까지 본 결과다",
+    "citedEvidence": "docs/superpowers/specs/bench/l0/metadata/completeness-code.json",
+    "citedMeasurementVersion": "l0-metadata-completeness/v1",
     "metaKeys": [
+      "collector_version",
       "community_count",
+      "content_hash",
       "edge_count",
       "excluded",
       "external_calls",
@@ -94,12 +98,16 @@
       "parsed",
       "partial",
       "partial_files",
+      "project_id",
+      "revision",
       "skipped",
+      "source_id",
       "source_root",
       "walked"
     ],
     "nodeKeys": [
       "community",
+      "content_hash",
       "degree",
       "god_node",
       "id",
@@ -108,6 +116,7 @@
       "lang",
       "path",
       "qualified_name",
+      "source_id",
       "status"
     ],
     "required": [
@@ -119,24 +128,38 @@
     ],
     "present": [
       {
+        "field": "projectId",
+        "via": "project_id",
+        "basis": "직접 키",
+        "pinned": true
+      },
+      {
         "field": "sourceId",
-        "via": "nodes[].path",
-        "basis": "노드마다 수집 범위 기준 상대경로가 있어 소스를 지목할 수 있다",
-        "pinned": false
+        "via": "source_id",
+        "basis": "직접 키",
+        "pinned": true
+      },
+      {
+        "field": "revision",
+        "via": "revision",
+        "basis": "직접 키",
+        "pinned": true
+      },
+      {
+        "field": "contentHash",
+        "via": "content_hash",
+        "basis": "직접 키",
+        "pinned": true
       },
       {
         "field": "collectorVersion",
-        "via": "meta.generated_by",
-        "basis": "'lodestar-codegraph v1' — 수집기 이름과 세대만 있고 커밋·semver 가 없다",
-        "pinned": false
+        "via": "collector_version",
+        "basis": "직접 키",
+        "pinned": true
       }
     ],
-    "absent": [
-      "projectId",
-      "revision",
-      "contentHash"
-    ],
-    "rate": 0.4
+    "absent": [],
+    "rate": 1.0
   },
   "reporting": {
     "probe": "산출물에 실패·제외를 사유·좌표와 함께 실을 자리가 있는가",

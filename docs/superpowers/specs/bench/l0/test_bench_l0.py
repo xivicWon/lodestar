@@ -175,6 +175,29 @@ def test_재지_못한_게이트는_경고와_함께_보고서에_실린다():
     assert validate_rqr.cross_field_errors(rep) == [], "계약 위반 없이 실려야 한다"
 
 
+def test_판정문의_남은_게이트는_게이트_결과에서_나온다():
+    """손으로 적으면 게이트가 통과로 바뀐 뒤에도 보고서가 '아직 실패다' 라고 말한다.
+
+    #114 재측정에서 실제로 그럴 뻔했다: #113 으로 식별 필드가 5/5 가 됐는데 판정문은 여전히
+    "5/5 라 추적 가능성 게이트가 남아 있다" 였다 — 근거와 서술이 어긋나면 판정문은 장식이 된다.
+    """
+    passing = [{"id": "gate-security-masking", "name": "L0 보안 (PII)", "status": "PASS"}]
+    failing = [{"id": "gate-l0-metadata-completeness", "name": "L0 메타데이터 완전성 (5필드)",
+                "status": "FAIL"}]
+    assert "전부 통과" in build_report._open_gates(passing)
+    text = build_report._open_gates(failing)
+    assert "L0 메타데이터 완전성" in text and "L0-fix-2" in text
+
+
+def test_판정_근거는_이_실행을_가리킨다():
+    p = copy.deepcopy(_probe("db"))
+    rep = build_report.build_from("db", p)
+    for j in rep["featureJudgments"]:
+        assert rep["run"]["runId"] in j["evidenceRefs"]
+        # 게이트가 하나라도 실패면 Core 로 올릴 수 없다(I1 G4).
+        assert j["judgment"] != "Core" or all(g["status"] == "PASS" for g in rep["gates"])
+
+
 # ---- 확인기: 규칙이 실제로 무는가 --------------------------------------------------------
 
 @pytest.fixture(scope="module")
@@ -242,6 +265,21 @@ def test_V5_파일_범위를_벗어난_좌표를_문다(ctx):
     errs, _ = verify_l0.v5_exclusion_locators_resolve(
         _ctx_with_exclusion(ctx, f"{SQL}#L99999 (TB_CUST_MST)"))
     assert any("범위를 벗어난다" in e for e in errs), errs
+
+
+def test_모든_결함_주입이_증거를_실제로_바꾼다(ctx):
+    """주입이 no-op 이면 규칙은 멀쩡히 통과하고 케이스 수도 그대로라 아무도 알아채지 못한다.
+
+    이번 M0 작업에서 세 번 일어났다: 실패하던 게이트·지표가 통과로 바뀌자, 그 값을 통과로 덮던
+    주입이 아무것도 바꾸지 않게 됐다. 확인기 러너가 이제 이걸 실패로 세고, 여기서 그 성질을 고정한다.
+    """
+    stale = []
+    for case in verify_l0.injections():
+        bad = copy.deepcopy(ctx)
+        case[2](bad)
+        if bad == ctx:
+            stale.append(f"{case[0]}: {case[1]}")
+    assert stale == [], f"증거를 바꾸지 않는 결함 주입: {stale}"
 
 
 def test_확인기_규칙과_케이스_총계가_manifest_와_같다():

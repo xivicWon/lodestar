@@ -9,8 +9,8 @@
   "collector" : {
     "impl" : "DdlParser + DdlSource (DDL 텍스트 경로) · SampleLegacyDb + MetadataService (샘플 적재 경로)",
     "declaredVersion" : "none",
-    "citedVersion" : "DdlParser+SampleLegacyDb@sha256:291cf9ade1ba727df98611489d62b1d5e0ca9515bb0396f784e34953555a2e36",
-    "sourceHash" : "sha256:291cf9ade1ba727df98611489d62b1d5e0ca9515bb0396f784e34953555a2e36",
+    "citedVersion" : "DdlParser+SampleLegacyDb@sha256:3419c41f7692191c864e99dbc96c3913dd6da8c16e8ab9ef0b1fa1dea85e61d4",
+    "sourceHash" : "sha256:3419c41f7692191c864e99dbc96c3913dd6da8c16e8ab9ef0b1fa1dea85e61d4",
     "sourceFiles" : [ "backend/src/main/kotlin/com/ontostudio/rdb/DdlParser.kt", "backend/src/main/kotlin/com/ontostudio/rdb/SchemaModel.kt", "backend/src/main/kotlin/com/ontostudio/rdb/MetadataService.kt", "backend/src/main/kotlin/com/ontostudio/rdb/SampleLegacyDb.kt" ],
     "note" : "수집기 자체는 여전히 버전을 선언하지 않는다(L0-fix-2 — #114 범위 밖). 재측정 시점의 커밋이 아직 없으므로 수집기 신원은 구성 파일 해시로 고정한다 — 값은 재계산으로 검증된다"
   },
@@ -62,10 +62,13 @@
     "rate" : 1.0
   },
   "provenance" : {
-    "probe" : "kotlin-reflect — SchemaModel/TableInfo/ColumnInfo/ForeignKeyInfo/CollectionIssue 의 선언 멤버 이름",
+    "probe" : "#113 전용 측정(metadata/completeness-db.json)의 completeness 를 인용한다 — 타입 그래프의 자리와 수집 경로별 실제 값 중 **최소값**이라 자리만 있고 값이 없는 통과를 막는다",
+    "citedEvidence" : "docs/superpowers/specs/bench/l0/metadata/completeness-db.json",
+    "citedMeasurementVersion" : "l0-metadata-completeness/v1",
     "required" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
-    "present" : [ ],
-    "rate" : 0.0
+    "present" : 5,
+    "rate" : 1.0,
+    "typeGraphPresent" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ]
   },
   "reporting" : {
     "probe" : "산출물 타입에 실패·제외를 사유·좌표와 함께 실을 자리가 있는가",
@@ -220,7 +223,7 @@
       "artifactHashes" : [ "sha256:4d97295c02f95118ee3ca9147ac67b19018cbb02d124c64dae11c6ea97a68641", "sha256:4d97295c02f95118ee3ca9147ac67b19018cbb02d124c64dae11c6ea97a68641", "sha256:4d97295c02f95118ee3ca9147ac67b19018cbb02d124c64dae11c6ea97a68641" ],
       "largestIdenticalGroup" : 3,
       "determinismRate" : 1.0,
-      "provenanceRate" : 0.0,
+      "provenanceRate" : 1.0,
       "note" : "DDL 텍스트 경로와 같은 SchemaModel 로 수렴하므로 provenance·보고 채널 결과도 같다 — 두 경로의 결함도, 이번 수정도 산출물 타입에서 공유된다",
       "storedRowValuesLeakedIntoArtifact" : 0
     },

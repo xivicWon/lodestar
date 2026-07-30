@@ -19,7 +19,10 @@ runs/run-l0-db-3c27259-002/     probe-db.json · report.json    (#114 재측정 
 runs/run-l0-code-3c27259-001/   probe-code.json · report.json  (#88 실측 — 결정성 0.3333 · H1)
 runs/run-l0-code-3c27259-002/   probe-code.json · report.json  (#112 재측정 — 결정성 1.0)
 runs/run-l0-code-3c27259-003/   probe-code.json · report.json  (#114 재측정 — 보고율 1.0 · 현행)
-```
+
+test_bench_l0.py                계측기 자체의 단위 테스트 (합성 입력)
+metadata_completeness.py        #113 게이트 재측정 (코드 트랙 실측 + DB 트랙 결과 확인)
+metadata/completeness-{db,code}.json   그 결과```
 
 **현행 실행**은 db `002` · code `003` 이다(`build_report.RUNS` · `probe_code.RUN_DIR`). 각 트랙의 직전
 실행이 `PREVIOUS` 이며 새 보고서가 그것을 `baseline.previous` 로 인용한다 — 덮어쓰지 않는다(I3 §5.5).
@@ -43,19 +46,21 @@ pip install -e codegraph                      # tree-sitter 수집기 의존성
 #    서브셸로 격리한다 — `cd backend && ... && cd ..` 는 gradle 이 실패하면 backend 에 남아
 #    이후 docs/... 경로가 전부 어긋난다.
 ( cd backend && ./gradlew test --tests 'com.ontostudio.rdb.L0DbSourceProbeTest' )
+# 아래는 **고정 revision 의 worktree 에서만** 성립한다 — #113 이후 현재 브랜치에서는 실패가 정상이다.
+# 이유와 절차: "기존 실행의 재현 조건" 절.
 python3 docs/superpowers/specs/bench/l0/probe_code.py --check
 
 # 2) 보고서 재생성 (프로브에서 결정적으로 파생된다 — diff 가 나오면 근거가 표류했다)
 python3 docs/superpowers/specs/bench/l0/build_report.py
 git diff --exit-code docs/superpowers/specs/bench/l0/runs
 
-# 3) 증거 적합성 확인
+# 3) 증거 적합성 확인 (워킹트리와 무관 — 커밋된 산출물만 읽는다)
 python3 docs/superpowers/specs/bench/l0/verify_l0.py
-# 31 cases, 0 mismatches
+# 31 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount. #88 의 24 는 #112 가 V12~V13 을,
+#                            #114 가 V14 를 더하며 31 로 올렸다 — manifest 가 정본이고 확인기가 대조한다)
 
 # 4) 계측기 자체의 테스트 (실측 없이 합성 입력으로 돈다)
-python3 -m pytest docs/superpowers/specs/bench/l0/test_bench_l0.py -q
-```
+python3 -m pytest docs/superpowers/specs/bench/l0/test_bench_l0.py -q```
 
 새 runId 를 처음 만들 때만 DB 프로브를 부트스트랩한다 — 그 외에는 커밋된 산출물이 없으면 테스트가 실패한다.
 
@@ -67,3 +72,60 @@ python3 -m pytest docs/superpowers/specs/bench/l0/test_bench_l0.py -q
 #88 때는 `determinismObserved` 가 프로세스마다 달라져 표류 검사에서 제외했지만, #112 로 그 원인이
 사라져 예외를 없앴다 — 이제 `--check` 는 산출물 전체의 표류에 더해 **결정성 1.0** 과
 `determinismControl.seedIndependent`(PYTHONHASHSEED 를 바꿔도 동일)를 요구한다.
+
+## 기존 실행의 재현 조건 (#113 이후)
+
+코드 트랙 프로브의 **입력이 `backend/src/main/kotlin` 그 자체**다. 그래서 L0-fix 로 백엔드 코드가
+바뀌면 워킹트리에서의 `probe_code.py --check` 는 더 이상 고정 입력을 재지 못하고 실패한다 — 고장이
+아니라 그 프로브가 **입력 신원을 검사하고 있다는 증거**다(#113 은 `SchemaModel.kt` 등 그 범위 안의
+파일을 바꾼다). 기존 실행을 재현하려면 **그 실행을 만든 커밋**을 꺼낸다. 입력만이 아니라 수집기까지
+그 시점이어야 한다 — run-001 은 `lodestar-codegraph@0.1.0`, run-002 는 `0.1.1` 이 잰 것이다.
+
+```bash
+RUN_COMMIT=3944e50            # 그 실행을 만든 커밋 (run-002 는 #112 머지 커밋)
+git worktree add /tmp/l0-run "$RUN_COMMIT"
+python3 -m venv /tmp/l0-run-venv               # 격리된 인터프리터에서 돌린다
+/tmp/l0-run-venv/bin/pip install -q -e /tmp/l0-run/codegraph
+( cd /tmp/l0-run && /tmp/l0-run-venv/bin/python docs/superpowers/specs/bench/l0/probe_code.py --check )
+```
+
+venv 를 쓰는 이유: 현재 워킹트리에서 `pip install -e codegraph` 를 해 두면 editable 설치의 import
+훅이 `sys.path` 보다 먼저 걸려, **역사적 입력에 현재 수집기**를 물릴 수 있다. 그러면 재현이 아니다.
+
+커밋된 증거 자체의 적합성(`verify_l0.py`)은 워킹트리와 무관하다 — 커밋된 산출물만 읽으므로
+현재 브랜치에서도 그대로 29 cases / 0 mismatches 여야 한다.
+
+### 코드 트랙 재측정은 gold 재고정이 선행이다 (열린 항목)
+
+`#113` 브랜치에서 `probe_code.py --check` 는 실패한다. 확인된 표류 블록은
+`input`·`inventory`·`readOnly`(입력이 바뀌었다)와 `provenance`·`determinismControl`(수집기가 바뀌었다)이다.
+
+```
+[FAIL] 프로브 산출물 표류 — 블록: ['determinismControl', 'input', 'inventory', 'provenance', 'readOnly']
+```
+
+이것을 새 runId 로 정리하려면 **입력 revision 을 다시 고정해야** 한다. gold manifest 는
+`sourceRevision: 3c27259…` 를 **`APPROVED`** 상태로 고정하고 있고(`docs/superpowers/specs/gold/manifest.json`),
+확인기 V3·V4 가 프로브 입력을 그 값과 대조한다. 즉 코드 트랙의 새 실측은 **I2 Gold Set 개정**(승인 사항,
+I1 §7)을 거쳐야 하며, `gate-l0-metadata-completeness` 하나를 닫는 이 이슈 안에서 끝낼 수 없다.
+
+그때까지 코드 트랙의 메타데이터 완전성은 `metadata_completeness.py` 가 **고정 입력과 무관하게**
+현재 수집기를 직접 돌려 잰다(아래). 두 측정은 목적이 다르다 — 프로브는 *고정 revision 의 실측*,
+이쪽은 *지금 수집기가 계약을 지키는가* 다.
+
+## #113 게이트 재측정
+
+`gate-l0-metadata-completeness` 하나만 다시 잰다. **#88 의 baseline 산출물은 손대지 않는다.**
+
+```bash
+( cd backend && ./gradlew test --tests '*L0DbMetadataCompletenessTest' )   # DB 트랙
+python3 docs/superpowers/specs/bench/l0/metadata_completeness.py           # 코드 트랙 + 두 트랙 판정
+# [ok] gate-l0-metadata-completeness — db 5/5 · code 5/5
+```
+
+최초 생성은 각각 `-DL0_METADATA_BOOTSTRAP=true` · `--bootstrap` 이다. 두 결과의 `volatile` 블록은
+입력 내용·리비전에 따라 달라지므로 표류 검사에서 제외한다.
+
+L0 **전체 판정**은 여전히 `BLOCKED` 이다 — #112 로 결정성(H1)은 해소됐지만 PII 마스킹(H2)과
+오류 가시성이 남아 있다. 전체 판정을 움직이려면 그것들까지 고친 뒤 **새 runId 로 전 트랙을 다시 재는**
+별도 실행이 필요하다.

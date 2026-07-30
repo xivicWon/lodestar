@@ -45,7 +45,7 @@ class SemanticEnricherCurrentTest {
     /** 두 테이블(TB_CUST_MST, TB_ORD_HD)로 구성한 온톨로지를 holder 에 주입. */
     private fun holderWith(vararg tables: TableInfo): OntologyHolder {
         val holder = OntologyHolder()
-        val ont = SchemaToOwlMapper().build(SchemaModel(tables.toList()), baseIri)
+        val ont = SchemaToOwlMapper().build(SchemaModel.of(tables.toList(), "db:test:semanticenrichercurrenttest"), baseIri)
         holder.replace(ont, baseIri)
         return holder
     }

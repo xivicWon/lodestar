@@ -1,0 +1,121 @@
+{
+  "measurementVersion": "l0-metadata-completeness/v1",
+  "issue": 113,
+  "gate": "gate-l0-metadata-completeness",
+  "track": "code",
+  "contract": "docs/superpowers/specs/2026-07-30-m0-l0-collection-metadata-contract.md",
+  "baseline": "docs/superpowers/specs/bench/l0/runs/run-l0-code-3c27259-001 (0/5, 손대지 않는다)",
+  "required": [
+    "projectId",
+    "sourceId",
+    "revision",
+    "contentHash",
+    "collectorVersion"
+  ],
+  "artifact": {
+    "probe": "실제 수집기(lodestar_codegraph)를 돌려 산출물의 meta·nodes 키를 센다",
+    "scopeRoot": "backend/src/main/kotlin",
+    "metaKeys": [
+      "collector_version",
+      "community_count",
+      "content_hash",
+      "edge_count",
+      "excluded",
+      "external_calls",
+      "failed",
+      "failed_files",
+      "generated_by",
+      "issues",
+      "languages",
+      "node_count",
+      "parsed",
+      "partial",
+      "partial_files",
+      "project_id",
+      "revision",
+      "skipped",
+      "source_id",
+      "source_root",
+      "walked"
+    ],
+    "nodeKeys": [
+      "community",
+      "content_hash",
+      "degree",
+      "god_node",
+      "id",
+      "kind",
+      "label",
+      "lang",
+      "path",
+      "qualified_name",
+      "source_id",
+      "status"
+    ],
+    "present": [
+      {
+        "field": "projectId",
+        "via": "meta.project_id",
+        "basis": "직접 키 + 값 확인"
+      },
+      {
+        "field": "sourceId",
+        "via": "meta.source_id",
+        "basis": "직접 키 + 값 확인"
+      },
+      {
+        "field": "revision",
+        "via": "meta.revision",
+        "basis": "직접 키 + 값 확인"
+      },
+      {
+        "field": "contentHash",
+        "via": "meta.content_hash",
+        "basis": "직접 키 + 값 확인"
+      },
+      {
+        "field": "collectorVersion",
+        "via": "meta.collector_version",
+        "basis": "직접 키 + 값 확인"
+      }
+    ],
+    "absent": []
+  },
+  "perSource": {
+    "probe": "노드 하나에서 5필드가 닫히는가 — 소스를 지목하지 못하는 신원은 추적성이 아니다",
+    "nodesMissingSourceId": [],
+    "nodesMissingContentHash": [],
+    "nodesWithWrongContentHash": [],
+    "scope": {
+      "probe": "범위 안의 수집 가능한 파일을 다 봤는가 — 노드 수 고정 대신 범위 회귀를 잡는다",
+      "collectableFiles": 60,
+      "walked": 60,
+      "allCollected": true,
+      "missed": []
+    },
+    "formats": {
+      "metaProjectId": true,
+      "metaSourceId": true,
+      "metaContentHash": true,
+      "metaRevision": true,
+      "revisionDerivesFromContentHash": true,
+      "collectorVersion": true
+    }
+  },
+  "identity": {
+    "projectId": "lodestar",
+    "collectorVersion": "lodestar-codegraph@0.2.0"
+  },
+  "completeness": {
+    "present": 5,
+    "required": 5,
+    "rate": 1.0
+  },
+  "volatile": {
+    "note": "값은 수집 범위의 내용·리비전에 따라 달라진다 — 표류 검사 대상이 아니다",
+    "revision": "dirty:6589e65ecdc1",
+    "contentHash": "sha256:6589e65ecdc17c423b7440b8668a0dba5b6715d10b2cba21375e30eebe05d688",
+    "nodeCount": 384,
+    "walked": 60
+  }
+}

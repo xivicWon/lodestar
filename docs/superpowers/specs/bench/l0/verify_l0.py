@@ -470,17 +470,16 @@ def injections() -> list[tuple[str, str, callable]]:
         c["reports"]["db"]["counts"]["excluded"] += 1
 
     def handmade_metric(c):
-        # 실패한 게이트의 수치를 손으로 통과시킨 모양. (#112 이후 determinism 은 실제로 1.0 이라
-        # 그 값을 1.0 으로 바꾸는 주입은 아무것도 바꾸지 않는다 — 아직 실패인 지표를 고른다.)
-        c["reports"]["code"]["metrics"]["provenanceCompleteness"]["value"] = 1.0
+        # 수치를 손으로 고친 모양. **현재 값과 다른 값**으로 흔든다 — 특정 지표에 절대값을 박아두면
+        # 실측이 그 값이 되는 순간(예: #113 이후 provenance 1.0) 주입이 아무것도 바꾸지 않는다.
+        m = c["reports"]["code"]["metrics"]["provenanceCompleteness"]
+        m["value"] = 0.5 if m["value"] != 0.5 else 0.25
 
     def handmade_gate(c):
-        # 실제로 실패한 게이트를 손으로 통과시킨다. 이미 통과한 게이트에 PASS 를 덮으면 주입이
-        # 아무것도 바꾸지 않아, 규칙이 무는지 확인하지 못한 채 케이스만 남는다.
-        for g in c["reports"]["db"]["gates"]:
-            if g["id"] == "gate-l0-metadata-completeness":
-                g["status"] = "PASS"
-                g["observed"] = 1.0
+        # **지금 실패 중인** 게이트를 손으로 통과시킨다. 특정 게이트 id 를 박아두면 그 게이트가
+        # 통과로 바뀌는 순간 주입이 아무것도 바꾸지 않아, 규칙이 무는지 확인하지 못한 채 케이스만 남는다.
+        failed = next(g for g in c["reports"]["db"]["gates"] if g["status"] == "FAIL")
+        failed["status"] = "PASS"
 
     def input_drift(c):
         c["probes"]["db"]["input"]["hashMatchesPinned"] = False
@@ -643,6 +642,13 @@ def main() -> int:
     mismatches = 0
     for rid, name, fn in cases:
         bad = _inj(ctx, fn)
+        # 주입이 아무것도 바꾸지 않으면 그 케이스는 **무력화된 것**이다. 세상이 바뀌어(실패하던
+        # 게이트·지표가 통과로) 주입 대상이 이미 그 값이면 규칙은 멀쩡히 통과하고 케이스 수도 그대로라
+        # 아무도 알아채지 못한다 — 이번 M0 작업에서 실제로 세 번 일어났다.
+        if bad == ctx:
+            mismatches += 1
+            print(f"  [{rid}] {name}: 주입이 증거를 바꾸지 않았다 — 케이스가 무력화됐다")
+            continue
         try:
             errs, _ = RULES[rid](bad)
             caught = bool(errs)

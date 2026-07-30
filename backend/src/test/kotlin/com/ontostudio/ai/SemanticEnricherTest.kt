@@ -95,7 +95,7 @@ class SemanticEnricherTest {
         val store = store()
         // 샘플의 모든 테이블을 확정 처리.
         SampleLegacyDb().open().use { conn ->
-            for (t in MetadataService().extract(conn).tables) {
+            for (t in MetadataService().extract(conn, "db:test:semanticenricher").tables) {
                 store.confirm(ConfirmedFact("http://lodestar/rdb/legacy#${SchemaToOwlMapper().slug(t.name)}", t.name, "class"))
             }
         }

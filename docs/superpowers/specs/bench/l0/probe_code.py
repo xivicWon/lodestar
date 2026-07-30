@@ -370,14 +370,21 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
         elif f in PROVENANCE_ALIASES:
             key, basis, pinned = PROVENANCE_ALIASES[f]
             present.append({"field": f, "via": key, "basis": basis, "pinned": pinned})
+    # 비율은 **#113 의 전용 측정을 인용한다**. 키가 있는지만 다시 재면 값이 비어 있거나
+    # 플레이스홀더여도 통과하는, 더 느슨한 근거로 같은 게이트를 판정하게 된다. 키 집합은
+    # 인용이 실재와 어긋나지 않는지 보는 보조 증거로만 남긴다.
+    cited = json.loads((HERE / "metadata/completeness-code.json").read_text())
     probe["provenance"] = {
-        "probe": "산출물(codegraph.json)의 meta·nodes 키 집합",
+        "probe": "#113 전용 측정(metadata/completeness-code.json)의 completeness 를 인용한다 — "
+                 "산출물 키 존재가 아니라 소스 단위로 값이 채워졌는지까지 본 결과다",
+        "citedEvidence": "docs/superpowers/specs/bench/l0/metadata/completeness-code.json",
+        "citedMeasurementVersion": cited["measurementVersion"],
         "metaKeys": meta_keys,
         "nodeKeys": node_keys,
         "required": REQUIRED_PROVENANCE,
         "present": present,
         "absent": [f for f in REQUIRED_PROVENANCE if f not in {p["field"] for p in present}],
-        "rate": round(len(present) / len(REQUIRED_PROVENANCE), 4),
+        "rate": cited["completeness"]["rate"],
     }
 
     # 6) 실패·제외 보고 채널
