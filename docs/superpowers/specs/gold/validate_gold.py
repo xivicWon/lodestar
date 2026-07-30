@@ -283,8 +283,13 @@ if _ms:
     sys.exit(1)
 
 DOCS = {rel: load(rel) for rel in ITEM_FILES + OTHER_FILES}
-ALL_ITEMS = [(rel, it) for rel in ITEM_FILES for it in DOCS[rel]["items"]]
-ITEM_BY_ID = {it["id"]: it for _, it in ALL_ITEMS}
+# 파생 구조를 만들 때 필수 키를 단정하지 않는다. 단정하면 항목 하나에 `id` 가
+# 빠졌을 때 규칙이 돌기도 전에 모듈 로드에서 KeyError 로 죽고, 사용자는 구조화된
+# [G1] 대신 raw traceback 을 본다 — 매니페스트에는 사전 게이트를 뒀으면서
+# 항목 파일에는 같은 보호가 없었다. 결함은 G1 이 스키마 위반으로 보고한다.
+ALL_ITEMS = [(rel, it) for rel in ITEM_FILES for it in DOCS[rel].get("items", [])
+             if isinstance(it, dict)]
+ITEM_BY_ID = {it["id"]: it for _, it in ALL_ITEMS if "id" in it}
 SOURCES = {s["sourceId"]: s for s in MANIFEST["pinnedSources"]}
 
 
@@ -556,10 +561,12 @@ def _g9():
         # ABSENT 는 정의상 원본에 없으므로 이름 대조를 요구할 수 없다(위 검사까지만).
         if it["expect"] not in ("PRESENT", "REPORTED_EXCLUDED"):
             continue
-        name = it["value"].get("name") or it["value"].get("constraintName") \
-            or (it["value"]["columns"][0] if it["type"] == "PRIMARY_KEY" else None)
-        if name and name not in lines[ln - 1]:
-            yield f"{it['id']}: '{name}' 가 인용 행 L{ln} 에 없다 — gold 좌표가 원본과 어긋난다"
+        # 코드 트랙과 **같은 명세 테이블**을 쓴다. 여기만 자체 추출을 하면 테이블의
+        # DB 항목이 죽은 코드가 되고, 명세를 고쳐도 DB 트랙은 따라오지 않는다.
+        spec = VERIFY_TOKENS.get(it["type"])
+        for name in (spec(it["value"]) if spec else []):
+            if name not in lines[ln - 1]:
+                yield f"{it['id']}: '{name}' 가 인용 행 L{ln} 에 없다 — gold 좌표가 원본과 어긋난다"
 
     # 코드 트랙도 같은 대조를 받는다. DB 만 검사하면 fqn·members 를 지어내도 통과한다.
     for it in DOCS["l1/code.json"]["items"]:

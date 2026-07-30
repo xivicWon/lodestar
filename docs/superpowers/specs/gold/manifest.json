@@ -284,7 +284,7 @@
     },
     {
       "path": "validate_gold.py",
-      "sha256": "sha256:de2c995209362fbf939f31af5dc49c93e5df6551dd7f7d2a16e7f6f6fb30b76e"
+      "sha256": "sha256:4cb29e628838a143b08e23e1a21d31e5d92da02b369a4634aef1da39497a8489"
     }
   ],
   "fixtures": [
@@ -350,7 +350,7 @@
     }
   ],
   "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
-  "goldSetId": "gold-set/v0+8d6aaa4e014f",
+  "goldSetId": "gold-set/v0+de835c17d201",
   "expectedCounts": {
     "l1/db.json": 178,
     "l1/code.json": 47,
