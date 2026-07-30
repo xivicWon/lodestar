@@ -12,6 +12,7 @@ def build_and_write(nodes: list[Node], edges: list[Edge], meta_extra: dict,
     node_docs = sorted(
         ({"id": n.id, "kind": n.kind, "label": n.label,
           "qualified_name": n.qualified_name, "path": n.path, "lang": n.lang,
+          "status": n.status,
           "community": n.community, "degree": n.degree, "god_node": n.god_node}
          for n in nodes),
         key=lambda d: d["id"],

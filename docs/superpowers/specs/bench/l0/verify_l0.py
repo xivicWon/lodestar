@@ -36,7 +36,10 @@ import validate_rqr  # noqa: E402
 from jsonschema import Draft202012Validator  # noqa: E402
 
 TRACKS = ("db", "code")
-MAX_RULE = 11
+MAX_RULE = 12
+# 검증 대상 실행 집합 — #88 baseline 과 #114 재측정을 나란히 확인한다. 규칙은 집합마다 따로 돌고
+# 결과는 합산한다: 한 집합만 보면 '수정 후 실행' 이나 '수정 전 기준선' 중 하나가 무검증으로 남는다.
+RUN_SETS = ("baseline", "l0fix")
 L0_COLLECTOR_FEATURES = {"db": {"P-ddl-parser", "E1"}, "code": {"E17"}}
 
 
@@ -45,11 +48,11 @@ def blob(revision: str, path: str) -> str:
                           capture_output=True, text=True, check=True).stdout
 
 
-def load_ctx() -> dict:
+def load_ctx(run_set: str = "baseline") -> dict:
     ctx = {"gold": json.loads((GOLD / "manifest.json").read_text()),
-           "reports": {}, "probes": {}}
+           "runSet": run_set, "reports": {}, "probes": {}}
     for t in TRACKS:
-        run = build_report.RUNS[t]
+        run = build_report.run_dir(run_set, t)
         ctx["reports"][t] = json.loads((run / "report.json").read_text())
         ctx["probes"][t] = json.loads((run / build_report.PROBE_NAME[t]).read_text())
     return ctx
@@ -75,7 +78,7 @@ def v2_report_derives_from_probe(ctx):
     errs, seen = [], 0
     for t, rep in ctx["reports"].items():
         seen += 1
-        rebuilt = build_report.build_from(t, ctx["probes"][t])
+        rebuilt = build_report.build_from(t, ctx["probes"][t], ctx["runSet"])
         if rebuilt != rep:
             diff = [k for k in sorted(set(rebuilt) | set(rep)) if rebuilt.get(k) != rep.get(k)]
             errs.append(f"{t}: 보고서가 프로브에서 재생성되지 않는다 — 블록: {diff}")
@@ -301,6 +304,62 @@ def v11_declared_paths_measured(ctx):
     return errs, seen
 
 
+def _range(locator: str):
+    m = re.search(r"#L(\d+)(?:-L(\d+))?", locator or "")
+    if not m:
+        return None
+    start = int(m.group(1))
+    return start, int(m.group(2) or start)
+
+
+def v12_report_attribution(ctx):
+    """V12 보고율은 **귀속**으로 센다 — 건수만 맞추거나 그럴듯한 좌표를 적어 통과하는 경로를 막는다.
+
+    확인기는 프로브의 `reported: true` 를 믿지 않고, 그 항목이 인용한 관측 좌표가 gold 기대 좌표와
+    실제로 겹치는지·사유가 있는지를 다시 본다. 겹침을 다시 계산하지 않으면 '보고했다' 는 주장 자체가
+    검증되지 않은 채 게이트를 통과한다(#114 오류 가시성 게이트의 근거가 여기 걸려 있다).
+    """
+    errs, seen = [], 0
+    gold_failures = {f["id"]: f for f in json.loads((GOLD / "failures.json").read_text())["fixtures"]}
+    for t in TRACKS:
+        for fx in ctx["probes"][t]["failureFixtures"]:
+            att = fx.get("reportAttribution")
+            if att is None:
+                # 보고 채널이 없던 실행(v1 프로브) — '보고 0건' 이라는 주장 자체를 검사한다.
+                seen += 1
+                if fx.get("actualReported", 0) != 0:
+                    errs.append(f"{t}: {fx['id']} 는 귀속 근거 없이 보고 건수를 주장한다")
+                continue
+            expected = gold_failures[fx["id"]]["reported"]
+            if len(att["expected"]) != len(expected):
+                errs.append(f"{t}: {fx['id']} 의 기대 항목 수가 gold 와 다르다")
+            for e, g in zip(att["expected"], expected):
+                seen += 1
+                if e["kind"] != g["kind"] or e["locator"] != g["locator"]:
+                    errs.append(f"{t}: {fx['id']} 의 기대 항목이 gold 선언과 다르다 "
+                                f"({e['kind']} {e['locator']} ≠ {g['kind']} {g['locator']})")
+                    continue
+                if not e["reported"]:
+                    continue
+                if not e.get("reasonPresent"):
+                    errs.append(f"{t}: {fx['id']} {g['kind']} 를 사유 없이 보고로 셌다(R-F-2)")
+                want, got = _range(g["locator"]), _range(e.get("observedLocator", ""))
+                if got is None:
+                    errs.append(f"{t}: {fx['id']} {g['kind']} 의 관측 좌표가 없다 — 보고로 셀 수 없다")
+                elif not (got[0] <= want[1] and want[0] <= got[1]):
+                    errs.append(f"{t}: {fx['id']} {g['kind']} 의 관측 좌표 {e['observedLocator']} 가 "
+                                f"gold 좌표 {g['locator']} 와 겹치지 않는다")
+            recomputed = sum(1 for e in att["expected"] if e["reported"])
+            if att["actualReported"] != recomputed or fx["actualReported"] != recomputed:
+                errs.append(f"{t}: {fx['id']} 의 보고 건수가 항목별 귀속과 맞지 않는다 "
+                            f"(주장 {fx['actualReported']} / 귀속 {recomputed})")
+            if att.get("unattributedReports"):
+                # 과대 집계는 실패가 아니라 표기 대상이지만, 픽스처에서는 R-F-4 위반 신호다.
+                errs.append(f"{t}: {fx['id']} 에 gold 기대에 귀속되지 않은 보고가 있다: "
+                            f"{att['unattributedReports']}")
+    return errs, seen
+
+
 RULES = {
     "V1": v1_schema_and_i3_rules,
     "V2": v2_report_derives_from_probe,
@@ -313,6 +372,7 @@ RULES = {
     "V9": v9_tracks_separated,
     "V10": v10_baseline_eligibility,
     "V11": v11_declared_paths_measured,
+    "V12": v12_report_attribution,
 }
 
 
@@ -409,6 +469,16 @@ def injections() -> list[tuple[str, str, callable]]:
     def coverage_state_unmeasured(c):
         c["probes"]["code"].pop("coverageState")
 
+    def fake_report_claim(c):
+        """관측 좌표 없이 '보고했다' 고 주장 — 귀속 근거 없는 보고율."""
+        att = c["probes"]["db"]["failureFixtures"][0]["reportAttribution"]
+        att["expected"][0].pop("observedLocator", None)
+
+    def wrong_report_locator(c):
+        """그럴듯하지만 gold 기대 구간과 겹치지 않는 관측 좌표."""
+        att = c["probes"]["code"]["failureFixtures"][0]["reportAttribution"]
+        att["expected"][0]["observedLocator"] = "code-broken-syntax.kt#L999"
+
     return [
         ("V1", "판정 어휘 위반", bad_schema),
         ("V1", "counts 합 불일치(I3 R2)", bad_i3),
@@ -434,32 +504,38 @@ def injections() -> list[tuple[str, str, callable]]:
         ("V6", "픽스처 id 를 바꿔 붙임(귀속 위조)", swapped_fixture_id),
         ("V11", "선언한 MetadataService 경로를 재지 않음", metadata_path_unmeasured),
         ("V11", "커버리지 state 를 재지 않음", coverage_state_unmeasured),
+        # 아래 두 케이스는 보고 채널이 있는 실행(l0fix)에서만 의미가 있다.
+        ("V12", "귀속 근거 없이 보고 주장", fake_report_claim, "l0fix"),
+        ("V12", "관측 좌표가 gold 구간과 겹치지 않음", wrong_report_locator, "l0fix"),
     ]
 
 
 def main() -> int:
-    ctx = load_ctx()
+    contexts = {s: load_ctx(s) for s in RUN_SETS}
     failures = []
 
-    print("== 규칙 실행 (커밋된 증거)")
-    for rid, fn in RULES.items():
-        try:
-            errs, seen = fn(ctx)
-        except Exception as e:  # 손상된 증거일수록 예외가 잘 난다 — 침묵하지 않는다
-            failures.append(f"[{rid}] 예외: {type(e).__name__}: {e}")
-            print(f"  {rid}: 예외 — {type(e).__name__}: {e}")
-            continue
-        if seen == 0:
-            failures.append(f"[{rid}] 검사 대상이 0건이다 — 규칙이 아무것도 들여다보지 않았다")
-        for e in errs:
-            failures.append(f"[{rid}] {e}")
-        print(f"  {rid}: 대상 {seen}건, 오류 {len(errs)}건")
+    for run_set, ctx in contexts.items():
+        print(f"== 규칙 실행 (커밋된 증거 · {run_set})")
+        for rid, fn in RULES.items():
+            try:
+                errs, seen = fn(ctx)
+            except Exception as e:  # 손상된 증거일수록 예외가 잘 난다 — 침묵하지 않는다
+                failures.append(f"[{rid}/{run_set}] 예외: {type(e).__name__}: {e}")
+                print(f"  {rid}: 예외 — {type(e).__name__}: {e}")
+                continue
+            if seen == 0:
+                failures.append(f"[{rid}/{run_set}] 검사 대상이 0건이다 — 규칙이 아무것도 들여다보지 않았다")
+            for e in errs:
+                failures.append(f"[{rid}/{run_set}] {e}")
+            print(f"  {rid}: 대상 {seen}건, 오류 {len(errs)}건")
 
     print("== 결함 주입 (규칙이 실제로 무는가)")
     cases = injections()
     mismatches = 0
-    for rid, name, fn in cases:
-        bad = _inj(ctx, fn)
+    for case in cases:
+        rid, name, fn = case[0], case[1], case[2]
+        target = case[3] if len(case) > 3 else "baseline"
+        bad = _inj(contexts[target], fn)
         try:
             errs, _ = RULES[rid](bad)
             caught = bool(errs)
@@ -468,7 +544,7 @@ def main() -> int:
         if not caught:
             mismatches += 1
             print(f"  [{rid}] {name}: 걸리지 않았다")
-    covered = {rid for rid, _, _ in cases}
+    covered = {case[0] for case in cases}
     for rid in RULES:
         if rid not in covered:
             mismatches += 1

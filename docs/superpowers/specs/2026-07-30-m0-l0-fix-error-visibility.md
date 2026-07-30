@@ -1,0 +1,131 @@
+# M0 / L0-fix — 수집 제외·실패·부분복구를 반환형에 명시 (조용한 skip 제거)
+
+> 작성일: 2026-07-30
+> 이슈: #114 `[L0-fix][visibility]` · 선행: #88 [L0 Source 실측](2026-07-30-m0-l0-source-validation.md)(BLOCKED · baseline)
+> 대응 후속 제안: #88 §6 의 **L0-fix-3**(제외·실패 채널) · **L0-fix-4**(부분 복구·부분 성공 표기)
+> 상태: **수정 + 재측정 완료** — `gate-error-visibility` 두 트랙 **PASS**(보고율 1.0). 다른 게이트는 여전히 FAIL이라 L0 전체 판정은 **BLOCKED** 유지.
+
+#88 이 측정한 것은 정확도가 아니라 정직성이었고, 두 트랙 모두 **제외·실패 보고율 0.0** 으로 실패했다
+(F3·F4·F5·F6). 원인은 구현 실수가 아니라 **반환형에 자리가 없다**는 구조였다:
+`DdlParser.parse` 는 `catch (e: Exception) { null } ?: continue` 로 실패 문장을 좌표·사유 없이 버렸고,
+`SchemaModel` · `codegraph.json` 어디에도 "무엇을 왜 못 했다" 를 실을 슬롯이 없었다.
+
+이 이슈는 그 자리를 만들고, **같은 고정 입력으로 다시 재서** 보고율이 1.0 이 되는지 확인한다.
+
+---
+
+## 1. 도입한 어휘 (두 트랙 공통)
+
+| 종류 | 뜻 | 산출물에서 |
+|---|---|---|
+| `SKIPPED` | 수집 범위 밖이거나 수집기가 처리하지 않는 대상. **정당한 제외도 여기다** — 사유·분모는 그대로 보고한다(I3 R20) | `issues[].kind` |
+| `FAILED` | 처리하려 했으나 실패한 대상. 사실은 산출하지 않는다 | `issues[].kind` |
+| `PARTIAL` | 일부만 수집된 대상. 부분 성공을 완전 성공으로 위장하지 않기 위한 표시 | `issues[].kind` · 코드 노드 `status` |
+
+사유 코드는 gold(#99) `failures.json` 의 `reported[].kind` 와 **같은 값**을 쓴다 — 대조가 가능해야 보고율을
+귀속으로 셀 수 있다: `PARSE_ERROR` · `UNSUPPORTED_STATEMENT` · `UNSUPPORTED_LANGUAGE` ·
+`UNSUPPORTED_OBJECT_TYPE` · `OUT_OF_SCOPE_BY_DESIGN` · `PARTIAL_COLLECTION` · `IGNORED_BY_CONFIG`.
+
+항목은 넷을 반드시 가진다: **종류 · 사유코드+사유문 · 좌표 · 대상**. 좌표는 `path#L11-L14`(한 행이면
+`path#L16`) 이고, **대상 문자열은 그 행에서 실제로 조회돼야 한다** — 그럴듯하지만 조회되지 않는 좌표를
+막는 #88 §7 V5 와 같은 요구다.
+
+## 2. DB 트랙 (`SchemaModel` · `DdlParser` · `MetadataService`)
+
+- `SchemaModel(tables, issues, partials)`. `issues` 는 **문장·객체 단위**(gold R-F-4), `partials` 는
+  **입력 단위** 부분 성공 요약이다 — 분모가 다르므로 한 리스트에 섞지 않는다.
+- 문장 분리기를 다시 썼다: 문자열 리터럴·`--`·블록 주석·**달러 인용(`$$`, `$tag$`)** 안의 `;` 는 경계가
+  아니다. 트리거+PL/pgSQL 함수 픽스처가 조각 5~6건이 아니라 **문장 2건**으로 세어진다(R-F-4).
+- **조용한 부분 복구 제거**: 쉼표가 빠지면 JSqlParser 는 예외 없이 뒤 컬럼을 앞 컬럼의 제약으로 흡수해
+  '컬럼 1개짜리 테이블' 을 만든다. 예외만 보는 구현에서는 이 실패가 조용히 통과한다. 그래서 컬럼 제약
+  안에 **다른 컬럼의 타입 선언이 들어앉았는지** 보고(허용 구문 DEFAULT/CHECK/REFERENCES/COMMENT 의
+  값 표현식은 먼저 걷어낸다), 걸리면 부분 복구 결과를 **버리고** `FAILED`/`PARSE_ERROR` 로 보고한다
+  (gold `F.DB.PARTIAL_EXTRACT` 는 TB_BAD_MIDDLE 을 산출하지 않는 것을 정답으로 못박는다).
+- 미지원 문법(`CREATE TRIGGER`/`FUNCTION`/`PROCEDURE`)과 진짜 깨진 문장을 구분한다 — 한 통에 넣으면
+  '고칠 것' 과 '지원 범위' 가 섞인다.
+- `MetadataService`: 타입 필터가 걸러낸 객체(뷰 등)를 `UNSUPPORTED_OBJECT_TYPE` 로 보고한다.
+  판정은 **신원**으로 한다 — `TABLE_TYPE` 문자열로 비교하면 H2 의 `"BASE TABLE"` 표기에 걸려 전 테이블이
+  미지원으로 오보고된다(프로브의 표류 검사가 이 실수를 잡았고, 회귀 테스트로 고정했다).
+
+## 3. 코드 트랙 (`lodestar_codegraph`)
+
+- `walk_with_exclusions` — 확장자 필터·무시 규칙에 걸린 파일을 사유·좌표와 함께 돌려준다. 조용히 거르면
+  `not_collected` 와 `absent` 가 L0 에서 이미 뭉개진다(EVL 계약 §2.5).
+- `parse_with_issues` — tree-sitter 는 오류 복구 파서라 깨진 입력에서도 부분 트리를 만든다. **가장 바깥
+  ERROR/MISSING 노드만** 좌표로 남기고(중첩까지 세면 실패 건수가 부풀어 R-F-4 위반), 그 구간과 겹치는
+  선언은 사실로 산출하지 않는다.
+- 파일 노드에 `status` 를 실었다: `parsed` | `partial` | `failed`. 사실을 하나도 못 건지면 `failed`,
+  일부라도 건지면 `partial` 이며 그 파일에서 나온 노드도 `partial` 로 표시된다(I1 §3.3 confidence 상한의 근거).
+- `meta` 에 `issues`(항목별) · `excluded`/`failed`/`partial`(건수) · `partial_files`/`failed_files` 가 실린다.
+  정렬은 좌표 기준으로 고정한다 — 보고 채널이 새 비결정성의 원천이 되면 안 된다.
+
+## 4. 재측정 (새 runId — 이전 실행은 남긴다)
+
+프로브를 v2 로 올리고 **새 runId** 로 다시 쟀다. #88 의 산출물·보고서는 비교 기준선으로 그대로 둔다
+(I3 §5.5 — 사후 수정은 새 runId). v1 프로브의 산식("반환형에 자리가 없어 보고율은 구조적으로 0")은 더 이상
+성립하지 않으므로 v1 프로브 코드는 v2 가 이어받았다.
+
+| 실행 | 프로브 | 입력 |
+|---|---|---|
+| `run-l0-db-3c27259-002` | `L0DbSourceProbeTest.kt` (`l0-db-probe/v2`) | #88 과 동일한 고정 원본(해시 대조) |
+| `run-l0-code-3c27259-002` | `probe_code.py` (`l0-code-probe/v2`) | **고정 revision 의 blob 에서 재구성한 범위** |
+
+코드 트랙은 입력이 `backend/src/main/kotlin` 이고 이 이슈가 바로 그 디렉토리를 고친다 — 작업 트리를
+입력으로 삼는 동안에는 "고정 revision 을 쟀다" 가 성립하지 않는다. 그래서 v2 는 범위를 `git` blob 에서
+임시 디렉토리로 재구성해 측정한다. 수집기 신원은 커밋이 아직 없으므로 **구성 파일 해시**로 인용한다
+(`versions.collector` = `…@sha256:…`, 재계산으로 검증된다).
+
+**보고율의 세는 법(M-DB-5 · M-CODE-4).** "보고했다" 는 주장은 건수로 세지 않는다. gold 기대 항목마다
+(사유코드 일치 ∧ 좌표 행범위 겹침 ∧ 사유문 존재)로 **귀속**하고, 귀속되지 않은 보고는
+`unattributedReports` 로 따로 드러낸다(과대 집계 = R-F-4 위반 신호). 확인기 V12 는 프로브의
+`reported: true` 를 믿지 않고 그 항목이 인용한 관측 좌표를 **다시 계산해** 겹침을 확인한다.
+
+### 결과
+
+| 게이트 | db 001 → 002 | code 001 → 002 |
+|---|---|---|
+| `gate-error-visibility` | 0.0 → **1.0 PASS** | 0.0 → **1.0 PASS** |
+| `gate-determinism` | 1.0 PASS (유지) | 0.3333 FAIL (유지 · H1 — L0-fix-1) |
+| `gate-l0-metadata-completeness` | 0.0 FAIL (유지 · L0-fix-2) | 0.4 FAIL (유지 · L0-fix-2) |
+| `gate-security-masking` | FAIL (유지 · H2 — L0-fix-5) | FAIL (유지 · H2 — L0-fix-5) |
+| 판정 | BLOCKED (H2) | BLOCKED (H1·H2) |
+
+- db: 문장 36건 = 산출 27 + 제외 9(뷰 1 · 행 데이터 8) + 실패 0, 제외·실패 **9/9 보고**.
+  실패 픽스처 3건의 기대 보고 5항목 **전부 귀속**, 조용한 부분 복구 **0건**(v1: 1건).
+- code: 범위 59파일 전량 파싱, 실패 픽스처 3건의 기대 보고 3항목 **전부 귀속**,
+  '완전 성공으로 표시된 실패 픽스처' **0건**(v1: 2건).
+- 남은 FAIL 은 전부 이 이슈 범위 밖의 후속(L0-fix-1·2·5)이다. 오류 가시성만 열렸고 L1 착수 조건은
+  아직 닫혀 있다.
+
+## 5. 확인기 (V12 추가)
+
+`verify_l0.py` 는 이제 **두 실행 집합**(baseline `-001` · l0fix `-002`)을 각각 검증한다. 한 집합만 보면
+'수정 후 실행' 이나 '수정 전 기준선' 중 하나가 무검증으로 남는다.
+
+| ID | 불변식 | 위반 시 |
+|---|---|---|
+| **V12** | 보고율은 **귀속**으로 센다 — 기대 항목이 gold 선언과 같고, 보고로 센 항목은 사유가 있고 관측 좌표가 gold 구간과 겹치며, 건수가 항목별 귀속과 일치한다 | 건수만 맞춘 보고 · 그럴듯하지만 겹치지 않는 좌표 · 귀속 근거 없는 보고율 |
+
+결함 주입 케이스 2건이 V12 를 문다(귀속 근거 없이 보고 주장 · 겹치지 않는 관측 좌표).
+`bench/l0/manifest.json` 의 범위·총계도 함께 올렸다: **V1-V12 · 26 케이스**.
+
+```bash
+( cd backend && ./gradlew test )                                  # DB 프로브 + 회귀 테스트
+( cd codegraph && python3 -m pytest -q )                          # 코드 트랙 수집기 테스트
+python3 docs/superpowers/specs/bench/l0/probe_code.py --check      # 코드 프로브 표류 검사
+python3 docs/superpowers/specs/bench/l0/build_report.py            # 보고서 4건 재생성(멱등)
+python3 docs/superpowers/specs/bench/l0/verify_l0.py               # 26 cases, 0 mismatches
+```
+
+## 6. 남긴 판단
+
+- **부분 복구를 버리는 쪽을 택했다.** gold 는 TB_BAD_MIDDLE 을 산출하지 않는 것을 정답으로 못박는다 —
+  "컬럼 하나라도 살리는" 쪽이 정보가 많아 보이지만, 그 테이블이 스키마에 등장하는 순간 하류(매퍼·온톨로지)는
+  그것을 완전한 사실로 취급한다. 버리고 `FAILED` 로 보고하는 것이 손실이 아니라 정직이다.
+  DB 트랙에서 `PARTIAL` 은 **입력 단위 요약**(`partials`)으로만 나타나고, 코드 트랙에서는 파일 단위로
+  사실을 유지한 채 `PARTIAL` 이 붙는다 — 어느 쪽이든 조용한 복구는 없다.
+- **탐지는 휴리스틱이고, 휴리스틱이라고 적었다.** 흡수된 컬럼 탐지는 SQL 타입 낱말 목록에 기댄다.
+  고정 입력의 27개 테이블에서 오탐 0건임을 테스트가 고정하지만, 새 벤더 문법에서 오탐이 나면 그때는
+  실패로 보고된다(사실을 조용히 버리는 방향이 아니라 **보고하는 방향**으로 틀린다).
+- **v1 프로브는 되돌리지 않는다.** 커밋된 v1 산출물은 그 시점 수집기의 측정이며, 지금 코드로 다시 만들
+  수 없다. 그래서 v1 은 증거로 동결하고 확인기가 계속 검증한다(V2 는 보고서를 프로브에서 재생성해 대조).

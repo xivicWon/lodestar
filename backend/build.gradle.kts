@@ -33,5 +33,8 @@ tasks.test {
     inputs.files(fileTree(File(rootDir.parentFile, "docs/superpowers/specs/bench/l0/runs")))
         .withPropertyName("l0BenchEvidence")
         .optional()
+    // 새 runId 를 처음 만들 때만 쓰는 1회 우회. 테스트 JVM 은 데몬의 -D 를 물려받지 않으므로
+    // 여기서 명시적으로 넘긴다 — 넘기지 않으면 부트스트랩 플래그가 조용히 무시된다.
+    System.getProperty("L0_PROBE_BOOTSTRAP")?.let { systemProperty("L0_PROBE_BOOTSTRAP", it) }
 }
 kotlin { jvmToolchain(21) }

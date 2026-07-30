@@ -197,9 +197,18 @@ def extract_file(pf: ParsedFile, edge_seq: Iterator[int]) -> ExtractResult:
     pkg = _package_name(root, spec)
     r = ExtractResult()
 
+    # 파싱 오류 구간과 겹치는 선언은 사실로 산출하지 않는다 — tree-sitter 의 부분 트리에서
+    # 심볼을 건져 성공으로 표시하면 부분 추출이 완전 추출로 위장된다(#114).
+    def broken(n: TsNode) -> bool:
+        s, e = n.start_point[0] + 1, n.end_point[0] + 1
+        return any(not (e < bs or s > be) for bs, be in pf.error_spans)
+
+    status = "partial" if pf.has_errors else "parsed"
+
     file_id = f"file:{rel}"
-    r.nodes.append(Node(id=file_id, kind="file", label=rel.split("/")[-1],
-                        qualified_name=rel, path=rel, lang=pf.sf.lang))
+    file_node = Node(id=file_id, kind="file", label=rel.split("/")[-1],
+                     qualified_name=rel, path=rel, lang=pf.sf.lang, status=status)
+    r.nodes.append(file_node)
 
     # 함수 id/owner_fqn/name은 collect_functions()에서만 계산한다 (id/arity/#seq 로직의
     # 유일한 구현). start_byte로 조회 — 같은 파일 안에서 func_decls 타입 노드는 서로
@@ -211,7 +220,7 @@ def extract_file(pf: ParsedFile, edge_seq: Iterator[int]) -> ExtractResult:
 
     def visit_type(tnode: TsNode, owner_fqn: str | None = None):
         name = _child_field_ident(tnode)
-        if not name:
+        if not name or broken(tnode):
             return
         # 중첩 타입은 owner_fqn을 이어붙인다 (Outer.Inner). owner_fqn이 없으면(최상위)
         # 패키지에서 새로 계산한다 — 재귀 호출마다 패키지에서 다시 계산하면 중첩 타입의
@@ -219,7 +228,7 @@ def extract_file(pf: ParsedFile, edge_seq: Iterator[int]) -> ExtractResult:
         fqn = f"{owner_fqn}.{name}" if owner_fqn else (f"{pkg}.{name}" if pkg else name)
         tid = f"type:{fqn}"
         r.nodes.append(Node(id=tid, kind="type", label=name,
-                            qualified_name=fqn, path=rel, lang=pf.sf.lang))
+                            qualified_name=fqn, path=rel, lang=pf.sf.lang, status=status))
         r.type_index[fqn] = tid
         # 중첩 타입의 contains 엣지는 파일이 아니라 소유 타입에서 나온다.
         contains_src = f"type:{owner_fqn}" if owner_fqn else file_id
@@ -242,11 +251,12 @@ def extract_file(pf: ParsedFile, edge_seq: Iterator[int]) -> ExtractResult:
 
     def visit_func(fnode: TsNode):
         meta = func_by_start.get(fnode.start_byte)
-        if meta is None:  # collect_functions가 이름 없음 등으로 건너뛴 노드
+        if meta is None or broken(fnode):  # 이름 없음 · 파싱 오류 구간
             return
         fid, owner_fqn, name = meta
         r.nodes.append(Node(id=fid, kind="function", label=name,
-                            qualified_name=f"{owner_fqn}.{name}", path=rel, lang=pf.sf.lang))
+                            qualified_name=f"{owner_fqn}.{name}", path=rel, lang=pf.sf.lang,
+                            status=status))
         r.edges.append(Edge(next(edge_seq), f"type:{owner_fqn}", fid,
                             "contains", EXTRACTED, 1.0))
 
@@ -256,6 +266,10 @@ def extract_file(pf: ParsedFile, edge_seq: Iterator[int]) -> ExtractResult:
             visit_type(c)
     for imp in _imports(root, spec):
         r.edges.append(Edge(next(edge_seq), file_id, f"type:{imp}", "imports", EXTRACTED, 1.0))
+
+    # 오류가 있는데 사실을 하나도 못 건졌다면 그 파일은 부분 성공이 아니라 실패다.
+    if pf.has_errors and not any(n.kind in ("type", "function") for n in r.nodes):
+        file_node.status = "failed"
 
     return r
 
