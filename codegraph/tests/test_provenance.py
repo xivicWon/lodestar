@@ -120,6 +120,36 @@ def test_ignored_but_collected_source_is_not_claimed_as_head(tmp_path):
     assert rev.startswith("dirty:"), rev
 
 
+def test_symlinked_source_is_not_claimed_as_head(tmp_path):
+    """수집기는 링크 **대상의 바이트**를 읽지만 git 은 링크만 추적한다.
+
+    대상이 수집 범위 밖이면 그 내용이 바뀌어도 `status -- <범위>` 는 clean 이다 — 그 상태로
+    HEAD 를 적으면 "이 커밋으로 재현된다" 가 거짓이 된다.
+    """
+    import os
+
+    root = write_scope(tmp_path, **{"A.kt": "class A\n"})
+    outside = tmp_path / "outside.kt"
+    outside.write_text("class Before\n", encoding="utf-8")
+    os.symlink(outside, root / "Link.kt")
+
+    git = ["git", "-C", str(tmp_path)]
+    subprocess.run(git + ["init", "-q"], check=True)
+    subprocess.run(git + ["config", "user.email", "t@t"], check=True)
+    subprocess.run(git + ["config", "user.name", "t"], check=True)
+    subprocess.run(git + ["add", "-A"], check=True)
+    subprocess.run(git + ["commit", "-qm", "x"], check=True)
+
+    files = [str(root / "A.kt"), str(root / "Link.kt")]
+    rev = prov.detect_revision(str(root), prov.scope_hash(str(root), files), ["A.kt", "Link.kt"])
+    assert rev.startswith("dirty:"), rev
+
+    # 대조군: 워킹트리를 건드리지 않고 **수집 집합에서만** 링크를 빼면 커밋 sha 여야 한다.
+    # (파일을 지우면 트리가 dirty 해져서 무엇 때문에 dirty 인지 구별할 수 없다.)
+    plain = prov.detect_revision(str(root), prov.scope_hash(str(root), [str(root / "A.kt")]), ["A.kt"])
+    assert not plain.startswith(("dirty:", "nogit:")), plain
+
+
 @pytest.mark.parametrize("bad", ["", " ", "unknown", "N/A", "null", "none", "todo", "-"])
 def test_placeholder_project_id_is_rejected(bad):
     with pytest.raises(ValueError):

@@ -116,6 +116,11 @@ def detect_revision(source_root: str, scope_content_hash: str,
     if status is None or status:
         return f"dirty:{short}"
     if collected:
+        # 심볼릭 링크는 수집기가 **대상의 바이트**를 읽지만 git 은 링크 자체(대상 경로 문자열)만
+        # 추적한다. 대상이 범위 밖에 있으면 그 내용이 바뀌어도 `status -- <범위>` 는 clean 이라
+        # HEAD 로 재현된다고 주장하게 된다. 수집한 바이트를 HEAD 가 담고 있지 않으므로 dirty 다.
+        if any(os.path.islink(os.path.join(root, rel)) for rel in collected):
+            return f"dirty:{short}"
         listing = _git(root, "ls-files", "--full-name", "--", root)
         if listing is None:
             return f"dirty:{short}"

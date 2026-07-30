@@ -4,6 +4,7 @@ import java.sql.DriverManager
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
@@ -183,6 +184,20 @@ class CollectionMetadataTest {
             CollectionMetadata.sha256(SchemaCanonical.bytes(listOf(base.copy(foreignKeys = fks)))),
             CollectionMetadata.sha256(SchemaCanonical.bytes(listOf(base.copy(foreignKeys = fks.reversed())))),
             "같은 FK 집합의 입력 순서가 신원을 흔든다")
+    }
+
+    @Test fun `live jdbc source id distinguishes different servers`() {
+        // 같은 이름의 DB 가 운영·스테이징에 각각 있으면, host·port 가 없는 sourceId 는
+        // 두 서버를 같은 소스로 기록한다 — 그 지점에서 추적성이 끊긴다.
+        val prod = ConnectionInfo("db.prod", 5432, "app", "u", "p")
+        val stage = ConnectionInfo("db.stage", 5432, "app", "u", "p")
+        assertNotEquals(LiveJdbcSource.sourceId(prod), LiveJdbcSource.sourceId(stage))
+        assertNotEquals(LiveJdbcSource.sourceId(prod), LiveJdbcSource.sourceId(prod.copy(port = 5433)))
+        assertEquals("db:jdbc:postgresql://db.prod:5432/app", LiveJdbcSource.sourceId(prod))
+        // 자격증명은 신원이 아니다 — 산출물에 실리면 안 된다.
+        val withSecret = prod.copy(user = "svc_account", password = "s3cr3t")
+        assertFalse(LiveJdbcSource.sourceId(withSecret).contains("s3cr3t"))
+        assertFalse(LiveJdbcSource.sourceId(withSecret).contains("svc_account"))
     }
 
     @Test fun `live jdbc path records vendor and database in the source id`() {

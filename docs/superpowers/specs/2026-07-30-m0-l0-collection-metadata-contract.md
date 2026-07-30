@@ -40,7 +40,7 @@ L1 이후의 모든 수치가 추적 불가능한 입력 위에 서게 된다(I1
 |---|---|---|
 | DB | 인라인 DDL 텍스트 | `db:ddl:<논리 스키마 이름>` |
 | DB | 번들 샘플 레거시 | `db:legacy-sample` (gold 고정 id 와 같다) |
-| DB | 라이브 JDBC | `db:jdbc:<vendor>/<database>` |
+| DB | 라이브 JDBC | `db:jdbc:<vendor>://<host>:<port>/<database>` — host·port 를 빼면 서로 다른 서버의 같은 이름 DB(운영/스테이징)가 같은 소스가 된다. **자격증명은 넣지 않는다** |
 | CODE | 소스 파일 | 수집 범위 루트 기준 **상대경로** (`nodes[].source_id`) |
 | CODE | 실행 전체(범위) | `code:<범위 이름>` (`meta.source_id` — 절대경로가 아니다, §5.2) |
 
@@ -98,7 +98,9 @@ nodes[].source_id · nodes[].content_hash
 - `meta.revision` — 수집 범위 루트에서 `git rev-parse HEAD`. 커밋 sha 를 쓰려면 **수집한 것이 그
   커밋에서 그대로 나와야** 하므로 두 가지를 본다: 범위 안에 수정된 파일이 없는가, 그리고 수집한
   파일이 전부 HEAD 에 추적되는가. 후자를 빼면 gitignore 된 소스를 수집해도 워킹트리는 clean 이라
-  "HEAD 로 재현된다" 는 거짓 주장이 된다. 재현되지 않으면 `dirty:`, git 이 아니면 `nogit:` +
+  "HEAD 로 재현된다" 는 거짓 주장이 된다. **수집한 파일에 심볼릭 링크가 있으면 무조건 `dirty:`** 다 —
+  수집기는 링크 대상의 바이트를 읽는데 git 은 링크(대상 경로 문자열)만 추적하므로, 대상이 범위 밖에
+  있으면 그 내용이 바뀌어도 워킹트리는 clean 이다. 재현되지 않으면 `dirty:`, git 이 아니면 `nogit:` +
   범위 해시 앞 12자. CLI `--revision` 으로 덮어쓸 수 있다(형식에 맞지 않으면 거절한다).
 - `collector_version` — `lodestar-codegraph@<pyproject version>[+<sha>]`. 기존
   `meta.generated_by`("lodestar-codegraph v1")는 세대만 있고 커밋·semver 가 없어 #88 에서

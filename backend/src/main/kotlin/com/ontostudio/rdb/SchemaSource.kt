@@ -29,10 +29,20 @@ class LiveJdbcSource(
     private val metadata: MetadataService,
 ) : SchemaSource {
     override val name: String = info.database
+
+    /**
+     * sourceId 에 host·port 가 들어간다 — 빼면 서로 다른 서버의 같은 이름 DB(운영/스테이징)가
+     * **같은 소스**로 기록되어 추적성이 그 지점에서 끊긴다. 자격증명은 넣지 않는다.
+     */
     override fun extract(): SchemaModel =
         connector.open(info).use { conn: Connection ->
-            metadata.extract(conn, sourceId = "db:jdbc:${info.vendor}/${info.database}")
+            metadata.extract(conn, sourceId = LiveJdbcSource.sourceId(info))
         }
+
+    companion object {
+        fun sourceId(info: ConnectionInfo): String =
+            "db:jdbc:${info.vendor}://${info.host}:${info.port}/${info.database}"
+    }
 }
 
 /** 번들 샘플 레거시 소스 */
