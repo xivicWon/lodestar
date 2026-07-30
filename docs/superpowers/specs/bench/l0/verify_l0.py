@@ -161,7 +161,11 @@ def v5_exclusion_locators_resolve(ctx):
                     errs.append(f"{t}: 좌표가 파일 범위를 벗어난다: {loc} (행수 {len(lines)})")
                 else:
                     target = re.search(r"\(([^)]+)\)\s*$", loc)
-                    if target and target.group(1) not in lines[line - 1]:
+                    # 파일 단위 제외(미지원 언어 등)의 대상은 그 파일 자신이다 — 파일 안의 어떤 행에도
+                    # 자기 경로가 적혀 있지 않으므로 행 내용 대조를 요구하면 정상 증거가 실패한다.
+                    file_level = target and (path.endswith(target.group(1))
+                                             or target.group(1).endswith(path))
+                    if target and not file_level and target.group(1) not in lines[line - 1]:
                         errs.append(f"{t}: 좌표가 가리키는 행에 대상이 없다: {loc} → {lines[line - 1]!r}")
     return errs, seen
 

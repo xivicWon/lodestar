@@ -81,6 +81,31 @@ class DdlParserIssueReportingTest {
         assertTrue(DdlParser().parse("CREATE TABLE T (ID INT PRIMARY KEY);").partials.isEmpty())
     }
 
+    @Test fun `주석만 있는 조각은 없는 실패로 보고되지 않는다`() {
+        val sql = """
+            /* 블록 주석만 있는 조각 */
+            CREATE TABLE T1 (ID INT PRIMARY KEY);
+            -- 행 주석만 있는 꼬리
+        """.trimIndent()
+        val out = DdlParser().parse(sql)
+        assertEquals(listOf("T1"), out.tables.map { it.name })
+        assertEquals(emptyList(), out.issues, "주석을 문장으로 세면 없는 실패가 보고된다")
+    }
+
+    @Test fun `문자열 리터럴 안의 세미콜론은 문장 경계가 아니다`() {
+        val out = DdlParser().parse("INSERT INTO T VALUES ('a;b'); CREATE TABLE T2 (ID INT);")
+        assertEquals(listOf("T2"), out.tables.map { it.name })
+        // 리터럴에서 잘리면 조각이 파싱 실패로 세어져 실패 건수가 부풀어 오른다(R-F-4).
+        assertEquals(1, out.issues.size, out.issues.toString())
+        assertEquals(CollectionReason.OUT_OF_SCOPE_BY_DESIGN, out.issues[0].reasonCode)
+    }
+
+    @Test fun `종결 세미콜론이 없는 마지막 문장도 수집된다`() {
+        val out = DdlParser().parse("CREATE TABLE T1 (ID INT PRIMARY KEY)")
+        assertEquals(listOf("T1"), out.tables.map { it.name })
+        assertEquals(emptyList(), out.issues)
+    }
+
     @Test fun `정당한 제외도 사유와 분모로 보고된다 (legacy-sample INSERT·VIEW)`() {
         val sqlPath = "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql"
         val out = DdlParser().parse(File(repoRoot, sqlPath).readText(), sqlPath)

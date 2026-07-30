@@ -53,8 +53,8 @@ def _error_target(n: TsNode, pkg: str) -> str | None:
             prev_kw = True
             continue
         if prev_kw and c.type in ("identifier", "simple_identifier", "type_identifier"):
-            return f"{pkg}." + c.text.decode("utf-8", "replace") if pkg \
-                else c.text.decode("utf-8", "replace")
+            name = c.text.decode("utf-8", "replace")
+            return f"{pkg}.{name}" if pkg else name
         prev_kw = False
     return None
 

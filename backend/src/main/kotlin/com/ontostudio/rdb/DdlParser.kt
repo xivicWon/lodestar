@@ -160,17 +160,26 @@ class DdlParser {
     private fun dollarTag(sql: String, at: Int): String? =
         Regex("^\\$[A-Za-z_][A-Za-z0-9_]*\\$|^\\$\\$").find(sql.substring(at))?.value
 
-    /** 주석·빈 줄만 남은 조각은 문장이 아니다. 좌표는 **첫 실제 코드 행**부터 센다. */
+    /**
+     * 주석·빈 줄만 남은 조각은 문장이 아니다. 좌표는 **첫 실제 코드 행**부터 센다.
+     *
+     * 주석 판정은 행 단위 근사다(행 주석 · 블록 주석 시작 · 이어지는 별표). 근사여도 방향이 정해져
+     * 있다: 주석만 있는 조각을 문장으로 세면 없는 실패가 보고되므로, 그 방향으로 틀리지 않게 걷어낸다.
+     */
     private fun statementOf(text: String, startLine: Int, endLine: Int): RawStatement? {
+        fun isComment(line: String): Boolean {
+            val t = line.trim()
+            return t.startsWith("--") || t.startsWith("/*") || t.startsWith("*")
+        }
+
         var first = -1
         var lineNo = startLine
         for (l in text.split("\n")) {
-            val t = l.trim()
-            if (t.isNotEmpty() && !t.startsWith("--")) { first = lineNo; break }
+            if (l.isNotBlank() && !isComment(l)) { first = lineNo; break }
             lineNo++
         }
         if (first < 0) return null
-        val body = text.lineSequence().filterNot { it.trim().startsWith("--") }.joinToString("\n").trim()
+        val body = text.lineSequence().filterNot { isComment(it) }.joinToString("\n").trim()
         if (body.isEmpty() || body == ";") return null
         return RawStatement(first, endLine, text)
     }

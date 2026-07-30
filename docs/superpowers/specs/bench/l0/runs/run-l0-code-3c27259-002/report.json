@@ -15,7 +15,7 @@
   "versions": {
     "collector": {
       "status": "PINNED",
-      "value": "lodestar-codegraph@0.1.0+sha256:64040d39bcbec68f854bbfc66841e41b9b1d08af90051b22a9c08123c085ad0b"
+      "value": "lodestar-codegraph@0.1.0+sha256:61968310034de002df8a2baa9e7e9ded2907e06e4aeb02f6d444ca5328448bb2"
     },
     "extractor": {
       "status": "NOT_APPLICABLE",

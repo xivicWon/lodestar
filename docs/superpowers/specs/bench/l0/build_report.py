@@ -84,7 +84,6 @@ def _db_facts(p: dict) -> dict:
         "provenance": p["provenance"]["rate"],
         "shouldReport": should_report,
         "reported": reported,
-        "partial": acq.get("partial", 0),
         "silentPartialRecovery": sum(
             len(f["unexpectedExtracted"]) for f in fixtures if not f.get("markedAsPartial")),
         "piiPositives": p["pii"]["positives"],
@@ -109,7 +108,6 @@ def _code_facts(p: dict) -> dict:
         "shouldReport": (inv["excludedByExtensionFilter"] + inv.get("failedReportedByCollector", 0)
                          + sum(f["expectedReported"] for f in fixtures)),
         "reported": inv.get("reported", 0) + sum(f.get("actualReported", 0) for f in fixtures),
-        "partial": inv.get("partialReportedByCollector", 0),
         "markedFullySucceeded": sum(1 for f in fixtures if f["markedAsFullySucceeded"]),
         "piiPositives": p["pii"]["positives"],
         "piiMasked": p["pii"]["masked"],

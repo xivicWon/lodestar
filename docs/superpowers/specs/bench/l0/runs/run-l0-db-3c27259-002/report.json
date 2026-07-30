@@ -15,7 +15,7 @@
   "versions": {
     "collector": {
       "status": "PINNED",
-      "value": "DdlParser+SampleLegacyDb@sha256:b3f3e73c70635bd6a27d2f17b773a16c79babbf0c92c0c98fa9706abbc3ed581"
+      "value": "DdlParser+SampleLegacyDb@sha256:291cf9ade1ba727df98611489d62b1d5e0ca9515bb0396f784e34953555a2e36"
     },
     "extractor": {
       "status": "NOT_APPLICABLE",

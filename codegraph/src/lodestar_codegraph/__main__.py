@@ -27,17 +27,19 @@ def main(argv: list[str] | None = None) -> int:
     parsed, nodes, edges = [], [], []
     for f in files:
         pf, file_issues = parse_with_issues(f)
-        issues += file_issues
         if pf is None:
+            issues += file_issues
             continue
         parsed.append(pf)
         r = extract_file(pf, seq)
         nodes += r.nodes
         edges += r.edges
         # 사실을 일부라도 건진 파일의 오류는 실패가 아니라 **부분 수집**이다 — 어느 쪽인지
-        # 산출물에 명시해야 부분 성공이 완전 성공으로 위장되지 않는다(#114).
-        if any(n.kind == "file" and n.status == "partial" for n in r.nodes):
-            issues = [replace(i, kind=PARTIAL) if i in file_issues else i for i in issues]
+        # 산출물에 명시해야 부분 성공이 완전 성공으로 위장되지 않는다(#114). 판정은 그 파일의
+        # 결과로만 하고 누적 목록은 건드리지 않는다 — 값 동일성으로 되짚으면 다른 파일의 항목까지
+        # 함께 바뀔 수 있다.
+        partial = any(n.kind == "file" and n.status == "partial" for n in r.nodes)
+        issues += [replace(i, kind=PARTIAL) if partial else i for i in file_issues]
 
     calls, external = resolve_calls(parsed, nodes, seq)
     edges += calls

@@ -37,7 +37,7 @@ class MetadataService {
         //
         // 제외 판정은 **신원**으로 한다 — TABLE_TYPE 문자열로 비교하면 벤더 표기 차이에 걸린다
         // (H2 는 테이블을 "BASE TABLE" 로 보고하므로 전 테이블이 미지원으로 오보고된다).
-        val collected = ids.map { Triple(it.first, it.second, it.third) }.toSet()
+        val collected = ids.toSet()
         md.getTables(conn.catalog, null, "%", null).use { rs ->
             while (rs.next()) {
                 val type = rs.getString("TABLE_TYPE") ?: "UNKNOWN"

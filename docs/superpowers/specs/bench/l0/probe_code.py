@@ -127,18 +127,6 @@ def nondeterministic_paths(a: dict, b: dict) -> list[str]:
     return sorted(paths)
 
 
-def blob_tree(revision: str, prefix: str) -> dict[str, str]:
-    """고정 revision 의 `prefix` 아래 파일 전부의 blob 해시. 작업 트리가 아니라 revision 이 정본이다."""
-    listing = subprocess.run(["git", "ls-tree", "-r", "--format=%(path)", revision, prefix],
-                             cwd=REPO, capture_output=True, text=True, check=True).stdout
-    out = {}
-    for path in filter(None, (l.strip() for l in listing.split("\n"))):
-        content = subprocess.run(["git", "show", f"{revision}:{path}"],
-                                 cwd=REPO, capture_output=True, check=True).stdout
-        out[path] = sha256_bytes(content)
-    return out
-
-
 def materialize(revision: str, prefix: str, dest: pathlib.Path) -> dict[str, str]:
     """고정 revision 의 `prefix` 아래 파일 전부를 `dest` 에 풀어놓고 {repo상대경로: 해시} 를 돌려준다.
 
