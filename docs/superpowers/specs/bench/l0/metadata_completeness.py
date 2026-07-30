@@ -37,6 +37,13 @@ HASH_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 REV_RE = re.compile(r"^(?:[0-9a-f]{7,40}|(?:inline|bundle|live|dirty|nogit):[0-9a-f]{12})$")
 VER_RE = re.compile(r"^[a-z0-9][a-z0-9-]*@\d+\.\d+\.\d+(?:\+[0-9a-f]{7,40})?$")
 
+#: 키가 있는 것만 세면 빈 값·플레이스홀더도 5/5 가 된다 — 게이트가 통과를 뜻하지 않게 된다.
+PLACEHOLDERS = {"unknown", "n/a", "na", "null", "none", "todo", "tbd", "-", "?"}
+
+
+def usable(value) -> bool:
+    return isinstance(value, str) and bool(value.strip()) and value.strip().lower() not in PLACEHOLDERS
+
 #: 값이 입력·수집기 버전에 따라 달라지는 블록 — 표류 검사에서 제외한다(#88 의 determinismObserved 와 같은 처리).
 VOLATILE = "volatile"
 
@@ -63,16 +70,18 @@ def measure_code() -> dict:
     node_keys = sorted(nodes[0]) if nodes else []
 
     # #88 M-CODE-3 와 같은 산식 — 별칭이 아니라 **직접 키**로만 센다.
+    # 다만 키의 존재로 끝내지 않는다: 빈 값·플레이스홀더가 담긴 자리는 신원이 아니다.
+    sample_node = nodes[0] if nodes else {}
     present = []
     for field in REQUIRED:
         flat = field.lower()
-        for scope, keys in (("meta", meta_keys), ("nodes[]", node_keys)):
+        for scope, keys, values in (("meta", meta_keys, meta), ("nodes[]", node_keys, sample_node)):
             hit = next((k for k in keys if k.replace("_", "").lower() == flat), None)
-            if hit:
-                present.append({"field": field, "via": f"{scope}.{hit}", "basis": "직접 키"})
+            if hit and usable(values.get(hit)):
+                present.append({"field": field, "via": f"{scope}.{hit}", "basis": "직접 키 + 값 확인"})
                 break
 
-    missing_source_id = [n["id"] for n in nodes if not n.get("source_id")]
+    missing_source_id = [n["id"] for n in nodes if not usable(n.get("source_id"))]
     missing_hash = [n["id"] for n in nodes if not HASH_RE.match(n.get("content_hash") or "")]
 
     return {
@@ -96,6 +105,8 @@ def measure_code() -> dict:
             "nodesMissingSourceId": missing_source_id,
             "nodesMissingContentHash": missing_hash,
             "formats": {
+                "metaProjectId": usable(meta.get("project_id")),
+                "metaSourceId": usable(meta.get("source_id")),
                 "metaContentHash": bool(HASH_RE.match(meta.get("content_hash", ""))),
                 "metaRevision": bool(REV_RE.match(meta.get("revision", ""))),
                 "collectorVersion": bool(VER_RE.match(meta.get("collector_version", ""))),

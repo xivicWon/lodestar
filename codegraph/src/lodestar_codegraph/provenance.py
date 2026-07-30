@@ -77,11 +77,17 @@ def _git(root: str, *args: str) -> str | None:
     return proc.stdout.strip() if proc.returncode == 0 else None
 
 
-def detect_revision(source_root: str, scope_content_hash: str) -> str:
+def detect_revision(source_root: str, scope_content_hash: str,
+                    collected: list[str] | None = None) -> str:
     """수집 범위의 스냅샷 식별자.
 
-    clean 한 git 워킹트리면 커밋 sha, 아니면 `dirty:`/`nogit:` + 범위 해시 앞 12자.
-    시각은 쓰지 않는다 — 같은 입력의 두 실행이 달라지면 결정성 측정(I1 H1)이 오염된다.
+    커밋 sha 를 쓰려면 **수집한 것이 그 커밋에서 그대로 나와야** 한다. 그래서 두 가지를 본다 —
+    범위 안에 수정된 파일이 없는가, 그리고 수집한 파일이 전부 HEAD 에 추적되는가([collected],
+    수집 범위 루트 기준 상대경로). 후자를 빼면 gitignore 된 소스를 수집해도 워킹트리는 clean 이라
+    "HEAD 로 재현된다" 는 거짓 주장이 된다.
+
+    재현되지 않으면 `dirty:`/`nogit:` + 범위 해시 앞 12자. 시각은 쓰지 않는다 —
+    같은 입력의 두 실행이 달라지면 결정성 측정(I1 H1)이 오염된다.
     """
     root = os.path.abspath(source_root)
     short = scope_content_hash.removeprefix("sha256:")[:12]
@@ -91,7 +97,29 @@ def detect_revision(source_root: str, scope_content_hash: str) -> str:
     status = _git(root, "status", "--porcelain", "--", root)
     if status is None or status:
         return f"dirty:{short}"
+    if collected:
+        listing = _git(root, "ls-files", "--full-name", "--", root)
+        if listing is None:
+            return f"dirty:{short}"
+        prefix = _git(root, "rev-parse", "--show-prefix") or ""
+        tracked = {p[len(prefix):] for p in listing.split("\n") if p.startswith(prefix)}
+        if any(rel.replace(os.sep, "/") not in tracked for rel in collected):
+            # 추적되지 않는 소스를 수집했다 — HEAD 에서 같은 범위가 나오지 않는다.
+            return f"dirty:{short}"
     return head
+
+
+def scope_id(source_root: str) -> str:
+    """수집 범위의 이름 — **실행 위치가 아니라** 범위 자체를 가리킨다.
+
+    절대경로를 그대로 실으면 같은 스냅샷을 다른 기계에서 수집했을 때 산출물이 달라진다.
+    실행 위치는 수집 결과가 아니다(`meta.source_root` 를 정규화에서 빼는 것과 같은 이유).
+    """
+    root = os.path.abspath(source_root)
+    repo = _git(root, "rev-parse", "--show-toplevel")
+    if repo and os.path.isdir(repo):
+        return os.path.relpath(root, repo).replace(os.sep, "/")
+    return os.path.basename(root.rstrip(os.sep))
 
 
 def _require_identity(field: str, value: str) -> str:
@@ -109,13 +137,13 @@ def build_metadata(project_id: str, source_root: str, file_hashes: dict[str, str
     root = os.path.abspath(source_root)
     content_hash = hash_of_scope(file_hashes)
     if revision is None:
-        revision = detect_revision(root, content_hash)
+        revision = detect_revision(root, content_hash, sorted(file_hashes))
     elif not _REVISION.match(revision):
         raise ValueError(
             f"revision 은 커밋 sha(7~40 hex) 또는 선언된 비-VCS 스킴이어야 한다: {revision!r}")
     return {
         "project_id": project_id,
-        "source_id": f"code:{root}",
+        "source_id": f"code:{scope_id(root)}",
         "revision": revision,
         "content_hash": content_hash,
         "collector_version": collector_version(),

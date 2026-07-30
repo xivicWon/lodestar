@@ -49,27 +49,27 @@
       {
         "field": "projectId",
         "via": "meta.project_id",
-        "basis": "직접 키"
+        "basis": "직접 키 + 값 확인"
       },
       {
         "field": "sourceId",
         "via": "meta.source_id",
-        "basis": "직접 키"
+        "basis": "직접 키 + 값 확인"
       },
       {
         "field": "revision",
         "via": "meta.revision",
-        "basis": "직접 키"
+        "basis": "직접 키 + 값 확인"
       },
       {
         "field": "contentHash",
         "via": "meta.content_hash",
-        "basis": "직접 키"
+        "basis": "직접 키 + 값 확인"
       },
       {
         "field": "collectorVersion",
         "via": "meta.collector_version",
-        "basis": "직접 키"
+        "basis": "직접 키 + 값 확인"
       }
     ],
     "absent": []
@@ -79,6 +79,8 @@
     "nodesMissingSourceId": [],
     "nodesMissingContentHash": [],
     "formats": {
+      "metaProjectId": true,
+      "metaSourceId": true,
       "metaContentHash": true,
       "metaRevision": true,
       "collectorVersion": true
@@ -92,8 +94,8 @@
   "volatile": {
     "note": "값은 수집 범위의 내용·리비전에 따라 달라진다 — 표류 검사 대상이 아니다",
     "projectId": "lodestar",
-    "revision": "dirty:bfa9f03ef782",
-    "contentHash": "sha256:bfa9f03ef782301aeeffc57ff92e8f61835a84022ff7f987357945fc907fbb85",
+    "revision": "dirty:c580d2c0a81e",
+    "contentHash": "sha256:c580d2c0a81efae90d5df259e4d8f7a97f427fafdf8090d262a0d20bf199aea5",
     "collectorVersion": "lodestar-codegraph@0.1.0",
     "nodeCount": 368,
     "walked": 60

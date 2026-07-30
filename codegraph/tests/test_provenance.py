@@ -44,14 +44,23 @@ def test_scope_hash_follows_content(tmp_path):
     assert HASH_RE.match(before)
     (root / "A.kt").write_text("class A { }\n", encoding="utf-8")
     assert prov.scope_hash(str(root), [str(root / "A.kt")]) != before
-    # 경로가 늘어도 바뀐다 — 내용만 이으면 파일 추가/이동이 묻힌다.
-    (root / "B.kt").write_text("class A { }\n", encoding="utf-8")
-    assert prov.scope_hash(str(root), [str(root / "A.kt"), str(root / "B.kt")]) != before
+
+
+def test_scope_hash_follows_paths_not_just_content():
+    """내용이 같아도 경로가 다르면 다른 범위다 — 내용만 이으면 파일 추가·이동이 묻힌다.
+
+    앞 테스트처럼 내용을 함께 바꾸면, 경로를 해시에 넣지 않은 구현도 통과한다.
+    여기서는 **내용을 고정**해 경로만으로 갈리는지 본다.
+    """
+    h = "sha256:" + "0" * 64
+    assert prov.hash_of_scope({"A.kt": h}) != prov.hash_of_scope({"B.kt": h})
+    assert prov.hash_of_scope({"A.kt": h}) != prov.hash_of_scope({"A.kt": h, "B.kt": h})
+    assert prov.hash_of_scope({"a/A.kt": h}) != prov.hash_of_scope({"b/A.kt": h})
 
 
 def test_revision_outside_git_is_marked_not_a_commit(tmp_path):
     root = write_scope(tmp_path, **{"A.kt": "class A\n"})
-    rev = prov.detect_revision(str(root), prov.scope_hash(str(root), [str(root / "A.kt")]))
+    rev = prov.detect_revision(str(root), prov.scope_hash(str(root), [str(root / "A.kt")]), ["A.kt"])
     assert rev.startswith("nogit:"), rev
     assert REV_RE.match(rev)
 
@@ -68,12 +77,33 @@ def test_revision_in_clean_git_repo_is_the_commit(tmp_path):
                           check=True).stdout.strip()
 
     scope = prov.scope_hash(str(root), [str(root / "A.kt")])
-    assert prov.detect_revision(str(root), scope) == head
+    assert prov.detect_revision(str(root), scope, ["A.kt"]) == head
 
     # 워킹트리가 더러우면 HEAD 로 재현되지 않는다 — 커밋인 척하지 않는다.
     (root / "A.kt").write_text("class A { }\n", encoding="utf-8")
-    dirty = prov.detect_revision(str(root), prov.scope_hash(str(root), [str(root / "A.kt")]))
+    dirty = prov.detect_revision(str(root), prov.scope_hash(str(root), [str(root / "A.kt")]), ["A.kt"])
     assert dirty.startswith("dirty:"), dirty
+
+
+def test_ignored_but_collected_source_is_not_claimed_as_head(tmp_path):
+    """gitignore 된 소스를 수집하면 워킹트리는 clean 이지만 HEAD 로 재현되지 않는다."""
+    root = write_scope(tmp_path, **{"A.kt": "class A\n"})
+    (tmp_path / ".gitignore").write_text("src/Generated.kt\n", encoding="utf-8")
+    git = ["git", "-C", str(tmp_path)]
+    subprocess.run(git + ["init", "-q"], check=True)
+    subprocess.run(git + ["config", "user.email", "t@t"], check=True)
+    subprocess.run(git + ["config", "user.name", "t"], check=True)
+    subprocess.run(git + ["add", "-A"], check=True)
+    subprocess.run(git + ["commit", "-qm", "x"], check=True)
+
+    (root / "Generated.kt").write_text("class Generated\n", encoding="utf-8")
+    assert subprocess.run(git + ["status", "--porcelain"], capture_output=True,
+                          text=True, check=True).stdout == "", "전제: 워킹트리가 clean 이어야 한다"
+
+    files = [str(root / "A.kt"), str(root / "Generated.kt")]
+    rev = prov.detect_revision(str(root), prov.scope_hash(str(root), files),
+                               ["A.kt", "Generated.kt"])
+    assert rev.startswith("dirty:"), rev
 
 
 @pytest.mark.parametrize("bad", ["", " ", "unknown", "N/A", "null", "none", "todo", "-"])
@@ -91,7 +121,9 @@ def test_artifact_carries_all_five_fields_per_source(tmp_path):
 
     meta = doc["meta"]
     assert meta["project_id"] == "lodestar"
-    assert meta["source_id"] == f"code:{root}"
+    # 실행 위치가 아니라 범위 이름이다 — 절대경로를 실으면 기계마다 산출물이 달라진다.
+    assert meta["source_id"] == "code:src"
+    assert str(tmp_path) not in json.dumps(meta["source_id"])
     assert HASH_RE.match(meta["content_hash"])
     assert REV_RE.match(meta["revision"])
     assert VER_RE.match(meta["collector_version"])
@@ -117,8 +149,7 @@ def test_metadata_does_not_break_determinism(tmp_path):
     a = run(root, tmp_path / "a.json")
     b = run(root, tmp_path / "b.json")
     for d in (a, b):
-        d["meta"].pop("source_root")
-        d["meta"].pop("source_id")  # 절대경로를 담는다 — 실행 위치는 수집 결과가 아니다
+        d["meta"].pop("source_root")  # 실행 인자 그대로다 — 실행 위치는 수집 결과가 아니다
     assert a == b
 
 

@@ -21,7 +21,8 @@ class CollectionMetadataTest {
     private fun valid() = CollectionMetadata(
         projectId = "lodestar",
         sourceId = "db:ddl:schema",
-        revision = "inline:0123456789ab",
+        // 비-VCS revision 은 자기 contentHash 에서 파생돼야 한다 — 픽스처도 그 불변식을 지킨다.
+        revision = "inline:" + "a".repeat(12),
         contentHash = "sha256:" + "a".repeat(64),
         collectorVersion = "lodestar-rdb-collector@0.1.0",
     )
@@ -59,10 +60,23 @@ class CollectionMetadataTest {
         for (bad in listOf("HEAD", "main", "2026-07-30T00:00:00Z", "snapshot:abc", "inline:zz")) {
             assertFailsWith<IllegalArgumentException> { valid().copy(revision = bad) }
         }
-        for (ok in listOf("3c27259", "a".repeat(40), "inline:0123456789ab", "bundle:0123456789ab",
-                          "live:0123456789ab", "dirty:0123456789ab", "nogit:0123456789ab")) {
+        // valid() 의 contentHash 는 "a" * 64 이므로 비-VCS revision 의 접미사도 그것이어야 한다.
+        val a12 = "a".repeat(12)
+        for (ok in listOf("3c27259", "a".repeat(40)) +
+            CollectionMetadata.REVISION_SCHEMES.map { "$it:$a12" }) {
             assertEquals(ok, valid().copy(revision = ok).revision)
         }
+    }
+
+    @Test fun `non-vcs revision must be derived from this artifact's content hash`() {
+        // 형식만 보면 다른 스냅샷의 해시를 붙여도 통과한다 — 그러면 revision 이 신원을 가리키지 않는다.
+        for (scheme in CollectionMetadata.REVISION_SCHEMES) {
+            assertFailsWith<IllegalArgumentException> {
+                valid().copy(revision = "$scheme:0123456789ab")
+            }
+        }
+        // 커밋 sha 는 내용 파생이 아니다 — 그 자체가 외부 좌표이므로 이 불변식의 대상이 아니다.
+        assertEquals("3c27259", valid().copy(revision = "3c27259").revision)
     }
 
     @Test fun `collector version must carry name and semver`() {
@@ -114,6 +128,32 @@ class CollectionMetadataTest {
         // gold manifest 가 고정한 id 와 같아야 증거가 이어진다(I2 §6.1).
         assertEquals("db:legacy-sample", m.sourceId)
         assertTrue(m.revision.startsWith("bundle:"), "번들 리소스는 커밋 sha 를 지어내지 않는다: ${m.revision}")
+        // 접두어만 보면 revision 이 고정값으로 굳거나 다른 스냅샷에서 계산돼도 통과한다.
+        assertEquals("bundle:" + m.contentHash.removePrefix("sha256:").take(12), m.revision)
+        assertEquals(
+            CollectionMetadata.sha256(
+                SchemaCanonical.bytes(SampleSource(SampleLegacyDb(), MetadataService()).extract().tables)),
+            m.contentHash,
+            "번들 경로의 contentHash 가 수집한 카탈로그의 정규화 스냅샷에서 나오지 않았다")
+    }
+
+    @Test fun `canonical bytes follow column order and fk target columns`() {
+        // 정렬로 뭉개면 카탈로그가 바뀌었는데 contentHash 가 같아진다.
+        val cols = listOf(ColumnInfo("a", "integer", false), ColumnInfo("b", "integer", true))
+        val base = TableInfo("t", cols, listOf("a"), emptyList())
+        assertNotEquals(
+            CollectionMetadata.sha256(SchemaCanonical.bytes(listOf(base))),
+            CollectionMetadata.sha256(SchemaCanonical.bytes(listOf(base.copy(columns = cols.reversed())))),
+            "컬럼 순서가 바뀌었는데 신원이 같다")
+
+        val fks = listOf(
+            ForeignKeyInfo(listOf("x"), "ref", listOf("p")),
+            ForeignKeyInfo(listOf("x"), "ref", listOf("q")),
+        )
+        assertEquals(
+            CollectionMetadata.sha256(SchemaCanonical.bytes(listOf(base.copy(foreignKeys = fks)))),
+            CollectionMetadata.sha256(SchemaCanonical.bytes(listOf(base.copy(foreignKeys = fks.reversed())))),
+            "같은 FK 집합의 입력 순서가 신원을 흔든다")
     }
 
     @Test fun `live jdbc path records vendor and database in the source id`() {

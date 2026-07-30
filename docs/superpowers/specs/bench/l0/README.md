@@ -58,8 +58,13 @@ python3 docs/superpowers/specs/bench/l0/verify_l0.py
 
 ```bash
 git worktree add /tmp/l0-baseline 3c27259
-( cd /tmp/l0-baseline && python3 docs/superpowers/specs/bench/l0/probe_code.py --check )
+python3 -m venv /tmp/l0-baseline-venv          # 격리된 인터프리터에서 돌린다
+/tmp/l0-baseline-venv/bin/pip install -q -e /tmp/l0-baseline/codegraph
+( cd /tmp/l0-baseline && /tmp/l0-baseline-venv/bin/python docs/superpowers/specs/bench/l0/probe_code.py --check )
 ```
+
+venv 를 쓰는 이유: 현재 워킹트리에서 `pip install -e codegraph` 를 해 두면 editable 설치의 import
+훅이 `sys.path` 보다 먼저 걸려, **역사적 입력에 현재 수집기**를 물릴 수 있다. 그러면 재현이 아니다.
 
 커밋된 증거 자체의 적합성(`verify_l0.py`)은 워킹트리와 무관하다 — 커밋된 산출물만 읽으므로
 현재 브랜치에서도 그대로 24 cases / 0 mismatches 여야 한다.

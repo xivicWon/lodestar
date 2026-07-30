@@ -48,12 +48,18 @@ object SchemaCanonical {
     fun bytes(tables: List<TableInfo>): ByteArray = buildString {
         for (t in tables.sortedBy { it.name }) {
             append("T\t").append(t.name).append('\n')
-            for (c in t.columns.sortedBy { it.name }) {
+            // 컬럼은 정렬하지 않는다 — 순서 자체가 스키마의 일부이고, 두 수집 경로 모두
+            // 순서가 결정적이다(DDL 은 선언 순, JDBC 는 ORDINAL_POSITION 순).
+            for (c in t.columns) {
                 append("C\t").append(c.name).append('\t').append(c.sqlType).append('\t')
                     .append(c.nullable).append('\n')
             }
             append("P\t").append(t.primaryKey.joinToString(",")).append('\n')
-            for (f in t.foreignKeys.sortedBy { it.refTable + " " + it.fkColumns.joinToString(",") }) {
+            // 정렬 키에 refColumns 까지 넣는다 — 빼면 같은 테이블·같은 FK 컬럼을 다른 대상 컬럼으로
+            // 가리키는 두 FK 의 순서가 해시를 흔든다.
+            for (f in t.foreignKeys.sortedBy {
+                it.refTable + " " + it.fkColumns.joinToString(",") + " " + it.refColumns.joinToString(",")
+            }) {
                 append("F\t").append(f.fkColumns.joinToString(",")).append('\t')
                     .append(f.refTable).append('\t').append(f.refColumns.joinToString(",")).append('\n')
             }

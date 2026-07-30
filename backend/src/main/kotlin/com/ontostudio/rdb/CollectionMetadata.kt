@@ -30,6 +30,15 @@ data class CollectionMetadata(
         require(COLLECTOR_VERSION.matches(collectorVersion)) {
             "collectorVersion 은 '<이름>@<semver>[+<commit>]' 여야 한다: '$collectorVersion'"
         }
+        // 비-VCS revision 은 **이 산출물의 내용**에서 나온 것이어야 한다. 형식만 보면
+        // 다른 스냅샷의 해시를 붙여도 통과하고, 그러면 revision 이 신원을 가리키지 않는다.
+        val scheme = revision.substringBefore(':', missingDelimiterValue = "")
+        if (scheme in REVISION_SCHEMES) {
+            val expected = revisionOf(scheme, contentHash)
+            require(revision == expected) {
+                "revision 이 contentHash 에서 파생되지 않았다: '$revision' (기대: '$expected')"
+            }
+        }
     }
 
     companion object {

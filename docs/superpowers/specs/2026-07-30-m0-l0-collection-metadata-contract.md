@@ -86,20 +86,40 @@ nodes[].source_id · nodes[].content_hash
 ```
 
 - `meta.content_hash` — 수집 범위의 **범위 해시**: `"<상대경로> <파일해시>\n"` 을 경로 정렬해 이은
-  바이트의 sha256. 파일 하나가 바뀌면 반드시 바뀐다.
+  바이트의 sha256. 내용만 잇지 않고 경로를 함께 잇는다 — 내용만 이으면 파일 추가·이동이 묻힌다.
+  분모는 **수집기가 실제로 읽은 파일**(확장자 필터를 통과한 것)이다. 범위 안에 있으나 필터로
+  제외된 파일은 이 해시에 들어가지 않는다 — 그 제외를 사유와 함께 드러내는 것은 이 계약이 아니라
+  L0-fix-3(오류·제외 채널)의 몫이다.
+- `meta.source_id` — **실행 위치가 아니라 범위 이름**이다. 절대경로를 그대로 실으면 같은 스냅샷을
+  다른 기계에서 수집했을 때 산출물이 달라진다(`meta.source_root` 를 정규화에서 빼는 것과 같은 이유).
+  git 저장소 안이면 저장소 루트 기준 상대경로, 아니면 범위 디렉토리 이름을 쓴다.
 - `nodes[].content_hash` — 그 노드가 나온 **파일**의 해시. 노드 단위로 5필드가 닫힌다
   (`project_id`·`revision`·`collector_version` 은 실행 단위로 하나다 — 한 실행은 한 스냅샷이다).
-- `meta.revision` — 수집 범위 루트에서 `git rev-parse HEAD`. 워킹트리가 dirty 면 `dirty:`,
-  git 이 아니면 `nogit:` + 범위 해시 앞 12자. CLI `--revision` 으로 덮어쓸 수 있다.
+- `meta.revision` — 수집 범위 루트에서 `git rev-parse HEAD`. 커밋 sha 를 쓰려면 **수집한 것이 그
+  커밋에서 그대로 나와야** 하므로 두 가지를 본다: 범위 안에 수정된 파일이 없는가, 그리고 수집한
+  파일이 전부 HEAD 에 추적되는가. 후자를 빼면 gitignore 된 소스를 수집해도 워킹트리는 clean 이라
+  "HEAD 로 재현된다" 는 거짓 주장이 된다. 재현되지 않으면 `dirty:`, git 이 아니면 `nogit:` +
+  범위 해시 앞 12자. CLI `--revision` 으로 덮어쓸 수 있다(형식에 맞지 않으면 거절한다).
 - `collector_version` — `lodestar-codegraph@<pyproject version>[+<sha>]`. 기존
   `meta.generated_by`("lodestar-codegraph v1")는 세대만 있고 커밋·semver 가 없어 #88 에서
   별칭으로만 인정됐다 — 그 자리를 이 필드가 대신한다(`generated_by` 는 하위호환으로 유지).
 
 ## 6. 재측정
 
-`bench/l0/metadata_completeness.py` 가 두 트랙을 **#88 프로브와 같은 방식으로** 다시 잰다 —
-DB 는 산출물 타입 그래프(중첩 포함)의 멤버 이름, CODE 는 실제 수집 실행이 낸 `meta`·`nodes` 키.
-결과는 `bench/l0/metadata/completeness.json` 에 남고, 스크립트가 두 트랙 5/5 를 단언한다.
+두 트랙을 **#88 프로브와 같은 방식으로** 다시 잰다 — DB 는 산출물 타입 그래프(중첩 포함)의 멤버
+이름과 실제 수집 경로 3종의 값, CODE 는 실제 수집 실행이 낸 `meta`·`nodes` 키와 값. 수집기가
+언어별로 나뉘어 있으므로 측정도 나뉜다(#88 이 프로브를 나눈 것과 같은 이유).
+
+| 트랙 | 측정 | 결과 |
+|---|---|---|
+| DB | `backend/.../rdb/L0DbMetadataCompletenessTest.kt` | `bench/l0/metadata/completeness-db.json` |
+| CODE | `bench/l0/metadata_completeness.py` | `bench/l0/metadata/completeness-code.json` |
+
+`metadata_completeness.py` 가 코드 트랙을 재고 **두 트랙의 판정을 함께** 낸다. 각 측정은 자기 결과의
+표류 검사를 하며, 입력 내용·수집기 버전에 따라 달라지는 `volatile` 블록만 검사에서 제외한다.
+
+**키의 존재로 세지 않는다.** 자리가 있어도 빈 값이나 플레이스홀더가 담겨 있으면 신원이 아니므로,
+두 측정 모두 값의 사용 가능성(§2.1)과 형식(§2)까지 확인한 뒤에만 완전성에 센다.
 
 **#88 의 baseline 산출물(`run-l0-*-3c27259-001`)은 손대지 않는다.** 그것은 revision `3c27259`
 시점의 증거이고, 고친 코드로 덮어쓰면 그 시점의 사실이 사라진다(I3 §5.5 — 새 실측은 새 runId).

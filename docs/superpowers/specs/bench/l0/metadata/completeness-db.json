@@ -43,8 +43,8 @@
   "volatile" : {
     "note" : "값은 수집기 버전·입력에 따라 달라진다 — 표류 검사 대상이 아니다",
     "collectorVersion" : "lodestar-rdb-collector@0.1.0",
-    "sampleContentHash" : "sha256:3dddea1f696093ef5ff9b00fb69f69d18bb97b629568d0e28af7f3557bcf2ab8",
-    "sampleRevision" : "bundle:3dddea1f6960",
+    "sampleContentHash" : "sha256:c927031d689a5c37b8652387ade433ebc06880ea26421e947155483145bc43a6",
+    "sampleRevision" : "bundle:c927031d689a",
     "ddlContentHash" : "sha256:af16a259a6f47280c751fd7e475876ebd66fdf1139a571026c08859b2e167d3b"
   }
 }
