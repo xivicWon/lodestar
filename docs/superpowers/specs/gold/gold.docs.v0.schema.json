@@ -1042,6 +1042,7 @@
             "type": "object",
             "required": [
               "id",
+              "sourceId",
               "kind",
               "layer",
               "path",
@@ -1133,6 +1134,11 @@
               "notes": {
                 "type": "string",
                 "minLength": 1
+              },
+              "sourceId": {
+                "type": "string",
+                "minLength": 1,
+                "description": "매니페스트 `pinnedSources` 의 id. 이것이 있어야 좌표 해석과 원본 접근이 단일 해석기 `seg()` 를 거친다 — 없으면 G14 만 자기 방식으로 파일을 읽게 되고, 그 편차가 곧 규칙마다 다른 실수를 만든다."
               }
             }
           }

@@ -105,7 +105,7 @@ SUBCHECKS = {
     "G13": ["G13.1 시나리오 개수·필수 필드", "G13.2 step 연속성",
             "G13.3 CONTINUE_FROM 대상 실재", "G13.4 산문 안의 gold id 실재",
             "G13.5 요구 5케이스 존재"],
-    "G14": ["G14.1 픽스처 실재·해시", "G14.2 reported 존재·사유 필수",
+    "G14": ["G14.1 픽스처 sourceId 등록·해시 선언 일치", "G14.2 reported 존재·사유 필수",
             "G14.3 보고 좌표 범위", "G14.4 extracted 이름이 픽스처에 실재",
             "G14.5 kind ↔ 보고 종류·추출 유무 정합", "G14.6 요구 3종 존재"],
 }
@@ -861,30 +861,32 @@ def _g14():
     for f in d["fixtures"]:
         touched("G14", 1)
         kinds.add(f["kind"])
-        p = REPO / f["path"]
-        if not p.exists():
-            yield f"{f['id']}: 픽스처 파일이 없다 {f['path']}"
+        sid = f["sourceId"]
+        if sid not in SOURCES:
+            yield f"{f['id']}: sourceId '{sid}' 가 매니페스트에 등록돼 있지 않다"
             continue
-        if sha(p) != f["contentHash"]:
-            yield f"{f['id']}: contentHash 불일치"
+        # 해시는 **선언끼리** 대조한다. 디스크와의 대조는 G5 가 소유한다 —
+        # 같은 파일을 두 규칙이 각자 읽으면 그것이 곧 또 하나의 중복된 진실이다.
+        if f["contentHash"] != SOURCES[sid]["contentHash"]:
+            yield (f"{f['id']}: contentHash 가 pinnedSources 의 고정값과 다르다 "
+                   f"({f['contentHash'][:20]}… ≠ {SOURCES[sid]['contentHash'][:20]}…)")
         if not f["reported"]:
             yield f"{f['id']}: reported 가 비어 있다 — 실패 픽스처인데 보고 기대치가 없다"
-        n = len(p.read_text().splitlines())
         for r in f["reported"]:
             if not r.get("reasonRequired"):
                 yield f"{f['id']}: reported 항목에 reasonRequired 가 없다 (사유 없는 보고는 보고가 아니다)"
             # 실패 픽스처의 보고 좌표도 실재해야 한다. 여기만 예외를 두면 "어디서
             # 실패했다고 보고해야 하는가" 의 정답이 존재하지 않는 행을 가리키게 되고,
             # 채점자는 대조할 대상이 없어 그 항목을 통과 처리하게 된다.
-            nums = [int(x) for x in re.findall(r"L(\d+)", r["locator"])]
-            if any(x < 1 or x > n for x in nums):
+            a, b, n, _ = seg(sid, r["locator"])
+            if a < 1 or b > n:
                 yield (f"{f['id']}: 보고 좌표 {r['locator']} 가 파일 범위(1..{n})를 벗어난다 "
                        f"— 유령 좌표")
-            elif len(nums) == 2 and nums[0] > nums[1]:
+            elif a > b:
                 yield f"{f['id']}: 보고 좌표 {r['locator']} 의 시작 행이 끝 행보다 크다"
         # R-F-1 은 "extracted 는 그 입력에서 산출되어야 하는 사실의 전부" 라고 적어놓고
         # 아무도 읽지 않았다 — 픽스처에 없는 이름을 지어내도 통과했다.
-        body = p.read_text()
+        body = "\n".join(blob_lines(sid))
         for ex in f["extracted"]:
             name = ex.get("name") or ex.get("fqn", "").split(".")[-1]
             if name and not re.search(r"\b" + re.escape(name) + r"\b", body):

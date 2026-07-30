@@ -197,6 +197,48 @@
       "axis": "source",
       "contentHash": "sha256:23511ddf731645539b7ba312d23fa8b0478005bde29c5154989adfd5e3906c4b",
       "lines": 68
+    },
+    {
+      "sourceId": "fixture:failure/db-broken-syntax.sql",
+      "path": "docs/superpowers/specs/gold/fixtures/failure/db-broken-syntax.sql",
+      "origin": "fixture",
+      "contentHash": "sha256:02d70b3b484efa646d87ee5d21241d65c04710ad4ad60e012bdb83e5cd3c6141",
+      "lines": 7
+    },
+    {
+      "sourceId": "fixture:failure/db-unsupported-trigger.sql",
+      "path": "docs/superpowers/specs/gold/fixtures/failure/db-unsupported-trigger.sql",
+      "origin": "fixture",
+      "contentHash": "sha256:3af6b2868f273f88ecc024aacd58fc3b653c9f133e11aee8b60e5846317e9b38",
+      "lines": 17
+    },
+    {
+      "sourceId": "fixture:failure/db-partial-extract.sql",
+      "path": "docs/superpowers/specs/gold/fixtures/failure/db-partial-extract.sql",
+      "origin": "fixture",
+      "contentHash": "sha256:e5847ac537d55cd16e1dacce8503f31f1ade7a505fea26cad243d3926a229d80",
+      "lines": 23
+    },
+    {
+      "sourceId": "fixture:failure/code-broken-syntax.kt",
+      "path": "docs/superpowers/specs/gold/fixtures/failure/code-broken-syntax.kt",
+      "origin": "fixture",
+      "contentHash": "sha256:ae95bcf8a7c71837c9c99d95a683ce753ca2fc7c65b0a6975f1ff775753a9ae9",
+      "lines": 11
+    },
+    {
+      "sourceId": "fixture:failure/code-partial-extract.kt",
+      "path": "docs/superpowers/specs/gold/fixtures/failure/code-partial-extract.kt",
+      "origin": "fixture",
+      "contentHash": "sha256:54c8e89ffcdf010212309c552eb6e9b96643163d4a266435ff4403f1025c9290",
+      "lines": 14
+    },
+    {
+      "sourceId": "fixture:failure/code-unsupported-lang.scala",
+      "path": "docs/superpowers/specs/gold/fixtures/failure/code-unsupported-lang.scala",
+      "origin": "fixture",
+      "contentHash": "sha256:faed82281908dc3626f00f2350f098bef6d62c13d2109991c888966b8e8fbaa8",
+      "lines": 12
     }
   ],
   "goldFiles": [
@@ -206,11 +248,11 @@
     },
     {
       "path": "failures.json",
-      "sha256": "sha256:47e53adbd3305d0b105817d0f3934022a59d8fe66de11cb4523e0c8e15b06281"
+      "sha256": "sha256:ca63e75371174170c9ad10b33a68d887b485151970348660b6f222ea78d5d6c7"
     },
     {
       "path": "gold.docs.v0.schema.json",
-      "sha256": "sha256:3dfac6fa7e94a71474aa6e1e2d6cd57593d34f6ceafb409d44c082938dfbd29b"
+      "sha256": "sha256:524135d33cbd4b2d9334ecaad771b2c4648d258a4cc6007c740923ad18ae12cb"
     },
     {
       "path": "gold.v0.schema.json",
@@ -242,7 +284,7 @@
     },
     {
       "path": "validate_gold.py",
-      "sha256": "sha256:972eb639aa53f1b69aff6c10a768a0625943a0e1ef4eb904d8391aadf3addf81"
+      "sha256": "sha256:de2c995209362fbf939f31af5dc49c93e5df6551dd7f7d2a16e7f6f6fb30b76e"
     }
   ],
   "fixtures": [
@@ -308,7 +350,7 @@
     }
   ],
   "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
-  "goldSetId": "gold-set/v0+5c43b89eba95",
+  "goldSetId": "gold-set/v0+8d6aaa4e014f",
   "expectedCounts": {
     "l1/db.json": 178,
     "l1/code.json": 47,

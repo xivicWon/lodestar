@@ -34,7 +34,8 @@
         }
       ],
       "silentSkipIsFailure": true,
-      "notes": "현 DdlParser.parse 는 파싱 실패를 `catch (e: Exception) { null } ?: continue` 로 삼킨다(DdlParser.kt#L18). 이 픽스처는 그 경로를 정면으로 친다 — 결과는 '테이블 0건'이고 실패 보고가 없다. 그것이 곧 이 픽스처가 존재하는 이유이며, L0/L1 벤치에서 여기가 붉게 나오는 것은 예상된 결과지 픽스처의 오류가 아니다."
+      "notes": "현 DdlParser.parse 는 파싱 실패를 `catch (e: Exception) { null } ?: continue` 로 삼킨다(DdlParser.kt#L18). 이 픽스처는 그 경로를 정면으로 친다 — 결과는 '테이블 0건'이고 실패 보고가 없다. 그것이 곧 이 픽스처가 존재하는 이유이며, L0/L1 벤치에서 여기가 붉게 나오는 것은 예상된 결과지 픽스처의 오류가 아니다.",
+      "sourceId": "fixture:failure/db-broken-syntax.sql"
     },
     {
       "id": "F.DB.UNSUPPORTED_TRIGGER",
@@ -61,7 +62,8 @@
         }
       ],
       "silentSkipIsFailure": true,
-      "notes": "PL/pgSQL 본문 안의 ';' 때문에 ';' 단순 분할은 두 번째 문장을 여러 조각으로 쪼갠다. R-F-4 에 따라 정답은 2건이며, 조각 수만큼(5~6건) 보고하면 과대 집계로 별도 표기한다. 문장 경계를 세는 방식이 실행마다 다르면 그 자체로 결정성(H1) 위험 신호다."
+      "notes": "PL/pgSQL 본문 안의 ';' 때문에 ';' 단순 분할은 두 번째 문장을 여러 조각으로 쪼갠다. R-F-4 에 따라 정답은 2건이며, 조각 수만큼(5~6건) 보고하면 과대 집계로 별도 표기한다. 문장 경계를 세는 방식이 실행마다 다르면 그 자체로 결정성(H1) 위험 신호다.",
+      "sourceId": "fixture:failure/db-unsupported-trigger.sql"
     },
     {
       "id": "F.DB.PARTIAL_EXTRACT",
@@ -113,7 +115,8 @@
         }
       ],
       "silentSkipIsFailure": true,
-      "notes": "가장 중요한 픽스처다. 성공 2건이 실제로 나오기 때문에 결과가 '정상'처럼 보이고, 나머지 2건을 말하지 않으면 부분 성공이 완전 성공으로 위장된다. 실패한 TB_BAD_MIDDLE 을 부분 복구해 컬럼 하나짜리 테이블로 추출하는 것도 오답이다 — 조용한 부분 복구는 조용한 스킵과 같은 종류의 거짓말이다."
+      "notes": "가장 중요한 픽스처다. 성공 2건이 실제로 나오기 때문에 결과가 '정상'처럼 보이고, 나머지 2건을 말하지 않으면 부분 성공이 완전 성공으로 위장된다. 실패한 TB_BAD_MIDDLE 을 부분 복구해 컬럼 하나짜리 테이블로 추출하는 것도 오답이다 — 조용한 부분 복구는 조용한 스킵과 같은 종류의 거짓말이다.",
+      "sourceId": "fixture:failure/db-partial-extract.sql"
     },
     {
       "id": "F.CODE.BROKEN_SYNTAX",
@@ -134,7 +137,8 @@
         }
       ],
       "silentSkipIsFailure": true,
-      "notes": "tree-sitter 는 오류 복구 파서라 깨진 입력에서도 부분 트리를 만든다. 그 부분 트리에서 심볼을 건져 성공으로 표시하면 이 픽스처는 실패다 — ERROR 노드의 존재를 결과에 실어야 한다."
+      "notes": "tree-sitter 는 오류 복구 파서라 깨진 입력에서도 부분 트리를 만든다. 그 부분 트리에서 심볼을 건져 성공으로 표시하면 이 픽스처는 실패다 — ERROR 노드의 존재를 결과에 실어야 한다.",
+      "sourceId": "fixture:failure/code-broken-syntax.kt"
     },
     {
       "id": "F.CODE.PARTIAL_EXTRACT",
@@ -166,7 +170,8 @@
         }
       ],
       "silentSkipIsFailure": true,
-      "notes": "앞부분이 온전하므로 GoodOne 은 추출해도 된다. 판정 지점은 '파일 파싱 성공' 으로 표시하느냐다 — 부분 성공은 부분 성공으로 표시해야 하고, 이 파일에서 나온 사실의 confidence 에는 상한이 걸려야 한다(I1 §3.3)."
+      "notes": "앞부분이 온전하므로 GoodOne 은 추출해도 된다. 판정 지점은 '파일 파싱 성공' 으로 표시하느냐다 — 부분 성공은 부분 성공으로 표시해야 하고, 이 파일에서 나온 사실의 confidence 에는 상한이 걸려야 한다(I1 §3.3).",
+      "sourceId": "fixture:failure/code-partial-extract.kt"
     },
     {
       "id": "F.CODE.UNSUPPORTED_LANG",
@@ -186,7 +191,8 @@
         }
       ],
       "silentSkipIsFailure": true,
-      "notes": "확장자 필터로 조용히 거르는 것이 가장 흔한 구현이다. 그러면 '수집 범위 밖'과 '수집했는데 없음'이 구분되지 않는다 — answer-shape 의 `not_collected` 대 `absent` 구분(EVL 계약 §2.5)이 L0 에서부터 무너지는 지점이다."
+      "notes": "확장자 필터로 조용히 거르는 것이 가장 흔한 구현이다. 그러면 '수집 범위 밖'과 '수집했는데 없음'이 구분되지 않는다 — answer-shape 의 `not_collected` 대 `absent` 구분(EVL 계약 §2.5)이 L0 에서부터 무너지는 지점이다.",
+      "sourceId": "fixture:failure/code-unsupported-lang.scala"
     }
   ]
 }
