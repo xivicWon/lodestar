@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""#88 L0 Source — 커밋된 실측 증거의 적합성 확인기 (V1~V11).
+"""#88 L0 Source — 커밋된 실측 증거의 적합성 확인기 (V1~V12).
 
 보고서 하나가 스키마를 통과하는 것으로는 부족하다. 확인해야 하는 것은 **보고서의 수치가 프로브
 산출물에서 나왔고, 프로브의 입력이 고정 revision·gold 해시와 같고, 보고서가 가리키는 좌표가 실제로
@@ -7,7 +7,7 @@
 
     pip install jsonschema
     python3 docs/superpowers/specs/bench/l0/verify_l0.py
-    # 24 cases, 0 mismatches   (= manifest.json 의 caseCount)
+    # 26 cases, 0 mismatches   (= manifest.json 의 caseCount)
 
 각 규칙은 **결함 주입 케이스**를 가진다 — 규칙만 적고 검사가 없는 상태를 막는 장치다(I2 §5 · I3 §4.1
 과 같은 원칙). 규칙이 예외를 던지면 그 규칙의 실패로 기록하고 나머지 규칙을 계속 실행한다.
@@ -32,11 +32,12 @@ MANIFEST = json.loads((HERE / "manifest.json").read_text())
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(SCHEMAS))
 import build_report  # noqa: E402
+import probe_code  # noqa: E402
 import validate_rqr  # noqa: E402
 from jsonschema import Draft202012Validator  # noqa: E402
 
 TRACKS = ("db", "code")
-MAX_RULE = 11
+MAX_RULE = 12
 L0_COLLECTOR_FEATURES = {"db": {"P-ddl-parser", "E1"}, "code": {"E17"}}
 
 
@@ -301,6 +302,30 @@ def v11_declared_paths_measured(ctx):
     return errs, seen
 
 
+def v12_determinism_contract(ctx):
+    """V12 결정성 PASS 를 적은 실행은 프로브에서 실제로 1.0 이고, 시드에 무관하다(#112).
+
+    게이트 상태는 보고서의 문장이고, 결정성은 프로브가 잰 사실이다. 둘을 따로 보지 않으면
+    '수치는 1.0 인데 시드를 바꾸면 갈리는' 실행이 PASS 로 남을 수 있다 — #88 이 정확히 그 상태였다.
+    """
+    errs, seen = [], 0
+    for t, rep in ctx["reports"].items():
+        seen += 1
+        gate = {g["id"]: g for g in rep["gates"]}.get("gate-determinism", {})
+        p = ctx["probes"][t]
+        rate = (p["determinismObserved"]["rate"] if t == "code"
+                else p["determinism"]["rate"])
+        if gate.get("status") == "PASS" and rate != 1.0:
+            errs.append(f"{t}: gate-determinism 이 PASS 인데 프로브 결정성은 {rate} 다")
+        if gate.get("observed") != rate:
+            errs.append(f"{t}: 게이트에 적힌 결정성({gate.get('observed')})이 프로브({rate})와 다르다")
+    seen += 1
+    # code 트랙만 시드 통제 실험을 남긴다(db 수집기는 Kotlin 이라 해시 랜덤화 대상이 아니다).
+    for e in probe_code.determinism_errors(ctx["probes"]["code"]):
+        errs.append(f"code: {e}")
+    return errs, seen
+
+
 RULES = {
     "V1": v1_schema_and_i3_rules,
     "V2": v2_report_derives_from_probe,
@@ -313,6 +338,7 @@ RULES = {
     "V9": v9_tracks_separated,
     "V10": v10_baseline_eligibility,
     "V11": v11_declared_paths_measured,
+    "V12": v12_determinism_contract,
 }
 
 
@@ -416,6 +442,15 @@ def injections() -> list[tuple[str, str, callable]]:
     def coverage_state_unmeasured(c):
         c["probes"]["code"].pop("coverageState")
 
+    def determinism_regressed(c):
+        # 게이트는 PASS 인 채로 프로브만 갈린 실행 — #88 상태로의 회귀.
+        c["probes"]["code"]["determinismObserved"].update(
+            {"rate": 0.6667, "distinctHashes": 2, "divergingPaths": ["nodes[].community"]})
+
+    def seed_dependent(c):
+        # 3회는 우연히 같았지만 시드를 바꾸면 갈리는 실행 — 재현 보장이 없다.
+        c["probes"]["code"]["determinismControl"]["seedIndependent"] = False
+
     return [
         ("V1", "판정 어휘 위반", bad_schema),
         ("V1", "counts 합 불일치(I3 R2)", bad_i3),
@@ -441,6 +476,8 @@ def injections() -> list[tuple[str, str, callable]]:
         ("V6", "픽스처 id 를 바꿔 붙임(귀속 위조)", swapped_fixture_id),
         ("V11", "선언한 MetadataService 경로를 재지 않음", metadata_path_unmeasured),
         ("V11", "커버리지 state 를 재지 않음", coverage_state_unmeasured),
+        ("V12", "결정성이 다시 갈렸는데 게이트는 PASS", determinism_regressed),
+        ("V12", "시드를 바꾸면 산출물이 달라짐", seed_dependent),
     ]
 
 

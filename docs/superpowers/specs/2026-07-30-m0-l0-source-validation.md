@@ -20,7 +20,7 @@ L0 은 "수집이 잘 되는가" 가 아니라 **수집된 것이 추적 가능�
 | ✅ 확정 | 실측 결과와 게이트 판정 (Run Quality Report 2건) | §3 · `bench/l0/runs/` |
 | ✅ 확정 | 발견 F1~F10 과 각 발견의 근거 좌표 | §4 |
 | ✅ 확정 | 수집기별 Core/Lab/Parked/Retire 판정 | §5 |
-| ✅ 확정 | 증거 적합성 확인기 V1~V11 + 결함 주입 24케이스 | §7 · `bench/l0/verify_l0.py` |
+| ✅ 확정 | 증거 적합성 확인기 V1~V11 + 결함 주입 24케이스 (#112 에서 V12·26케이스로 확장) | §7 · `bench/l0/verify_l0.py` |
 | ⛔ 미확정 | precision/recall 목표 수치 | L1(#89) 1차 측정 후 비준 (I1 §4.2) — L0 은 사실을 산출하지 않으므로 해당 없음 |
 | ⛔ 미확정 | 발견된 결함의 **수정** | §6 후속 이슈 — 이 이슈는 게이트이지 수정이 아니다 |
 | ⛔ 미확정 | I1·I2 계약 개정 | §8 개정 안건 — @xivicWon 승인 사항(I1 §7) |
@@ -278,7 +278,7 @@ L0-fix-1 이 머지되면 코드 트랙을 **새 runId 로 재측정**한다. �
 
 ---
 
-## 7. 증거 적합성 확인기 (V1~V11)
+## 7. 증거 적합성 확인기 (V1~V12)
 
 보고서가 스키마를 통과하는 것으로는 부족하다. 확인할 것은 **수치가 프로브에서 나왔고, 프로브의 입력이
 고정 revision·gold 해시와 같고, 보고서가 가리키는 좌표가 실제로 조회되는가** 다.
@@ -286,7 +286,7 @@ L0-fix-1 이 머지되면 코드 트랙을 **새 runId 로 재측정**한다. �
 ```bash
 pip install jsonschema
 python3 docs/superpowers/specs/bench/l0/verify_l0.py
-# 24 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount)
+# 26 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount)
 ```
 
 | ID | 불변식 | 위반 시 |

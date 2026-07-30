@@ -394,6 +394,25 @@ def stable(probe: dict) -> dict:
     return {k: v for k, v in probe.items() if k not in VOLATILE}
 
 
+def determinism_errors(probe: dict) -> list[str]:
+    """결정성 계약(#112) — 3회 실행이 하나로 모이고, 시드를 바꿔도 같아야 한다.
+
+    `main(--check)` 안에만 두면 그 판정 자체는 아무도 검사하지 않는다. 순수 함수로 빼서
+    확인기(`verify_l0.py` V12)가 커밋된 산출물에 같은 규칙을 걸고 결함 주입으로 문다.
+    """
+    errs = []
+    obs = probe.get("determinismObserved", {})
+    if obs.get("rate") != 1.0:
+        errs.append(f"결정성 {obs.get('rate')} — 동일 입력 {obs.get('runs')}회 실행이 갈렸다: "
+                    f"{obs.get('divergingPaths')}")
+    if obs.get("distinctHashes") != 1:
+        errs.append(f"산출물 해시가 {obs.get('distinctHashes')}종이다 — 하나여야 한다")
+    ctrl = probe.get("determinismControl", {})
+    if not ctrl.get("seedIndependent"):
+        errs.append("PYTHONHASHSEED 를 바꾸면 산출물이 달라진다 — 재현 보장이 없다")
+    return errs
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true",
@@ -429,14 +448,10 @@ def main() -> int:
             diff = [k for k in sorted(set(want) | set(got)) if want.get(k) != got.get(k)]
             print(f"[FAIL] 프로브 산출물 표류 — 블록: {diff}")
             return 1
-        obs_rate = probe["determinismObserved"]["rate"]
-        if obs_rate < 1.0:
-            print(f"[FAIL] 결정성 {obs_rate} — 동일 입력 3회 실행이 갈렸다: "
-                  f"{probe['determinismObserved']['divergingPaths']}")
-            return 1
-        ctrl = probe["determinismControl"]
-        if not ctrl["seedIndependent"]:
-            print("[FAIL] PYTHONHASHSEED 를 바꾸면 산출물이 달라진다 — 재현 보장이 없다")
+        det = determinism_errors(probe)
+        if det:
+            for e in det:
+                print(f"[FAIL] {e}")
             return 1
         print("[ok] 프로브 산출물 일치 + 결정성 1.0 (시드 무관)")
     return 0
