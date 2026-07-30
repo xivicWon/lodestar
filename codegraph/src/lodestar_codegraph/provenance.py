@@ -69,9 +69,16 @@ def hash_of_scope(file_hashes: dict[str, str]) -> str:
     """수집 범위의 신원 — 상대경로와 파일 해시를 **둘 다** 잇는다.
 
     내용만 이으면 파일이 추가·이동돼도 해시가 같을 수 있다. 범위가 바뀌면 반드시 바뀌어야 한다.
+
+    경로는 **길이 접두어**로 싣는다. 구분자만 쓰면 직렬화가 단사가 아니다 — 공백·개행은 POSIX
+    파일명에 합법이므로, 이름에 구분자를 심은 파일 하나가 여러 파일로 이뤄진 다른 범위와 같은
+    바이트를 만든다. 길이를 먼저 적으면 경로 안에 무엇이 들어 있든 경계가 밀리지 않는다.
     """
-    lines = sorted(f"{rel} {h}" for rel, h in file_hashes.items())
-    return sha256_bytes("".join(line + "\n" for line in lines).encode())
+    out = bytearray()
+    for rel in sorted(file_hashes):
+        raw = rel.encode()
+        out += str(len(raw)).encode() + b":" + raw + b"\0" + file_hashes[rel].encode() + b"\0"
+    return sha256_bytes(bytes(out))
 
 
 def scope_hash(source_root: str, paths: list[str]) -> str:

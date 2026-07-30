@@ -76,6 +76,24 @@ venv 를 쓰는 이유: 현재 워킹트리에서 `pip install -e codegraph` 를
 커밋된 증거 자체의 적합성(`verify_l0.py`)은 워킹트리와 무관하다 — 커밋된 산출물만 읽으므로
 현재 브랜치에서도 그대로 29 cases / 0 mismatches 여야 한다.
 
+### 코드 트랙 재측정은 gold 재고정이 선행이다 (열린 항목)
+
+`#113` 브랜치에서 `probe_code.py --check` 는 실패한다. 확인된 표류 블록은
+`input`·`inventory`·`readOnly`(입력이 바뀌었다)와 `provenance`·`determinismControl`(수집기가 바뀌었다)이다.
+
+```
+[FAIL] 프로브 산출물 표류 — 블록: ['determinismControl', 'input', 'inventory', 'provenance', 'readOnly']
+```
+
+이것을 새 runId 로 정리하려면 **입력 revision 을 다시 고정해야** 한다. gold manifest 는
+`sourceRevision: 3c27259…` 를 **`APPROVED`** 상태로 고정하고 있고(`docs/superpowers/specs/gold/manifest.json`),
+확인기 V3·V4 가 프로브 입력을 그 값과 대조한다. 즉 코드 트랙의 새 실측은 **I2 Gold Set 개정**(승인 사항,
+I1 §7)을 거쳐야 하며, `gate-l0-metadata-completeness` 하나를 닫는 이 이슈 안에서 끝낼 수 없다.
+
+그때까지 코드 트랙의 메타데이터 완전성은 `metadata_completeness.py` 가 **고정 입력과 무관하게**
+현재 수집기를 직접 돌려 잰다(아래). 두 측정은 목적이 다르다 — 프로브는 *고정 revision 의 실측*,
+이쪽은 *지금 수집기가 계약을 지키는가* 다.
+
 ## #113 게이트 재측정
 
 `gate-l0-metadata-completeness` 하나만 다시 잰다. **#88 의 baseline 산출물은 손대지 않는다.**

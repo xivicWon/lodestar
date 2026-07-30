@@ -38,7 +38,8 @@
   "completeness" : {
     "present" : 5,
     "required" : 5,
-    "rate" : 1.0
+    "rate" : 1.0,
+    "basis" : "min(타입 그래프에 자리가 있는 필드 수, 수집 경로별로 채워진 필드 수의 최소값)"
   },
   "volatile" : {
     "note" : "값은 수집기 버전·입력에 따라 달라진다 — 표류 검사 대상이 아니다",

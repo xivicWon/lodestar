@@ -38,8 +38,10 @@ tasks.test {
         .optional()
     // 부트스트랩 스위치는 gradle JVM 이 아니라 **테스트 JVM** 이 읽어야 한다.
     // 전달하지 않으면 문서에 적힌 `-DL0_PROBE_BOOTSTRAP=true` 가 조용히 무시된다.
-    for (key in listOf("L0_PROBE_BOOTSTRAP", "L0_METADATA_BOOTSTRAP")) {
-        System.getProperty(key)?.let { systemProperty(key, it) }
+    // providers.systemProperty 로 읽는다 — System.getProperty 를 구성 단계에서 직접 읽으면
+    // configuration cache 가 추적하지 못하는 입력이 된다.
+    for (key in listOf("L0_PROBE_BOOTSTRAP", "L0_METADATA_BOOTSTRAP", "L0_METADATA_FORCE")) {
+        providers.systemProperty(key).orNull?.let { systemProperty(key, it) }
     }
 }
 kotlin { jvmToolchain(21) }

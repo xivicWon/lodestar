@@ -45,23 +45,36 @@ data class ForeignKeyInfo(
  * 수집 순서에 흔들리지 않도록 이름으로 정렬한다. 시각·실행 식별자는 절대 넣지 않는다.
  */
 object SchemaCanonical {
+
+    /**
+     * 식별자를 구분자와 겹치지 않게 만든다. **이 이스케이프가 없으면 직렬화가 단사가 아니다** —
+     * 이름에 탭·개행이 들어가면 필드·레코드 경계가 밀려 구조가 다른 스키마가 같은 바이트가 되고,
+     * 쉼표가 들어가면 `["a,b"]` 와 `["a","b"]` 가 구별되지 않는다. 그러면 contentHash 가 신원이 아니다.
+     * 식별자는 DDL 요청 본문에서 그대로 올 수 있으므로(`/api/rdb/import/ddl`) 입력으로 취급한다.
+     */
+    private fun esc(s: String): String = s
+        .replace("\\", "\\\\").replace("\t", "\\t").replace("\n", "\\n").replace("\r", "\\r")
+        .replace(",", "\\c")
+
+    private fun escList(items: List<String>): String = items.joinToString(",") { esc(it) }
+
     fun bytes(tables: List<TableInfo>): ByteArray = buildString {
         for (t in tables.sortedBy { it.name }) {
-            append("T\t").append(t.name).append('\n')
+            append("T\t").append(esc(t.name)).append('\n')
             // 컬럼은 정렬하지 않는다 — 순서 자체가 스키마의 일부이고, 두 수집 경로 모두
             // 순서가 결정적이다(DDL 은 선언 순, JDBC 는 ORDINAL_POSITION 순).
             for (c in t.columns) {
-                append("C\t").append(c.name).append('\t').append(c.sqlType).append('\t')
+                append("C\t").append(esc(c.name)).append('\t').append(esc(c.sqlType)).append('\t')
                     .append(c.nullable).append('\n')
             }
-            append("P\t").append(t.primaryKey.joinToString(",")).append('\n')
+            append("P\t").append(escList(t.primaryKey)).append('\n')
             // 정렬 키에 refColumns 까지 넣는다 — 빼면 같은 테이블·같은 FK 컬럼을 다른 대상 컬럼으로
             // 가리키는 두 FK 의 순서가 해시를 흔든다.
             for (f in t.foreignKeys.sortedBy {
                 it.refTable + " " + it.fkColumns.joinToString(",") + " " + it.refColumns.joinToString(",")
             }) {
-                append("F\t").append(f.fkColumns.joinToString(",")).append('\t')
-                    .append(f.refTable).append('\t').append(f.refColumns.joinToString(",")).append('\n')
+                append("F\t").append(escList(f.fkColumns)).append('\t')
+                    .append(esc(f.refTable)).append('\t').append(escList(f.refColumns)).append('\n')
             }
         }
     }.toByteArray()

@@ -42,7 +42,7 @@ L1 이후의 모든 수치가 추적 불가능한 입력 위에 서게 된다(I1
 | DB | 번들 샘플 레거시 | `db:legacy-sample` (gold 고정 id 와 같다) |
 | DB | 라이브 JDBC | `db:jdbc:<vendor>/<database>` |
 | CODE | 소스 파일 | 수집 범위 루트 기준 **상대경로** (`nodes[].source_id`) |
-| CODE | 실행 전체(범위) | `code:<수집 범위 루트>` (`meta.source_id`) |
+| CODE | 실행 전체(범위) | `code:<범위 이름>` (`meta.source_id` — 절대경로가 아니다, §5.2) |
 
 ## 4. `revision` 스킴
 
@@ -120,6 +120,18 @@ nodes[].source_id · nodes[].content_hash
 
 **키의 존재로 세지 않는다.** 자리가 있어도 빈 값이나 플레이스홀더가 담겨 있으면 신원이 아니므로,
 두 측정 모두 값의 사용 가능성(§2.1)과 형식(§2)까지 확인한 뒤에만 완전성에 센다.
+
+### 6.1 코드 트랙 프로브 표류 — 열린 항목
+
+이 이슈는 `backend/src/main/kotlin` 안의 파일을 고치는데, 그 디렉토리가 **코드 트랙 프로브의 입력
+범위 그 자체**다. 그래서 이 브랜치에서 `probe_code.py --check` 는 실패한다(표류 블록:
+`input`·`inventory`·`readOnly`·`provenance`·`determinismControl`). 프로브가 입력 신원을 검사하고
+있다는 증거이지 고장이 아니다.
+
+새 runId 로 정리하려면 입력 revision 을 다시 고정해야 하는데, gold manifest 는 `3c27259` 를
+**`APPROVED`** 로 고정하고 있고 확인기 V3·V4 가 그 값을 강제한다. 따라서 코드 트랙의 새 실측은
+**I2 Gold Set 개정(승인 사항, I1 §7)** 이 선행이며 이 이슈 범위 밖이다. 자세한 재현 조건은
+[`bench/l0/README.md`](bench/l0/README.md) 에 적었다.
 
 **#88 의 baseline 산출물(`run-l0-*-3c27259-001`)은 손대지 않는다.** 그것은 revision `3c27259`
 시점의 증거이고, 고친 코드로 덮어쓰면 그 시점의 사실이 사라진다(I3 §5.5 — 새 실측은 새 runId).

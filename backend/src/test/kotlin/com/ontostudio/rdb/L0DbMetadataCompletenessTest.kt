@@ -82,6 +82,7 @@ class L0DbMetadataCompletenessTest {
         val sample = SampleSource(SampleLegacyDb(), MetadataService()).extract().metadata
         val live = liveMetadata()
         val paths = listOf("ddl" to ddl, "sample" to sample, "live-jdbc" to live)
+        val minPathPresent = paths.minOf { (_, m) -> fieldsOf(m).count { it.value.isNotBlank() } }
 
         val measurement = mapper.createObjectNode().apply {
             put("measurementVersion", "l0-metadata-completeness/v1")
@@ -103,9 +104,13 @@ class L0DbMetadataCompletenessTest {
                 putArray("paths").also { a -> paths.forEach { (l, m) -> a.add(pathNode(l, m)) } }
             }
             putObject("completeness").apply {
-                put("present", typePresent.size)
+                // 타입에 자리가 있는가(typeGraph)와 그 자리가 실제로 채워지는가(collectionPaths)는
+                // 다른 질문이다. 게이트 수치는 **둘 중 낮은 쪽**이어야 한다 — 자리만 세면
+                // 값이 비어도 5/5 로 보인다.
+                put("present", minOf(typePresent.size, minPathPresent))
                 put("required", required.size)
-                put("rate", typePresent.size.toDouble() / required.size)
+                put("rate", minOf(typePresent.size, minPathPresent).toDouble() / required.size)
+                put("basis", "min(타입 그래프에 자리가 있는 필드 수, 수집 경로별로 채워진 필드 수의 최소값)")
             }
             putObject("volatile").apply {
                 put("note", "값은 수집기 버전·입력에 따라 달라진다 — 표류 검사 대상이 아니다")
@@ -131,11 +136,19 @@ class L0DbMetadataCompletenessTest {
             "gate-l0-metadata-completeness 는 완전성 100% 를 요구한다")
 
         // ---- 커밋된 측정 결과와의 표류 검사 (volatile 제외) ----------------------------------
+        // 부트스트랩은 **최초 생성용**이다. 이미 있는 증거를 조용히 갈아치울 수 있으면 그 스위치는
+        // "초록으로 만드는 버튼" 이 되고, 그 습관이 결국 아무도 보지 않는 baseline 을 만든다.
         val bootstrap = System.getProperty("L0_METADATA_BOOTSTRAP") == "true"
+        val force = System.getProperty("L0_METADATA_FORCE") == "true"
+        assertTrue(!(bootstrap && committed.exists() && !force),
+            "이미 재측정 결과가 있다: ${committed.path} — 부트스트랩은 최초 생성용이다. " +
+                "계약이 바뀌어 기준을 갱신하려면 -DL0_METADATA_FORCE=true 로 명시하고 git diff 로 확인한다")
         assertTrue(committed.exists() || bootstrap,
             "커밋된 재측정 결과가 없다: ${committed.path} — 최초 생성이면 " +
                 "-DL0_METADATA_BOOTSTRAP=true 로 실행하고 ${outFile.path} 를 커밋한다")
-        if (committed.exists()) {
+        // 부트스트랩은 기준을 **새로 쓰는** 실행이므로 표류 검사의 대상이 아니다. 그 대신 위의
+        // 가드가 이미 있는 기준을 말없이 갈아치우는 것을 막고, 무엇이 바뀌었는지는 git diff 에 남는다.
+        if (committed.exists() && !bootstrap) {
             val a = mapper.readTree(committed.readText()) as ObjectNode
             val b = mapper.readTree(json) as ObjectNode
             a.remove("volatile"); b.remove("volatile")

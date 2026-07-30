@@ -137,6 +137,35 @@ class CollectionMetadataTest {
             "번들 경로의 contentHash 가 수집한 카탈로그의 정규화 스냅샷에서 나오지 않았다")
     }
 
+    @Test fun `canonical bytes are injective against delimiter injection`() {
+        // 이스케이프가 없으면 이름 안의 탭·개행이 필드·레코드 경계를 밀어, 구조가 다른 스키마가
+        // 같은 바이트가 된다. 식별자는 DDL 요청 본문에서 그대로 올 수 있다(/api/rdb/import/ddl).
+        fun h(tables: List<TableInfo>) = CollectionMetadata.sha256(SchemaCanonical.bytes(tables))
+
+        val real = listOf(TableInfo("t", listOf(
+            ColumnInfo("x", "int", true), ColumnInfo("evil", "varchar", false)), emptyList(), emptyList()))
+        val forged = listOf(TableInfo("t", listOf(
+            ColumnInfo("x\tint\ttrue\nC\tevil", "varchar", false)), emptyList(), emptyList()))
+        assertNotEquals(h(real), h(forged), "컬럼 이름에 넣은 구분자가 다른 스키마를 같은 신원으로 만든다")
+
+        // 리스트 필드도 같다 — ["a,b"] 와 ["a","b"] 는 다른 키다.
+        val base = TableInfo("t", listOf(ColumnInfo("c", "int", true)), emptyList(), emptyList())
+        assertNotEquals(
+            h(listOf(base.copy(primaryKey = listOf("a,b")))),
+            h(listOf(base.copy(primaryKey = listOf("a", "b")))),
+            "복합키 ['a','b'] 와 단일키 ['a,b'] 가 같은 신원이다")
+        assertNotEquals(
+            h(listOf(base.copy(foreignKeys = listOf(ForeignKeyInfo(listOf("a,b"), "r", listOf("p")))))),
+            h(listOf(base.copy(foreignKeys = listOf(ForeignKeyInfo(listOf("a", "b"), "r", listOf("p")))))),
+            "FK 컬럼 목록에서 같은 충돌이 난다")
+
+        // 테이블 이름으로 레코드를 위조하지 못한다.
+        assertNotEquals(
+            h(listOf(TableInfo("x\nC\tfake\tint\ttrue", emptyList(), emptyList(), emptyList()))),
+            h(listOf(TableInfo("x", listOf(ColumnInfo("fake", "int", true)), emptyList(), emptyList()))),
+            "테이블 이름에 넣은 개행이 컬럼 레코드를 위조한다")
+    }
+
     @Test fun `canonical bytes follow column order and fk target columns`() {
         // 정렬로 뭉개면 카탈로그가 바뀌었는데 contentHash 가 같아진다.
         val cols = listOf(ColumnInfo("a", "integer", false), ColumnInfo("b", "integer", true))

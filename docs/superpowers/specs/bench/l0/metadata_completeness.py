@@ -129,8 +129,17 @@ def measure_code() -> dict:
     }
 
 
+#: DB 트랙이 반드시 계측해야 하는 수집 경로 — 하나가 측정에서 빠져도 남은 것들의 rate 는 1.0 이다.
+DB_REQUIRED_PATHS = {"ddl", "sample", "live-jdbc"}
+
+
 def check_code(m: dict) -> list[str]:
     errs = []
+    nodes_seen = m[VOLATILE].get("nodeCount", 0)
+    if nodes_seen < 1:
+        # 노드가 0 이면 순회 기반 검사가 전부 공집합으로 통과한다 — 실행 단위 5필드만으로
+        # '소스 단위로 닫혔다' 는 결론이 나온다. 빈 측정은 통과가 아니다.
+        errs.append("code: 측정된 노드가 0건이다 — 소스 단위 완전성을 입증할 수 없다")
     if m["completeness"]["rate"] != 1.0:
         errs.append(f"code: 완전성 {m['completeness']['rate']} — 누락: {m['artifact']['absent']}")
     if m["perSource"]["nodesMissingSourceId"]:
@@ -148,8 +157,11 @@ def check_db(m: dict) -> list[str]:
     if m["completeness"]["rate"] != 1.0:
         errs.append(f"db: 완전성 {m['completeness']['rate']} — 누락: {m['typeGraph']['absent']}")
     paths = m["collectionPaths"]["paths"]
-    if not paths:
-        errs.append("db: 측정된 수집 경로가 0건이다")
+    # 존재하는 경로의 rate 만 보면 경로가 통째로 빠진 측정이 5/5 로 읽힌다.
+    measured = {p["path"] for p in paths}
+    missing = sorted(DB_REQUIRED_PATHS - measured)
+    if missing:
+        errs.append(f"db: 계측되지 않은 수집 경로: {missing}")
     for p in paths:
         if p["rate"] != 1.0:
             errs.append(f"db: {p['path']} 경로 완전성 {p['rate']} — 누락: {p['absent']}")
@@ -162,7 +174,9 @@ def stable(m: dict) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--bootstrap", action="store_true", help="커밋된 측정 결과를 최초 생성한다")
+    ap.add_argument("--bootstrap", action="store_true", help="커밋된 측정 결과를 **최초** 생성한다")
+    ap.add_argument("--force", action="store_true",
+                    help="이미 있는 측정 결과를 덮어쓴다. 계약이 바뀌어 기준을 갱신할 때만 쓴다")
     args = ap.parse_args()
 
     code = measure_code()
@@ -180,6 +194,19 @@ def main() -> int:
         errs += check_db(json.loads(DB_COMMITTED.read_text()))
 
     if args.bootstrap:
+        # 이미 있는 증거를 조용히 덮어쓰지 않는다. 덮어쓸 수 있으면 --bootstrap 은 "초록으로 만드는
+        # 버튼" 이 되고, 그 습관이 결국 아무도 보지 않는 baseline 을 만든다(probe_code.py 가 --check 로
+        # 기준 파일에 쓰는 것을 거부하는 것과 같은 이유).
+        if CODE_COMMITTED.exists() and not args.force:
+            print(f"[FAIL] 이미 측정 결과가 있다: {CODE_COMMITTED.relative_to(REPO)} — "
+                  "--bootstrap 은 최초 생성용이다. 기준을 갱신하려면 --force 로 명시하고 "
+                  "git diff 로 무엇이 바뀌는지 확인한다")
+            return 1
+        if CODE_COMMITTED.exists():
+            before = stable(json.loads(CODE_COMMITTED.read_text()))
+            changed = [k for k in sorted(set(before) | set(stable(code)))
+                       if before.get(k) != stable(code).get(k)]
+            print(f"[force] 기준을 덮어쓴다 — 바뀌는 블록: {changed or '없음(volatile 만 변경)'}")
         OUT_DIR.mkdir(parents=True, exist_ok=True)
         CODE_COMMITTED.write_text(text)
     elif not CODE_COMMITTED.exists():

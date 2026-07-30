@@ -58,6 +58,20 @@ def test_scope_hash_follows_paths_not_just_content():
     assert prov.hash_of_scope({"a/A.kt": h}) != prov.hash_of_scope({"b/A.kt": h})
 
 
+def test_scope_hash_is_injective_against_delimiter_injection():
+    """경로에 구분자를 심어 다른 범위를 같은 신원으로 만들 수 없어야 한다.
+
+    공백·개행은 POSIX 파일명에 합법이다. 그것으로 이으면 파일 하나짜리 범위가 파일 두 개짜리
+    범위와 같은 바이트를 낸다 — contentHash 가 '실제로 읽은 바이트' 를 가리키지 않게 된다.
+    """
+    ha, hb = "sha256:" + "a" * 64, "sha256:" + "b" * 64
+    two_files = {"x": ha, "y": hb}
+    one_crafted = {f"x {ha}\ny": hb}
+    assert prov.hash_of_scope(two_files) != prov.hash_of_scope(one_crafted)
+    # 정렬 경계도 마찬가지다 — 경로에 심은 구분자가 다음 항목처럼 보이면 안 된다.
+    assert prov.hash_of_scope({"a": ha, "b": hb}) != prov.hash_of_scope({f"a\0{ha}\0b": hb})
+
+
 def test_revision_outside_git_is_marked_not_a_commit(tmp_path):
     root = write_scope(tmp_path, **{"A.kt": "class A\n"})
     rev = prov.detect_revision(str(root), prov.scope_hash(str(root), [str(root / "A.kt")]), ["A.kt"])
