@@ -33,15 +33,18 @@ pip install -e codegraph                      # tree-sitter 수집기 의존성
 #    서브셸로 격리한다 — `cd backend && ... && cd ..` 는 gradle 이 실패하면 backend 에 남아
 #    이후 docs/... 경로가 전부 어긋난다.
 ( cd backend && ./gradlew test --tests 'com.ontostudio.rdb.L0DbSourceProbeTest' )
+# 아래는 **고정 revision 의 worktree 에서만** 성립한다 — #113 이후 현재 브랜치에서는 실패가 정상이다.
+# 이유와 절차: "기존 실행의 재현 조건" 절.
 python3 docs/superpowers/specs/bench/l0/probe_code.py --check
 
 # 2) 보고서 재생성 (프로브에서 결정적으로 파생된다 — diff 가 나오면 근거가 표류했다)
 python3 docs/superpowers/specs/bench/l0/build_report.py
 git diff --exit-code docs/superpowers/specs/bench/l0/runs
 
-# 3) 증거 적합성 확인
+# 3) 증거 적합성 확인 (워킹트리와 무관 — 커밋된 산출물만 읽는다)
 python3 docs/superpowers/specs/bench/l0/verify_l0.py
-# 29 cases, 0 mismatches
+# 29 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount. #88 의 24 는 #112 가 V12~V13 을
+#                            더하며 29 로 올렸다 — manifest 가 정본이고 확인기가 그것과 대조한다)
 ```
 
 새 runId 를 처음 만들 때만 DB 프로브를 부트스트랩한다 — 그 외에는 커밋된 산출물이 없으면 테스트가 실패한다.

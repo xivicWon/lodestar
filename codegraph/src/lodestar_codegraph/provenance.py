@@ -89,7 +89,10 @@ def scope_hash(source_root: str, paths: list[str]) -> str:
 
 def _git(root: str, *args: str) -> str | None:
     try:
-        proc = subprocess.run(["git", "-C", root, *args], capture_output=True, text=True)
+        # surrogateescape 로 읽는다. POSIX 파일명은 UTF-8 이 아닐 수 있고, 엄격 디코딩이면
+        # 그런 파일이 하나만 있어도 수집이 예외로 멈춘다(os.listdir 이 쓰는 것과 같은 방식이다).
+        proc = subprocess.run(["git", "-C", root, *args], capture_output=True,
+                              encoding="utf-8", errors="surrogateescape")
     except OSError:  # git 자체가 없다
         return None
     return proc.stdout.strip() if proc.returncode == 0 else None

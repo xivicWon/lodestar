@@ -47,7 +47,7 @@ class LiveJdbcSource(
          */
         fun sourceId(info: ConnectionInfo): String {
             val vendor = info.vendor.trim().lowercase()
-            val host = info.host.trim()
+            val host = info.host.trim().lowercase()   // DNS 는 대소문자를 구분하지 않는다
             val database = info.database.trim()
             return "db:jdbc:$vendor://$host:${info.port}/$database"
         }

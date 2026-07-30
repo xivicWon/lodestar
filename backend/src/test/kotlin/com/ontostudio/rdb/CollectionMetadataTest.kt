@@ -231,6 +231,7 @@ class CollectionMetadataTest {
             canonical.copy(vendor = " postgresql "),
             canonical.copy(database = " app "),
             canonical.copy(host = " db.prod "),
+            canonical.copy(host = "DB.PROD"),          // DNS 는 대소문자를 구분하지 않는다
         )) {
             assertEquals(LiveJdbcSource.sourceId(canonical), LiveJdbcSource.sourceId(variant),
                 "같은 연결인데 sourceId 가 갈린다: $variant")
@@ -274,18 +275,25 @@ class CollectionMetadataTest {
     }
 
     @Test fun `live jdbc path records vendor and database in the source id`() {
+        // sourceId 를 직접 주입하면 LiveJdbcSource 의 신원 생성·전달 회귀를 탐지하지 못한다 —
+        // **운영 진입점을 그대로 돌리고** 커넥션 공급만 갈아끼운다.
         val url = "jdbc:h2:mem:meta_prov;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1"
-        DriverManager.getConnection(url, "sa", "").use { conn ->
-            conn.createStatement().use { st ->
-                st.execute("DROP ALL OBJECTS")
-                st.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name VARCHAR(100))")
-            }
-            val m = MetadataService().extract(conn, sourceId = "db:jdbc:h2/meta_prov").metadata
-            assertComplete(m)
-            assertEquals("db:jdbc:h2/meta_prov", m.sourceId)
-            assertTrue(m.revision.startsWith("live:"), "라이브 DB 는 VCS 신원이 없다: ${m.revision}")
-            assertEquals("live:" + m.contentHash.removePrefix("sha256:").take(12), m.revision)
+        val info = ConnectionInfo("db.example", 5432, "meta_prov", "sa", "")
+        val connector = object : DbConnector() {
+            override fun open(info: ConnectionInfo) =
+                DriverManager.getConnection(url, "sa", "").also { c ->
+                    c.createStatement().use { st ->
+                        st.execute("DROP ALL OBJECTS")
+                        st.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name VARCHAR(100))")
+                    }
+                }
         }
+        val m = LiveJdbcSource(info, connector, MetadataService()).extract().metadata
+        assertComplete(m)
+        assertEquals("db:jdbc:postgresql://db.example:5432/meta_prov", m.sourceId)
+        assertTrue(m.revision.startsWith("live:"), "라이브 DB 는 VCS 신원이 없다: ${m.revision}")
+        assertEquals("live:" + m.contentHash.removePrefix("sha256:").take(12), m.revision)
+        assertFalse(m.sourceId.contains("sa"), "자격증명이 신원에 새면 안 된다: ${m.sourceId}")
     }
 
     @Test fun `live content hash is deterministic across runs and follows the catalog`() {

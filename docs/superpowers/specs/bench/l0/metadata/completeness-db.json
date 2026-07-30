@@ -18,18 +18,24 @@
     "paths" : [ {
       "path" : "ddl",
       "sourceId" : "db:ddl:sales",
+      "revision" : "inline:af16a259a6f4",
+      "contentHash" : "sha256:af16a259a6f47280c751fd7e475876ebd66fdf1139a571026c08859b2e167d3b",
       "present" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
       "absent" : [ ],
       "rate" : 1.0
     }, {
       "path" : "sample",
       "sourceId" : "db:legacy-sample",
+      "revision" : "bundle:03bcefc79a18",
+      "contentHash" : "sha256:03bcefc79a188755c09cb8e6c655ff1bee3fb1c90bbbefb0d74a6e2d5d14b269",
       "present" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
       "absent" : [ ],
       "rate" : 1.0
     }, {
       "path" : "live-jdbc",
       "sourceId" : "db:jdbc:postgresql://db.example:5432/meta_completeness",
+      "revision" : "live:341e246b79c7",
+      "contentHash" : "sha256:341e246b79c7a333294bc340b908a18cc0f83819c96d01fea77bb06add5ea00b",
       "present" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
       "absent" : [ ],
       "rate" : 1.0

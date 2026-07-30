@@ -6,6 +6,7 @@ import java.io.File
 import java.sql.DriverManager
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -49,6 +50,9 @@ class L0DbMetadataCompletenessTest {
         return mapper.createObjectNode().apply {
             put("path", label)
             put("sourceId", m.sourceId)
+            // 측정기가 파생 관계를 독립적으로 확인할 수 있게 값을 함께 남긴다.
+            put("revision", m.revision)
+            put("contentHash", m.contentHash)
             putArray("present").also { a -> present.forEach { a.add(it) } }
             putArray("absent").also { a ->
                 CollectionMetadata.REQUIRED_FIELDS.filterNot { it in present }.forEach { a.add(it) }
@@ -143,6 +147,26 @@ class L0DbMetadataCompletenessTest {
         for ((label, m) in paths) {
             assertEquals(required.size, fieldsOf(m).count { it.value.isNotBlank() },
                 "$label 경로의 산출물에 빈 식별 필드가 있다: ${fieldsOf(m)}")
+        }
+
+        // **비어있지 않음만 세면 `db:test` 같은 값도 5/5 가 된다.** 경로마다 계약이 요구하는
+        // sourceId 모양(§3)과 revision 스킴(§4)을 직접 단언한다 — 게이트가 거짓 양성이 되지 않게.
+        assertEquals("db:ddl:sales", ddl.sourceId)
+        assertTrue(ddl.revision.startsWith("inline:"), "DDL 은 inline: 이어야 한다: ${ddl.revision}")
+        assertEquals(SampleSource.SOURCE_ID, sample.sourceId)
+        assertTrue(sample.revision.startsWith("bundle:"), "번들은 bundle: 이어야 한다: ${sample.revision}")
+        assertTrue(
+            Regex("^db:jdbc:[a-z0-9]+://[^/:\\s]+:\\d+/\\S*$").matches(live.sourceId),
+            "라이브 sourceId 에 vendor·host·port·database 가 있어야 한다: ${live.sourceId}")
+        assertTrue(live.revision.startsWith("live:"), "라이브는 live: 여야 한다: ${live.revision}")
+        for ((label, m) in paths) {
+            // 접미사가 자기 contentHash 에서 나왔는가 — 형식만 보면 아무 12자리나 통과한다.
+            assertEquals("${m.revision.substringBefore(':')}:" +
+                m.contentHash.removePrefix("sha256:").take(12), m.revision,
+                "$label 경로의 revision 이 contentHash 에서 파생되지 않았다")
+            // 자격증명이 신원에 새지 않는다.
+            assertFalse(m.sourceId.contains("sa") && m.sourceId.contains("@"),
+                "$label sourceId 에 자격증명으로 보이는 것이 있다: ${m.sourceId}")
         }
         assertEquals(1.0, measurement["completeness"]["rate"].asDouble(),
             "gate-l0-metadata-completeness 는 완전성 100% 를 요구한다")

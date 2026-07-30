@@ -91,6 +91,7 @@
       "metaSourceId": true,
       "metaContentHash": true,
       "metaRevision": true,
+      "revisionDerivesFromContentHash": true,
       "collectorVersion": true
     }
   },
@@ -105,8 +106,8 @@
   },
   "volatile": {
     "note": "값은 수집 범위의 내용·리비전에 따라 달라진다 — 표류 검사 대상이 아니다",
-    "revision": "dirty:f34c3596fa2e",
-    "contentHash": "sha256:f34c3596fa2e56e5bef954866cf4bf1f4dc1d88b8cdc24f87d9f8a40c53cea85",
+    "revision": "dirty:7781dd2d25e9",
+    "contentHash": "sha256:7781dd2d25e9bbbbe00e21c198f058038a50004b5618eb6404b77c35ff06af1d",
     "nodeCount": 371,
     "walked": 60
   }

@@ -47,6 +47,17 @@ PLACEHOLDERS = {"unknown", "n/a", "na", "null", "none", "todo", "tbd", "-", "?"}
 def usable(value) -> bool:
     return isinstance(value, str) and bool(value.strip()) and value.strip().lower() not in PLACEHOLDERS
 
+
+def derives(revision: str, content_hash: str) -> bool:
+    """비-VCS revision 의 접미사가 이 산출물의 contentHash 앞 12자인가.
+
+    커밋 sha 는 내용 파생이 아니라 외부 좌표이므로 이 검사의 대상이 아니다.
+    """
+    if ":" not in revision:
+        return bool(re.match(r"^[0-9a-f]{7,40}$", revision))
+    scheme, _, suffix = revision.partition(":")
+    return suffix == content_hash.removeprefix("sha256:")[:12]
+
 #: 값이 입력·수집기 버전에 따라 달라지는 블록 — 표류 검사에서 제외한다(#88 의 determinismObserved 와 같은 처리).
 VOLATILE = "volatile"
 
@@ -141,6 +152,10 @@ def measure_code() -> dict:
                 "metaSourceId": bool(SOURCE_ID_RE.match(meta.get("source_id") or "")),
                 "metaContentHash": bool(HASH_RE.match(meta.get("content_hash", ""))),
                 "metaRevision": bool(REV_RE.match(meta.get("revision", ""))),
+                # 형식만 보면 `nogit:000000000000` 처럼 **수집 내용과 무관한** revision 도 통과한다.
+                # 비-VCS revision 은 같은 산출물의 content_hash 에서 나온 것이어야 한다(계약 §4).
+                "revisionDerivesFromContentHash": derives(
+                    meta.get("revision", ""), meta.get("content_hash", "")),
                 "collectorVersion": bool(VER_RE.match(meta.get("collector_version", ""))),
             },
         },
@@ -165,6 +180,13 @@ def measure_code() -> dict:
         },
     }
 
+
+#: 경로마다 계약이 요구하는 sourceId 모양(§3) — 비어있지 않음만 세면 db:test 도 5/5 가 된다.
+DB_EXPECTED_SOURCE_ID = {
+    "ddl": r"^db:ddl:\S+$",
+    "sample": r"^db:legacy-sample$",
+    "live-jdbc": r"^db:jdbc:[a-z0-9]+://[^/:\s]+:\d+/\S*$",
+}
 
 #: DB 트랙이 반드시 계측해야 하는 수집 경로 — 하나가 측정에서 빠져도 남은 것들의 rate 는 1.0 이다.
 DB_REQUIRED_PATHS = {"ddl", "sample", "live-jdbc"}
@@ -207,6 +229,12 @@ def check_db(m: dict) -> list[str]:
     if missing:
         errs.append(f"db: 계측되지 않은 수집 경로: {missing}")
     for p in paths:
+        rev, ch = p.get("revision", ""), p.get("contentHash", "")
+        if rev and not derives(rev, ch):
+            errs.append(f"db: {p['path']} 경로의 revision 이 contentHash 에서 파생되지 않았다: {rev}")
+        expected_id = DB_EXPECTED_SOURCE_ID.get(p["path"])
+        if expected_id and not re.match(expected_id, p.get("sourceId", "")):
+            errs.append(f"db: {p['path']} 경로의 sourceId 가 계약 형식이 아니다: {p.get('sourceId')!r}")
         if p["rate"] != 1.0:
             errs.append(f"db: {p['path']} 경로 완전성 {p['rate']} — 누락: {p['absent']}")
     return errs
