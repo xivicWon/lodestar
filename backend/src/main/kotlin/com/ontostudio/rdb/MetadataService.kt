@@ -12,7 +12,16 @@ class MetadataService {
         "mysql", "performance_schema", "sys"
     )
 
-    fun extract(conn: Connection): SchemaModel {
+    /**
+     * [revisionScheme] 는 이 카탈로그가 어디서 왔는지를 드러낸다 — 라이브 DB 는 `live`,
+     * 리포에 번들된 샘플을 적재한 것이면 `bundle`. 둘 다 git 커밋이 아니므로 sha 를 지어내지 않는다(#113).
+     */
+    fun extract(
+        conn: Connection,
+        sourceId: String = "db:jdbc",
+        projectId: String = CollectionMetadata.DEFAULT_PROJECT_ID,
+        revisionScheme: String = "live",
+    ): SchemaModel {
         val md = conn.metaData
         val tables = mutableListOf<TableInfo>()
 
@@ -63,6 +72,10 @@ class MetadataService {
 
             tables.add(TableInfo(name, columns, pk.values.toList(), foreignKeys))
         }
-        return SchemaModel(tables)
+        // JDBC 경로에는 '읽은 원본 바이트' 가 없다 — 수집기가 실제로 본 카탈로그의 정규화 표현을 해싱한다.
+        return SchemaModel(
+            tables,
+            CollectionMetadata.fromContent(sourceId, SchemaCanonical.bytes(tables), revisionScheme, projectId),
+        )
     }
 }

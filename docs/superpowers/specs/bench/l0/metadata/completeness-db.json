@@ -1,0 +1,50 @@
+{
+  "measurementVersion" : "l0-metadata-completeness/v1",
+  "issue" : 113,
+  "gate" : "gate-l0-metadata-completeness",
+  "track" : "db",
+  "contract" : "docs/superpowers/specs/2026-07-30-m0-l0-collection-metadata-contract.md",
+  "baseline" : "docs/superpowers/specs/bench/l0/runs/run-l0-db-3c27259-001 (0/5, 손대지 않는다)",
+  "required" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
+  "typeGraph" : {
+    "probe" : "kotlin-reflect — 산출물 타입 그래프(중첩 CollectionMetadata 포함)의 선언 멤버 이름",
+    "types" : [ "SchemaModel", "TableInfo", "ColumnInfo", "ForeignKeyInfo", "CollectionMetadata" ],
+    "present" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
+    "absent" : [ ],
+    "rate" : 1.0
+  },
+  "collectionPaths" : {
+    "probe" : "각 SchemaSource 를 실제로 돌려 산출물의 metadata 값을 센다",
+    "paths" : [ {
+      "path" : "ddl",
+      "sourceId" : "db:ddl:sales",
+      "present" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
+      "absent" : [ ],
+      "rate" : 1.0
+    }, {
+      "path" : "sample",
+      "sourceId" : "db:legacy-sample",
+      "present" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
+      "absent" : [ ],
+      "rate" : 1.0
+    }, {
+      "path" : "live-jdbc",
+      "sourceId" : "db:jdbc:h2/meta_completeness",
+      "present" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
+      "absent" : [ ],
+      "rate" : 1.0
+    } ]
+  },
+  "completeness" : {
+    "present" : 5,
+    "required" : 5,
+    "rate" : 1.0
+  },
+  "volatile" : {
+    "note" : "값은 수집기 버전·입력에 따라 달라진다 — 표류 검사 대상이 아니다",
+    "collectorVersion" : "lodestar-rdb-collector@0.1.0",
+    "sampleContentHash" : "sha256:3dddea1f696093ef5ff9b00fb69f69d18bb97b629568d0e28af7f3557bcf2ab8",
+    "sampleRevision" : "bundle:3dddea1f6960",
+    "ddlContentHash" : "sha256:af16a259a6f47280c751fd7e475876ebd66fdf1139a571026c08859b2e167d3b"
+  }
+}

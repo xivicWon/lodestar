@@ -19,7 +19,7 @@ class DdlSource(
     private val parser: DdlParser,
 ) : SchemaSource {
     override val name: String = schemaName?.takeIf { it.isNotBlank() } ?: "schema"
-    override fun extract(): SchemaModel = parser.parse(sql)
+    override fun extract(): SchemaModel = parser.parse(sql, sourceId = "db:ddl:$name")
 }
 
 /** 라이브 JDBC 소스 (벤더 무관 — DatabaseMetaData 기반). 벤더 확장은 DbConnector/DbDialect에서 흡수. */
@@ -30,7 +30,9 @@ class LiveJdbcSource(
 ) : SchemaSource {
     override val name: String = info.database
     override fun extract(): SchemaModel =
-        connector.open(info).use { conn: Connection -> metadata.extract(conn) }
+        connector.open(info).use { conn: Connection ->
+            metadata.extract(conn, sourceId = "db:jdbc:${info.vendor}/${info.database}")
+        }
 }
 
 /** 번들 샘플 레거시 소스 */
@@ -39,6 +41,10 @@ class SampleSource(
     private val metadata: MetadataService,
 ) : SchemaSource {
     override val name: String = "legacy"
+
+    /** gold manifest 가 고정한 sourceId 와 같은 값을 쓴다 — 증거가 이어지려면 같은 이름이어야 한다(I2 §6.1). */
     override fun extract(): SchemaModel =
-        sampleDb.open().use { conn: Connection -> metadata.extract(conn) }
+        sampleDb.open().use { conn: Connection ->
+            metadata.extract(conn, sourceId = "db:legacy-sample", revisionScheme = "bundle")
+        }
 }

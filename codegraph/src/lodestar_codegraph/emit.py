@@ -5,13 +5,21 @@ from .model import Node, Edge
 
 
 def build_and_write(nodes: list[Node], edges: list[Edge], meta_extra: dict,
-                    out_path: str, prune_dangling: bool = True) -> dict:
+                    out_path: str, prune_dangling: bool = True,
+                    file_hashes: dict[str, str] | None = None) -> dict:
+    """[file_hashes] 는 상대경로 → `sha256:...`.
+
+    노드마다 `source_id`·`content_hash` 를 붙여 **소스 단위로** 수집 신원이 닫히게 한다(#113).
+    실행 단위 필드(project_id·revision·collector_version)는 `meta_extra` 로 들어온다.
+    """
     ids = {n.id for n in nodes}
     kept = [e for e in edges if not prune_dangling or (e.src in ids and e.dst in ids)]
 
+    hashes = file_hashes or {}
     node_docs = sorted(
         ({"id": n.id, "kind": n.kind, "label": n.label,
           "qualified_name": n.qualified_name, "path": n.path, "lang": n.lang,
+          "source_id": n.path, "content_hash": hashes.get(n.path),
           "community": n.community, "degree": n.degree, "god_node": n.god_node}
          for n in nodes),
         key=lambda d: d["id"],

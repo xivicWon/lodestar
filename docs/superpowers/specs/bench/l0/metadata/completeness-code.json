@@ -1,0 +1,101 @@
+{
+  "measurementVersion": "l0-metadata-completeness/v1",
+  "issue": 113,
+  "gate": "gate-l0-metadata-completeness",
+  "track": "code",
+  "contract": "docs/superpowers/specs/2026-07-30-m0-l0-collection-metadata-contract.md",
+  "baseline": "docs/superpowers/specs/bench/l0/runs/run-l0-code-3c27259-001 (0/5, 손대지 않는다)",
+  "required": [
+    "projectId",
+    "sourceId",
+    "revision",
+    "contentHash",
+    "collectorVersion"
+  ],
+  "artifact": {
+    "probe": "실제 수집기(lodestar_codegraph)를 돌려 산출물의 meta·nodes 키를 센다",
+    "scopeRoot": "backend/src/main/kotlin",
+    "metaKeys": [
+      "collector_version",
+      "community_count",
+      "content_hash",
+      "edge_count",
+      "external_calls",
+      "generated_by",
+      "languages",
+      "node_count",
+      "parsed",
+      "project_id",
+      "revision",
+      "skipped",
+      "source_id",
+      "source_root",
+      "walked"
+    ],
+    "nodeKeys": [
+      "community",
+      "content_hash",
+      "degree",
+      "god_node",
+      "id",
+      "kind",
+      "label",
+      "lang",
+      "path",
+      "qualified_name",
+      "source_id"
+    ],
+    "present": [
+      {
+        "field": "projectId",
+        "via": "meta.project_id",
+        "basis": "직접 키"
+      },
+      {
+        "field": "sourceId",
+        "via": "meta.source_id",
+        "basis": "직접 키"
+      },
+      {
+        "field": "revision",
+        "via": "meta.revision",
+        "basis": "직접 키"
+      },
+      {
+        "field": "contentHash",
+        "via": "meta.content_hash",
+        "basis": "직접 키"
+      },
+      {
+        "field": "collectorVersion",
+        "via": "meta.collector_version",
+        "basis": "직접 키"
+      }
+    ],
+    "absent": []
+  },
+  "perSource": {
+    "probe": "노드 하나에서 5필드가 닫히는가 — 소스를 지목하지 못하는 신원은 추적성이 아니다",
+    "nodesMissingSourceId": [],
+    "nodesMissingContentHash": [],
+    "formats": {
+      "metaContentHash": true,
+      "metaRevision": true,
+      "collectorVersion": true
+    }
+  },
+  "completeness": {
+    "present": 5,
+    "required": 5,
+    "rate": 1.0
+  },
+  "volatile": {
+    "note": "값은 수집 범위의 내용·리비전에 따라 달라진다 — 표류 검사 대상이 아니다",
+    "projectId": "lodestar",
+    "revision": "dirty:bfa9f03ef782",
+    "contentHash": "sha256:bfa9f03ef782301aeeffc57ff92e8f61835a84022ff7f987357945fc907fbb85",
+    "collectorVersion": "lodestar-codegraph@0.1.0",
+    "nodeCount": 368,
+    "walked": 60
+  }
+}

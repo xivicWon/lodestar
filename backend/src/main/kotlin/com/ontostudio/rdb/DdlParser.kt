@@ -9,7 +9,15 @@ import org.springframework.stereotype.Component
 @Component
 class DdlParser {
 
-    fun parse(sql: String): SchemaModel {
+    /**
+     * [sourceId]·[projectId] 는 산출물의 수집 신원이 된다(#113 계약 v0).
+     * DDL 텍스트는 커밋된 적 없는 입력이므로 revision 은 입력 바이트에서 파생한 `inline:` 이다.
+     */
+    fun parse(
+        sql: String,
+        sourceId: String = "db:ddl:schema",
+        projectId: String = CollectionMetadata.DEFAULT_PROJECT_ID,
+    ): SchemaModel {
         val tables = mutableListOf<TableInfo>()
         // ';' 기준으로 개별 문장 분리 후 하나씩 파싱 → 트리거/함수 등 미지원 구문은 건너뛴다.
         for (raw in sql.split(";")) {
@@ -18,7 +26,11 @@ class DdlParser {
             val parsed = try { CCJSqlParserUtil.parse(stmt) } catch (e: Exception) { null } ?: continue
             if (parsed is CreateTable) tables.add(toTableInfo(parsed))
         }
-        return SchemaModel(tables)
+        // 신원은 수집기가 **실제로 읽은 바이트**(입력 SQL)에서 나온다 — 파싱 결과가 아니라.
+        return SchemaModel(
+            tables,
+            CollectionMetadata.fromContent(sourceId, sql.toByteArray(), "inline", projectId),
+        )
     }
 
     private fun unquote(s: String): String = s.trim().trim('"', '`', '[', ']')

@@ -1,0 +1,157 @@
+package com.ontostudio.rdb
+
+import java.sql.DriverManager
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
+
+/**
+ * #113 L0-fix — 수집 식별 메타데이터 계약 v0 (DB 트랙).
+ *
+ * 계약: docs/superpowers/specs/2026-07-30-m0-l0-collection-metadata-contract.md
+ *
+ * 여기서 거는 단언은 두 종류다.
+ * 1) 계약이 **거절해야 하는 것**을 거절하는가 — 빈 값·플레이스홀더로 게이트를 통과시키는 길을 막는다.
+ * 2) **모든 수집 경로**가 다섯 필드를 채우는가 — 경로 하나라도 비면 추적성은 그 경로에서 끊긴다.
+ */
+class CollectionMetadataTest {
+
+    private fun valid() = CollectionMetadata(
+        projectId = "lodestar",
+        sourceId = "db:ddl:schema",
+        revision = "inline:0123456789ab",
+        contentHash = "sha256:" + "a".repeat(64),
+        collectorVersion = "lodestar-rdb-collector@0.1.0",
+    )
+
+    // ---- 1) 계약이 거절하는 것 --------------------------------------------------------
+
+    @Test fun `blank fields are rejected`() {
+        for (mutate in listOf<(CollectionMetadata) -> CollectionMetadata>(
+            { it.copy(projectId = "") },
+            { it.copy(sourceId = " ") },
+            { it.copy(revision = "") },
+            { it.copy(contentHash = "") },
+            { it.copy(collectorVersion = "") },
+        )) {
+            assertFailsWith<IllegalArgumentException> { mutate(valid()) }
+        }
+    }
+
+    @Test fun `placeholder identities are rejected`() {
+        // "모르는 값을 unknown 으로 채워 통과" 는 은폐다 — 계약이 직접 막는다.
+        for (bad in listOf("unknown", "UNKNOWN", "n/a", "null", "none", "todo", "-")) {
+            assertFailsWith<IllegalArgumentException> { valid().copy(sourceId = bad) }
+            assertFailsWith<IllegalArgumentException> { valid().copy(projectId = bad) }
+        }
+    }
+
+    @Test fun `malformed content hash is rejected`() {
+        for (bad in listOf("abc", "sha256:xyz", "sha256:" + "a".repeat(63), "md5:" + "a".repeat(32))) {
+            assertFailsWith<IllegalArgumentException> { valid().copy(contentHash = bad) }
+        }
+    }
+
+    @Test fun `revision must be a commit sha or a declared non-vcs scheme`() {
+        // 커밋이 아닌 것을 커밋처럼 보이게 하는 값을 막는다.
+        for (bad in listOf("HEAD", "main", "2026-07-30T00:00:00Z", "snapshot:abc", "inline:zz")) {
+            assertFailsWith<IllegalArgumentException> { valid().copy(revision = bad) }
+        }
+        for (ok in listOf("3c27259", "a".repeat(40), "inline:0123456789ab", "bundle:0123456789ab",
+                          "live:0123456789ab", "dirty:0123456789ab", "nogit:0123456789ab")) {
+            assertEquals(ok, valid().copy(revision = ok).revision)
+        }
+    }
+
+    @Test fun `collector version must carry name and semver`() {
+        for (bad in listOf("lodestar-codegraph v1", "0.1.0", "collector@1", "collector@1.0")) {
+            assertFailsWith<IllegalArgumentException> { valid().copy(collectorVersion = bad) }
+        }
+        assertEquals("c@1.2.3+3c27259", valid().copy(collectorVersion = "c@1.2.3+3c27259").collectorVersion)
+    }
+
+    @Test fun `collector version reports name and semver of the db collector`() {
+        assertTrue(DbCollector.version().startsWith("lodestar-rdb-collector@"),
+            "수집기 신원은 산출물만 보고 특정할 수 있어야 한다: ${DbCollector.version()}")
+        // 형식 검증은 계약이 한다 — 여기서 만들어 통과하는지 본다.
+        valid().copy(collectorVersion = DbCollector.version())
+    }
+
+    // ---- 2) 모든 수집 경로가 다섯 필드를 채우는가 ----------------------------------------
+
+    private fun assertComplete(m: CollectionMetadata) {
+        // 계약이 init 에서 이미 검증하지만, 다섯 필드가 **다 있는지**는 여기서 필드 이름으로 센다.
+        val values = mapOf(
+            "projectId" to m.projectId, "sourceId" to m.sourceId, "revision" to m.revision,
+            "contentHash" to m.contentHash, "collectorVersion" to m.collectorVersion)
+        assertEquals(CollectionMetadata.REQUIRED_FIELDS.toSet(), values.keys)
+        assertTrue(values.values.none { it.isBlank() }, "빈 필드가 있다: $values")
+    }
+
+    @Test fun `ddl path records identity derived from the input bytes`() {
+        val sql = "CREATE TABLE t (id INTEGER PRIMARY KEY)"
+        val m = DdlSource(sql, "sales", DdlParser()).extract().metadata
+        assertComplete(m)
+        assertEquals("lodestar", m.projectId)
+        assertEquals("db:ddl:sales", m.sourceId)
+        assertEquals(CollectionMetadata.sha256(sql.toByteArray()), m.contentHash)
+        assertEquals("inline:" + m.contentHash.removePrefix("sha256:").take(12), m.revision)
+        assertEquals(DbCollector.version(), m.collectorVersion)
+    }
+
+    @Test fun `ddl content hash changes when the input changes`() {
+        val a = DdlSource("CREATE TABLE t (id INTEGER)", "s", DdlParser()).extract().metadata
+        val b = DdlSource("CREATE TABLE t (id BIGINT)", "s", DdlParser()).extract().metadata
+        assertNotEquals(a.contentHash, b.contentHash)
+        assertNotEquals(a.revision, b.revision)
+    }
+
+    @Test fun `sample path records the gold pinned source id`() {
+        val m = SampleSource(SampleLegacyDb(), MetadataService()).extract().metadata
+        assertComplete(m)
+        // gold manifest 가 고정한 id 와 같아야 증거가 이어진다(I2 §6.1).
+        assertEquals("db:legacy-sample", m.sourceId)
+        assertTrue(m.revision.startsWith("bundle:"), "번들 리소스는 커밋 sha 를 지어내지 않는다: ${m.revision}")
+    }
+
+    @Test fun `live jdbc path records vendor and database in the source id`() {
+        val url = "jdbc:h2:mem:meta_prov;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1"
+        DriverManager.getConnection(url, "sa", "").use { conn ->
+            conn.createStatement().use { st ->
+                st.execute("DROP ALL OBJECTS")
+                st.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name VARCHAR(100))")
+            }
+            val m = MetadataService().extract(conn, sourceId = "db:jdbc:h2/meta_prov").metadata
+            assertComplete(m)
+            assertEquals("db:jdbc:h2/meta_prov", m.sourceId)
+            assertTrue(m.revision.startsWith("live:"), "라이브 DB 는 VCS 신원이 없다: ${m.revision}")
+            assertEquals("live:" + m.contentHash.removePrefix("sha256:").take(12), m.revision)
+        }
+    }
+
+    @Test fun `live content hash is deterministic across runs and follows the catalog`() {
+        val url = "jdbc:h2:mem:meta_det;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1"
+        DriverManager.getConnection(url, "sa", "").use { conn ->
+            conn.createStatement().use { st ->
+                st.execute("DROP ALL OBJECTS")
+                st.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY)")
+            }
+            // 시각이 아니라 내용에서 나오므로 3회 실행이 같아야 한다(H1 결정성을 오염시키지 않는다).
+            val hashes = (1..3).map { MetadataService().extract(conn).metadata.contentHash }
+            assertEquals(1, hashes.toSet().size, "같은 카탈로그의 3회 수집이 다른 신원을 냈다: $hashes")
+
+            conn.createStatement().use { st -> st.execute("ALTER TABLE customers ADD COLUMN note VARCHAR(10)") }
+            assertNotEquals(hashes[0], MetadataService().extract(conn).metadata.contentHash,
+                "카탈로그가 바뀌었는데 contentHash 가 같다")
+        }
+    }
+
+    @Test fun `in-memory schemas derive identity from their own content`() {
+        val tables = listOf(TableInfo("t", listOf(ColumnInfo("id", "integer", false)), listOf("id"), emptyList()))
+        val m = SchemaModel.of(tables, sourceId = "db:test:memory").metadata
+        assertComplete(m)
+        assertEquals(CollectionMetadata.sha256(SchemaCanonical.bytes(tables)), m.contentHash)
+    }
+}

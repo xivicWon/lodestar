@@ -26,7 +26,7 @@ class RelationServiceEvidenceTest {
     private fun service(holder: OntologyHolder) = RelationService(holder, OntologyMapper(holder))
 
     // TB_ASSET_MASTER.GROUP_CD 가 TB_GROUP(완전일치)·TB_USER_GROUP_ASSET(토큰일치) 둘 다에 매칭.
-    private fun ambiguousSchema() = SchemaModel(listOf(
+    private fun ambiguousSchema() = SchemaModel.of(sourceId = "db:test:relationserviceevidencetest", tables = listOf(
         TableInfo("TB_ASSET_MASTER",
             listOf(ColumnInfo("ASSET_NO", "varchar(20)", false),
                    ColumnInfo("GROUP_CD", "varchar(10)", true)),

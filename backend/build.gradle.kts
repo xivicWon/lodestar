@@ -33,5 +33,13 @@ tasks.test {
     inputs.files(fileTree(File(rootDir.parentFile, "docs/superpowers/specs/bench/l0/runs")))
         .withPropertyName("l0BenchEvidence")
         .optional()
+    inputs.files(fileTree(File(rootDir.parentFile, "docs/superpowers/specs/bench/l0/metadata")))
+        .withPropertyName("l0MetadataEvidence")
+        .optional()
+    // 부트스트랩 스위치는 gradle JVM 이 아니라 **테스트 JVM** 이 읽어야 한다.
+    // 전달하지 않으면 문서에 적힌 `-DL0_PROBE_BOOTSTRAP=true` 가 조용히 무시된다.
+    for (key in listOf("L0_PROBE_BOOTSTRAP", "L0_METADATA_BOOTSTRAP")) {
+        System.getProperty(key)?.let { systemProperty(key, it) }
+    }
 }
 kotlin { jvmToolchain(21) }

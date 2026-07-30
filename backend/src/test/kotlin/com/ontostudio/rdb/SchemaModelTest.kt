@@ -5,7 +5,7 @@ import kotlin.test.assertEquals
 
 class SchemaModelTest {
     @Test fun `schema model holds tables columns and fks`() {
-        val schema = SchemaModel(listOf(
+        val schema = SchemaModel.of(sourceId = "db:test:schemamodeltest", tables = listOf(
             TableInfo(
                 name = "orders",
                 columns = listOf(ColumnInfo("id", "integer", false), ColumnInfo("total", "numeric", true)),

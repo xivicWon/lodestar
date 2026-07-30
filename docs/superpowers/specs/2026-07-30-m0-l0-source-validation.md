@@ -261,6 +261,20 @@ Retire 는 하나도 없다 — 세 경로 모두 결함이 **국소적이고 �
 L0-fix-1 이 머지되면 코드 트랙을 **새 runId 로 재측정**한다. 이번 보고서는 비교 기준선으로 남는다
 (`eligibleAsBaseline: true`).
 
+### 6.1 L0-fix-2 진행 (#113 — 반영됨)
+
+계약과 두 트랙 구현: [수집 식별 메타데이터 계약 v0](2026-07-30-m0-l0-collection-metadata-contract.md).
+재측정 결과: `bench/l0/metadata/completeness-{db,code}.json` — **두 트랙 5/5**.
+
+제안과 다르게 간 것이 하나 있다. **수집 시각(timestamp)을 넣지 않았다.** 시각을 산출물에 실으면
+같은 입력의 두 실행이 달라져 결정성 측정(H1)이 오염되고, 지금 H1 은 이미 열려 있는 항목이다.
+스냅샷 식별은 시각 대신 `revision` 의 스킴 접두어(`inline:`·`bundle:`·`live:`·`dirty:`·`nogit:`)와
+내용 파생 해시가 맡는다. 신선도 지표가 실제 시각을 요구하게 되면, 산출물 본문이 아니라 **실행
+기록(Run Quality Report)** 쪽에 두는 것이 결정성과 충돌하지 않는 자리다.
+
+이 이슈가 닫은 것은 `gate-l0-metadata-completeness` 하나뿐이다. L0 판정은 여전히 `BLOCKED` 이며,
+`run-l0-{db,code}-3c27259-001` 은 그 시점의 증거로 **손대지 않았다**(I3 §5.5).
+
 ---
 
 ## 7. 증거 적합성 확인기 (V1~V11)
