@@ -2,8 +2,10 @@
   "goldSetVersion": "gold-set/v0",
   "issue": 99,
   "status": {
-    "state": "DRAFT",
-    "note": "에이전트 초안. 리뷰어(@xivicWon) 승인 전까지 정답으로 사용할 수 없다(I1 §1.2). APPROVED 로 바뀌는 시점에 #88 착수 게이트(I1 G2)가 열린다."
+    "state": "APPROVED",
+    "note": "리뷰어 승인 완료. 이 시점부터 정답셋으로 사용 가능하며 #88 착수 게이트(I1 G2)가 열린다. 승인 범위는 본 gold 의 내용과 §7 에 열거된 정책 판단이며, §8 의 I1·EVL 계약 개정 안건은 **별개다** — 그것들은 해당 계약의 개정 절차로 처리한다.",
+    "approvedBy": "@xivicWon",
+    "approvedAt": "2026-07-30T07:53:27Z"
   },
   "sourceRevision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
   "docsRevision": "7d3db3ed77803c5603137e28a8d9069254db2771",
