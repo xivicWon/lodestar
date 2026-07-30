@@ -10,3 +10,8 @@ data/
 # Python 바이트코드 (참조 확인기 실행 시 생성)
 __pycache__/
 *.pyc
+
+# Claude pipeline transient (worktree 세션 지시 파일)
+.claude-brief.md
+.review-response*.md
+.claude/settings.local.json
