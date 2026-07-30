@@ -1,0 +1,236 @@
+{
+  "schemaVersion": "run-quality-report/v0",
+  "run": {
+    "runId": "run-l0-code-3c27259-003",
+    "projectId": "lodestar",
+    "layer": "L0",
+    "track": "code",
+    "reportKind": "BASELINE",
+    "sourceRevision": "3c27259",
+    "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
+    "startedAt": "2026-07-30T13:40:00Z",
+    "completedAt": "2026-07-30T13:40:06Z",
+    "executedBy": "claude-code agent (Claude Opus 4.8) — 판정 승인권자는 @xivicWon (I1 §1.2)"
+  },
+  "versions": {
+    "collector": {
+      "status": "PINNED",
+      "value": "lodestar-codegraph@0.2.0"
+    },
+    "extractor": {
+      "status": "NOT_APPLICABLE",
+      "value": null
+    },
+    "model": {
+      "status": "NOT_APPLICABLE",
+      "value": null
+    },
+    "prompt": {
+      "status": "NOT_APPLICABLE",
+      "value": null
+    }
+  },
+  "counts": {
+    "input": 59,
+    "output": 59,
+    "failed": 0,
+    "excluded": 0
+  },
+  "exclusions": [],
+  "failures": [],
+  "metrics": {
+    "precision": {
+      "status": "NOT_APPLICABLE",
+      "value": null,
+      "note": "L0 은 사실을 산출하지 않는다 — 명시 사실 정확도는 L1(#89)에서 잰다"
+    },
+    "recall": {
+      "status": "NOT_APPLICABLE",
+      "value": null,
+      "note": "L0 은 사실을 산출하지 않는다 — 재현율은 L1(#89)에서 잰다"
+    },
+    "scopeCoverage": {
+      "status": "MEASURED",
+      "value": 1.0,
+      "note": "counts.output/counts.input = 59/59"
+    },
+    "determinism": {
+      "status": "MEASURED",
+      "value": 1.0,
+      "note": "동일 revision 3회 실행 산출물 해시의 최대 동일 그룹 / 3"
+    },
+    "provenanceCompleteness": {
+      "status": "MEASURED",
+      "value": 0.4,
+      "note": "필수 식별 5필드(projectId·sourceId·revision·contentHash·collectorVersion) 중 산출물에서 소스 단위로 조회 가능한 비율"
+    }
+  },
+  "evl": {
+    "confidenceCalibration": {
+      "status": "NOT_APPLICABLE",
+      "population": null,
+      "ece": null,
+      "bins": [],
+      "sampleCount": 0,
+      "missingRawCount": 0
+    },
+    "conflictDetection": {
+      "precision": {
+        "status": "NOT_APPLICABLE",
+        "value": null,
+        "note": "L0 은 충돌 판정을 만들지 않는다"
+      },
+      "recall": {
+        "status": "NOT_APPLICABLE",
+        "value": null,
+        "note": "L0 은 충돌 판정을 만들지 않는다"
+      },
+      "goldSetId": "gold-set/v0+f20edbad6bad"
+    },
+    "coverageClasses": [
+      {
+        "class": "code",
+        "state": "present",
+        "deterministic": true,
+        "warned": false
+      },
+      {
+        "class": "issue",
+        "state": "not_collected",
+        "deterministic": true,
+        "warned": true
+      },
+      {
+        "class": "adr",
+        "state": "not_collected",
+        "deterministic": true,
+        "warned": true
+      },
+      {
+        "class": "test",
+        "state": "not_collected",
+        "deterministic": true,
+        "warned": true
+      },
+      {
+        "class": "runtime",
+        "state": "not_collected",
+        "deterministic": true,
+        "warned": true
+      }
+    ]
+  },
+  "gates": [
+    {
+      "id": "gate-determinism",
+      "name": "결정성 (동일 입력 3회 일치율)",
+      "required": 1.0,
+      "observed": 1.0,
+      "status": "PASS"
+    },
+    {
+      "id": "gate-l0-metadata-completeness",
+      "name": "L0 메타데이터 완전성 (projectId·sourceId·revision·contentHash·collectorVersion)",
+      "required": 1.0,
+      "observed": 0.4,
+      "status": "FAIL"
+    },
+    {
+      "id": "gate-error-visibility",
+      "name": "L0 오류 가시성 (실패·제외 보고율)",
+      "required": 1.0,
+      "observed": 1.0,
+      "status": "PASS"
+    },
+    {
+      "id": "gate-security-masking",
+      "name": "L0 보안 (테스트 시크릿·PII 미마스킹 0건)",
+      "required": "0건",
+      "observed": "코퍼스 양성 28건 중 마스킹 0건 (미마스킹 0건 · 미수집 28건 — 수집 확장자가 아니어서 walked=0)",
+      "status": "FAIL"
+    }
+  ],
+  "baseline": {
+    "previous": {
+      "projectId": "lodestar",
+      "layer": "L0",
+      "track": "code",
+      "sourceRevision": "3c27259",
+      "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
+      "runId": "run-l0-code-3c27259-002",
+      "schemaVersion": "run-quality-report/v0"
+    },
+    "comparable": true,
+    "reason": "run-l0-code-3c27259-002 과 project·layer·track·sourceRevision·fixtureHash·schemaVersion 이 같다 — 같은 입력을 같은 계약으로 잰 실행이므로 수치를 직접 비교한다. 달라진 것은 수집기 버전이며(#112 결정성 수정), 그 변화량이 아래 deltas 다.",
+    "eligibleAsBaseline": true,
+    "deltas": [
+      {
+        "metric": "determinism",
+        "previous": 1.0,
+        "current": 1.0,
+        "delta": 0.0
+      },
+      {
+        "metric": "provenanceCompleteness",
+        "previous": 0.4,
+        "current": 0.4,
+        "delta": 0.0
+      },
+      {
+        "metric": "scopeCoverage",
+        "previous": 1.0,
+        "current": 1.0,
+        "delta": 0.0
+      },
+      {
+        "metric": "gates.gate-determinism",
+        "previous": 1.0,
+        "current": 1.0,
+        "delta": 0.0
+      },
+      {
+        "metric": "gates.gate-l0-metadata-completeness",
+        "previous": 0.4,
+        "current": 0.4,
+        "delta": 0.0
+      },
+      {
+        "metric": "gates.gate-error-visibility",
+        "previous": 0.0,
+        "current": 1.0,
+        "delta": 1.0
+      }
+    ]
+  },
+  "verdict": {
+    "value": "BLOCKED",
+    "haltRules": [
+      "H2"
+    ],
+    "restrictions": []
+  },
+  "featureJudgments": [
+    {
+      "featureId": "E17",
+      "judgment": "Lab",
+      "measured": true,
+      "rationale": "수집 범위 59개 파일을 전량 파싱했고 결정성 1.0(#112 · H1 해소), #114 로 제외·실패·부분수집이 meta.issues 에 사유·좌표와 함께 실려 보고율 3/3 이다. 파싱 오류가 있는 파일은 status 로 표시되어 완전 성공으로 위장된 실패 픽스처가 0건이다. 그래도 Core 는 아니다 — 필수 식별 2/5 로 추적 가능성 게이트(L0-fix-2)와 보안 게이트(L0-fix-5)가 남아 있으므로 Lab.",
+      "evidenceRefs": [
+        "run-l0-code-3c27259-003"
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "code": "GATE_FAILED",
+      "message": "무조건 게이트 실패: L0 메타데이터 완전성 (projectId·sourceId·revision·contentHash·collectorVersion)",
+      "trigger": "gates.gate-l0-metadata-completeness"
+    },
+    {
+      "code": "GATE_FAILED",
+      "message": "무조건 게이트 실패: L0 보안 (테스트 시크릿·PII 미마스킹 0건)",
+      "trigger": "gates.gate-security-masking"
+    }
+  ],
+  "notes": "L0 코드 트랙 재실측(#114 — 오류 가시성 수정 후. 결정성은 #112 에서 이미 해소됐다). 프로브 산출물: probe-code.json (probe_code.py --check 로 표류 검사 + 결정성 1.0·시드 무관 확인). determinism 은 기본 인터프리터 설정 3회 실행의 최대 동일 그룹/3 이며, PYTHONHASHSEED 를 바꾼 실행까지 산출물이 같다는 통제 실험이 프로브에 함께 남아 있다(determinismControl.seedIndependent). 수집 범위는 고정 revision 의 blob 에서 재구성해 측정한다 — 이 수정이 backend/src/main/kotlin 을 함께 고치므로, 작업 트리를 입력으로 삼는 동안에는 '고정 revision 을 쟀다' 가 성립하지 않는다. 보고율 3/3 의 분모는 확장자 제외 0건과 실패 픽스처 3건의 기대 보고 항목이고, 산출물은 파일마다 status(parsed|partial|failed)를 실어 파싱 오류 구간과 겹치는 선언을 사실로 내지 않는다(완전 성공으로 표시된 실패 픽스처 0건). 남은 실패는 메타데이터(L0-fix-2)와 보안(L0-fix-5)이라 판정은 여전히 BLOCKED(H2)다. precision/recall 은 L1(#89)의 몫이라 NOT_APPLICABLE 이다."
+}

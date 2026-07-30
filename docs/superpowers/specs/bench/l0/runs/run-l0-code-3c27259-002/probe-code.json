@@ -1,5 +1,5 @@
 {
-  "probeVersion": "l0-code-probe/v2",
+  "probeVersion": "l0-code-probe/v1",
   "layer": "L0",
   "track": "code",
   "projectId": "lodestar",
@@ -8,26 +8,12 @@
   "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
   "collector": {
     "impl": "lodestar_codegraph (walk → tree-sitter parse → extract → resolve → cluster → emit)",
-    "declaredVersion": "lodestar-codegraph v1 (meta.generated_by) · pyproject 0.1.0",
-    "citedVersion": "lodestar-codegraph@0.1.0+sha256:61968310034de002df8a2baa9e7e9ded2907e06e4aeb02f6d444ca5328448bb2",
-    "sourceHash": "sha256:61968310034de002df8a2baa9e7e9ded2907e06e4aeb02f6d444ca5328448bb2",
-    "sourceFiles": [
-      "codegraph/src/lodestar_codegraph/__init__.py",
-      "codegraph/src/lodestar_codegraph/__main__.py",
-      "codegraph/src/lodestar_codegraph/cluster.py",
-      "codegraph/src/lodestar_codegraph/emit.py",
-      "codegraph/src/lodestar_codegraph/extract.py",
-      "codegraph/src/lodestar_codegraph/lang.py",
-      "codegraph/src/lodestar_codegraph/model.py",
-      "codegraph/src/lodestar_codegraph/parse.py",
-      "codegraph/src/lodestar_codegraph/resolve.py",
-      "codegraph/src/lodestar_codegraph/walk.py"
-    ],
-    "note": "산출물이 선언하는 것은 여전히 이름과 세대뿐이다(L0-fix-2 — #114 범위 밖). 재측정 시점의 커밋이 아직 없으므로 수집기 신원은 구성 파일 해시로 고정한다 — 재계산으로 검증된다"
+    "declaredVersion": "lodestar-codegraph v1 (meta.generated_by) · pyproject 0.1.1",
+    "citedVersion": "lodestar-codegraph@0.1.1",
+    "note": "산출물이 선언하는 것은 이름과 세대뿐이다 — 커밋·semver 가 없어 산출물만으로는 재현 대상을 특정할 수 없다. 입력 revision(3c27259)과 달리 수집기는 #112 의 결정성 수정이 들어간 0.1.1 이다 — 입력 신원과 수집기 버전은 다른 축이다."
   },
   "input": {
     "scopeRoot": "backend/src/main/kotlin",
-    "materializedFrom": "git blob @3c27259",
     "fileCount": 59,
     "pinnedComparedCount": 7,
     "pinnedMismatched": [],
@@ -44,12 +30,7 @@
     "parsed": 59,
     "skippedByCollector": 0,
     "excludedByExtensionFilter": 0,
-    "excludedReportedByCollector": 0,
-    "failedReportedByCollector": 0,
-    "partialReportedByCollector": 0,
-    "reported": 0,
     "exclusions": [],
-    "issues": [],
     "nodeCount": 362,
     "edgeCount": 717,
     "externalCalls": 1372
@@ -65,46 +46,38 @@
     "codeStateStable": true
   },
   "determinismObserved": {
-    "note": "기본 설정(해시 랜덤화 on) 3회 실행. 이 블록은 프로세스마다 값이 달라지므로 표류 검사 대상이 아니다.",
+    "note": "기본 설정(해시 랜덤화 on) 3회 실행. #112 수정 이후 이 블록은 프로세스마다 같아야 하며 표류 검사 대상이다 — 값이 흔들리면 그 자체가 회귀다.",
     "runs": 3,
-    "distinctHashes": 3,
-    "largestIdenticalGroup": 1,
-    "rate": 0.3333,
-    "divergingPaths": [
-      "meta.community_count",
-      "nodes[].community"
-    ]
+    "distinctHashes": 1,
+    "largestIdenticalGroup": 3,
+    "rate": 1.0,
+    "divergingPaths": []
   },
-  "determinismRootCause": {
+  "determinismControl": {
     "experiment": "PYTHONHASHSEED 를 고정한 실행 2회와 다른 시드 1회를 비교한다",
     "seed0Hashes": [
-      "sha256:750b79b72812129a916007c24b61a493fd25c733c9332d3604ef4881ae3fbd95",
-      "sha256:750b79b72812129a916007c24b61a493fd25c733c9332d3604ef4881ae3fbd95"
+      "sha256:38467ef3b63d9d03a7be8d02111bad4f829218834160bf91fe95d8f60ca61aba",
+      "sha256:38467ef3b63d9d03a7be8d02111bad4f829218834160bf91fe95d8f60ca61aba"
     ],
     "seed0Identical": true,
-    "seed1Hash": "sha256:1521be45e051fa4b624cdf8189bf4cc084d793643f90b19490288de0cbe9f312",
-    "seedChangesArtifact": true,
+    "seed1Hash": "sha256:38467ef3b63d9d03a7be8d02111bad4f829218834160bf91fe95d8f60ca61aba",
+    "seedChangesArtifact": false,
+    "seedIndependent": true,
     "structuralHashStable": true,
-    "structuralHash": "sha256:fc47120f4c88918555d098cbdfd66f26570dc4574be413e3952a6461610129c9",
-    "cause": "cluster.annotate 가 `ids = {n.id for n in nodes}`(집합)을 그대로 `g.add_nodes_from(ids)` 에 넘긴다(cluster.py#L8-L10). 문자열 해시 랜덤화로 집합 순회 순서가 프로세스마다 달라지고, Louvain 은 노드 순서에 의존하므로 seed=42 를 고정해도 군집 배정이 갈린다.",
-    "blastRadius": "노드의 community·god_node 가 흔들린다. 노드·엣지·좌표는 동일하다(structuralHashStable) — 즉 사실 자체가 아니라 사실에 붙는 군집 라벨이 재현되지 않는다."
+    "structuralHash": "sha256:6d063bcd917d82babd17b123758d656a376f5df543b206e223a32b3751382040",
+    "fix": "cluster.annotate 가 노드·엣지를 정렬해서 그래프에 넣고(`g.add_nodes_from(sorted(ids))`) 군집 라벨을 멤버 정렬로 정규화한다(#112). 이전에는 집합을 그대로 넘겨 문자열 해시 랜덤화가 노드 순서를, 노드 순서가 Louvain 의 군집 배정을 바꿨다.",
+    "scope": "산출물 전체(canonical)가 시드에 무관하게 동일하다. 군집 라벨을 뺀 구조 해시도 여전히 안정적이다(structuralHashStable) — 사실과 라벨이 함께 재현된다."
   },
   "provenance": {
     "probe": "산출물(codegraph.json)의 meta·nodes 키 집합",
     "metaKeys": [
       "community_count",
       "edge_count",
-      "excluded",
       "external_calls",
-      "failed",
-      "failed_files",
       "generated_by",
-      "issues",
       "languages",
       "node_count",
       "parsed",
-      "partial",
-      "partial_files",
       "skipped",
       "source_root",
       "walked"
@@ -118,8 +91,7 @@
       "label",
       "lang",
       "path",
-      "qualified_name",
-      "status"
+      "qualified_name"
     ],
     "required": [
       "projectId",
@@ -150,30 +122,13 @@
     "rate": 0.4
   },
   "reporting": {
-    "probe": "산출물에 실패·제외를 사유·좌표와 함께 실을 자리가 있는가",
+    "probe": "산출물에 실패·제외를 사유와 함께 실을 자리가 있는가",
     "aggregateKeys": [
-      "excluded",
       "external_calls",
-      "failed",
-      "partial",
       "skipped"
     ],
-    "channelKeys": [
-      "failed_files",
-      "issues",
-      "partial_files"
-    ],
-    "channelExists": true,
-    "perItemReasons": true,
-    "itemFields": [
-      "kind",
-      "locator",
-      "reason",
-      "reason_code",
-      "target"
-    ],
-    "note": "#114 로 meta.issues 가 생겼다 — 제외·실패·부분수집이 사유·좌표·대상과 함께 실린다. 노드에는 status(parsed|partial|failed) 가 붙어 부분 추출이 완전 추출로 위장되지 않는다.",
-    "itemsObserved": 3
+    "perItemReasons": false,
+    "note": "meta.skipped 는 건수만 있고 대상·사유가 없다. 확장자 필터로 제외된 파일은 walked 에도 들어가지 않아 산출물에서 흔적이 사라진다 — 'not_collected' 와 'absent' 가 L0 에서 이미 뭉개진다."
   },
   "failureFixtures": [
     {
@@ -189,35 +144,11 @@
       "actualExtracted": [
         "file:code-broken-syntax.kt"
       ],
-      "extractedSymbols": [],
-      "unexpectedExtracted": [],
-      "missingExtracted": [],
-      "fileStatus": [
-        "failed"
-      ],
       "expectedReported": 1,
-      "actualReported": 1,
-      "reportAttribution": {
-        "expected": [
-          {
-            "kind": "PARSE_ERROR",
-            "target": "fixtures/failure/code-broken-syntax.kt",
-            "locator": "#L6-L11",
-            "reported": true,
-            "observedKind": "failed",
-            "observedLocator": "code-broken-syntax.kt#L6-L11",
-            "observedTarget": "fixture.failure.BrokenSyntax",
-            "reasonPresent": true,
-            "targetMatches": false
-          }
-        ],
-        "expectedReported": 1,
-        "actualReported": 1,
-        "unattributedReports": []
-      },
-      "markedAsFullySucceeded": false,
+      "actualReported": 0,
+      "markedAsFullySucceeded": true,
       "silentSkipIsFailure": true,
-      "verdict": "OK"
+      "verdict": "UNREPORTED"
     },
     {
       "id": "F.CODE.PARTIAL_EXTRACT",
@@ -237,38 +168,11 @@
         "function:fixture.failure.GoodOne.ok",
         "type:fixture.failure.GoodOne"
       ],
-      "extractedSymbols": [
-        "fixture.failure.GoodOne",
-        "fixture.failure.GoodOne.ok"
-      ],
-      "unexpectedExtracted": [],
-      "missingExtracted": [],
-      "fileStatus": [
-        "partial"
-      ],
       "expectedReported": 1,
-      "actualReported": 1,
-      "reportAttribution": {
-        "expected": [
-          {
-            "kind": "PARSE_ERROR",
-            "target": "fixture.failure.TailBroken",
-            "locator": "#L12-L14",
-            "reported": true,
-            "observedKind": "partial",
-            "observedLocator": "code-partial-extract.kt#L12-L14",
-            "observedTarget": "fixture.failure.TailBroken",
-            "reasonPresent": true,
-            "targetMatches": true
-          }
-        ],
-        "expectedReported": 1,
-        "actualReported": 1,
-        "unattributedReports": []
-      },
-      "markedAsFullySucceeded": false,
+      "actualReported": 0,
+      "markedAsFullySucceeded": true,
       "silentSkipIsFailure": true,
-      "verdict": "OK"
+      "verdict": "UNREPORTED"
     },
     {
       "id": "F.CODE.UNSUPPORTED_LANG",
@@ -281,33 +185,11 @@
       "skipped": 0,
       "expectedExtracted": [],
       "actualExtracted": [],
-      "extractedSymbols": [],
-      "unexpectedExtracted": [],
-      "missingExtracted": [],
-      "fileStatus": [],
       "expectedReported": 1,
-      "actualReported": 1,
-      "reportAttribution": {
-        "expected": [
-          {
-            "kind": "UNSUPPORTED_LANGUAGE",
-            "target": "fixtures/failure/code-unsupported-lang.scala",
-            "locator": "#L1",
-            "reported": true,
-            "observedKind": "skipped",
-            "observedLocator": "code-unsupported-lang.scala#L1",
-            "observedTarget": "code-unsupported-lang.scala",
-            "reasonPresent": true,
-            "targetMatches": true
-          }
-        ],
-        "expectedReported": 1,
-        "actualReported": 1,
-        "unattributedReports": []
-      },
+      "actualReported": 0,
       "markedAsFullySucceeded": false,
       "silentSkipIsFailure": true,
-      "verdict": "OK"
+      "verdict": "UNREPORTED"
     }
   ],
   "pii": {
@@ -350,10 +232,6 @@
       "PII.POS.LOG.L9.37"
     ],
     "walked": 0,
-    "exclusionsReported": 3,
-    "exclusionReasons": [
-      "UNSUPPORTED_LANGUAGE"
-    ],
     "goldGap": "gold v0 의 양성 28건(전체 항목 44건 = 양성 28 + 음성 16)은 전부 .sql/.properties/.log 에 있다 — 코드 수집기가 실제로 읽는 확장자(.kt/.java) 안에 양성이 없어, 수집된 표면에서의 마스킹 동작은 이 gold 로 측정할 수 없다. 픽스처를 여기서 만들지 않고 I2 개정 안건으로 남긴다."
   },
   "maskingCapability": {

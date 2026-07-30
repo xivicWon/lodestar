@@ -8,12 +8,12 @@ JSON 프로브 산출물로 남긴다. 보고서(Run Quality Report v0)는 이 �
     python3 docs/superpowers/specs/bench/l0/probe_code.py            # 측정 + build/l0/probe-code.json
     python3 docs/superpowers/specs/bench/l0/probe_code.py --check    # 커밋된 산출물과 대조
 
-**v1 과의 차이**: v1(run-l0-code-3c27259-001)은 제외·실패를 사유와 함께 실을 자리가 없던 수집기를
-쟀고, 입력을 **작업 트리**에서 읽었다. #114 로 산출물에 `meta.issues` 채널이 생겼으므로 v1 의 산식
-(보고율 0)은 더 이상 성립하지 않는다. v1 산출물·보고서는 비교 기준선으로 그대로 남기고(I3 §5.5), 이
-프로브는 새 runId 로 재측정한다. 또한 수집 범위를 **고정 revision 의 blob 에서 재구성**해 측정한다 —
-수집기를 고치면 작업 트리의 `backend/src/main/kotlin` 이 곧 바뀌므로, 작업 트리를 입력으로 삼는 동안에는
-"고정 revision 을 쟀다" 가 성립하지 않는다.
+**이전 실행과의 차이**: run-002(#112)까지는 제외·실패를 사유와 함께 실을 자리가 없던 수집기를 쟀고,
+입력을 **작업 트리**에서 읽었다. #114 로 산출물에 `meta.issues` 채널이 생겼으므로 "보고율은 구조적으로 0"
+이라는 산식이 더 이상 성립하지 않는다. 지난 실행은 비교 기준선으로 그대로 두고(I3 §5.5) 새 runId 로
+재측정한다. 또한 수집 범위를 **고정 revision 의 blob 에서 재구성**해 측정한다 — 이 수정이
+`backend/src/main/kotlin` 을 함께 고치므로, 작업 트리를 입력으로 삼는 동안에는 "고정 revision 을 쟀다" 가
+성립하지 않는다.
 
 측정 규칙과 판정: docs/superpowers/specs/2026-07-30-m0-l0-source-validation.md
 """
@@ -29,16 +29,23 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 
 HERE = pathlib.Path(__file__).resolve().parent
 REPO = HERE.parents[4]
 GOLD = REPO / "docs/superpowers/specs/gold"
-RUN_DIR = HERE / "runs/run-l0-code-3c27259-002"
+RUN_DIR = HERE / "runs/run-l0-code-3c27259-003"
 COMMITTED = RUN_DIR / "probe-code.json"
 OUT = REPO / "build/l0/probe-code.json"
 
 SCOPE_ROOT = "backend/src/main/kotlin"
 CG_ROOT = REPO / "codegraph"
+
+
+def collector_version() -> str:
+    """수집기 버전은 손으로 적지 않는다 — pyproject 에서 읽는다. 손으로 옮긴 버전은 올려도 티가 나지 않는다."""
+    return tomllib.loads((CG_ROOT / "pyproject.toml").read_text())["project"]["version"]
+
 
 # 측정 규칙 (선언)
 # M-CODE-1  입력 단위는 파일이다. 수집 범위 루트 아래의 모든 정규 파일이 분모이며,
@@ -146,13 +153,6 @@ def materialize(revision: str, prefix: str, dest: pathlib.Path) -> dict[str, str
     return out
 
 
-def collector_source_hash() -> tuple[str, list[str]]:
-    """수집기 신원 — 재측정 시점의 커밋이 아직 없으므로 구성 파일들의 해시로 고정한다."""
-    files = sorted(str(p.relative_to(REPO)) for p in (CG_ROOT / "src").rglob("*.py"))
-    digest = "\n".join(f"{f} {sha256_file(REPO / f)}" for f in files)
-    return sha256_bytes(digest.encode()), files
-
-
 def line_range(locator: str) -> tuple[int, int] | None:
     m = re.search(r"#L(\d+)(?:-L(\d+))?", locator)
     if not m:
@@ -219,7 +219,6 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
     rev = manifest["sourceRevision"]
     scope = work / "scope"
     rev_files = materialize(rev, SCOPE_ROOT, scope)
-    collector_hash, collector_files = collector_source_hash()
     probe: dict = {
         "probeVersion": "l0-code-probe/v2",
         "layer": "L0",
@@ -230,18 +229,17 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
         "fixtureHash": manifest["fixtureHash"],
         "collector": {
             "impl": "lodestar_codegraph (walk → tree-sitter parse → extract → resolve → cluster → emit)",
-            "declaredVersion": "lodestar-codegraph v1 (meta.generated_by) · pyproject 0.1.0",
-            "citedVersion": f"lodestar-codegraph@0.1.0+{collector_hash}",
-            "sourceHash": collector_hash,
-            "sourceFiles": collector_files,
-            "note": "산출물이 선언하는 것은 여전히 이름과 세대뿐이다(L0-fix-2 — #114 범위 밖). 재측정 "
-                    "시점의 커밋이 아직 없으므로 수집기 신원은 구성 파일 해시로 고정한다 — 재계산으로 검증된다",
+            "declaredVersion": f"lodestar-codegraph v1 (meta.generated_by) · pyproject {collector_version()}",
+            "citedVersion": f"lodestar-codegraph@{collector_version()}",
+            "note": "산출물이 선언하는 것은 이름과 세대뿐이다 — 커밋·semver 가 없어 산출물만으로는 재현 대상을 "
+                    "특정할 수 없다(L0-fix-2). 입력 revision(3c27259)과 수집기 버전은 다른 축이며, 이 실행의 "
+                    "수집기는 #112 의 결정성 수정과 #114 의 제외·실패 채널이 모두 들어간 판이다.",
         },
     }
 
     # 1) 입력 신원 — 고정 revision blob 에서 재구성한 범위를 gold 고정 해시와 대조한다.
-    #    gold 가 고정한 것은 범위 59파일 중 7건뿐이므로, 나머지도 blob 해시와 전수 대조한다
-    #    (여기서는 재구성 자체가 blob 이므로 항등이지만, 경로 집합·건수의 어긋남은 여전히 잡힌다).
+    #    gold 가 고정한 것은 범위 59파일 중 7건뿐이므로 나머지도 blob 해시와 전수 대조한다
+    #    (재구성 자체가 blob 이라 항등이지만, 경로 집합·건수의 어긋남은 여전히 잡힌다).
     ignore = ["build", ".gradle", ".git", "node_modules"]
     all_files = walk_all_files(scope, ignore)
     rel_of = {str(p): str(pathlib.PurePosixPath(SCOPE_ROOT) / p.relative_to(scope))
@@ -317,7 +315,8 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
     }
 
     probe["determinismObserved"] = {
-        "note": "기본 설정(해시 랜덤화 on) 3회 실행. 이 블록은 프로세스마다 값이 달라지므로 표류 검사 대상이 아니다.",
+        "note": "기본 설정(해시 랜덤화 on) 3회 실행. #112 수정 이후 이 블록은 프로세스마다 같아야 하며 "
+                "표류 검사 대상이다 — 값이 흔들리면 그 자체가 회귀다.",
         "runs": 3,
         "distinctHashes": len(set(run_hashes)),
         "largestIdenticalGroup": largest,
@@ -325,23 +324,25 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
         "divergingPaths": diverge,
     }
 
-    # 4) 결정성 근본 원인 — 시드 통제 실험 (표류 검사 대상: 시드를 고정하면 재현된다)
+    # 4) 시드 독립성 통제 실험 — 같은 시드 2회와 다른 시드 1회가 **모두** 같아야 한다.
+    #    (#88 에서는 같은 시드끼리만 같고 시드를 바꾸면 갈렸다 — 그 갈림이 H1 의 근거였다.)
     seed0 = [sha256_bytes(canonical(run_collector(scope, work / f"s0_{i}.json", seed="0")))
              for i in range(2)]
     seed1 = sha256_bytes(canonical(run_collector(scope, work / "s1.json", seed="1")))
-    probe["determinismRootCause"] = {
+    probe["determinismControl"] = {
         "experiment": "PYTHONHASHSEED 를 고정한 실행 2회와 다른 시드 1회를 비교한다",
         "seed0Hashes": seed0,
         "seed0Identical": seed0[0] == seed0[1],
         "seed1Hash": seed1,
         "seedChangesArtifact": seed0[0] != seed1,
+        "seedIndependent": seed0[0] == seed0[1] == seed1,
         "structuralHashStable": len(struct_hashes) == 1,
         "structuralHash": sorted(struct_hashes)[0],
-        "cause": "cluster.annotate 가 `ids = {n.id for n in nodes}`(집합)을 그대로 "
-                 "`g.add_nodes_from(ids)` 에 넘긴다(cluster.py#L8-L10). 문자열 해시 랜덤화로 집합 순회 순서가 "
-                 "프로세스마다 달라지고, Louvain 은 노드 순서에 의존하므로 seed=42 를 고정해도 군집 배정이 갈린다.",
-        "blastRadius": "노드의 community·god_node 가 흔들린다. 노드·엣지·좌표는 동일하다("
-                       "structuralHashStable) — 즉 사실 자체가 아니라 사실에 붙는 군집 라벨이 재현되지 않는다.",
+        "fix": "cluster.annotate 가 노드·엣지를 정렬해서 그래프에 넣고(`g.add_nodes_from(sorted(ids))`) "
+               "군집 라벨을 멤버 정렬로 정규화한다(#112). 이전에는 집합을 그대로 넘겨 문자열 해시 랜덤화가 "
+               "노드 순서를, 노드 순서가 Louvain 의 군집 배정을 바꿨다.",
+        "scope": "산출물 전체(canonical)가 시드에 무관하게 동일하다. 군집 라벨을 뺀 구조 해시도 "
+                 "여전히 안정적이다(structuralHashStable) — 사실과 라벨이 함께 재현된다.",
     }
 
     # 5) provenance — 필수 5필드가 산출물에서 소스 단위로 조회되는가 (M-CODE-3)
@@ -373,8 +374,6 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
                           if k in ("skipped", "excluded", "failed", "partial", "external_calls")],
         "channelKeys": [k for k in meta_keys if k in ("issues", "partial_files", "failed_files")],
         "channelExists": "issues" in meta_keys,
-        "perItemReasons": bool(issues) and all(i["reason"] for i in issues),
-        "itemFields": sorted(issues[0].keys()) if issues else [],
         "note": "#114 로 meta.issues 가 생겼다 — 제외·실패·부분수집이 사유·좌표·대상과 함께 실린다. "
                 "노드에는 status(parsed|partial|failed) 가 붙어 부분 추출이 완전 추출로 위장되지 않는다.",
     }
@@ -488,11 +487,32 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
     return probe
 
 
-VOLATILE = ("determinismObserved",)
+# #88 에서는 `determinismObserved` 가 프로세스마다 달라져 표류 검사에서 뺐다. #112 로 그 원인이
+# 사라졌으므로 예외를 없앤다 — 결정성이 다시 흔들리면 표류로 걸려야 한다.
+VOLATILE: tuple[str, ...] = ()
 
 
 def stable(probe: dict) -> dict:
     return {k: v for k, v in probe.items() if k not in VOLATILE}
+
+
+def determinism_errors(probe: dict) -> list[str]:
+    """결정성 계약(#112) — 3회 실행이 하나로 모이고, 시드를 바꿔도 같아야 한다.
+
+    `main(--check)` 안에만 두면 그 판정 자체는 아무도 검사하지 않는다. 순수 함수로 빼서
+    확인기(`verify_l0.py` V12)가 커밋된 산출물에 같은 규칙을 걸고 결함 주입으로 문다.
+    """
+    errs = []
+    obs = probe.get("determinismObserved", {})
+    if obs.get("rate") != 1.0:
+        errs.append(f"결정성 {obs.get('rate')} — 동일 입력 {obs.get('runs')}회 실행이 갈렸다: "
+                    f"{obs.get('divergingPaths')}")
+    if obs.get("distinctHashes") != 1:
+        errs.append(f"산출물 해시가 {obs.get('distinctHashes')}종이다 — 하나여야 한다")
+    ctrl = probe.get("determinismControl", {})
+    if not ctrl.get("seedIndependent"):
+        errs.append("PYTHONHASHSEED 를 바꾸면 산출물이 달라진다 — 재현 보장이 없다")
+    return errs
 
 
 def main() -> int:
@@ -530,11 +550,12 @@ def main() -> int:
             diff = [k for k in sorted(set(want) | set(got)) if want.get(k) != got.get(k)]
             print(f"[FAIL] 프로브 산출물 표류 — 블록: {diff}")
             return 1
-        rc = probe["determinismRootCause"]
-        if not (rc["seed0Identical"] and rc["seedChangesArtifact"]):
-            print("[FAIL] 결정성 근본 원인 실험이 재현되지 않았다 — 수집기가 바뀌었으면 새 runId 로 재측정한다")
+        det = determinism_errors(probe)
+        if det:
+            for e in det:
+                print(f"[FAIL] {e}")
             return 1
-        print("[ok] 프로브 산출물 일치 + 근본 원인 재현")
+        print("[ok] 프로브 산출물 일치 + 결정성 1.0 (시드 무관)")
     return 0
 
 

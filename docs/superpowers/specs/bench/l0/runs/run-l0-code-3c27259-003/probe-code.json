@@ -1,0 +1,359 @@
+{
+  "probeVersion": "l0-code-probe/v2",
+  "layer": "L0",
+  "track": "code",
+  "projectId": "lodestar",
+  "sourceRevision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
+  "goldSetId": "gold-set/v0+f20edbad6bad",
+  "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
+  "collector": {
+    "impl": "lodestar_codegraph (walk → tree-sitter parse → extract → resolve → cluster → emit)",
+    "declaredVersion": "lodestar-codegraph v1 (meta.generated_by) · pyproject 0.2.0",
+    "citedVersion": "lodestar-codegraph@0.2.0",
+    "note": "산출물이 선언하는 것은 이름과 세대뿐이다 — 커밋·semver 가 없어 산출물만으로는 재현 대상을 특정할 수 없다(L0-fix-2). 입력 revision(3c27259)과 수집기 버전은 다른 축이며, 이 실행의 수집기는 #112 의 결정성 수정과 #114 의 제외·실패 채널이 모두 들어간 판이다."
+  },
+  "input": {
+    "scopeRoot": "backend/src/main/kotlin",
+    "materializedFrom": "git blob @3c27259",
+    "fileCount": 59,
+    "pinnedComparedCount": 7,
+    "pinnedMismatched": [],
+    "allPinnedMatch": true,
+    "revisionFileCount": 59,
+    "revisionMismatched": [],
+    "allFilesMatchRevision": true,
+    "scopeHash": "sha256:85d30a2256f8c6ee13a0b45ff2a569eba570e1fedfc19da448367134a4b27c6a"
+  },
+  "inventory": {
+    "rule": "M-CODE-1",
+    "input": 59,
+    "walked": 59,
+    "parsed": 59,
+    "skippedByCollector": 0,
+    "excludedByExtensionFilter": 0,
+    "excludedReportedByCollector": 0,
+    "failedReportedByCollector": 0,
+    "partialReportedByCollector": 0,
+    "reported": 0,
+    "exclusions": [],
+    "issues": [],
+    "nodeCount": 362,
+    "edgeCount": 717,
+    "externalCalls": 1372
+  },
+  "coverageState": {
+    "note": "산출물 해시 결정성이 아니라 '봤는가/있었는가' state 의 3회 안정성이다(EVL §7.1)",
+    "codeStateRuns": [
+      "present",
+      "present",
+      "present"
+    ],
+    "codeState": "present",
+    "codeStateStable": true
+  },
+  "determinismObserved": {
+    "note": "기본 설정(해시 랜덤화 on) 3회 실행. #112 수정 이후 이 블록은 프로세스마다 같아야 하며 표류 검사 대상이다 — 값이 흔들리면 그 자체가 회귀다.",
+    "runs": 3,
+    "distinctHashes": 1,
+    "largestIdenticalGroup": 3,
+    "rate": 1.0,
+    "divergingPaths": []
+  },
+  "determinismControl": {
+    "experiment": "PYTHONHASHSEED 를 고정한 실행 2회와 다른 시드 1회를 비교한다",
+    "seed0Hashes": [
+      "sha256:53c19e14cca6e22f398f994bf2e61d35fa33fd7732f625c257fbec1cc83f5453",
+      "sha256:53c19e14cca6e22f398f994bf2e61d35fa33fd7732f625c257fbec1cc83f5453"
+    ],
+    "seed0Identical": true,
+    "seed1Hash": "sha256:53c19e14cca6e22f398f994bf2e61d35fa33fd7732f625c257fbec1cc83f5453",
+    "seedChangesArtifact": false,
+    "seedIndependent": true,
+    "structuralHashStable": true,
+    "structuralHash": "sha256:fc47120f4c88918555d098cbdfd66f26570dc4574be413e3952a6461610129c9",
+    "fix": "cluster.annotate 가 노드·엣지를 정렬해서 그래프에 넣고(`g.add_nodes_from(sorted(ids))`) 군집 라벨을 멤버 정렬로 정규화한다(#112). 이전에는 집합을 그대로 넘겨 문자열 해시 랜덤화가 노드 순서를, 노드 순서가 Louvain 의 군집 배정을 바꿨다.",
+    "scope": "산출물 전체(canonical)가 시드에 무관하게 동일하다. 군집 라벨을 뺀 구조 해시도 여전히 안정적이다(structuralHashStable) — 사실과 라벨이 함께 재현된다."
+  },
+  "provenance": {
+    "probe": "산출물(codegraph.json)의 meta·nodes 키 집합",
+    "metaKeys": [
+      "community_count",
+      "edge_count",
+      "excluded",
+      "external_calls",
+      "failed",
+      "failed_files",
+      "generated_by",
+      "issues",
+      "languages",
+      "node_count",
+      "parsed",
+      "partial",
+      "partial_files",
+      "skipped",
+      "source_root",
+      "walked"
+    ],
+    "nodeKeys": [
+      "community",
+      "degree",
+      "god_node",
+      "id",
+      "kind",
+      "label",
+      "lang",
+      "path",
+      "qualified_name",
+      "status"
+    ],
+    "required": [
+      "projectId",
+      "sourceId",
+      "revision",
+      "contentHash",
+      "collectorVersion"
+    ],
+    "present": [
+      {
+        "field": "sourceId",
+        "via": "nodes[].path",
+        "basis": "노드마다 수집 범위 기준 상대경로가 있어 소스를 지목할 수 있다",
+        "pinned": false
+      },
+      {
+        "field": "collectorVersion",
+        "via": "meta.generated_by",
+        "basis": "'lodestar-codegraph v1' — 수집기 이름과 세대만 있고 커밋·semver 가 없다",
+        "pinned": false
+      }
+    ],
+    "absent": [
+      "projectId",
+      "revision",
+      "contentHash"
+    ],
+    "rate": 0.4
+  },
+  "reporting": {
+    "probe": "산출물에 실패·제외를 사유·좌표와 함께 실을 자리가 있는가",
+    "aggregateKeys": [
+      "excluded",
+      "external_calls",
+      "failed",
+      "partial",
+      "skipped"
+    ],
+    "channelKeys": [
+      "failed_files",
+      "issues",
+      "partial_files"
+    ],
+    "channelExists": true,
+    "note": "#114 로 meta.issues 가 생겼다 — 제외·실패·부분수집이 사유·좌표·대상과 함께 실린다. 노드에는 status(parsed|partial|failed) 가 붙어 부분 추출이 완전 추출로 위장되지 않는다.",
+    "perItemReasons": true,
+    "itemFields": [
+      "kind",
+      "locator",
+      "reason",
+      "reason_code",
+      "target"
+    ],
+    "itemsObserved": 3
+  },
+  "failureFixtures": [
+    {
+      "id": "F.CODE.BROKEN_SYNTAX",
+      "kind": "파싱 실패",
+      "path": "docs/superpowers/specs/gold/fixtures/failure/code-broken-syntax.kt",
+      "contentHash": "sha256:ae95bcf8a7c71837c9c99d95a683ce753ca2fc7c65b0a6975f1ff775753a9ae9",
+      "hashMatchesPinned": true,
+      "walked": 1,
+      "parsed": 1,
+      "skipped": 0,
+      "expectedExtracted": [],
+      "actualExtracted": [
+        "file:code-broken-syntax.kt"
+      ],
+      "extractedSymbols": [],
+      "unexpectedExtracted": [],
+      "missingExtracted": [],
+      "fileStatus": [
+        "failed"
+      ],
+      "expectedReported": 1,
+      "actualReported": 1,
+      "reportAttribution": {
+        "expected": [
+          {
+            "kind": "PARSE_ERROR",
+            "target": "fixtures/failure/code-broken-syntax.kt",
+            "locator": "#L6-L11",
+            "reported": true,
+            "observedKind": "failed",
+            "observedLocator": "code-broken-syntax.kt#L6-L11",
+            "observedTarget": "fixture.failure.BrokenSyntax",
+            "reasonPresent": true,
+            "targetMatches": false
+          }
+        ],
+        "expectedReported": 1,
+        "actualReported": 1,
+        "unattributedReports": []
+      },
+      "markedAsFullySucceeded": false,
+      "silentSkipIsFailure": true,
+      "verdict": "OK"
+    },
+    {
+      "id": "F.CODE.PARTIAL_EXTRACT",
+      "kind": "부분 추출",
+      "path": "docs/superpowers/specs/gold/fixtures/failure/code-partial-extract.kt",
+      "contentHash": "sha256:54c8e89ffcdf010212309c552eb6e9b96643163d4a266435ff4403f1025c9290",
+      "hashMatchesPinned": true,
+      "walked": 1,
+      "parsed": 1,
+      "skipped": 0,
+      "expectedExtracted": [
+        "fixture.failure.GoodOne",
+        "fixture.failure.GoodOne.ok"
+      ],
+      "actualExtracted": [
+        "file:code-partial-extract.kt",
+        "function:fixture.failure.GoodOne.ok",
+        "type:fixture.failure.GoodOne"
+      ],
+      "extractedSymbols": [
+        "fixture.failure.GoodOne",
+        "fixture.failure.GoodOne.ok"
+      ],
+      "unexpectedExtracted": [],
+      "missingExtracted": [],
+      "fileStatus": [
+        "partial"
+      ],
+      "expectedReported": 1,
+      "actualReported": 1,
+      "reportAttribution": {
+        "expected": [
+          {
+            "kind": "PARSE_ERROR",
+            "target": "fixture.failure.TailBroken",
+            "locator": "#L12-L14",
+            "reported": true,
+            "observedKind": "partial",
+            "observedLocator": "code-partial-extract.kt#L12-L14",
+            "observedTarget": "fixture.failure.TailBroken",
+            "reasonPresent": true,
+            "targetMatches": true
+          }
+        ],
+        "expectedReported": 1,
+        "actualReported": 1,
+        "unattributedReports": []
+      },
+      "markedAsFullySucceeded": false,
+      "silentSkipIsFailure": true,
+      "verdict": "OK"
+    },
+    {
+      "id": "F.CODE.UNSUPPORTED_LANG",
+      "kind": "미지원 문법",
+      "path": "docs/superpowers/specs/gold/fixtures/failure/code-unsupported-lang.scala",
+      "contentHash": "sha256:faed82281908dc3626f00f2350f098bef6d62c13d2109991c888966b8e8fbaa8",
+      "hashMatchesPinned": true,
+      "walked": 0,
+      "parsed": 0,
+      "skipped": 0,
+      "expectedExtracted": [],
+      "actualExtracted": [],
+      "extractedSymbols": [],
+      "unexpectedExtracted": [],
+      "missingExtracted": [],
+      "fileStatus": [],
+      "expectedReported": 1,
+      "actualReported": 1,
+      "reportAttribution": {
+        "expected": [
+          {
+            "kind": "UNSUPPORTED_LANGUAGE",
+            "target": "fixtures/failure/code-unsupported-lang.scala",
+            "locator": "#L1",
+            "reported": true,
+            "observedKind": "skipped",
+            "observedLocator": "code-unsupported-lang.scala#L1",
+            "observedTarget": "code-unsupported-lang.scala",
+            "reasonPresent": true,
+            "targetMatches": true
+          }
+        ],
+        "expectedReported": 1,
+        "actualReported": 1,
+        "unattributedReports": []
+      },
+      "markedAsFullySucceeded": false,
+      "silentSkipIsFailure": true,
+      "verdict": "OK"
+    }
+  ],
+  "pii": {
+    "corpusFiles": [
+      "pii:corpus.sql",
+      "pii:corpus.properties",
+      "pii:corpus.log"
+    ],
+    "positives": 28,
+    "masked": 0,
+    "unmaskedInArtifact": [],
+    "notCollected": [
+      "PII.POS.SQL.L18.0",
+      "PII.POS.SQL.L18.1",
+      "PII.POS.SQL.L18.2",
+      "PII.POS.SQL.L18.3",
+      "PII.POS.SQL.L18.4",
+      "PII.POS.SQL.L18.5",
+      "PII.POS.SQL.L18.6",
+      "PII.POS.SQL.L20.7",
+      "PII.POS.SQL.L20.8",
+      "PII.POS.SQL.L20.9",
+      "PII.POS.SQL.L20.10",
+      "PII.POS.SQL.L20.11",
+      "PII.POS.SQL.L20.12",
+      "PII.POS.SQL.L20.13",
+      "PII.POS.PROPERTIES.L5.19",
+      "PII.POS.PROPERTIES.L6.20",
+      "PII.POS.PROPERTIES.L7.21",
+      "PII.POS.PROPERTIES.L8.22",
+      "PII.POS.PROPERTIES.L9.23",
+      "PII.POS.PROPERTIES.L10.24",
+      "PII.POS.LOG.L5.30",
+      "PII.POS.LOG.L5.31",
+      "PII.POS.LOG.L6.32",
+      "PII.POS.LOG.L7.33",
+      "PII.POS.LOG.L7.34",
+      "PII.POS.LOG.L7.35",
+      "PII.POS.LOG.L8.36",
+      "PII.POS.LOG.L9.37"
+    ],
+    "walked": 0,
+    "exclusionsReported": 3,
+    "exclusionReasons": [
+      "UNSUPPORTED_LANGUAGE"
+    ],
+    "goldGap": "gold v0 의 양성 28건(전체 항목 44건 = 양성 28 + 음성 16)은 전부 .sql/.properties/.log 에 있다 — 코드 수집기가 실제로 읽는 확장자(.kt/.java) 안에 양성이 없어, 수집된 표면에서의 마스킹 동작은 이 gold 로 측정할 수 없다. 픽스처를 여기서 만들지 않고 I2 개정 안건으로 남긴다."
+  },
+  "maskingCapability": {
+    "searchDirs": [
+      "backend/src/main",
+      "codegraph/src",
+      "frontend/src"
+    ],
+    "pattern": "mask|redact|anonymi|pseudonymi|scrub|obfuscat",
+    "hits": [],
+    "exists": false
+  },
+  "readOnly": {
+    "filesCompared": 59,
+    "unchanged": true,
+    "changed": []
+  }
+}

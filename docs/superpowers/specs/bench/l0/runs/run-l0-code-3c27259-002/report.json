@@ -8,14 +8,14 @@
     "reportKind": "BASELINE",
     "sourceRevision": "3c27259",
     "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
-    "startedAt": "2026-07-30T12:45:00Z",
-    "completedAt": "2026-07-30T12:51:00Z",
+    "startedAt": "2026-07-30T09:16:12Z",
+    "completedAt": "2026-07-30T09:16:14Z",
     "executedBy": "claude-code agent (Claude Opus 4.8) — 판정 승인권자는 @xivicWon (I1 §1.2)"
   },
   "versions": {
     "collector": {
       "status": "PINNED",
-      "value": "lodestar-codegraph@0.1.0+sha256:61968310034de002df8a2baa9e7e9ded2907e06e4aeb02f6d444ca5328448bb2"
+      "value": "lodestar-codegraph@0.1.1"
     },
     "extractor": {
       "status": "NOT_APPLICABLE",
@@ -56,7 +56,7 @@
     },
     "determinism": {
       "status": "MEASURED",
-      "value": 0.3333,
+      "value": 1.0,
       "note": "동일 revision 3회 실행 산출물 해시의 최대 동일 그룹 / 3"
     },
     "provenanceCompleteness": {
@@ -125,8 +125,8 @@
       "id": "gate-determinism",
       "name": "결정성 (동일 입력 3회 일치율)",
       "required": 1.0,
-      "observed": 0.3333,
-      "status": "FAIL"
+      "observed": 1.0,
+      "status": "PASS"
     },
     {
       "id": "gate-l0-metadata-completeness",
@@ -139,8 +139,8 @@
       "id": "gate-error-visibility",
       "name": "L0 오류 가시성 (실패·제외 보고율)",
       "required": 1.0,
-      "observed": 1.0,
-      "status": "PASS"
+      "observed": 0.0,
+      "status": "FAIL"
     },
     {
       "id": "gate-security-masking",
@@ -152,44 +152,32 @@
   ],
   "baseline": {
     "previous": {
-      "runId": "run-l0-code-3c27259-001",
       "projectId": "lodestar",
       "layer": "L0",
       "track": "code",
       "sourceRevision": "3c27259",
       "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
+      "runId": "run-l0-code-3c27259-001",
       "schemaVersion": "run-quality-report/v0"
     },
     "comparable": true,
-    "reason": "입력(고정 revision 의 같은 원본)·fixtureHash·schemaVersion 이 같고 수집기만 바뀌었다 — 그래서 이 비교는 수집기 변경의 효과를 잰다(I1 §7.4).",
+    "reason": "run-l0-code-3c27259-001 과 project·layer·track·sourceRevision·fixtureHash·schemaVersion 이 같다 — 같은 입력을 같은 계약으로 잰 실행이므로 수치를 직접 비교한다. 달라진 것은 수집기 버전이며(#112 결정성 수정), 그 변화량이 아래 deltas 다.",
     "eligibleAsBaseline": true,
     "deltas": [
       {
-        "metric": "gates.gate-error-visibility",
-        "previous": 0.0,
-        "current": 1.0,
-        "delta": 1.0
-      },
-      {
-        "metric": "counts.failed",
-        "previous": 0,
-        "current": 0,
-        "delta": 0
-      },
-      {
-        "metric": "metrics.determinism",
+        "metric": "determinism",
         "previous": 0.3333,
-        "current": 0.3333,
-        "delta": 0.0
+        "current": 1.0,
+        "delta": 0.6667
       },
       {
-        "metric": "metrics.provenanceCompleteness",
+        "metric": "provenanceCompleteness",
         "previous": 0.4,
         "current": 0.4,
         "delta": 0.0
       },
       {
-        "metric": "metrics.scopeCoverage",
+        "metric": "scopeCoverage",
         "previous": 1.0,
         "current": 1.0,
         "delta": 0.0
@@ -199,7 +187,6 @@
   "verdict": {
     "value": "BLOCKED",
     "haltRules": [
-      "H1",
       "H2"
     ],
     "restrictions": []
@@ -209,7 +196,7 @@
       "featureId": "E17",
       "judgment": "Lab",
       "measured": true,
-      "rationale": "고정 revision 에서 재구성한 범위 59개 파일을 전량 파싱했고, #114 로 제외·실패·부분수집이 meta.issues 에 사유·좌표와 함께 실려 보고율 3/3 이다. 파싱 오류가 있는 파일은 status 로 표시되어 완전 성공으로 위장된 실패 픽스처가 0건이다. 그러나 동일 입력 3회 실행의 산출물이 여전히 서로 달라 결정성 0.3333(군집 라벨 비결정 — cluster.py 의 집합 순회 순서)이며 H1 이 열려 있다. Core 불가, 원인이 국소적이고 수정 가능하므로 Retire 도 아니다(L0-fix-1).",
+      "rationale": "수집 범위 59개 파일을 전량 파싱했고, #112 로 군집 라벨의 집합 순회 순서 의존을 없애 결정성 1.0 이 됐다 (PYTHONHASHSEED 무관 · H1 해소). 그래도 Core 는 아니다 — 필수 식별 2/5 이고, 보고돼야 할 실패·제외 3건 중 산출물에 남는 것이 0건이다(픽스처 2건은 오히려 전량 성공으로 표시된다). 추적 가능성·정직성 게이트가 남아 있으므로 Lab.",
       "evidenceRefs": [
         "run-l0-code-3c27259-002"
       ]
@@ -218,13 +205,13 @@
   "warnings": [
     {
       "code": "GATE_FAILED",
-      "message": "무조건 게이트 실패: 결정성 (동일 입력 3회 일치율)",
-      "trigger": "gates.gate-determinism"
+      "message": "무조건 게이트 실패: L0 메타데이터 완전성 (projectId·sourceId·revision·contentHash·collectorVersion)",
+      "trigger": "gates.gate-l0-metadata-completeness"
     },
     {
       "code": "GATE_FAILED",
-      "message": "무조건 게이트 실패: L0 메타데이터 완전성 (projectId·sourceId·revision·contentHash·collectorVersion)",
-      "trigger": "gates.gate-l0-metadata-completeness"
+      "message": "무조건 게이트 실패: L0 오류 가시성 (실패·제외 보고율)",
+      "trigger": "gates.gate-error-visibility"
     },
     {
       "code": "GATE_FAILED",
@@ -232,5 +219,5 @@
       "trigger": "gates.gate-security-masking"
     }
   ],
-  "notes": "L0 코드 트랙 **재측정**(#114 — 오류 가시성 수정 후). 수집 범위를 고정 revision 의 blob 에서 재구성해 측정했다 — 수집기를 고치면 작업 트리의 backend/src/main/kotlin 이 곧 바뀌므로, 작업 트리를 입력으로 삼는 동안에는 '고정 revision 을 쟀다' 가 성립하지 않는다. 보고율은 3/3 이며 분모는 확장자 제외 0건과 실패 픽스처 3건의 기대 보고 항목이다. 산출물은 이제 파일마다 status(parsed|partial|failed)를 싣고 파싱 오류 구간과 겹치는 선언은 사실로 내지 않는다 — '완전 성공으로 표시된 실패 픽스처' 0건. determinism 은 여전히 cluster.py 의 집합 순회 순서 때문에 재현되지 않는다(L0-fix-1 — 이 이슈 범위 밖, H1 유지). precision/recall 은 L1(#89)의 몫이라 NOT_APPLICABLE 이다."
+  "notes": "L0 코드 트랙 재실측(#112). 프로브 산출물: probe-code.json (probe_code.py --check 로 표류 검사 + 결정성 1.0·시드 무관 확인). determinism 은 기본 인터프리터 설정 3회 실행의 최대 동일 그룹/3 이며, PYTHONHASHSEED 를 바꾼 실행까지 산출물이 같다는 통제 실험이 프로브에 함께 남아 있다(determinismControl.seedIndependent). 입력은 run-l0-code-3c27259-001 과 같은 고정 revision 이고 달라진 것은 수집기 버전뿐이라 두 실행은 직접 비교된다. 남은 게이트 3종(메타데이터·오류 가시성·보안)은 그대로 실패이며 H2 로 판정은 여전히 BLOCKED 다. precision/recall 은 L1(#89)의 몫이라 NOT_APPLICABLE 이다."
 }

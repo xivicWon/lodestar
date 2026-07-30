@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""#88 L0 Source — 커밋된 실측 증거의 적합성 확인기 (V1~V11).
+"""#88 L0 Source — 커밋된 실측 증거의 적합성 확인기 (V1~V14).
 
 보고서 하나가 스키마를 통과하는 것으로는 부족하다. 확인해야 하는 것은 **보고서의 수치가 프로브
 산출물에서 나왔고, 프로브의 입력이 고정 revision·gold 해시와 같고, 보고서가 가리키는 좌표가 실제로
@@ -7,7 +7,7 @@
 
     pip install jsonschema
     python3 docs/superpowers/specs/bench/l0/verify_l0.py
-    # 24 cases, 0 mismatches   (= manifest.json 의 caseCount)
+    # 31 cases, 0 mismatches   (= manifest.json 의 caseCount)
 
 각 규칙은 **결함 주입 케이스**를 가진다 — 규칙만 적고 검사가 없는 상태를 막는 장치다(I2 §5 · I3 §4.1
 과 같은 원칙). 규칙이 예외를 던지면 그 규칙의 실패로 기록하고 나머지 규칙을 계속 실행한다.
@@ -32,14 +32,12 @@ MANIFEST = json.loads((HERE / "manifest.json").read_text())
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(SCHEMAS))
 import build_report  # noqa: E402
+import probe_code  # noqa: E402
 import validate_rqr  # noqa: E402
 from jsonschema import Draft202012Validator  # noqa: E402
 
 TRACKS = ("db", "code")
-MAX_RULE = 12
-# 검증 대상 실행 집합 — #88 baseline 과 #114 재측정을 나란히 확인한다. 규칙은 집합마다 따로 돌고
-# 결과는 합산한다: 한 집합만 보면 '수정 후 실행' 이나 '수정 전 기준선' 중 하나가 무검증으로 남는다.
-RUN_SETS = ("baseline", "l0fix")
+MAX_RULE = 14
 L0_COLLECTOR_FEATURES = {"db": {"P-ddl-parser", "E1"}, "code": {"E17"}}
 
 
@@ -48,11 +46,11 @@ def blob(revision: str, path: str) -> str:
                           capture_output=True, text=True, check=True).stdout
 
 
-def load_ctx(run_set: str = "baseline") -> dict:
+def load_ctx() -> dict:
     ctx = {"gold": json.loads((GOLD / "manifest.json").read_text()),
-           "runSet": run_set, "reports": {}, "probes": {}}
+           "reports": {}, "probes": {}}
     for t in TRACKS:
-        run = build_report.run_dir(run_set, t)
+        run = build_report.RUNS[t]
         ctx["reports"][t] = json.loads((run / "report.json").read_text())
         ctx["probes"][t] = json.loads((run / build_report.PROBE_NAME[t]).read_text())
     return ctx
@@ -78,7 +76,7 @@ def v2_report_derives_from_probe(ctx):
     errs, seen = [], 0
     for t, rep in ctx["reports"].items():
         seen += 1
-        rebuilt = build_report.build_from(t, ctx["probes"][t], ctx["runSet"])
+        rebuilt = build_report.build_from(t, ctx["probes"][t])
         if rebuilt != rep:
             diff = [k for k in sorted(set(rebuilt) | set(rep)) if rebuilt.get(k) != rep.get(k)]
             errs.append(f"{t}: 보고서가 프로브에서 재생성되지 않는다 — 블록: {diff}")
@@ -161,11 +159,7 @@ def v5_exclusion_locators_resolve(ctx):
                     errs.append(f"{t}: 좌표가 파일 범위를 벗어난다: {loc} (행수 {len(lines)})")
                 else:
                     target = re.search(r"\(([^)]+)\)\s*$", loc)
-                    # 파일 단위 제외(미지원 언어 등)의 대상은 그 파일 자신이다 — 파일 안의 어떤 행에도
-                    # 자기 경로가 적혀 있지 않으므로 행 내용 대조를 요구하면 정상 증거가 실패한다.
-                    file_level = target and (path.endswith(target.group(1))
-                                             or target.group(1).endswith(path))
-                    if target and not file_level and target.group(1) not in lines[line - 1]:
+                    if target and target.group(1) not in lines[line - 1]:
                         errs.append(f"{t}: 좌표가 가리키는 행에 대상이 없다: {loc} → {lines[line - 1]!r}")
     return errs, seen
 
@@ -308,6 +302,79 @@ def v11_declared_paths_measured(ctx):
     return errs, seen
 
 
+def v12_determinism_contract(ctx):
+    """V12 결정성 PASS 를 적은 실행은 프로브에서 실제로 1.0 이고, 시드에 무관하다(#112).
+
+    게이트 상태는 보고서의 문장이고, 결정성은 프로브가 잰 사실이다. 둘을 따로 보지 않으면
+    '수치는 1.0 인데 시드를 바꾸면 갈리는' 실행이 PASS 로 남을 수 있다 — #88 이 정확히 그 상태였다.
+    """
+    errs, seen = [], 0
+    for t, rep in ctx["reports"].items():
+        seen += 1
+        gate = {g["id"]: g for g in rep["gates"]}.get("gate-determinism", {})
+        p = ctx["probes"][t]
+        rate = (p["determinismObserved"]["rate"] if t == "code"
+                else p["determinism"]["rate"])
+        if gate.get("status") == "PASS" and rate != 1.0:
+            errs.append(f"{t}: gate-determinism 이 PASS 인데 프로브 결정성은 {rate} 다")
+        if gate.get("observed") != rate:
+            errs.append(f"{t}: 게이트에 적힌 결정성({gate.get('observed')})이 프로브({rate})와 다르다")
+    seen += 1
+    # code 트랙만 시드 통제 실험을 남긴다(db 수집기는 Kotlin 이라 해시 랜덤화 대상이 아니다).
+    for e in probe_code.determinism_errors(ctx["probes"]["code"]):
+        errs.append(f"code: {e}")
+    return errs, seen
+
+
+def v13_cited_baseline_resolves(ctx):
+    """V13 인용한 이전 실행이 실제로 조회되고, 그 증거 자체가 계약을 통과한다(#112).
+
+    `baseline.previous` 는 다른 실행을 근거로 끌어오는 포인터다. 그 실행이 사라지거나 손상돼도
+    현재 보고서는 형식상 멀쩡하다 — V5 가 제외 좌표에 하는 일을 실행 인용에도 한다.
+    현재 실행만 검사하는 V1 은 인용된 실행을 보지 않는다.
+    """
+    errs, seen = [], 0
+    schema = json.loads((SCHEMAS / "run-quality-report.v0.schema.json").read_text())
+    for t, rep in ctx["reports"].items():
+        prev = rep["baseline"]["previous"]
+        if prev is None:
+            continue
+        seen += 1
+        cited = None
+        for d in sorted((HERE / "runs").iterdir()):
+            f = d / "report.json"
+            if f.is_file():
+                r = json.loads(f.read_text())
+                if r["run"]["runId"] == prev["runId"]:
+                    cited = r
+                    break
+        if cited is None:
+            errs.append(f"{t}: 인용한 이전 실행의 보고서가 없다: {prev['runId']}")
+            continue
+        for k in ("projectId", "layer", "track", "sourceRevision", "fixtureHash"):
+            if cited["run"][k] != prev[k]:
+                errs.append(f"{t}: baseline.previous.{k} 가 인용한 실행의 실제 값과 다르다 "
+                            f"({prev[k]!r} / 실제 {cited['run'][k]!r})")
+        if cited["schemaVersion"] != prev["schemaVersion"]:
+            errs.append(f"{t}: baseline.previous.schemaVersion 이 인용한 실행과 다르다")
+        # 인용된 증거가 그 자체로 계약을 통과하지 못하면 비교의 기준이 될 수 없다.
+        for e in Draft202012Validator(schema).iter_errors(cited):
+            errs.append(f"{t}: 인용한 {prev['runId']} 가 스키마를 어긴다 — {e.json_path}: {e.message}")
+        for e in validate_rqr.cross_field_errors(cited):
+            errs.append(f"{t}: 인용한 {prev['runId']} 가 I3 규칙을 어긴다 — {e}")
+        # deltas 의 previous 값은 인용한 보고서의 지표(또는 게이트 관측값)와 같아야 한다.
+        cited_gates = {f"gates.{g['id']}": g.get("observed") for g in cited.get("gates", [])}
+        for d in rep["baseline"]["deltas"]:
+            if d["metric"].startswith("gates."):
+                got = cited_gates.get(d["metric"])
+            else:
+                got = cited["metrics"].get(d["metric"], {}).get("value")
+            if got != d["previous"]:
+                errs.append(f"{t}: deltas[{d['metric']}].previous={d['previous']} 인데 "
+                            f"{prev['runId']} 의 값은 {got} 다")
+    return errs, seen
+
+
 def _range(locator: str):
     m = re.search(r"#L(\d+)(?:-L(\d+))?", locator or "")
     if not m:
@@ -316,12 +383,12 @@ def _range(locator: str):
     return start, int(m.group(2) or start)
 
 
-def v12_report_attribution(ctx):
-    """V12 보고율은 **귀속**으로 센다 — 건수만 맞추거나 그럴듯한 좌표를 적어 통과하는 경로를 막는다.
+def v14_report_attribution(ctx):
+    """V14 보고율은 **귀속**으로 센다 — 건수만 맞추거나 그럴듯한 좌표를 적어 통과하는 경로를 막는다(#114).
 
     확인기는 프로브의 `reported: true` 를 믿지 않고, 그 항목이 인용한 관측 좌표가 gold 기대 좌표와
     실제로 겹치는지·사유가 있는지를 다시 본다. 겹침을 다시 계산하지 않으면 '보고했다' 는 주장 자체가
-    검증되지 않은 채 게이트를 통과한다(#114 오류 가시성 게이트의 근거가 여기 걸려 있다).
+    검증되지 않은 채 오류 가시성 게이트를 통과한다.
     """
     errs, seen = [], 0
     gold_failures = {f["id"]: f for f in json.loads((GOLD / "failures.json").read_text())["fixtures"]}
@@ -329,7 +396,7 @@ def v12_report_attribution(ctx):
         for fx in ctx["probes"][t]["failureFixtures"]:
             att = fx.get("reportAttribution")
             if att is None:
-                # 보고 채널이 없던 실행(v1 프로브) — '보고 0건' 이라는 주장 자체를 검사한다.
+                # 보고 채널이 없던 실행 — '보고 0건' 이라는 주장 자체를 검사한다.
                 seen += 1
                 if fx.get("actualReported", 0) != 0:
                     errs.append(f"{t}: {fx['id']} 는 귀속 근거 없이 보고 건수를 주장한다")
@@ -358,7 +425,7 @@ def v12_report_attribution(ctx):
                 errs.append(f"{t}: {fx['id']} 의 보고 건수가 항목별 귀속과 맞지 않는다 "
                             f"(주장 {fx['actualReported']} / 귀속 {recomputed})")
             if att.get("unattributedReports"):
-                # 과대 집계는 실패가 아니라 표기 대상이지만, 픽스처에서는 R-F-4 위반 신호다.
+                # 과대 집계는 R-F-4 위반 신호다 — 픽스처에서는 실패로 본다.
                 errs.append(f"{t}: {fx['id']} 에 gold 기대에 귀속되지 않은 보고가 있다: "
                             f"{att['unattributedReports']}")
     return errs, seen
@@ -376,7 +443,9 @@ RULES = {
     "V9": v9_tracks_separated,
     "V10": v10_baseline_eligibility,
     "V11": v11_declared_paths_measured,
-    "V12": v12_report_attribution,
+    "V12": v12_determinism_contract,
+    "V13": v13_cited_baseline_resolves,
+    "V14": v14_report_attribution,
 }
 
 
@@ -397,11 +466,15 @@ def injections() -> list[tuple[str, str, callable]]:
         c["reports"]["db"]["counts"]["excluded"] += 1
 
     def handmade_metric(c):
-        c["reports"]["code"]["metrics"]["determinism"]["value"] = 1.0
+        # 실패한 게이트의 수치를 손으로 통과시킨 모양. (#112 이후 determinism 은 실제로 1.0 이라
+        # 그 값을 1.0 으로 바꾸는 주입은 아무것도 바꾸지 않는다 — 아직 실패인 지표를 고른다.)
+        c["reports"]["code"]["metrics"]["provenanceCompleteness"]["value"] = 1.0
 
     def handmade_gate(c):
+        # 실제로 실패한 게이트를 손으로 통과시킨다. 이미 통과한 게이트에 PASS 를 덮으면 주입이
+        # 아무것도 바꾸지 않아, 규칙이 무는지 확인하지 못한 채 케이스만 남는다.
         for g in c["reports"]["db"]["gates"]:
-            if g["id"] == "gate-error-visibility":
+            if g["id"] == "gate-l0-metadata-completeness":
                 g["status"] = "PASS"
                 g["observed"] = 1.0
 
@@ -437,6 +510,11 @@ def injections() -> list[tuple[str, str, callable]]:
                                          if g["id"] != "gate-security-masking"]
 
     def halt_dropped(c):
+        # 결정성이 다시 깨진 실행인데 H1 을 달지 않은 보고서.
+        for g in c["reports"]["code"]["gates"]:
+            if g["id"] == "gate-determinism":
+                g["status"] = "FAIL"
+                g["observed"] = 0.6667
         c["reports"]["code"]["verdict"]["haltRules"] = ["H2"]
 
     def pass_with_failed_gate(c):
@@ -473,6 +551,11 @@ def injections() -> list[tuple[str, str, callable]]:
     def coverage_state_unmeasured(c):
         c["probes"]["code"].pop("coverageState")
 
+    def determinism_regressed(c):
+        # 게이트는 PASS 인 채로 프로브만 갈린 실행 — #88 상태로의 회귀.
+        c["probes"]["code"]["determinismObserved"].update(
+            {"rate": 0.6667, "distinctHashes": 2, "divergingPaths": ["nodes[].community"]})
+
     def fake_report_claim(c):
         """관측 좌표 없이 '보고했다' 고 주장 — 귀속 근거 없는 보고율."""
         att = c["probes"]["db"]["failureFixtures"][0]["reportAttribution"]
@@ -482,6 +565,21 @@ def injections() -> list[tuple[str, str, callable]]:
         """그럴듯하지만 gold 기대 구간과 겹치지 않는 관측 좌표."""
         att = c["probes"]["code"]["failureFixtures"][0]["reportAttribution"]
         att["expected"][0]["observedLocator"] = "code-broken-syntax.kt#L999"
+
+    def phantom_baseline(c):
+        c["reports"]["code"]["baseline"]["previous"]["runId"] = "run-l0-code-3c27259-999"
+
+    def forged_delta_baseline(c):
+        for d in c["reports"]["code"]["baseline"]["deltas"]:
+            if d["metric"] == "determinism":
+                d["previous"] = 0.9  # 개선폭을 작게 보이도록 기준선을 손봄
+
+    def baseline_identity_lie(c):
+        c["reports"]["code"]["baseline"]["previous"]["sourceRevision"] = "deadbee"
+
+    def seed_dependent(c):
+        # 3회는 우연히 같았지만 시드를 바꾸면 갈리는 실행 — 재현 보장이 없다.
+        c["probes"]["code"]["determinismControl"]["seedIndependent"] = False
 
     return [
         ("V1", "판정 어휘 위반", bad_schema),
@@ -508,38 +606,39 @@ def injections() -> list[tuple[str, str, callable]]:
         ("V6", "픽스처 id 를 바꿔 붙임(귀속 위조)", swapped_fixture_id),
         ("V11", "선언한 MetadataService 경로를 재지 않음", metadata_path_unmeasured),
         ("V11", "커버리지 state 를 재지 않음", coverage_state_unmeasured),
-        # 아래 두 케이스는 보고 채널이 있는 실행(l0fix)에서만 의미가 있다.
-        ("V12", "귀속 근거 없이 보고 주장", fake_report_claim, "l0fix"),
-        ("V12", "관측 좌표가 gold 구간과 겹치지 않음", wrong_report_locator, "l0fix"),
+        ("V12", "결정성이 다시 갈렸는데 게이트는 PASS", determinism_regressed),
+        ("V12", "시드를 바꾸면 산출물이 달라짐", seed_dependent),
+        ("V13", "인용한 이전 실행이 실재하지 않음", phantom_baseline),
+        ("V14", "귀속 근거 없이 보고 주장", fake_report_claim),
+        ("V14", "관측 좌표가 gold 구간과 겹치지 않음", wrong_report_locator),
+        ("V13", "deltas 의 기준선 값을 손으로 고침", forged_delta_baseline),
+        ("V13", "인용한 실행의 신원을 다르게 적음", baseline_identity_lie),
     ]
 
 
 def main() -> int:
-    contexts = {s: load_ctx(s) for s in RUN_SETS}
+    ctx = load_ctx()
     failures = []
 
-    for run_set, ctx in contexts.items():
-        print(f"== 규칙 실행 (커밋된 증거 · {run_set})")
-        for rid, fn in RULES.items():
-            try:
-                errs, seen = fn(ctx)
-            except Exception as e:  # 손상된 증거일수록 예외가 잘 난다 — 침묵하지 않는다
-                failures.append(f"[{rid}/{run_set}] 예외: {type(e).__name__}: {e}")
-                print(f"  {rid}: 예외 — {type(e).__name__}: {e}")
-                continue
-            if seen == 0:
-                failures.append(f"[{rid}/{run_set}] 검사 대상이 0건이다 — 규칙이 아무것도 들여다보지 않았다")
-            for e in errs:
-                failures.append(f"[{rid}/{run_set}] {e}")
-            print(f"  {rid}: 대상 {seen}건, 오류 {len(errs)}건")
+    print("== 규칙 실행 (커밋된 증거)")
+    for rid, fn in RULES.items():
+        try:
+            errs, seen = fn(ctx)
+        except Exception as e:  # 손상된 증거일수록 예외가 잘 난다 — 침묵하지 않는다
+            failures.append(f"[{rid}] 예외: {type(e).__name__}: {e}")
+            print(f"  {rid}: 예외 — {type(e).__name__}: {e}")
+            continue
+        if seen == 0:
+            failures.append(f"[{rid}] 검사 대상이 0건이다 — 규칙이 아무것도 들여다보지 않았다")
+        for e in errs:
+            failures.append(f"[{rid}] {e}")
+        print(f"  {rid}: 대상 {seen}건, 오류 {len(errs)}건")
 
     print("== 결함 주입 (규칙이 실제로 무는가)")
     cases = injections()
     mismatches = 0
-    for case in cases:
-        rid, name, fn = case[0], case[1], case[2]
-        target = case[3] if len(case) > 3 else "baseline"
-        bad = _inj(contexts[target], fn)
+    for rid, name, fn in cases:
+        bad = _inj(ctx, fn)
         try:
             errs, _ = RULES[rid](bad)
             caught = bool(errs)
@@ -548,7 +647,7 @@ def main() -> int:
         if not caught:
             mismatches += 1
             print(f"  [{rid}] {name}: 걸리지 않았다")
-    covered = {case[0] for case in cases}
+    covered = {rid for rid, _, _ in cases}
     for rid in RULES:
         if rid not in covered:
             mismatches += 1

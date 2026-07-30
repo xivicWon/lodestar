@@ -1,7 +1,7 @@
 # M0 / L0-fix — 수집 제외·실패·부분복구를 반환형에 명시 (조용한 skip 제거)
 
 > 작성일: 2026-07-30
-> 이슈: #114 `[L0-fix][visibility]` · 선행: #88 [L0 Source 실측](2026-07-30-m0-l0-source-validation.md)(BLOCKED · baseline)
+> 이슈: #114 `[L0-fix][visibility]` · 선행: #88 [L0 Source 실측](2026-07-30-m0-l0-source-validation.md)(BLOCKED · baseline) · #112(L0-fix-1 결정성 수정, `run-l0-code-3c27259-002`)
 > 대응 후속 제안: #88 §6 의 **L0-fix-3**(제외·실패 채널) · **L0-fix-4**(부분 복구·부분 성공 표기)
 > 상태: **수정 + 재측정 완료** — `gate-error-visibility` 두 트랙 **PASS**(보고율 1.0). 다른 게이트는 여전히 FAIL이라 L0 전체 판정은 **BLOCKED** 유지.
 
@@ -65,56 +65,65 @@
 (I3 §5.5 — 사후 수정은 새 runId). v1 프로브의 산식("반환형에 자리가 없어 보고율은 구조적으로 0")은 더 이상
 성립하지 않으므로 v1 프로브 코드는 v2 가 이어받았다.
 
-| 실행 | 프로브 | 입력 |
-|---|---|---|
-| `run-l0-db-3c27259-002` | `L0DbSourceProbeTest.kt` (`l0-db-probe/v2`) | #88 과 동일한 고정 원본(해시 대조) |
-| `run-l0-code-3c27259-002` | `probe_code.py` (`l0-code-probe/v2`) | **고정 revision 의 blob 에서 재구성한 범위** |
+| 실행 | 프로브 | 이전 실행(`baseline.previous`) | 입력 |
+|---|---|---|---|
+| `run-l0-db-3c27259-002` | `L0DbSourceProbeTest.kt` (`l0-db-probe/v2`) | `run-l0-db-3c27259-001`(#88) | #88 과 동일한 고정 원본(해시 대조) |
+| `run-l0-code-3c27259-003` | `probe_code.py` (`l0-code-probe/v2`) | `run-l0-code-3c27259-002`(#112) | **고정 revision 의 blob 에서 재구성한 범위** |
+
+코드 트랙은 #112(결정성 수정)의 재측정 `-002` 위에 이어지므로 `-003` 이다. 같은 고정 입력을 수집기
+버전만 바꿔가며 잰 실행들이 사슬로 이어지고, 새 실행이 직전 것을 `baseline.previous` 로 인용해
+변화량을 `deltas` 에 적는다 — 게이트 관측값도 비교 대상에 넣었다(수집기 수정의 효과가 지표가 아니라
+게이트에만 나타나는 실행이 있다. #114 의 오류 가시성이 정확히 그렇다).
 
 코드 트랙은 입력이 `backend/src/main/kotlin` 이고 이 이슈가 바로 그 디렉토리를 고친다 — 작업 트리를
 입력으로 삼는 동안에는 "고정 revision 을 쟀다" 가 성립하지 않는다. 그래서 v2 는 범위를 `git` blob 에서
-임시 디렉토리로 재구성해 측정한다. 수집기 신원은 커밋이 아직 없으므로 **구성 파일 해시**로 인용한다
-(`versions.collector` = `…@sha256:…`, 재계산으로 검증된다).
+임시 디렉토리로 재구성해 측정한다. 수집기 신원은 재측정 시점의 커밋이 아직 없으므로 트랙마다 재현
+가능한 값으로 인용한다: 코드 트랙은 `codegraph/pyproject.toml` 의 버전(#112 가 세운 규약 — 손으로 옮긴
+버전은 올려도 티가 나지 않는다. 이 변경으로 `0.1.1 → 0.2.0`), DB 트랙은 버전 선언이 없으므로 **수집기
+구성 파일들의 해시**(`versions.collector` = `…@sha256:…`)를 쓰며 둘 다 재계산으로 검증된다.
 
 **보고율의 세는 법(M-DB-5 · M-CODE-4).** "보고했다" 는 주장은 건수로 세지 않는다. gold 기대 항목마다
 (사유코드 일치 ∧ 좌표 행범위 겹침 ∧ 사유문 존재)로 **귀속**하고, 귀속되지 않은 보고는
-`unattributedReports` 로 따로 드러낸다(과대 집계 = R-F-4 위반 신호). 확인기 V12 는 프로브의
+`unattributedReports` 로 따로 드러낸다(과대 집계 = R-F-4 위반 신호). 확인기 V14 는 프로브의
 `reported: true` 를 믿지 않고 그 항목이 인용한 관측 좌표를 **다시 계산해** 겹침을 확인한다.
 
 ### 결과
 
-| 게이트 | db 001 → 002 | code 001 → 002 |
+| 게이트 | db 001 → 002 | code 002 → 003 |
 |---|---|---|
 | `gate-error-visibility` | 0.0 → **1.0 PASS** | 0.0 → **1.0 PASS** |
-| `gate-determinism` | 1.0 PASS (유지) | 0.3333 FAIL (유지 · H1 — L0-fix-1) |
+| `gate-determinism` | 1.0 PASS (유지) | 1.0 PASS (유지 · #112 에서 해소) |
 | `gate-l0-metadata-completeness` | 0.0 FAIL (유지 · L0-fix-2) | 0.4 FAIL (유지 · L0-fix-2) |
 | `gate-security-masking` | FAIL (유지 · H2 — L0-fix-5) | FAIL (유지 · H2 — L0-fix-5) |
-| 판정 | BLOCKED (H2) | BLOCKED (H1·H2) |
+| 판정 | BLOCKED (H2) | BLOCKED (H2) |
 
 - db: 문장 36건 = 산출 27 + 제외 9(뷰 1 · 행 데이터 8) + 실패 0, 제외·실패 **9/9 보고**.
   실패 픽스처 3건의 기대 보고 5항목 **전부 귀속**, 조용한 부분 복구 **0건**(v1: 1건).
 - code: 범위 59파일 전량 파싱, 실패 픽스처 3건의 기대 보고 3항목 **전부 귀속**,
   '완전 성공으로 표시된 실패 픽스처' **0건**(v1: 2건).
-- 남은 FAIL 은 전부 이 이슈 범위 밖의 후속(L0-fix-1·2·5)이다. 오류 가시성만 열렸고 L1 착수 조건은
-  아직 닫혀 있다.
+- 남은 FAIL 은 전부 이 이슈 범위 밖의 후속(L0-fix-2 · L0-fix-5)이다. 결정성(H1)은 #112 에서 이미
+  해소됐으므로 두 트랙 모두 남은 중단 규칙은 **H2 하나**다 — 그래도 판정은 BLOCKED 이고 L1(#89)
+  착수 조건은 닫혀 있다.
 
-## 5. 확인기 (V12 추가)
-
-`verify_l0.py` 는 이제 **두 실행 집합**(baseline `-001` · l0fix `-002`)을 각각 검증한다. 한 집합만 보면
-'수정 후 실행' 이나 '수정 전 기준선' 중 하나가 무검증으로 남는다.
+## 5. 확인기 (V14 추가)
 
 | ID | 불변식 | 위반 시 |
 |---|---|---|
-| **V12** | 보고율은 **귀속**으로 센다 — 기대 항목이 gold 선언과 같고, 보고로 센 항목은 사유가 있고 관측 좌표가 gold 구간과 겹치며, 건수가 항목별 귀속과 일치한다 | 건수만 맞춘 보고 · 그럴듯하지만 겹치지 않는 좌표 · 귀속 근거 없는 보고율 |
+| **V14** | 보고율은 **귀속**으로 센다 — 기대 항목이 gold 선언과 같고, 보고로 센 항목은 사유가 있고 관측 좌표가 gold 구간과 겹치며, 건수가 항목별 귀속과 일치한다 | 건수만 맞춘 보고 · 그럴듯하지만 겹치지 않는 좌표 · 귀속 근거 없는 보고율 |
 
-결함 주입 케이스 2건이 V12 를 문다(귀속 근거 없이 보고 주장 · 겹치지 않는 관측 좌표).
-`bench/l0/manifest.json` 의 범위·총계도 함께 올렸다: **V1-V12 · 26 케이스**.
+결함 주입 케이스 2건이 V14 를 문다(귀속 근거 없이 보고 주장 · 겹치지 않는 관측 좌표).
+`bench/l0/manifest.json` 의 범위·총계도 함께 올렸다: **V1-V14 · 31 케이스**.
+
+V13(인용한 이전 실행 검증)은 게이트 관측값 델타까지 대조하도록 넓혔고, "게이트를 손으로 통과시킴"
+결함 주입은 **실제로 실패 중인** 게이트를 겨냥하도록 바꿨다 — 이미 통과한 게이트에 PASS 를 덮으면
+주입이 아무것도 바꾸지 않아, 규칙이 무는지 확인하지 못한 채 케이스만 남는다.
 
 ```bash
 ( cd backend && ./gradlew test )                                  # DB 프로브 + 회귀 테스트
 ( cd codegraph && python3 -m pytest -q )                          # 코드 트랙 수집기 테스트
 python3 docs/superpowers/specs/bench/l0/probe_code.py --check      # 코드 프로브 표류 검사
-python3 docs/superpowers/specs/bench/l0/build_report.py            # 보고서 4건 재생성(멱등)
-python3 docs/superpowers/specs/bench/l0/verify_l0.py               # 26 cases, 0 mismatches
+python3 docs/superpowers/specs/bench/l0/build_report.py            # 현행 보고서 재생성(멱등)
+python3 docs/superpowers/specs/bench/l0/verify_l0.py               # 31 cases, 0 mismatches
 ```
 
 ## 6. 남긴 판단
