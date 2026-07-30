@@ -19,9 +19,14 @@ data class ConnectionInfo(
     val vendor: String = "postgresql",
 )
 
-/** ConnectionInfo → JDBC Connection. 벤더별 URL을 만든다(DatabaseMetaData는 벤더 무관). */
+/**
+ * ConnectionInfo → JDBC Connection. 벤더별 URL을 만든다(DatabaseMetaData는 벤더 무관).
+ *
+ * `open` 인 이유: 라이브 수집 경로(`LiveJdbcSource`)를 실제 DB 없이 테스트하려면 커넥션 공급만
+ * 갈아끼울 수 있어야 한다. 그러지 않으면 운영 진입점이 계측되지 않은 채로 남는다(#113).
+ */
 @Component
-class DbConnector {
+open class DbConnector {
 
     /** 벤더별 JDBC URL. (순수·테스트 가능) */
     internal fun jdbcUrl(info: ConnectionInfo): String {
@@ -36,7 +41,7 @@ class DbConnector {
         }
     }
 
-    fun open(info: ConnectionInfo): Connection {
+    open fun open(info: ConnectionInfo): Connection {
         return try {
             DriverManager.getConnection(jdbcUrl(info), info.user, info.password)
         } catch (e: Exception) {

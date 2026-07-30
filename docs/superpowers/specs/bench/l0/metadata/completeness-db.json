@@ -1,0 +1,60 @@
+{
+  "measurementVersion" : "l0-metadata-completeness/v1",
+  "issue" : 113,
+  "gate" : "gate-l0-metadata-completeness",
+  "track" : "db",
+  "contract" : "docs/superpowers/specs/2026-07-30-m0-l0-collection-metadata-contract.md",
+  "baseline" : "docs/superpowers/specs/bench/l0/runs/run-l0-db-3c27259-001 (0/5, 손대지 않는다)",
+  "required" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
+  "typeGraph" : {
+    "probe" : "kotlin-reflect — 산출물 타입 그래프(중첩 CollectionMetadata 포함)의 선언 멤버 이름",
+    "types" : [ "SchemaModel", "TableInfo", "ColumnInfo", "ForeignKeyInfo", "CollectionMetadata" ],
+    "present" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
+    "absent" : [ ],
+    "rate" : 1.0
+  },
+  "collectionPaths" : {
+    "probe" : "각 SchemaSource 를 실제로 돌려 산출물의 metadata 값을 센다",
+    "paths" : [ {
+      "path" : "ddl",
+      "sourceId" : "db:ddl:sales",
+      "revision" : "inline:af16a259a6f4",
+      "contentHash" : "sha256:af16a259a6f47280c751fd7e475876ebd66fdf1139a571026c08859b2e167d3b",
+      "present" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
+      "absent" : [ ],
+      "rate" : 1.0
+    }, {
+      "path" : "sample",
+      "sourceId" : "db:legacy-sample",
+      "revision" : "bundle:03bcefc79a18",
+      "contentHash" : "sha256:03bcefc79a188755c09cb8e6c655ff1bee3fb1c90bbbefb0d74a6e2d5d14b269",
+      "present" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
+      "absent" : [ ],
+      "rate" : 1.0
+    }, {
+      "path" : "live-jdbc",
+      "sourceId" : "db:jdbc:postgresql://db.example:5432/meta_completeness",
+      "revision" : "live:341e246b79c7",
+      "contentHash" : "sha256:341e246b79c7a333294bc340b908a18cc0f83819c96d01fea77bb06add5ea00b",
+      "present" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
+      "absent" : [ ],
+      "rate" : 1.0
+    } ]
+  },
+  "identity" : {
+    "projectId" : "lodestar",
+    "collectorVersion" : "lodestar-rdb-collector@0.1.0"
+  },
+  "completeness" : {
+    "present" : 5,
+    "required" : 5,
+    "rate" : 1.0,
+    "basis" : "min(타입 그래프에 자리가 있는 필드 수, 수집 경로별로 채워진 필드 수의 최소값)"
+  },
+  "volatile" : {
+    "note" : "입력 내용에 따라 달라지는 값만 둔다 — 표류 검사 대상이 아니다. projectId·collectorVersion 은 계약이 고정하는 신원이므로 identity 블록에 있다",
+    "sampleContentHash" : "sha256:03bcefc79a188755c09cb8e6c655ff1bee3fb1c90bbbefb0d74a6e2d5d14b269",
+    "sampleRevision" : "bundle:03bcefc79a18",
+    "ddlContentHash" : "sha256:af16a259a6f47280c751fd7e475876ebd66fdf1139a571026c08859b2e167d3b"
+  }
+}
