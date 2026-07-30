@@ -31,8 +31,8 @@
     }
   },
   "counts": {
-    "input": 29,
-    "output": 28,
+    "input": 28,
+    "output": 27,
     "failed": 0,
     "excluded": 1
   },
@@ -60,7 +60,7 @@
     "scopeCoverage": {
       "status": "MEASURED",
       "value": 0.97,
-      "note": "counts.output/counts.input = 28/29 — 미지원 뷰 1건 제외"
+      "note": "counts.output/counts.input = 27/28 — 미지원 뷰 1건 제외"
     },
     "determinism": {
       "status": "MEASURED",
@@ -182,7 +182,7 @@
       "featureId": "P-ddl-parser",
       "judgment": "Core",
       "measured": true,
-      "rationale": "28개 테이블의 PK·컬럼을 좌표와 함께 추출했고, 미지원 뷰 1건을 제외 사유로 보고했다(조용한 스킵 없음).",
+      "rationale": "27개 테이블의 PK·컬럼을 좌표와 함께 추출했고, 미지원 뷰 1건을 제외 사유로 보고했다(조용한 스킵 없음).",
       "evidenceRefs": [
         "run-l1-db-example-0001"
       ]

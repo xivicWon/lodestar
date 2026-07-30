@@ -11,6 +11,50 @@ L0~L3 벤치를 실행하기 전에 **모든 고정 요소를 못박는 선행 �
 
 ---
 
+## 개정 이력
+
+수치·revision 변경은 **이전 값과 함께** 남긴다. 덮어쓰기는 개정이 아니다(§7.3 · P4 자기적용).
+
+### R1 — 2026-07-30 · §1.1 DB 트랙 `CREATE TABLE` **28 → 27** (이슈 #116)
+
+| 항목 | 이전 값 | 개정 값 |
+|---|---|---|
+| §1.1 DB 실측 규모 | `CREATE TABLE` **28** | `CREATE TABLE` **27** |
+| §1.1 FK 서술 | "**28**테이블 중 명시 FK 1건" | "**27**테이블 중 명시 FK 1건" |
+
+- **사유:** 초판의 28 은 `grep -ci 'create table'` 결과였고, 그 28번째 일치는 픽스처 L221~L222의
+  한국어 주석이다. 테이블 수는 `CREATE TABLE` **문장**만 세야 한다(gold R-DB-1).
+  이 오탐은 gold 음성 항목 `L1.DB.TABLE.NEG.만` 이 잡으려는 실패와 **정확히 같은 실패**다.
+- **근거 (둘 다 27):**
+  - #99 Gold Set — `docs/superpowers/specs/gold/l1/db.json` `counts.TABLE = 27`
+    (`COLUMN` 119 · `PRIMARY_KEY` 27 · `FOREIGN_KEY` 1 · `VIEW` 1), 제안은 I2 §8.1.
+  - #88 L0 실측 — `docs/superpowers/specs/bench/l0/runs/run-l0-db-3c27259-001/`
+    (동일 revision 3회 수집 결과 동일, 결정성 1.0), 확인 기록은 L0 검증 문서 §8.3(F10).
+- **영향 범위(§7.1) — 무효화되는 이전 실행: 없다.**
+  - `run-l0-db-3c27259-001` 은 테이블 수 주장을 27로 실측했고 `fixtureHash` 도 gold 와 같다.
+    28 을 인용한 baseline-적격 실행은 존재하지 않는다(L0 판정은 BLOCKED, RQR 예시는 `EXAMPLE`).
+  - source revision(`3c27259`)·Gold Set 은 바뀌지 않는다 → §7.4의 기준선 제외 조항 비해당.
+  - I3(#100) RQR 예시의 L1 db `counts` 는 이 값에서 파생되므로 함께 정정했다
+    (`input` 29 → **28**, `output` 28 → **27**; 28 = 테이블 27 + 뷰 1, 뷰 1건은 제외 사유로 보고).
+  - #99 gold EVL 충돌 항목 `CF1.TABLE_COUNT`(27 vs 28)는 `docsRevision: 7d3db3e`(개정 이전)에
+    고정돼 있어 **그 revision 기준으로는 여전히 유효**하다. 이 개정은 그 항목의 `resolutionPath`가
+    말한 해소 경로 자체이며, gold 를 `RESOLVED` 로 바꾸는 것은 gold 개정 절차(#99 §10.4 — `--rehash`·
+    G1~G14 재통과·승인)를 따르는 **별건**이다. 이 PR 은 gold 를 건드리지 않는다.
+- **행 번호 이동(좌표 인용 주의):** 이 절이 문서 상단에 추가되면서(§7.3 이 상단을 요구한다) 이후
+  모든 행이 밀렸다. **§1.1 DB 행 L40 → L84**, **§1.1 FK 서술 L44 → L92**,
+  **§4.1 "L1 무보고 파싱 실패" 행 L169 → L217**.
+  - 기존 좌표(L40·L44·L169)를 인용한 gold(`gold/evl/questions.json`)·I2 §8.1 기록은
+    `docsRevision: 7d3db3e` 기준으로 읽어야 하며, 그 revision 에서는 그대로 조회된다
+    (gold 는 문서 축을 revision·contentHash·행수까지 고정한다 — G5).
+  - 따라서 **gold 의 docsRevision 을 올리는 다음 개정에서 함께 갱신할 것**: 이 문서의
+    `contentHash`·`lines`, `adr:m0-i1-baseline-contract.md` 좌표(L40→L74 · L169→L207),
+    그리고 `CF1.TABLE_COUNT` 의 `status`(`NEEDS_CHECK` → `RESOLVED` · `resolvedBy`).
+    이 PR 은 gold 를 건드리지 않으므로 지금은 아무것도 깨지지 않는다.
+- **자동 확인:** `python3 docs/superpowers/specs/verify_i1_counts.py` (C1~C5 — 원문 실측·문서 내부
+  정합·gold·RQR 예시·개정 이력 보존).
+
+---
+
 ## 0. 이 문서가 확정하는 것 / 하지 않는 것
 
 | | 내용 | 소유 |
@@ -37,11 +81,15 @@ L0~L3 벤치를 실행하기 전에 **모든 고정 요소를 못박는 선행 �
 | 트랙 | 벤치 대상 | 실측 규모 (@`3c27259`) | 커버 레이어 |
 |---|---|---|---|
 | **코드** | `backend/src/main/kotlin` (실제 Kotlin) | `.kt` 59개, 17개 패키지 | L1 코드관찰, L2 코드↔코드 |
-| **DB** | `backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql` | `CREATE TABLE` 28, `CREATE VIEW` 1, 명시 `FOREIGN KEY` 1 | L0 수집, L1 명시사실, L2 암시관계, L3 의미 |
+| **DB** | `backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql` | `CREATE TABLE` 27, `CREATE VIEW` 1, 명시 `FOREIGN KEY` 1 | L0 수집, L1 명시사실, L2 암시관계, L3 의미 |
+
+> 테이블 수는 **`CREATE TABLE` 문장**만 센다(gold R-DB-1). 주석 안의 같은 문자열은 세지 않는다 —
+> 초판의 28 은 L221 주석("`DdlParser` 는 `CREATE TABLE` 만 처리하므로 스킵되어야 함")을 함께 센
+> `grep -ci` 결과였다. 개정 이력 R1 참조.
 
 DB 트랙 픽스처가 레거시 벤치 대상으로 적합한 이유(실제 성질):
 
-- **FK가 사실상 없음** — 28테이블 중 명시 FK는 `TB_ORD_MEMO → TB_ORD_HD` **단 1건**. 나머지 관계는 전부 이름 기반 암시관계 → **L2 INFERRED 링크의 정직한 시험대**.
+- **FK가 사실상 없음** — 27테이블 중 명시 FK는 `TB_ORD_MEMO → TB_ORD_HD` **단 1건**. 나머지 관계는 전부 이름 기반 암시관계 → **L2 INFERRED 링크의 정직한 시험대**.
 - **복합키 다수** — `TB_CUST_ADDR(CUST_NO, ADDR_SEQ)`, `TB_STOK_QTY(WH_CD, ITEM_CD)`, `TB_ORD_DTL(ORD_NO, ORD_SEQ)`, `TB_ATTND(EMP_NO, WRK_DT)`, `TB_COMM_CD(GRP_CD, CD)` 등 → **L1 PK 추출 정확도**.
 - **뷰 1건 존재** — `VW_ORD_SUMMARY`. 현 `DdlParser`는 `CREATE TABLE`만 처리 → **스킵을 "조용히 무시"하지 않고 제외 사유로 보고하는지**가 L0/L1 오류 가시성 시험 항목.
 - **암호명 컬럼** — `TB_CUST_MST`, `CUST_NO`, `VNDR_CD` 등 → **L3 의미 Claim(AI 추정)** 대상.
