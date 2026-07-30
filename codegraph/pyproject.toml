@@ -20,6 +20,10 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# 마스킹 규칙 스펙 사본(#115)은 패키지 데이터다 — 빠지면 엔진이 규칙 없이 임포트된다.
+[tool.setuptools.package-data]
+lodestar_codegraph = ["masking-rules.v0.json"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]

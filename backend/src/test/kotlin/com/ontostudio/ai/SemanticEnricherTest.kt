@@ -52,9 +52,11 @@ class SemanticEnricherTest {
         assertEquals("고객 마스터", cust.suggestedLabel)
         assertTrue(candidates.any { it.currentName == "TB_ORD_HD" })
 
-        // 프롬프트에 컬럼과 샘플 데이터(사업자번호 값)가 포함됐는지 = "샘플행 포함" 검증
+        // 프롬프트에 컬럼과 샘플 데이터가 포함됐는지 = "샘플행 포함" 검증.
+        // #115/#85: 샘플 행은 들어가지만 **마스킹된 뒤**다 — 마스킹 이전 원문은 AI 요청으로 나가지 않는다.
         assertTrue(fake.lastPrompt.contains("TB_CUST_MST"))
-        assertTrue(fake.lastPrompt.contains("120-88-12345"), "샘플 행 값이 프롬프트에 들어가야 함")
+        assertTrue(fake.lastPrompt.contains("BIZ_NO="), "샘플 행 값이 프롬프트에 들어가야 함")
+        assertFalse(fake.lastPrompt.contains("120-88-12345"), "PII 형태 원문이 AI 요청에 실렸다(#85)")
     }
 
     @Test fun `unknown tables in ai response are ignored`() {

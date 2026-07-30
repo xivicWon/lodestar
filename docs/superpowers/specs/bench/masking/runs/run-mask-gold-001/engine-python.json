@@ -1,0 +1,281 @@
+{
+  "evidenceVersion": "mask-engine-evidence/v1",
+  "engine": "python:lodestar_codegraph.mask",
+  "specVersion": "masking-rules/v0",
+  "goldSetVersion": "gold-set/v0",
+  "files": [
+    {
+      "sourceId": "pii:corpus.sql",
+      "contentHash": "sha256:3cf79add5d7793b9f3c5e7e2a955b52774bfa0630cd59875a74690489f856046",
+      "maskedTextHash": "sha256:beabf59d93c35abb0400854d3fbc1e6c5005cf46e2a509f2277227a94919e0e2",
+      "maskedSpans": 14,
+      "spans": [
+        {
+          "start": 471,
+          "end": 474,
+          "ruleId": "PII.KR_NAME",
+          "class": "NAME",
+          "line": 18
+        },
+        {
+          "start": 478,
+          "end": 492,
+          "ruleId": "PII.KR_RRN",
+          "class": "KR_RRN",
+          "line": 18
+        },
+        {
+          "start": 496,
+          "end": 512,
+          "ruleId": "PII.EMAIL",
+          "class": "EMAIL",
+          "line": 18
+        },
+        {
+          "start": 516,
+          "end": 529,
+          "ruleId": "PII.KR_PHONE",
+          "class": "PHONE",
+          "line": 18
+        },
+        {
+          "start": 533,
+          "end": 552,
+          "ruleId": "PII.CARD_NO_DELIMITED",
+          "class": "CARD_NO",
+          "line": 18
+        },
+        {
+          "start": 556,
+          "end": 570,
+          "ruleId": "PII.KR_BANK_ACCOUNT",
+          "class": "BANK_ACCOUNT",
+          "line": 18
+        },
+        {
+          "start": 574,
+          "end": 593,
+          "ruleId": "PII.KR_ADDRESS",
+          "class": "ADDRESS",
+          "line": 18
+        },
+        {
+          "start": 648,
+          "end": 651,
+          "ruleId": "PII.KR_NAME",
+          "class": "NAME",
+          "line": 20
+        },
+        {
+          "start": 655,
+          "end": 669,
+          "ruleId": "PII.KR_RRN",
+          "class": "KR_RRN",
+          "line": 20
+        },
+        {
+          "start": 673,
+          "end": 693,
+          "ruleId": "PII.EMAIL",
+          "class": "EMAIL",
+          "line": 20
+        },
+        {
+          "start": 697,
+          "end": 713,
+          "ruleId": "PII.KR_PHONE",
+          "class": "PHONE",
+          "line": 20
+        },
+        {
+          "start": 717,
+          "end": 733,
+          "ruleId": "PII.CARD_NO_PLAIN",
+          "class": "CARD_NO",
+          "line": 20
+        },
+        {
+          "start": 737,
+          "end": 752,
+          "ruleId": "PII.KR_BANK_ACCOUNT",
+          "class": "BANK_ACCOUNT",
+          "line": 20
+        },
+        {
+          "start": 756,
+          "end": 773,
+          "ruleId": "PII.KR_ADDRESS",
+          "class": "ADDRESS",
+          "line": 20
+        }
+      ],
+      "byClass": {
+        "ADDRESS": 2,
+        "BANK_ACCOUNT": 2,
+        "CARD_NO": 2,
+        "EMAIL": 2,
+        "KR_RRN": 2,
+        "NAME": 2,
+        "PHONE": 2
+      },
+      "byRule": {
+        "PII.CARD_NO_DELIMITED": 1,
+        "PII.CARD_NO_PLAIN": 1,
+        "PII.EMAIL": 2,
+        "PII.KR_ADDRESS": 2,
+        "PII.KR_BANK_ACCOUNT": 2,
+        "PII.KR_NAME": 2,
+        "PII.KR_PHONE": 2,
+        "PII.KR_RRN": 2
+      }
+    },
+    {
+      "sourceId": "pii:corpus.properties",
+      "contentHash": "sha256:fd8929c2ba121c907ffc3377b0e35e3aeed286f346ea75c8b6c4cbef82e14152",
+      "maskedTextHash": "sha256:00aa710ef516d595001e19a33d406594d0bbdbfe4c6f94b06619457f78f79ba7",
+      "maskedSpans": 6,
+      "spans": [
+        {
+          "start": 142,
+          "end": 163,
+          "ruleId": "SECRET.KEYED_VALUE",
+          "class": "PASSWORD",
+          "line": 5
+        },
+        {
+          "start": 180,
+          "end": 200,
+          "ruleId": "SECRET.AWS_ACCESS_KEY_ID",
+          "class": "AWS_ACCESS_KEY_ID",
+          "line": 6
+        },
+        {
+          "start": 221,
+          "end": 261,
+          "ruleId": "SECRET.KEYED_VALUE",
+          "class": "PASSWORD",
+          "line": 7
+        },
+        {
+          "start": 277,
+          "end": 358,
+          "ruleId": "SECRET.JWT",
+          "class": "JWT",
+          "line": 8
+        },
+        {
+          "start": 374,
+          "end": 428,
+          "ruleId": "SECRET.SLACK_TOKEN",
+          "class": "SLACK_TOKEN",
+          "line": 9
+        },
+        {
+          "start": 440,
+          "end": 480,
+          "ruleId": "SECRET.GITHUB_TOKEN",
+          "class": "GITHUB_TOKEN",
+          "line": 10
+        }
+      ],
+      "byClass": {
+        "AWS_ACCESS_KEY_ID": 1,
+        "GITHUB_TOKEN": 1,
+        "JWT": 1,
+        "PASSWORD": 2,
+        "SLACK_TOKEN": 1
+      },
+      "byRule": {
+        "SECRET.AWS_ACCESS_KEY_ID": 1,
+        "SECRET.GITHUB_TOKEN": 1,
+        "SECRET.JWT": 1,
+        "SECRET.KEYED_VALUE": 2,
+        "SECRET.SLACK_TOKEN": 1
+      }
+    },
+    {
+      "sourceId": "pii:corpus.log",
+      "contentHash": "sha256:14ca520bd6860c4e70f4fdd66a3eef21e2ee41c394a2687e1791a05b7202661c",
+      "maskedTextHash": "sha256:5da2e288230bef1d544ffbaa4f5b99c1e93d404b97dfbb18cea48ec4f91d3000",
+      "maskedSpans": 8,
+      "spans": [
+        {
+          "start": 158,
+          "end": 174,
+          "ruleId": "PII.EMAIL",
+          "class": "EMAIL",
+          "line": 5
+        },
+        {
+          "start": 178,
+          "end": 190,
+          "ruleId": "PII.IP_ADDRESS",
+          "class": "IP_ADDRESS",
+          "line": 5
+        },
+        {
+          "start": 298,
+          "end": 319,
+          "ruleId": "SECRET.KEYED_VALUE",
+          "class": "PASSWORD",
+          "line": 6
+        },
+        {
+          "start": 377,
+          "end": 393,
+          "ruleId": "PII.CARD_NO_PLAIN",
+          "class": "CARD_NO",
+          "line": 7
+        },
+        {
+          "start": 400,
+          "end": 403,
+          "ruleId": "PII.KR_NAME",
+          "class": "NAME",
+          "line": 7
+        },
+        {
+          "start": 408,
+          "end": 421,
+          "ruleId": "PII.KR_PHONE",
+          "class": "PHONE",
+          "line": 7
+        },
+        {
+          "start": 498,
+          "end": 543,
+          "ruleId": "SECRET.JWT",
+          "class": "JWT",
+          "line": 8
+        },
+        {
+          "start": 601,
+          "end": 615,
+          "ruleId": "PII.KR_RRN",
+          "class": "KR_RRN",
+          "line": 9
+        }
+      ],
+      "byClass": {
+        "CARD_NO": 1,
+        "EMAIL": 1,
+        "IP_ADDRESS": 1,
+        "JWT": 1,
+        "KR_RRN": 1,
+        "NAME": 1,
+        "PASSWORD": 1,
+        "PHONE": 1
+      },
+      "byRule": {
+        "PII.CARD_NO_PLAIN": 1,
+        "PII.EMAIL": 1,
+        "PII.IP_ADDRESS": 1,
+        "PII.KR_NAME": 1,
+        "PII.KR_PHONE": 1,
+        "PII.KR_RRN": 1,
+        "SECRET.JWT": 1,
+        "SECRET.KEYED_VALUE": 1
+      }
+    }
+  ]
+}

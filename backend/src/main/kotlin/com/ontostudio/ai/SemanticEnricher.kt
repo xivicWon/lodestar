@@ -6,6 +6,7 @@ import com.ontostudio.core.OntologyHolder
 import com.ontostudio.core.OntologyMapper
 import com.ontostudio.dto.ApiException
 import com.ontostudio.rdb.MetadataService
+import com.ontostudio.security.MaskingEngine
 import com.ontostudio.rdb.SampleLegacyDb
 import com.ontostudio.rdb.SchemaToOwlMapper
 import com.ontostudio.savepoint.ConfirmationStore
@@ -38,6 +39,7 @@ class SemanticEnricher(
     private val holder: OntologyHolder = OntologyHolder(),
     private val ontologyMapper: OntologyMapper = OntologyMapper(holder),
     @Value("\${lodestar.enrich.chunk-size:40}") private val chunkSize: Int = 40,
+    private val masker: MaskingEngine = MaskingEngine(),
 ) {
     private val baseIri = "http://lodestar/rdb/legacy#"
     private val json = ObjectMapper()
@@ -81,7 +83,10 @@ class SemanticEnricher(
             val rows = sampleRows(conn, t.name, 3)
             if (rows.isNotEmpty()) {
                 sb.appendLine("샘플:")
-                for (r in rows) sb.appendLine("  - " + r.entries.joinToString(", ") { "${it.key}=${it.value}" })
+                // #115/#85: 마스킹은 저장·로그·**AI 요청**보다 먼저다. 적재 경로가 이미 마스킹하지만
+                // 라이브 JDBC 소스의 행은 원문이므로, 요청 경계에서 한 번 더 통과시킨다(다중 방어).
+                for (r in rows) sb.appendLine(masker.maskField(
+                    "  - " + r.entries.joinToString(", ") { "${it.key}=${it.value}" }))
             }
             sb.appendLine()
         }

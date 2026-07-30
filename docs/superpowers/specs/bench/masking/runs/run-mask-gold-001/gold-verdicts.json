@@ -1,0 +1,453 @@
+{
+  "evidenceVersion": "mask-gold-verdicts/v1",
+  "goldSetVersion": "gold-set/v0",
+  "goldSetState": "APPROVED",
+  "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
+  "items": [
+    {
+      "id": "PII.POS.SQL.L18.0",
+      "expect": "MASKED",
+      "class": "NAME",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.SQL.L18.1",
+      "expect": "MASKED",
+      "class": "KR_RRN",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.SQL.L18.2",
+      "expect": "MASKED",
+      "class": "EMAIL",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.SQL.L18.3",
+      "expect": "MASKED",
+      "class": "PHONE",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.SQL.L18.4",
+      "expect": "MASKED",
+      "class": "CARD_NO",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.SQL.L18.5",
+      "expect": "MASKED",
+      "class": "BANK_ACCOUNT",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.SQL.L18.6",
+      "expect": "MASKED",
+      "class": "ADDRESS",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.SQL.L20.7",
+      "expect": "MASKED",
+      "class": "NAME",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.SQL.L20.8",
+      "expect": "MASKED",
+      "class": "KR_RRN",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.SQL.L20.9",
+      "expect": "MASKED",
+      "class": "EMAIL",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.SQL.L20.10",
+      "expect": "MASKED",
+      "class": "PHONE",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.SQL.L20.11",
+      "expect": "MASKED",
+      "class": "CARD_NO",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.SQL.L20.12",
+      "expect": "MASKED",
+      "class": "BANK_ACCOUNT",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.SQL.L20.13",
+      "expect": "MASKED",
+      "class": "ADDRESS",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.NEG.SQL.L18.14",
+      "expect": "NOT_MASKED",
+      "class": "INTERNAL_ID",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 2,
+      "plaintextPresentAfterMasking": true,
+      "fullyCovered": false,
+      "verdict": "PRESERVED"
+    },
+    {
+      "id": "PII.NEG.SQL.L24.15",
+      "expect": "NOT_MASKED",
+      "class": "INTERNAL_ID",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": true,
+      "fullyCovered": false,
+      "verdict": "PRESERVED"
+    },
+    {
+      "id": "PII.NEG.SQL.L26.16",
+      "expect": "NOT_MASKED",
+      "class": "INTERNAL_ID",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": true,
+      "fullyCovered": false,
+      "verdict": "PRESERVED"
+    },
+    {
+      "id": "PII.NEG.SQL.L26.17",
+      "expect": "NOT_MASKED",
+      "class": "TIMESTAMP",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": true,
+      "fullyCovered": false,
+      "verdict": "PRESERVED"
+    },
+    {
+      "id": "PII.NEG.SQL.L28.18",
+      "expect": "NOT_MASKED",
+      "class": "CODE",
+      "sourceId": "pii:corpus.sql",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": true,
+      "fullyCovered": false,
+      "verdict": "PRESERVED"
+    },
+    {
+      "id": "PII.POS.PROPERTIES.L5.19",
+      "expect": "MASKED",
+      "class": "PASSWORD",
+      "sourceId": "pii:corpus.properties",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.PROPERTIES.L6.20",
+      "expect": "MASKED",
+      "class": "AWS_ACCESS_KEY_ID",
+      "sourceId": "pii:corpus.properties",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.PROPERTIES.L7.21",
+      "expect": "MASKED",
+      "class": "AWS_SECRET_ACCESS_KEY",
+      "sourceId": "pii:corpus.properties",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.PROPERTIES.L8.22",
+      "expect": "MASKED",
+      "class": "JWT",
+      "sourceId": "pii:corpus.properties",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.PROPERTIES.L9.23",
+      "expect": "MASKED",
+      "class": "SLACK_TOKEN",
+      "sourceId": "pii:corpus.properties",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.PROPERTIES.L10.24",
+      "expect": "MASKED",
+      "class": "GITHUB_TOKEN",
+      "sourceId": "pii:corpus.properties",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.NEG.PROPERTIES.L13.25",
+      "expect": "NOT_MASKED",
+      "class": "CONNECTION_URL",
+      "sourceId": "pii:corpus.properties",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": true,
+      "fullyCovered": false,
+      "verdict": "PRESERVED"
+    },
+    {
+      "id": "PII.NEG.PROPERTIES.L14.26",
+      "expect": "NOT_MASKED",
+      "class": "DB_USERNAME",
+      "sourceId": "pii:corpus.properties",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": true,
+      "fullyCovered": false,
+      "verdict": "PRESERVED"
+    },
+    {
+      "id": "PII.NEG.PROPERTIES.L15.27",
+      "expect": "NOT_MASKED",
+      "class": "GIT_SHA",
+      "sourceId": "pii:corpus.properties",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": true,
+      "fullyCovered": false,
+      "verdict": "PRESERVED"
+    },
+    {
+      "id": "PII.NEG.PROPERTIES.L16.28",
+      "expect": "NOT_MASKED",
+      "class": "CONTENT_HASH",
+      "sourceId": "pii:corpus.properties",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": true,
+      "fullyCovered": false,
+      "verdict": "PRESERVED"
+    },
+    {
+      "id": "PII.NEG.PROPERTIES.L17.29",
+      "expect": "NOT_MASKED",
+      "class": "TRACE_ID",
+      "sourceId": "pii:corpus.properties",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": true,
+      "fullyCovered": false,
+      "verdict": "PRESERVED"
+    },
+    {
+      "id": "PII.POS.LOG.L5.30",
+      "expect": "MASKED",
+      "class": "EMAIL",
+      "sourceId": "pii:corpus.log",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.LOG.L5.31",
+      "expect": "MASKED",
+      "class": "IP_ADDRESS",
+      "sourceId": "pii:corpus.log",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.LOG.L6.32",
+      "expect": "MASKED",
+      "class": "PASSWORD",
+      "sourceId": "pii:corpus.log",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.LOG.L7.33",
+      "expect": "MASKED",
+      "class": "CARD_NO",
+      "sourceId": "pii:corpus.log",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.LOG.L7.34",
+      "expect": "MASKED",
+      "class": "NAME",
+      "sourceId": "pii:corpus.log",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.LOG.L7.35",
+      "expect": "MASKED",
+      "class": "PHONE",
+      "sourceId": "pii:corpus.log",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.LOG.L8.36",
+      "expect": "MASKED",
+      "class": "JWT",
+      "sourceId": "pii:corpus.log",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.POS.LOG.L9.37",
+      "expect": "MASKED",
+      "class": "KR_RRN",
+      "sourceId": "pii:corpus.log",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": false,
+      "fullyCovered": true,
+      "verdict": "MASKED"
+    },
+    {
+      "id": "PII.NEG.LOG.L6.38",
+      "expect": "NOT_MASKED",
+      "class": "CONNECTION_URL",
+      "sourceId": "pii:corpus.log",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": true,
+      "fullyCovered": false,
+      "verdict": "PRESERVED"
+    },
+    {
+      "id": "PII.NEG.LOG.L12.39",
+      "expect": "NOT_MASKED",
+      "class": "GIT_SHA",
+      "sourceId": "pii:corpus.log",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": true,
+      "fullyCovered": false,
+      "verdict": "PRESERVED"
+    },
+    {
+      "id": "PII.NEG.LOG.L13.40",
+      "expect": "NOT_MASKED",
+      "class": "TRACE_ID",
+      "sourceId": "pii:corpus.log",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": true,
+      "fullyCovered": false,
+      "verdict": "PRESERVED"
+    },
+    {
+      "id": "PII.NEG.LOG.L13.41",
+      "expect": "NOT_MASKED",
+      "class": "INTERNAL_ID",
+      "sourceId": "pii:corpus.log",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": true,
+      "fullyCovered": false,
+      "verdict": "PRESERVED"
+    },
+    {
+      "id": "PII.NEG.LOG.L14.42",
+      "expect": "NOT_MASKED",
+      "class": "INTERNAL_ID",
+      "sourceId": "pii:corpus.log",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": true,
+      "fullyCovered": false,
+      "verdict": "PRESERVED"
+    },
+    {
+      "id": "PII.NEG.LOG.L6.43",
+      "expect": "NOT_MASKED",
+      "class": "DB_USERNAME",
+      "sourceId": "pii:corpus.log",
+      "occurrences": 1,
+      "plaintextPresentAfterMasking": true,
+      "fullyCovered": false,
+      "verdict": "PRESERVED"
+    }
+  ],
+  "spansOutsideGold": {
+    "pii:corpus.sql": 0,
+    "pii:corpus.properties": 0,
+    "pii:corpus.log": 0
+  }
+}

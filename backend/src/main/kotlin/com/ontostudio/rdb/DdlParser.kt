@@ -1,15 +1,34 @@
 package com.ontostudio.rdb
 
+import com.ontostudio.security.MaskLedger
+import com.ontostudio.security.SqlTextMasker
 import net.sf.jsqlparser.parser.CCJSqlParserUtil
 import net.sf.jsqlparser.statement.create.table.CreateTable
 import net.sf.jsqlparser.statement.create.table.ForeignKeyIndex
 import org.springframework.stereotype.Component
 
-/** DDL 텍스트 → SchemaModel. CREATE TABLE 만 처리하고, 파싱 실패 구문은 조용히 건너뛴다. */
-@Component
-class DdlParser {
+/** 파싱 결과 + 그 실행에서 무엇을 몇 건 가렸는지(원문 없음 · #115). */
+data class MaskedSchema(val schema: SchemaModel, val masking: Map<String, Any>)
 
-    fun parse(sql: String): SchemaModel {
+/**
+ * DDL 텍스트 → SchemaModel. CREATE TABLE 만 처리하고, 파싱 실패 구문은 조용히 건너뛴다
+ * (조용한 스킵은 #114 의 몫이다).
+ *
+ * #115: 파싱 **전에** PII·시크릿 마스킹 단계를 통과한다. DDL 의 노출면은 주석과 DEFAULT 리터럴이며,
+ * 마스킹은 리터럴·주석 안에서만 길이를 보존해 일어나므로 스키마 구조와 좌표는 그대로다.
+ */
+@Component
+class DdlParser(private val masker: SqlTextMasker = SqlTextMasker()) {
+
+    fun parse(sql: String): SchemaModel = parseMasked(sql).schema
+
+    fun parseMasked(sql: String): MaskedSchema {
+        val ledger = MaskLedger()
+        val masked = masker.mask(sql, ledger)
+        return MaskedSchema(parseInternal(masked), ledger.summary())
+    }
+
+    private fun parseInternal(sql: String): SchemaModel {
         val tables = mutableListOf<TableInfo>()
         // ';' 기준으로 개별 문장 분리 후 하나씩 파싱 → 트리거/함수 등 미지원 구문은 건너뛴다.
         for (raw in sql.split(";")) {

@@ -33,5 +33,17 @@ tasks.test {
     inputs.files(fileTree(File(rootDir.parentFile, "docs/superpowers/specs/bench/l0/runs")))
         .withPropertyName("l0BenchEvidence")
         .optional()
+    // #115 마스킹 교차언어 증거도 같은 이유로 입력이다. 규칙 스펙 단일 원본도 함께 — 원본이 바뀌면
+    // 사본 해시 검사와 gold 게이트를 다시 돌려야 한다.
+    inputs.files(fileTree(File(rootDir.parentFile, "docs/superpowers/specs/bench/masking/runs")))
+        .withPropertyName("maskingBenchEvidence")
+        .optional()
+    inputs.files(File(rootDir.parentFile, "docs/superpowers/specs/security/masking-rules.v0.json"))
+        .withPropertyName("maskingRuleSpec")
+        .optional()
+    // 증거 최초 생성 우회 플래그는 테스트 JVM 으로 전달돼야 의미가 있다.
+    for (flag in listOf("L0_PROBE_BOOTSTRAP", "MASK_EVIDENCE_BOOTSTRAP")) {
+        System.getProperty(flag)?.let { systemProperty(flag, it) }
+    }
 }
 kotlin { jvmToolchain(21) }
