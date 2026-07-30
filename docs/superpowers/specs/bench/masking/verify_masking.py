@@ -31,6 +31,15 @@ _spec = importlib.util.spec_from_file_location("build_masking_report", HERE / "b
 builder = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(builder)
 
+_pspec = importlib.util.spec_from_file_location("probe_masking", HERE / "probe_masking.py")
+probe = importlib.util.module_from_spec(_pspec)
+_pspec.loader.exec_module(probe)
+
+
+def canonical(value) -> str:
+    """비교는 표준 JSON 문자열로 한다 — 파이썬의 `True == 1` 때문에 dict 비교는 형을 흘린다."""
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
 CONTRACTED_ALLOW = [
     "ALLOW.MASK_TOKEN", "ALLOW.GIT_SHA", "ALLOW.CONTENT_HASH", "ALLOW.UUID",
     "ALLOW.JDBC_URL", "ALLOW.TIMESTAMP", "ALLOW.INTERNAL_ID",
@@ -108,8 +117,8 @@ def m2_engine_parity(ctx):
     spans = sum(len(f["spans"]) for f in k)
     if not spans:
         return False, 0, "비교할 스팬이 없다"
-    if k != p:
-        diff = [a["sourceId"] for a, b in zip(k, p) if a != b]
+    if canonical(k) != canonical(p):
+        diff = [a["sourceId"] for a, b in zip(k, p) if canonical(a) != canonical(b)]
         return False, spans, f"엔진 결과 불일치(gold): {diff or 'file set'}"
     if ctx["report"]["engines"]["parity"] is not True:
         return False, spans, "보고서가 불일치를 일치로 적었다"
@@ -120,8 +129,8 @@ def m2_engine_parity(ctx):
     if not cases:
         return False, spans, "패리티 케이스가 없다"
     vk, vp = builder.parity_view(pk), builder.parity_view(pp)
-    if vk != vp:
-        diff = [a.get("id") for a, b in zip(vk, vp) if a != b]
+    if canonical(vk) != canonical(vp):
+        diff = [a.get("id") for a, b in zip(vk, vp) if canonical(a) != canonical(b)]
         return False, spans + cases, f"엔진 결과 불일치(패리티): {diff or 'case set'}"
     fixture_hash = sha256_bytes(builder.EVIDENCE["parityFixture"].read_bytes())
     if not (pk["fixtureHash"] == pp["fixtureHash"] == fixture_hash):
@@ -241,7 +250,20 @@ def m8_deterministic_and_idempotent(ctx):
             return False, n, f"{f['sourceId']}: 스팬 수가 재현되지 않는다"
     if not n:
         return False, 0, "대조할 파일이 없다"
-    return True, n, f"{n}파일 재현·멱등 확인"
+
+    # 패리티 증거도 **프로브의 순수 함수**여야 한다. 이 재현이 없으면 두 증거를 서로만 일치하게
+    # 위조해 놓고도 M2·M11 이 통과한다(로컬 리뷰). 여기서 엔진을 실제로 다시 돌린다.
+    regenerated = probe.parity_evidence()
+    if canonical(regenerated) != canonical(ctx["parityPython"]):
+        got = {c["id"] for c in regenerated["cases"]}
+        have = {c["id"] for c in ctx["parityPython"]["cases"]}
+        diff = sorted(got ^ have) or [
+            c["id"] for c, d in zip(regenerated["cases"], ctx["parityPython"]["cases"])
+            if canonical(c) != canonical(d)
+        ]
+        return False, n + len(regenerated["cases"]), f"패리티 증거가 재현되지 않는다: {diff[:5]}"
+    n += len(regenerated["cases"])
+    return True, n, f"gold {len(ctx['enginePython']['files'])}파일 + 패리티 {len(regenerated['cases'])}케이스 재현·멱등 확인"
 
 
 def m9_no_plaintext_in_records(ctx):
@@ -311,7 +333,22 @@ def m11_parity_fixture_covers_new_branches(ctx):
             return False, n, f"{c['id']}: 길이 보존 모드가 문자 수·행 수를 바꿨다"
     if len({c["id"] for c in pk["cases"]}) != n:
         return False, n, "패리티 케이스 id 가 중복된다"
-    return True, n, f"패리티 {n}케이스가 분기 {len(required)}종·BMP 밖·여러 줄을 지나간다"
+    if sorted(pk["policies"]) != sorted(fixture["policies"]):
+        return False, n, "증거의 정책 목록이 픽스처 선언과 다르다"
+    if set(pk["policies"]) != set(probe.PARITY_POLICIES):
+        return False, n, "픽스처가 선언한 정책과 프로브가 아는 정책이 다르다"
+
+    # 정책이 실제로 판정을 바꾸는지 — 바꾸지 않으면 그 정책으로 잰 증거는 아무것도 막지 못한다.
+    suppressed = sum(1 for c in pk["cases"]
+                     if len(c["noAllowlist"]["spans"]) > len(c["default"]["spans"]))
+    if suppressed < 5:
+        return False, n, f"allowlist 가 탐지를 실제로 누르는 케이스가 {suppressed}건뿐 — 우선순위 분기 미검증"
+    toggled = sum(1 for c in pk["cases"]
+                  if len(c["namesDisabled"]["spans"]) < len(c["default"]["spans"]))
+    if toggled < 1:
+        return False, n, "클래스 비활성화가 판정을 바꾸는 케이스가 없다"
+    return True, n, (f"패리티 {n}케이스가 분기 {len(required)}종·BMP 밖·여러 줄을 지나가고 "
+                     f"allowlist 우선순위 {suppressed}건·클래스 토글 {toggled}건이 실제로 발생한다")
 
 
 RULES = {
@@ -374,8 +411,7 @@ CASES = [
     ("C33", "M2", lambda c: c["parityKotlin"]["cases"][7]["lengthPreserving"].__setitem__(
         "maskedTextHash", "sha256:" + "4" * 64)),
     ("C34", "M2", lambda c: c["parityPython"].__setitem__("fixtureHash", "sha256:" + "5" * 64)),
-    ("C35", "M2", lambda c: c["report"]["engines"]["branchParity"].__setitem__("identical", True)
-     if c["parityKotlin"]["cases"][1].__setitem__("inputChars", 999) else None),
+    ("C35", "M2", lambda c: c["report"]["engines"]["branchParity"].__setitem__("identical", False)),
     ("C36", "M11", lambda c: c["parityFixture"].__setitem__(
         "cases", [x for x in c["parityFixture"]["cases"] if "ASTRAL" not in x["id"]])),
     ("C37", "M11", lambda c: [
@@ -385,6 +421,14 @@ CASES = [
     ("C38", "M11", lambda c: c["parityKotlin"]["cases"][7]["lengthPreserving"].__setitem__(
         "maskedLines", 1)),
     ("C39", "M11", lambda c: c["parityKotlin"]["cases"].append(c["parityKotlin"]["cases"][0])),
+    ("C40", "M8", lambda c: c["parityPython"]["cases"][0]["default"].__setitem__(
+        "maskedTextHash", "sha256:" + "6" * 64)),
+    ("C41", "M8", lambda c: c["parityPython"]["cases"].pop()),
+    ("C42", "M11", lambda c: [cc.__setitem__("noAllowlist", cc["default"]) for cc in c["parityKotlin"]["cases"]]),
+    ("C43", "M11", lambda c: [cc.__setitem__("namesDisabled", cc["default"]) for cc in c["parityKotlin"]["cases"]]),
+    ("C44", "M11", lambda c: c["parityKotlin"].__setitem__("policies", ["default", "lengthPreserving"])),
+    ("C45", "M2", lambda c: c["parityKotlin"]["cases"][0].__setitem__("inputChars", True)
+     or c["parityPython"]["cases"][0].__setitem__("inputChars", 1)),
 ]
 
 

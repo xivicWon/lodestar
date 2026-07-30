@@ -57,6 +57,13 @@ class MaskPolicy:
 
 @dataclass(frozen=True)
 class MaskSpan:
+    """마스킹 스팬.
+
+    `start`·`end` 는 **이 엔진의 인덱스 단위(코드포인트)** 다 — Python 문자열을 그 좌표로 안전하게
+    자르기 위해서다. Kotlin 엔진은 같은 자리를 UTF-16 코드 단위로 센다. 좌표를 **남기거나 두 엔진을
+    비교할 때는** [spans_utf16]/[utf16_offset] 로 변환해야 한다(규칙 스펙 `spanContract`).
+    """
+
     start: int
     end: int
     rule_id: str
@@ -225,6 +232,15 @@ class MaskLedger:
 
 def with_length_preserving(policy: MaskPolicy | None) -> MaskPolicy:
     return replace(policy or MaskPolicy(), length_preserving=True)
+
+
+def spans_utf16(text: str, spans: list[MaskSpan]) -> list[MaskSpan]:
+    """스팬 좌표를 UTF-16 코드 단위로 변환한다 — 기록·교차 엔진 비교용 진입점.
+
+    이 변환을 빼면 BMP 밖 문자가 앞에 있는 입력에서 Kotlin 이 보는 좌표와 어긋난다.
+    """
+    return [MaskSpan(utf16_offset(text, s.start), utf16_offset(text, s.end), s.rule_id, s.cls)
+            for s in spans]
 
 
 def utf16_offset(text: str, index: int) -> int:

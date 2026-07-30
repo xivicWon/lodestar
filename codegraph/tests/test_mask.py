@@ -175,6 +175,21 @@ def test_utf16_offset_matches_kotlin_string_indexing():
     assert utf16_offset(text, span.start) == span.start + 1
 
 
+def test_spans_utf16_converts_for_records_and_cross_engine_compare():
+    """엔진의 raw 스팬은 코드포인트 단위다 — 기록·비교 전에 변환해야 Kotlin 좌표와 같다."""
+    from lodestar_codegraph.mask import detect, spans_utf16
+
+    text = "😀 mail=hong@example.com"
+    raw = detect(text)
+    conv = spans_utf16(text, raw)
+    assert [(s.start, s.end) for s in raw] == [(7, 23)]      # 코드포인트
+    assert [(s.start, s.end) for s in conv] == [(8, 24)]     # UTF-16 (Kotlin 이 보는 값)
+    assert text[raw[0].start:raw[0].end] == "hong@example.com"
+    # BMP 전용 입력에서는 두 좌표가 같다 — 그래서 gold 코퍼스만으로는 이 계약이 검증되지 않는다
+    bmp = "mail=hong@example.com"
+    assert [(s.start, s.end) for s in detect(bmp)] == [(s.start, s.end) for s in spans_utf16(bmp, detect(bmp))]
+
+
 def test_length_preserving_keeps_newlines_so_line_numbers_hold():
     """여러 줄 값을 '*' 로 통째로 덮으면 개행이 사라져 뒤따르는 행 좌표가 밀린다."""
     text = f"a\n'{PEM}'\nMARKER"

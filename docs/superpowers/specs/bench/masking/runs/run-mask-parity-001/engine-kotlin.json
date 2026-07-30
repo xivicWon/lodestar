@@ -3,8 +3,8 @@
   "engine" : "kotlin:com.ontostudio.security.MaskingEngine",
   "specVersion" : "masking-rules/v0",
   "fixtureVersion" : "mask-parity-fixture/v1",
-  "fixtureHash" : "sha256:c2ca0a4b3c7f174a2bcbced56d58195cc7ef46454ab56edbff8cc5ec3351173b",
-  "policies" : [ "default", "lengthPreserving" ],
+  "fixtureHash" : "sha256:7da83bae5a1c46ce8782d9839ed2a1f6537a443c6ae8d217807abf04ea11c9c2",
+  "policies" : [ "default", "lengthPreserving", "noAllowlist", "namesDisabled" ],
   "cases" : [ {
     "id" : "PARITY.KEYED.QUOTED_DOUBLE",
     "inputHash" : "sha256:a6c902ebfbc08ad978ce93e390d999105ea2289dbc20121aa21a5409a8254c3e",
@@ -37,6 +37,34 @@
       "byRule" : {
         "SECRET.KEYED_VALUE" : 1
       }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:3b1b75e4a4353210af5d000a497ee1e8e045cc76769e709e00e4d87b36c4fc93",
+      "maskedChars" : 59,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 30,
+        "end" : 44,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:3b1b75e4a4353210af5d000a497ee1e8e045cc76769e709e00e4d87b36c4fc93",
+      "maskedChars" : 59,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 30,
+        "end" : 44,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
     }
   }, {
     "id" : "PARITY.KEYED.QUOTED_SINGLE",
@@ -59,6 +87,34 @@
     },
     "lengthPreserving" : {
       "maskedTextHash" : "sha256:e1197553617cbfebf634e4f50a212803e2ba9f73ca88320116393d809d4b7d8d",
+      "maskedChars" : 42,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 14,
+        "end" : 31,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:cc6327624038507d741051570cd45985718eba8b6161ea073df82d6cbfc8ec0f",
+      "maskedChars" : 42,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 14,
+        "end" : 31,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:cc6327624038507d741051570cd45985718eba8b6161ea073df82d6cbfc8ec0f",
       "maskedChars" : 42,
       "maskedLines" : 1,
       "spans" : [ {
@@ -103,6 +159,34 @@
       "byRule" : {
         "SECRET.KEYED_VALUE" : 1
       }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:dd241d0b8d4b575be57fe2db2a2dd15c9e9f374d904c69589134de9a18cccaba",
+      "maskedChars" : 50,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 12,
+        "end" : 22,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:dd241d0b8d4b575be57fe2db2a2dd15c9e9f374d904c69589134de9a18cccaba",
+      "maskedChars" : 50,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 12,
+        "end" : 22,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
     }
   }, {
     "id" : "PARITY.KEYED.BARE",
@@ -126,6 +210,34 @@
     "lengthPreserving" : {
       "maskedTextHash" : "sha256:1629844100a80e59623535753cfacdc091c84270ef543c387dc34557522551b1",
       "maskedChars" : 36,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 9,
+        "end" : 25,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:d63f8077a86e41811f5a07b2f628a2a330bc05cc47f5a26198e9cad5205b27f0",
+      "maskedChars" : 37,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 9,
+        "end" : 25,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:d63f8077a86e41811f5a07b2f628a2a330bc05cc47f5a26198e9cad5205b27f0",
+      "maskedChars" : 37,
       "maskedLines" : 1,
       "spans" : [ {
         "start" : 9,
@@ -169,6 +281,34 @@
       "byRule" : {
         "SECRET.URL_CREDENTIAL" : 1
       }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:4335165341dc80526a8920fde3060d876a9d115c555e76076f0be47ca09ee1ce",
+      "maskedChars" : 59,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 15,
+        "end" : 22,
+        "ruleId" : "SECRET.URL_CREDENTIAL",
+        "class" : "URL_CREDENTIAL"
+      } ],
+      "byRule" : {
+        "SECRET.URL_CREDENTIAL" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:4335165341dc80526a8920fde3060d876a9d115c555e76076f0be47ca09ee1ce",
+      "maskedChars" : 59,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 15,
+        "end" : 22,
+        "ruleId" : "SECRET.URL_CREDENTIAL",
+        "class" : "URL_CREDENTIAL"
+      } ],
+      "byRule" : {
+        "SECRET.URL_CREDENTIAL" : 1
+      }
     }
   }, {
     "id" : "PARITY.URL.COLON_IN_PASSWORD",
@@ -202,6 +342,34 @@
       "byRule" : {
         "SECRET.URL_CREDENTIAL" : 1
       }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:739444a116a2f1c459e73f61cf778c0609c35a56177ab7e00d6183ebadf05b35",
+      "maskedChars" : 44,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 14,
+        "end" : 22,
+        "ruleId" : "SECRET.URL_CREDENTIAL",
+        "class" : "URL_CREDENTIAL"
+      } ],
+      "byRule" : {
+        "SECRET.URL_CREDENTIAL" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:739444a116a2f1c459e73f61cf778c0609c35a56177ab7e00d6183ebadf05b35",
+      "maskedChars" : 44,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 14,
+        "end" : 22,
+        "ruleId" : "SECRET.URL_CREDENTIAL",
+        "class" : "URL_CREDENTIAL"
+      } ],
+      "byRule" : {
+        "SECRET.URL_CREDENTIAL" : 1
+      }
     }
   }, {
     "id" : "PARITY.URL.NO_CREDENTIAL",
@@ -216,6 +384,20 @@
       "byRule" : { }
     },
     "lengthPreserving" : {
+      "maskedTextHash" : "sha256:fc8a053a19d6d2e55e029af3d54fda310a676a554110b236d792f21cbb2432f0",
+      "maskedChars" : 41,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:fc8a053a19d6d2e55e029af3d54fda310a676a554110b236d792f21cbb2432f0",
+      "maskedChars" : 41,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "namesDisabled" : {
       "maskedTextHash" : "sha256:fc8a053a19d6d2e55e029af3d54fda310a676a554110b236d792f21cbb2432f0",
       "maskedChars" : 41,
       "maskedLines" : 1,
@@ -245,6 +427,34 @@
       "maskedTextHash" : "sha256:9dc350cf924782e955a74d89178693cc70a4cff4590e31ad91b77178d65ea4e9",
       "maskedChars" : 148,
       "maskedLines" : 6,
+      "spans" : [ {
+        "start" : 5,
+        "end" : 136,
+        "ruleId" : "SECRET.PRIVATE_KEY_BLOCK",
+        "class" : "PRIVATE_KEY"
+      } ],
+      "byRule" : {
+        "SECRET.PRIVATE_KEY_BLOCK" : 1
+      }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:e913145769003309545eb02afe6928c4e4b1d47e37fa38585787c045a90206fc",
+      "maskedChars" : 37,
+      "maskedLines" : 3,
+      "spans" : [ {
+        "start" : 5,
+        "end" : 136,
+        "ruleId" : "SECRET.PRIVATE_KEY_BLOCK",
+        "class" : "PRIVATE_KEY"
+      } ],
+      "byRule" : {
+        "SECRET.PRIVATE_KEY_BLOCK" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:e913145769003309545eb02afe6928c4e4b1d47e37fa38585787c045a90206fc",
+      "maskedChars" : 37,
+      "maskedLines" : 3,
       "spans" : [ {
         "start" : 5,
         "end" : 136,
@@ -287,6 +497,34 @@
       "byRule" : {
         "SECRET.PRIVATE_KEY_BLOCK" : 1
       }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:f29b73f960313641d0da75d5d14dccb36c7b4d84289350e85b5a47acf4a7c615",
+      "maskedChars" : 51,
+      "maskedLines" : 3,
+      "spans" : [ {
+        "start" : 0,
+        "end" : 35,
+        "ruleId" : "SECRET.PRIVATE_KEY_BLOCK",
+        "class" : "PRIVATE_KEY"
+      } ],
+      "byRule" : {
+        "SECRET.PRIVATE_KEY_BLOCK" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:f29b73f960313641d0da75d5d14dccb36c7b4d84289350e85b5a47acf4a7c615",
+      "maskedChars" : 51,
+      "maskedLines" : 3,
+      "spans" : [ {
+        "start" : 0,
+        "end" : 35,
+        "ruleId" : "SECRET.PRIVATE_KEY_BLOCK",
+        "class" : "PRIVATE_KEY"
+      } ],
+      "byRule" : {
+        "SECRET.PRIVATE_KEY_BLOCK" : 1
+      }
     }
   }, {
     "id" : "PARITY.ASTRAL.BEFORE_MATCH",
@@ -316,6 +554,46 @@
     "lengthPreserving" : {
       "maskedTextHash" : "sha256:3863d31553a962e883ae13c226fad0be8023c7a6a288a4d4042f85e7079fc8f9",
       "maskedChars" : 51,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 13,
+        "end" : 32,
+        "ruleId" : "PII.EMAIL",
+        "class" : "EMAIL"
+      }, {
+        "start" : 37,
+        "end" : 51,
+        "ruleId" : "PII.KR_RRN",
+        "class" : "KR_RRN"
+      } ],
+      "byRule" : {
+        "PII.EMAIL" : 1,
+        "PII.KR_RRN" : 1
+      }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:2d8ed31f48b3c9065ae74dfcd480f74d94e357f995e6a468456ed582b8441a10",
+      "maskedChars" : 47,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 13,
+        "end" : 32,
+        "ruleId" : "PII.EMAIL",
+        "class" : "EMAIL"
+      }, {
+        "start" : 37,
+        "end" : 51,
+        "ruleId" : "PII.KR_RRN",
+        "class" : "KR_RRN"
+      } ],
+      "byRule" : {
+        "PII.EMAIL" : 1,
+        "PII.KR_RRN" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:2d8ed31f48b3c9065ae74dfcd480f74d94e357f995e6a468456ed582b8441a10",
+      "maskedChars" : 47,
       "maskedLines" : 1,
       "spans" : [ {
         "start" : 13,
@@ -389,6 +667,58 @@
         "PII.IP_ADDRESS" : 1,
         "PII.KR_PHONE" : 1
       }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:5719d56990c5c4984642fa368cadf94ae04609a5a9b7cf21b1f69241790197db",
+      "maskedChars" : 69,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 3,
+        "end" : 15,
+        "ruleId" : "PII.IP_ADDRESS",
+        "class" : "IP_ADDRESS"
+      }, {
+        "start" : 24,
+        "end" : 40,
+        "ruleId" : "PII.CARD_NO_PLAIN",
+        "class" : "CARD_NO"
+      }, {
+        "start" : 48,
+        "end" : 61,
+        "ruleId" : "PII.KR_PHONE",
+        "class" : "PHONE"
+      } ],
+      "byRule" : {
+        "PII.CARD_NO_PLAIN" : 1,
+        "PII.IP_ADDRESS" : 1,
+        "PII.KR_PHONE" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:5719d56990c5c4984642fa368cadf94ae04609a5a9b7cf21b1f69241790197db",
+      "maskedChars" : 69,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 3,
+        "end" : 15,
+        "ruleId" : "PII.IP_ADDRESS",
+        "class" : "IP_ADDRESS"
+      }, {
+        "start" : 24,
+        "end" : 40,
+        "ruleId" : "PII.CARD_NO_PLAIN",
+        "class" : "CARD_NO"
+      }, {
+        "start" : 48,
+        "end" : 61,
+        "ruleId" : "PII.KR_PHONE",
+        "class" : "PHONE"
+      } ],
+      "byRule" : {
+        "PII.CARD_NO_PLAIN" : 1,
+        "PII.IP_ADDRESS" : 1,
+        "PII.KR_PHONE" : 1
+      }
     }
   }, {
     "id" : "PARITY.HANGUL.NAME_DELIMITERS",
@@ -432,6 +762,32 @@
       "byRule" : {
         "PII.KR_NAME" : 2
       }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:4d3536bfafdf52abf31c3309550b6b7154dbfbe2674d28ec76fd759420f202bf",
+      "maskedChars" : 60,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 6,
+        "end" : 9,
+        "ruleId" : "PII.KR_NAME",
+        "class" : "NAME"
+      }, {
+        "start" : 12,
+        "end" : 15,
+        "ruleId" : "PII.KR_NAME",
+        "class" : "NAME"
+      } ],
+      "byRule" : {
+        "PII.KR_NAME" : 2
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:781f69b1a7f9795bf7ec8f7c76273c8d0fd2b147ab5fed5cc8f093a43e0a68af",
+      "maskedChars" : 40,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
     }
   }, {
     "id" : "PARITY.LUHN.BOUNDARY",
@@ -454,6 +810,34 @@
     },
     "lengthPreserving" : {
       "maskedTextHash" : "sha256:8237ec104b539a8399cd77d9d1072c8dbfb93e8ae7296b8dc092944bcc66df47",
+      "maskedChars" : 42,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 5,
+        "end" : 21,
+        "ruleId" : "PII.CARD_NO_PLAIN",
+        "class" : "CARD_NO"
+      } ],
+      "byRule" : {
+        "PII.CARD_NO_PLAIN" : 1
+      }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:10a4dfaf8e750abbb8a23d3c5139a43bc0a29b864c5701eb663e1baf81e0e95a",
+      "maskedChars" : 42,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 5,
+        "end" : 21,
+        "ruleId" : "PII.CARD_NO_PLAIN",
+        "class" : "CARD_NO"
+      } ],
+      "byRule" : {
+        "PII.CARD_NO_PLAIN" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:10a4dfaf8e750abbb8a23d3c5139a43bc0a29b864c5701eb663e1baf81e0e95a",
       "maskedChars" : 42,
       "maskedLines" : 1,
       "spans" : [ {
@@ -498,6 +882,34 @@
       "byRule" : {
         "SECRET.JWT" : 1
       }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:0f6cc03c6c0cdf58cf827b1b4a1848fecbe3f1ac2384e29c1c59f893061af5e4",
+      "maskedChars" : 33,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 21,
+        "end" : 69,
+        "ruleId" : "SECRET.JWT",
+        "class" : "JWT"
+      } ],
+      "byRule" : {
+        "SECRET.JWT" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:0f6cc03c6c0cdf58cf827b1b4a1848fecbe3f1ac2384e29c1c59f893061af5e4",
+      "maskedChars" : 33,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 21,
+        "end" : 69,
+        "ruleId" : "SECRET.JWT",
+        "class" : "JWT"
+      } ],
+      "byRule" : {
+        "SECRET.JWT" : 1
+      }
     }
   }, {
     "id" : "PARITY.IDEMPOTENCE.MASK_TOKEN",
@@ -531,6 +943,40 @@
       "byRule" : {
         "PII.KR_RRN" : 1
       }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:fa3ff32d1526dee0ef2026146277637f43f6dc6563325b686d75bed8cdfb5dbf",
+      "maskedChars" : 46,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 9,
+        "end" : 26,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      }, {
+        "start" : 31,
+        "end" : 45,
+        "ruleId" : "PII.KR_RRN",
+        "class" : "KR_RRN"
+      } ],
+      "byRule" : {
+        "PII.KR_RRN" : 1,
+        "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:fa3ff32d1526dee0ef2026146277637f43f6dc6563325b686d75bed8cdfb5dbf",
+      "maskedChars" : 46,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 31,
+        "end" : 45,
+        "ruleId" : "PII.KR_RRN",
+        "class" : "KR_RRN"
+      } ],
+      "byRule" : {
+        "PII.KR_RRN" : 1
+      }
     }
   }, {
     "id" : "PARITY.ALLOWLIST.TRACKING_VALUES",
@@ -545,6 +991,20 @@
       "byRule" : { }
     },
     "lengthPreserving" : {
+      "maskedTextHash" : "sha256:5bf6342274c2f9fbdaf78199d905e6daa58c93d4c401b9a2b959d912674306d7",
+      "maskedChars" : 182,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:5bf6342274c2f9fbdaf78199d905e6daa58c93d4c401b9a2b959d912674306d7",
+      "maskedChars" : 182,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "namesDisabled" : {
       "maskedTextHash" : "sha256:5bf6342274c2f9fbdaf78199d905e6daa58c93d4c401b9a2b959d912674306d7",
       "maskedChars" : 182,
       "maskedLines" : 1,
@@ -595,6 +1055,46 @@
         "PII.EMAIL" : 1,
         "PII.KR_PHONE" : 1
       }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:839f4c545423a9735e59928d5c2c2c26f090b9ac692a6f288b4fb0bafdc0301c",
+      "maskedChars" : 122,
+      "maskedLines" : 5,
+      "spans" : [ {
+        "start" : 20,
+        "end" : 39,
+        "ruleId" : "PII.EMAIL",
+        "class" : "EMAIL"
+      }, {
+        "start" : 103,
+        "end" : 116,
+        "ruleId" : "PII.KR_PHONE",
+        "class" : "PHONE"
+      } ],
+      "byRule" : {
+        "PII.EMAIL" : 1,
+        "PII.KR_PHONE" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:839f4c545423a9735e59928d5c2c2c26f090b9ac692a6f288b4fb0bafdc0301c",
+      "maskedChars" : 122,
+      "maskedLines" : 5,
+      "spans" : [ {
+        "start" : 20,
+        "end" : 39,
+        "ruleId" : "PII.EMAIL",
+        "class" : "EMAIL"
+      }, {
+        "start" : 103,
+        "end" : 116,
+        "ruleId" : "PII.KR_PHONE",
+        "class" : "PHONE"
+      } ],
+      "byRule" : {
+        "PII.EMAIL" : 1,
+        "PII.KR_PHONE" : 1
+      }
     }
   }, {
     "id" : "PARITY.EMPTY.EDGE",
@@ -627,6 +1127,468 @@
       } ],
       "byRule" : {
         "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:e95784a35d75b85113436493f6fe9549ebe8c89e7cea090ca4ac965d06ac2bb4",
+      "maskedChars" : 38,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 10,
+        "end" : 17,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:e95784a35d75b85113436493f6fe9549ebe8c89e7cea090ca4ac965d06ac2bb4",
+      "maskedChars" : 38,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 10,
+        "end" : 17,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    }
+  }, {
+    "id" : "PARITY.ALLOWLIST.PRECEDENCE_GIT_SHA",
+    "inputHash" : "sha256:d2a5bf1650f9a0f4c1ce6c13114a862923f81a87aa1f28ce022ac5a060088b1c",
+    "inputChars" : 49,
+    "inputLines" : 1,
+    "default" : {
+      "maskedTextHash" : "sha256:d2a5bf1650f9a0f4c1ce6c13114a862923f81a87aa1f28ce022ac5a060088b1c",
+      "maskedChars" : 49,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "lengthPreserving" : {
+      "maskedTextHash" : "sha256:d2a5bf1650f9a0f4c1ce6c13114a862923f81a87aa1f28ce022ac5a060088b1c",
+      "maskedChars" : 49,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:5a65279b79c9e77deb81d9a7e77cbbb7d517f6871699b176883ab9ab4f772e23",
+      "maskedChars" : 26,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 9,
+        "end" : 49,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:d2a5bf1650f9a0f4c1ce6c13114a862923f81a87aa1f28ce022ac5a060088b1c",
+      "maskedChars" : 49,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    }
+  }, {
+    "id" : "PARITY.ALLOWLIST.PRECEDENCE_CONTENT_HASH",
+    "inputHash" : "sha256:5d8f915c6e5948cd89a762265290e987a012303663a9ed0b5bb24871675dbfaf",
+    "inputChars" : 78,
+    "inputLines" : 1,
+    "default" : {
+      "maskedTextHash" : "sha256:5d8f915c6e5948cd89a762265290e987a012303663a9ed0b5bb24871675dbfaf",
+      "maskedChars" : 78,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "lengthPreserving" : {
+      "maskedTextHash" : "sha256:5d8f915c6e5948cd89a762265290e987a012303663a9ed0b5bb24871675dbfaf",
+      "maskedChars" : 78,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:c1c728728fb1764352401766811e8986415ee7e565605321d672749cf50bb4af",
+      "maskedChars" : 24,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 7,
+        "end" : 78,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:5d8f915c6e5948cd89a762265290e987a012303663a9ed0b5bb24871675dbfaf",
+      "maskedChars" : 78,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    }
+  }, {
+    "id" : "PARITY.ALLOWLIST.PRECEDENCE_UUID",
+    "inputHash" : "sha256:0edcc77c1fc71fca1d7a931851acf154a716930f85aaaaa67239193e8ff5b70b",
+    "inputChars" : 42,
+    "inputLines" : 1,
+    "default" : {
+      "maskedTextHash" : "sha256:0edcc77c1fc71fca1d7a931851acf154a716930f85aaaaa67239193e8ff5b70b",
+      "maskedChars" : 42,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "lengthPreserving" : {
+      "maskedTextHash" : "sha256:0edcc77c1fc71fca1d7a931851acf154a716930f85aaaaa67239193e8ff5b70b",
+      "maskedChars" : 42,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:6f0f5b87df6a7f5162d8dcdff91b5e3bd56309aa0796d4bf5cb19df8b48c2bac",
+      "maskedChars" : 23,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 6,
+        "end" : 42,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:0edcc77c1fc71fca1d7a931851acf154a716930f85aaaaa67239193e8ff5b70b",
+      "maskedChars" : 42,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    }
+  }, {
+    "id" : "PARITY.ALLOWLIST.PRECEDENCE_TIMESTAMP",
+    "inputHash" : "sha256:76c26470198173506b9803086463fed734d563cc96ab6a6089b4b5862d490921",
+    "inputChars" : 36,
+    "inputLines" : 1,
+    "default" : {
+      "maskedTextHash" : "sha256:76c26470198173506b9803086463fed734d563cc96ab6a6089b4b5862d490921",
+      "maskedChars" : 36,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "lengthPreserving" : {
+      "maskedTextHash" : "sha256:76c26470198173506b9803086463fed734d563cc96ab6a6089b4b5862d490921",
+      "maskedChars" : 36,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:43500bbe68c90efb3448a0940e9e984fb8f43e5afa6469a9fee02058f083104d",
+      "maskedChars" : 43,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 7,
+        "end" : 17,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:76c26470198173506b9803086463fed734d563cc96ab6a6089b4b5862d490921",
+      "maskedChars" : 36,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    }
+  }, {
+    "id" : "PARITY.ALLOWLIST.PRECEDENCE_INTERNAL_ID",
+    "inputHash" : "sha256:f84ebc41c7c76137dd0574c45873a30a3441075e905adede2b005d501065a9b4",
+    "inputChars" : 19,
+    "inputLines" : 1,
+    "default" : {
+      "maskedTextHash" : "sha256:f84ebc41c7c76137dd0574c45873a30a3441075e905adede2b005d501065a9b4",
+      "maskedChars" : 19,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "lengthPreserving" : {
+      "maskedTextHash" : "sha256:f84ebc41c7c76137dd0574c45873a30a3441075e905adede2b005d501065a9b4",
+      "maskedChars" : 19,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:a314078a31452fb0f0d25b3e261b8c3e7235c3f33468d69e646a61d4f9372108",
+      "maskedChars" : 24,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 7,
+        "end" : 19,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:f84ebc41c7c76137dd0574c45873a30a3441075e905adede2b005d501065a9b4",
+      "maskedChars" : 19,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    }
+  }, {
+    "id" : "PARITY.URL.JDBC_WITH_CREDENTIAL",
+    "inputHash" : "sha256:c88f174c3bbab186eade1afcf98ab78b41f22129e0a71b67da8428e385f16ea9",
+    "inputChars" : 63,
+    "inputLines" : 1,
+    "default" : {
+      "maskedTextHash" : "sha256:03eb928894863d12a9f8196b109784b4debeadf6d201b77af6598cb90857199c",
+      "maskedChars" : 79,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 44,
+        "end" : 51,
+        "ruleId" : "SECRET.URL_CREDENTIAL",
+        "class" : "URL_CREDENTIAL"
+      } ],
+      "byRule" : {
+        "SECRET.URL_CREDENTIAL" : 1
+      }
+    },
+    "lengthPreserving" : {
+      "maskedTextHash" : "sha256:ee1c0e5eb9f5c18908d392fb9dc864f44d5810f9020263ec8cecbe5eeec160c3",
+      "maskedChars" : 63,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 44,
+        "end" : 51,
+        "ruleId" : "SECRET.URL_CREDENTIAL",
+        "class" : "URL_CREDENTIAL"
+      } ],
+      "byRule" : {
+        "SECRET.URL_CREDENTIAL" : 1
+      }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:03eb928894863d12a9f8196b109784b4debeadf6d201b77af6598cb90857199c",
+      "maskedChars" : 79,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 44,
+        "end" : 51,
+        "ruleId" : "SECRET.URL_CREDENTIAL",
+        "class" : "URL_CREDENTIAL"
+      } ],
+      "byRule" : {
+        "SECRET.URL_CREDENTIAL" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:03eb928894863d12a9f8196b109784b4debeadf6d201b77af6598cb90857199c",
+      "maskedChars" : 79,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 44,
+        "end" : 51,
+        "ruleId" : "SECRET.URL_CREDENTIAL",
+        "class" : "URL_CREDENTIAL"
+      } ],
+      "byRule" : {
+        "SECRET.URL_CREDENTIAL" : 1
+      }
+    }
+  }, {
+    "id" : "PARITY.EMPTY.DOUBLE_QUOTED",
+    "inputHash" : "sha256:0703825b177d68d8309eb28f2fc04b15dc46112d97cea6ac7d599f6cde9efae3",
+    "inputChars" : 9,
+    "inputLines" : 1,
+    "default" : {
+      "maskedTextHash" : "sha256:0703825b177d68d8309eb28f2fc04b15dc46112d97cea6ac7d599f6cde9efae3",
+      "maskedChars" : 9,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "lengthPreserving" : {
+      "maskedTextHash" : "sha256:0703825b177d68d8309eb28f2fc04b15dc46112d97cea6ac7d599f6cde9efae3",
+      "maskedChars" : 9,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:0703825b177d68d8309eb28f2fc04b15dc46112d97cea6ac7d599f6cde9efae3",
+      "maskedChars" : 9,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:0703825b177d68d8309eb28f2fc04b15dc46112d97cea6ac7d599f6cde9efae3",
+      "maskedChars" : 9,
+      "maskedLines" : 1,
+      "spans" : [ ],
+      "byRule" : { }
+    }
+  }, {
+    "id" : "PARITY.SCHEME.BASIC_AND_TOKEN",
+    "inputHash" : "sha256:dedd5161a60d1f95b52ba3dee40787c126174d72a3716a214b3a48f985592edc",
+    "inputChars" : 76,
+    "inputLines" : 1,
+    "default" : {
+      "maskedTextHash" : "sha256:22f56b68cfa754bde95b699d78589a29478867bfc8e5e72a14bdf3eb13e3dbc9",
+      "maskedChars" : 69,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 20,
+        "end" : 44,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "lengthPreserving" : {
+      "maskedTextHash" : "sha256:12e99f056bbc0f0c2bdd470a3be55f093709856e65733ab88b8829816cf8e6d0",
+      "maskedChars" : 76,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 20,
+        "end" : 44,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:22f56b68cfa754bde95b699d78589a29478867bfc8e5e72a14bdf3eb13e3dbc9",
+      "maskedChars" : 69,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 20,
+        "end" : 44,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:22f56b68cfa754bde95b699d78589a29478867bfc8e5e72a14bdf3eb13e3dbc9",
+      "maskedChars" : 69,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 20,
+        "end" : 44,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
+    }
+  }, {
+    "id" : "PARITY.NAME.CLASS_TOGGLE",
+    "inputHash" : "sha256:469e37e21d5d5bca288eb13b8bcc7f2db7f5489ede43c525a0bbb9614cb8ae7b",
+    "inputChars" : 34,
+    "inputLines" : 1,
+    "default" : {
+      "maskedTextHash" : "sha256:6942cccd99a994139c34897a9f6151769d4b8d0ef0875fbf2cd343c4c71657bb",
+      "maskedChars" : 39,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 6,
+        "end" : 9,
+        "ruleId" : "PII.KR_NAME",
+        "class" : "NAME"
+      }, {
+        "start" : 15,
+        "end" : 34,
+        "ruleId" : "PII.EMAIL",
+        "class" : "EMAIL"
+      } ],
+      "byRule" : {
+        "PII.EMAIL" : 1,
+        "PII.KR_NAME" : 1
+      }
+    },
+    "lengthPreserving" : {
+      "maskedTextHash" : "sha256:9267cbce8ab7ecfb319e862f0f7aeb2473fbce1a5a65fc7ada3f2b05d27c562b",
+      "maskedChars" : 34,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 6,
+        "end" : 9,
+        "ruleId" : "PII.KR_NAME",
+        "class" : "NAME"
+      }, {
+        "start" : 15,
+        "end" : 34,
+        "ruleId" : "PII.EMAIL",
+        "class" : "EMAIL"
+      } ],
+      "byRule" : {
+        "PII.EMAIL" : 1,
+        "PII.KR_NAME" : 1
+      }
+    },
+    "noAllowlist" : {
+      "maskedTextHash" : "sha256:6942cccd99a994139c34897a9f6151769d4b8d0ef0875fbf2cd343c4c71657bb",
+      "maskedChars" : 39,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 6,
+        "end" : 9,
+        "ruleId" : "PII.KR_NAME",
+        "class" : "NAME"
+      }, {
+        "start" : 15,
+        "end" : 34,
+        "ruleId" : "PII.EMAIL",
+        "class" : "EMAIL"
+      } ],
+      "byRule" : {
+        "PII.EMAIL" : 1,
+        "PII.KR_NAME" : 1
+      }
+    },
+    "namesDisabled" : {
+      "maskedTextHash" : "sha256:c09f43af75e40c8c9b7daf9e2be64bb59ad4d9212321de3d6b37ad22fadf4778",
+      "maskedChars" : 29,
+      "maskedLines" : 1,
+      "spans" : [ {
+        "start" : 15,
+        "end" : 34,
+        "ruleId" : "PII.EMAIL",
+        "class" : "EMAIL"
+      } ],
+      "byRule" : {
+        "PII.EMAIL" : 1
       }
     }
   } ]

@@ -4,7 +4,12 @@
   "purpose": "두 엔진(Kotlin `com.ontostudio.security.MaskingEngine` · Python `lodestar_codegraph.mask`)이 **같은 입력에 같은 결과**를 내는지 보는 픽스처다. gold(#99)와 성격이 다르다: gold 는 승인된 **정답**이고 정오를 판정하지만, 이 픽스처에는 정답이 없다 — 여기서 확정하는 것은 '두 엔진이 갈리지 않는다' 하나다. 정확성 판정은 gold 가 한다.",
   "why": "gold 코퍼스는 이번에 신설·수정된 분기를 지나가지 않는다: 따옴표로 묶인 키드 시크릿(대안 그룹), '@' 가 든 URL 비밀번호, 여러 줄 PEM 블록, 잘린 PEM, BMP 밖 문자(스팬 좌표 단위), 길이 보존 모드의 개행 보존. 그 분기에서 두 엔진이 갈려도 gold 증거만으로는 조용히 통과한다.",
   "values": "전부 합성 값이며 실존 개인·계정·자격증명이 아니다. gold 와 겹치지 않는 값을 골라 이 픽스처가 정답셋으로 오인되지 않게 했다.",
-  "policies": ["default", "lengthPreserving"],
+  "policies": [
+    "default",
+    "lengthPreserving",
+    "noAllowlist",
+    "namesDisabled"
+  ],
   "cases": [
     {
       "id": "PARITY.KEYED.QUOTED_DOUBLE",
@@ -38,7 +43,7 @@
     },
     {
       "id": "PARITY.URL.NO_CREDENTIAL",
-      "note": "자격증명 없는 접속 URL — 가리면 오탐(allowlist 가 이긴다)",
+      "note": "자격증명 없는 접속 URL — 어떤 탐지 규칙도 발화하지 않는다(오탐 부재). allowlist 우선순위는 아래 PRECEDENCE 케이스들이 본다",
       "text": "jdbc:postgresql://localhost:5432/lodestar"
     },
     {
@@ -83,7 +88,7 @@
     },
     {
       "id": "PARITY.ALLOWLIST.TRACKING_VALUES",
-      "note": "가리면 추적이 끊기는 값들 — 전부 남아야 한다",
+      "note": "가리면 추적이 끊기는 값들이 그대로 남는다. 이 케이스에서는 탐지 규칙이 애초에 발화하지 않으므로 '눌렀다' 가 아니라 '건드리지 않았다' 를 보인다",
       "text": "build=3c27259fe6c979e00912c5e3686c611a28cb977e trace=550e8400-e29b-41d4-a716-446655440000 hash=sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94 id=ITM000000009"
     },
     {
@@ -93,8 +98,54 @@
     },
     {
       "id": "PARITY.EMPTY.EDGE",
-      "note": "빈 값·경계 — 스팬이 0폭이면 만들지 않는다",
+      "note": "빈 값·경계. 앞선 `password=` 매치가 뒤 텍스트를 값으로 삼키므로 홑따옴표 0폭 분기만 여기서 도달한다 — 큰따옴표 0폭은 아래 단독 케이스가 본다",
       "text": "password= secret=\"\" token=''"
+    },
+    {
+      "id": "PARITY.ALLOWLIST.PRECEDENCE_GIT_SHA",
+      "note": "키드 시크릿 규칙이 발화할 자리인데 ALLOW.GIT_SHA 가 이긴다 — allowlist 우선순위가 실제로 탐지를 누르는 자리(§잔여 위험의 교환)",
+      "text": "password=3c27259fe6c979e00912c5e3686c611a28cb977e"
+    },
+    {
+      "id": "PARITY.ALLOWLIST.PRECEDENCE_CONTENT_HASH",
+      "note": "ALLOW.CONTENT_HASH 가 키드 시크릿 탐지를 누른다 — 가리면 fixture 해시 대조가 끊긴다",
+      "text": "secret=sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94"
+    },
+    {
+      "id": "PARITY.ALLOWLIST.PRECEDENCE_UUID",
+      "note": "ALLOW.UUID 가 키드 시크릿 탐지를 누른다",
+      "text": "token=550e8400-e29b-41d4-a716-446655440000"
+    },
+    {
+      "id": "PARITY.ALLOWLIST.PRECEDENCE_TIMESTAMP",
+      "note": "ALLOW.TIMESTAMP 가 키드 시크릿 탐지를 누른다 — 이 allow 규칙은 다른 케이스에서 한 번도 발화하지 않았다",
+      "text": "secret=2024-01-05 11:20:00 next=keep"
+    },
+    {
+      "id": "PARITY.ALLOWLIST.PRECEDENCE_INTERNAL_ID",
+      "note": "ALLOW.INTERNAL_ID 가 키드 시크릿 탐지를 누른다",
+      "text": "apiKey=ITM000000009"
+    },
+    {
+      "id": "PARITY.URL.JDBC_WITH_CREDENTIAL",
+      "note": "ALLOW.JDBC_URL 의 부정 선행이 자격증명 있는 URL 에서 **매치되지 않아야** URL_CREDENTIAL 이 이긴다 — 그 분기는 jdbc 스킴에서만 열린다",
+      "text": "spring.datasource.url=jdbc:postgresql://svc:Pw@zz-9@db:5432/app"
+    },
+    {
+      "id": "PARITY.EMPTY.DOUBLE_QUOTED",
+      "note": "큰따옴표 빈 값 — 0폭 스팬은 만들지 않는다(대안 그룹 1의 0폭 분기)",
+      "text": "secret=\"\""
+    },
+    {
+      "id": "PARITY.SCHEME.BASIC_AND_TOKEN",
+      "note": "Basic·Token 접두도 스킴이므로 남고 값만 가린다(Bearer 외 분기)",
+      "text": "authorization=Basic ZmFrZTpmYWtlLW5vdC1yZWFs and x_token: Token tk-fake-0001"
+    },
+    {
+      "id": "PARITY.NAME.CLASS_TOGGLE",
+      "note": "namesDisabled 정책에서 인명이 남아야 한다 — 클래스 비활성화 분기의 관측 지점",
+      "text": "owner=박서준 mail=park.sj@example.net"
     }
-  ]
+  ],
+  "policyNote": "정책 4종을 각각 잰다. `noAllowlist`·`namesDisabled` 는 두 엔진의 **정책 분기**(allowlist 끄기 · 클래스 비활성화)를 지나가게 하려고 있다 — 기본 정책만 재면 그 분기에서 갈려도 조용히 통과한다. 덧붙여 `default` 와 `noAllowlist` 의 스팬 차이는 'allowlist 가 실제로 탐지를 눌렀다' 는 관측이 된다(M11 이 그 발생 건수를 요구한다)."
 }

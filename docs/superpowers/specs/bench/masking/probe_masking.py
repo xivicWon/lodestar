@@ -38,7 +38,7 @@ CODE_OUT = RUNS / "run-mask-code-001" / "emit-code.json"
 sys.path.insert(0, str(REPO / "codegraph/src"))
 from lodestar_codegraph.emit import build_and_write  # noqa: E402
 from lodestar_codegraph.mask import (  # noqa: E402
-    MaskPolicy, detect, load_rules, mask_text, utf16_offset,
+    MaskPolicy, detect, load_rules, mask_text, spans_utf16, utf16_offset,
 )
 from lodestar_codegraph.model import EXTRACTED, Edge, Node  # noqa: E402
 
@@ -180,6 +180,14 @@ def code_path_evidence() -> dict:
 
 
 PARITY_FIXTURE = HERE / "fixtures/parity-cases.json"
+
+# 픽스처의 정책 이름 → 정책. 두 엔진이 같은 이름에 같은 정책을 물려야 하므로 이름도 계약이다.
+PARITY_POLICIES = {
+    "default": MaskPolicy(),
+    "lengthPreserving": MaskPolicy(length_preserving=True),
+    "noAllowlist": MaskPolicy(allowlist_enabled=False),
+    "namesDisabled": MaskPolicy(disabled_classes=frozenset({"NAME"})),
+}
 PARITY_OUT = RUNS / "run-mask-parity-001" / "engine-python.json"
 
 
@@ -201,8 +209,8 @@ def parity_evidence() -> dict:
             "inputChars": utf16_offset(text, len(text)),
             "inputLines": text.count("\n") + 1,
         }
-        for policy_name, policy in (("default", MaskPolicy()),
-                                    ("lengthPreserving", MaskPolicy(length_preserving=True))):
+        for policy_name in fixture["policies"]:
+            policy = PARITY_POLICIES[policy_name]
             result = mask_text(text, policy)
             entry[policy_name] = {
                 # 원문·마스킹 텍스트는 적지 않는다 — 해시와 좌표만 남긴다(#85).
@@ -210,9 +218,8 @@ def parity_evidence() -> dict:
                 "maskedChars": utf16_offset(result.text, len(result.text)),
                 "maskedLines": result.text.count("\n") + 1,
                 "spans": [
-                    {"start": utf16_offset(text, s.start), "end": utf16_offset(text, s.end),
-                     "ruleId": s.rule_id, "class": s.cls}
-                    for s in result.spans
+                    {"start": s.start, "end": s.end, "ruleId": s.rule_id, "class": s.cls}
+                    for s in spans_utf16(text, result.spans)
                 ],
                 "byRule": result.counts,
             }

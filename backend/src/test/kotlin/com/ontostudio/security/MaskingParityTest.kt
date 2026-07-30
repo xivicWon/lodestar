@@ -38,14 +38,19 @@ class MaskingParityTest {
     private fun sha256(bytes: ByteArray) =
         "sha256:" + MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
-    private val policies = listOf(
+    /** 픽스처의 정책 이름 → 정책. 두 엔진이 같은 이름에 같은 정책을 물려야 하므로 이름도 계약이다. */
+    private val policies = mapOf(
         "default" to MaskPolicy(),
         "lengthPreserving" to MaskPolicy(lengthPreserving = true),
+        "noAllowlist" to MaskPolicy(allowlistEnabled = false),
+        "namesDisabled" to MaskPolicy(disabledClasses = setOf("NAME")),
     )
 
     @Test fun `parity evidence is recorded and does not drift`() {
         val fixture = mapper.readTree(fixtureFile)
         assertTrue(fixture["cases"].size() >= 15, "패리티 픽스처가 비었거나 너무 작다")
+        for (n in fixture["policies"]) assertTrue(n.asText() in policies,
+            "픽스처가 선언한 정책을 Kotlin 이 모른다: ${n.asText()}")
 
         val out = mapper.createObjectNode()
         out.put("evidenceVersion", "mask-parity-evidence/v1")
@@ -63,7 +68,9 @@ class MaskingParityTest {
             node.put("inputHash", sha256(text.toByteArray()))
             node.put("inputChars", text.length)
             node.put("inputLines", text.count { it == '\n' } + 1)
-            for ((name, policy) in policies) {
+            for (nameNode in fixture["policies"]) {
+                val name = nameNode.asText()
+                val policy = policies[name] ?: error("모르는 정책 이름: $name")
                 val result = engine.mask(text, policy)
                 node.putObject(name).apply {
                     // 원문·마스킹 텍스트는 적지 않는다 — 해시와 좌표만 남긴다(#85).
@@ -117,6 +124,20 @@ class MaskingParityTest {
         assertTrue("SECRET.PRIVATE_KEY_BLOCK" in rules, "PEM 블록 분기를 지나가지 않는다")
         assertTrue(astral, "BMP 밖 문자가 없으면 좌표 단위 계약이 검증되지 않는다")
         assertTrue(multiline, "여러 줄 입력이 없으면 개행 보존 계약이 검증되지 않는다")
+    }
+
+    /** 정책이 실제로 판정을 바꾸는지 — 바꾸지 않으면 그 정책으로 잰 증거는 아무것도 막지 못한다. */
+    @Test fun `policies actually change the outcome`() {
+        val cases = mapper.readTree(fixtureFile)["cases"].map { it["text"].asText() }
+        val suppressedByAllowlist = cases.count { text ->
+            engine.detect(text, MaskPolicy(allowlistEnabled = false)).size > engine.detect(text).size
+        }
+        assertTrue(suppressedByAllowlist >= 5,
+            "allowlist 가 탐지를 실제로 누르는 케이스가 $suppressedByAllowlist 건뿐이다 — 우선순위 분기가 사실상 미검증이다")
+        val keptByDisabling = cases.count { text ->
+            engine.detect(text, MaskPolicy(disabledClasses = setOf("NAME"))).size < engine.detect(text).size
+        }
+        assertTrue(keptByDisabling >= 1, "클래스 비활성화가 판정을 바꾸는 케이스가 없다")
     }
 
     /** 길이 보존 모드는 UTF-16 문자 수와 행 수를 유지한다 — 두 엔진이 같은 결과를 내야 하는 계약이다. */
