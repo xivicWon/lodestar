@@ -5,7 +5,8 @@
   "maskToken": {
     "template": "[MASKED:{class}]",
     "lengthPreservingChar": "*",
-    "note": "lengthPreserving 컨텍스트(SQL 리터럴 등 길이 제약이 있는 자리)는 원문 길이만큼 '*' 로 바꾸되 **개행은 그대로 둔다** — 문자 수와 행 구조가 보존되므로 컬럼 길이가 넘지 않고 `path#Lnn` 행 좌표도 밀리지 않는다. 여러 바이트 문자를 ASCII '*' 로 바꾸므로 **바이트 오프셋은 보존되지 않는다**(리뷰 LOD-055): 이 계약의 단위는 문자와 행이다. 두 경우 모두 원문은 어디에도 남기지 않는다(#85)."
+    "note": "lengthPreserving 컨텍스트(SQL 리터럴 등 길이 제약이 있는 자리)는 원문 길이만큼 '*' 로 바꾸되 **개행은 그대로 둔다** — 문자 수와 행 구조가 보존되므로 컬럼 길이가 넘지 않고 `path#Lnn` 행 좌표도 밀리지 않는다. 여러 바이트 문자를 ASCII '*' 로 바꾸므로 **바이트 오프셋은 보존되지 않는다**(리뷰 LOD-055): 이 계약의 단위는 문자와 행이다. 두 경우 모두 원문은 어디에도 남기지 않는다(#85).",
+    "valueGroupsNote": "규칙은 `valueGroup`(단일) 또는 `valueGroups`(대안 중 참여한 첫 그룹)로 가릴 구간을 지정한다. 두 엔진이 같은 규칙을 같은 방식으로 해석해야 하므로 이 선택 규칙도 계약이다: 목록 순서대로 보고 **처음 참여한 그룹**을 쓴다."
   },
   "policy": {
     "allowlistEnabled": true,
@@ -97,17 +98,21 @@
       "id": "SECRET.URL_CREDENTIAL",
       "class": "URL_CREDENTIAL",
       "kind": "SECRET",
-      "regex": "(?i)\\b[a-z][a-z0-9+.-]*://[^\\s:/@\"']+:([^\\s/@\"']+)@",
+      "regex": "(?i)\\b[a-z][a-z0-9+.-]*://[^\\s:/@\"']+:([^\\s/\"']+)@",
       "valueGroup": 1,
-      "note": "접속 문자열에 박힌 비밀번호만 가린다 — 호스트·스키마·계정명은 남긴다(#85: 마스킹 후에도 구조 정보 유지)."
+      "note": "접속 문자열에 박힌 비밀번호만 가린다 — 호스트·스키마·계정명은 남긴다(#85: 마스킹 후에도 구조 정보 유지). 값에서 '@' 를 배제하지 않는다: 배제하면 'p@ssw0rd' 가 첫 '@' 에서 끊겨 나머지가 평문으로 남는다(로컬 리뷰). 탐욕 수량자가 마지막 '@' 까지 잡는다."
     },
     {
       "id": "SECRET.KEYED_VALUE",
       "class": "PASSWORD",
       "kind": "SECRET",
-      "regex": "(?i)\\b(?:password|passwd|pwd|secret|apikey|api_key|accesskey|access_key|privatekey|private_key|credential|credentials|token|authorization)[A-Za-z0-9_]{0,12}[\"']?\\s*[:=]\\s*[\"']?(?:Bearer |Basic |Token )?([^\\s,;\"')]+)",
-      "valueGroup": 1,
-      "note": "키 이름이 비밀을 뜻할 때만 값을 가린다. 'username'·'user'·'key'·'path' 는 목록에 없다 — gold 음성(DB_USERNAME · 'key=item:ITM…')이 정확히 그 자리다. Bearer/Basic/Token 접두는 값이 아니라 스킴이므로 남긴다."
+      "regex": "(?i)\\b(?:password|passwd|pwd|secret|apikey|api_key|accesskey|access_key|privatekey|private_key|credential|credentials|token|authorization)[A-Za-z0-9_]{0,12}[\"']?\\s*[:=]\\s*(?:\"([^\"]*)\"|'([^']*)'|(?:Bearer |Basic |Token )?([^\\s,;\"')]+))",
+      "note": "키 이름이 비밀을 뜻할 때만 값을 가린다. 'username'·'user'·'key'·'path' 는 목록에 없다 — gold 음성(DB_USERNAME · 'key=item:ITM…')이 정확히 그 자리다. Bearer/Basic/Token 접두는 값이 아니라 스킴이므로 남긴다. 따옴표로 묶인 값은 **닫는 따옴표까지** 한 덩어리로 잡는다 — 공백에서 끊으면 'abc def' 의 'def' 가 평문으로 남는다(로컬 리뷰).",
+      "valueGroups": [
+        1,
+        2,
+        3
+      ]
     },
     {
       "id": "PII.KR_RRN",

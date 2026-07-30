@@ -46,7 +46,8 @@
           "SECRET.JWT": 2,
           "SECRET.KEYED_VALUE": 3,
           "SECRET.SLACK_TOKEN": 1
-        }
+        },
+        "masked_path_fields": 6
       }
     },
     "bareValue": {
@@ -91,7 +92,8 @@
           "SECRET.GITHUB_TOKEN": 1,
           "SECRET.JWT": 2,
           "SECRET.SLACK_TOKEN": 1
-        }
+        },
+        "masked_path_fields": 5
       }
     }
   },

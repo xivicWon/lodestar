@@ -55,6 +55,27 @@ class SqlTextMaskerTest {
         assertFalse(out.contains("900101-1234567"), "이스케이프 문자열 뒤의 값이 새어나갔다: $out")
     }
 
+    /**
+     * 달러 인용 본문 안의 홀따옴표(영어 축약형 등)는 리터럴 시작이 아니다. 그걸 리터럴로 읽으면
+     * 스캐너가 어긋나 **그 뒤의 진짜 값이 구간 밖으로 빠지고 마스킹되지 않는다**(로컬 리뷰).
+     */
+    @Test fun `dollar quoted body does not desync the scanner`() {
+        val sql = "CREATE FUNCTION f() AS $$ BEGIN RAISE NOTICE 'it can't work'; " +
+            "INSERT INTO LOG VALUES ('900101-1234567'); END $$;\nCREATE TABLE U (ID INT);"
+        val out = masker.mask(sql)
+        assertFalse(out.contains("900101-1234567"), "달러 인용 뒤의 주민번호가 새어나갔다: $out")
+        assertTrue(out.endsWith("CREATE TABLE U (ID INT);"), "구조가 어긋났다: $out")
+        assertEquals(sql.length, out.length)
+    }
+
+    /** 큰따옴표 식별자 안의 홀따옴표도 리터럴 시작이 아니다. */
+    @Test fun `double quoted identifier does not desync the scanner`() {
+        val sql = "CREATE TABLE \"it's\" (ID INT); INSERT INTO T VALUES ('900101-1234567');"
+        val out = masker.mask(sql)
+        assertFalse(out.contains("900101-1234567"), "큰따옴표 식별자 뒤의 주민번호가 새어나갔다: $out")
+        assertTrue(out.contains("\"it's\""), "식별자가 변조됐다: $out")
+    }
+
     @Test fun `nested block comments stay inside the comment`() {
         val sql = "/* outer /* inner */ rrn=900101-1234567 */ CREATE TABLE T (ID INT);"
         val out = masker.mask(sql)

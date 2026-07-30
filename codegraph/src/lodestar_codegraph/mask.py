@@ -28,6 +28,8 @@ class Rule:
     value_group: int = 0
     luhn: bool = False
     kind: str = "ALLOW"
+    # 대안 그룹 — 목록 순서대로 보고 처음 참여한 그룹을 가린다(따옴표 있는 값 / 없는 값 등).
+    value_groups: tuple[int, ...] = ()
 
     def compiled(self) -> re.Pattern[str]:
         return re.compile(self.regex, re.ASCII)
@@ -96,7 +98,8 @@ def load_rules(path: str | pathlib.Path | None = None) -> Rules:
             ),
             detect=tuple(
                 Rule(r["id"], r["class"], r["regex"], int(r.get("valueGroup", 0)),
-                     bool(r.get("luhn", False)), r.get("kind", "DETECT"))
+                     bool(r.get("luhn", False)), r.get("kind", "DETECT"),
+                     tuple(int(g) for g in r.get("valueGroups", ())))
                 for r in raw["detect"]
             ),
         )
@@ -145,7 +148,13 @@ def detect(text: str, policy: MaskPolicy | None = None,
         if rule.cls in policy.disabled_classes:
             continue
         for m in rule.compiled().finditer(text):
-            start, end = m.span(rule.value_group)
+            # 대안 그룹은 목록 순서대로 보고 처음 참여한 것을 쓴다(규칙 스펙 `maskToken.valueGroupsNote`).
+            group = rule.value_group
+            for g in rule.value_groups:
+                if m.group(g) is not None:
+                    group = g
+                    break
+            start, end = m.span(group)
             if start < 0 or start == end:
                 continue
             if rule.luhn and not _luhn(text[start:end]):

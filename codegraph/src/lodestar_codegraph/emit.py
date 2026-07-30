@@ -26,6 +26,11 @@ def build_and_write(nodes: list[Node], edges: list[Edge], meta_extra: dict,
     # 손대지 않는다(원문이 아니라 정규화 이름이며, 바꾸면 그래프가 끊긴다).
     ledger = MaskLedger()
 
+    # `path` 는 #88 문서가 코드 트랙의 sourceId 대용으로 지목한 필드다. 마스킹하면 좌표가 원본에서
+    # 조회되지 않을 수 있으므로(경로에 이메일·해시 형태가 들어간 드문 경우) **가려진 경로 수를 따로
+    # 센다** — 조용히 바뀌지 않게 하려는 것이다. 안정 식별자 도입은 #113 의 몫이다.
+    masked_paths = sum(1 for n in nodes if mask_field(n.path, None, mask_policy) != n.path)
+
     node_docs = sorted(
         ({"id": n.id, "kind": n.kind,
           "label": mask_field(n.label, ledger, mask_policy),
@@ -44,7 +49,7 @@ def build_and_write(nodes: list[Node], edges: list[Edge], meta_extra: dict,
     )
     communities = {n.community for n in nodes if n.community is not None}
     meta = {**_mask_meta(meta_extra, ledger, mask_policy),
-            "masking": ledger.summary(),
+            "masking": {**ledger.summary(), "masked_path_fields": masked_paths},
             "generated_by": "lodestar-codegraph v1",
             "node_count": len(node_docs),
             "edge_count": len(edge_docs),

@@ -41,6 +41,12 @@ tasks.test {
     inputs.files(File(rootDir.parentFile, "docs/superpowers/specs/security/masking-rules.v0.json"))
         .withPropertyName("maskingRuleSpec")
         .optional()
+    // 게이트 테스트는 gold(#99) 를 **디스크에서** 읽어 정답으로 삼는다(pii.json · manifest.json ·
+    // fixtures/*). 그것을 입력으로 선언하지 않으면 gold 를 고쳐 기대값을 낮춰도 gradle 이
+    // UP-TO-DATE 로 검사를 건너뛴다 — 실제로 pii.json 을 건드린 뒤 `:test UP-TO-DATE` 를 확인했다.
+    inputs.files(fileTree(File(rootDir.parentFile, "docs/superpowers/specs/gold")))
+        .withPropertyName("goldSet")
+        .optional()
     // 증거 최초 생성 우회 플래그는 테스트 JVM 으로 전달돼야 의미가 있다.
     for (flag in listOf("L0_PROBE_BOOTSTRAP", "MASK_EVIDENCE_BOOTSTRAP")) {
         System.getProperty(flag)?.let { systemProperty(flag, it) }

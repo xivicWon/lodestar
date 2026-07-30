@@ -41,6 +41,14 @@ def test_masking_summary_is_recorded_without_plaintext(tmp_path):
     assert m["spec_version"] == "masking-rules/v0"
 
 
+def test_masked_paths_are_counted_separately(tmp_path):
+    """`path` 는 #88 이 코드 트랙의 좌표·식별자 대용으로 쓰는 필드다 — 가려졌다면 조용히 넘어가면 안 된다."""
+    nodes = [_node("type:A", "A", "A", "src/hong@example.com.kt"),
+             _node("type:B", "B", "B", "src/PriceCalc.kt")]
+    doc = build_and_write(nodes, [], {}, str(tmp_path / "cg.json"))
+    assert doc["meta"]["masking"]["masked_path_fields"] == 1
+
+
 def test_clean_input_is_untouched_and_summary_is_zero(tmp_path):
     nodes = [_node("type:A", "PriceCalc", "com.ontostudio.PriceCalc", "src/PriceCalc.kt")]
     edges = [Edge(1, "type:A", "type:A", "calls", EXTRACTED, 1.0)]
@@ -48,6 +56,7 @@ def test_clean_input_is_untouched_and_summary_is_zero(tmp_path):
                           str(tmp_path / "cg.json"))
     assert doc["nodes"][0]["qualified_name"] == "com.ontostudio.PriceCalc"
     assert doc["meta"]["masking"]["masked_total"] == 0
+    assert doc["meta"]["masking"]["masked_path_fields"] == 0
     assert doc["meta"]["source_root"] == "backend/src/main/kotlin"
 
 

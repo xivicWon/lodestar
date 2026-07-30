@@ -80,6 +80,26 @@ def test_url_credential_keeps_structure():
     assert r.text.endswith("@db:5432/lodestar")
 
 
+def test_url_credential_with_at_sign_is_fully_masked():
+    """값에 '@' 가 있으면 첫 '@' 에서 끊겨 나머지가 평문으로 남는다 — 부분 마스킹은 누출이다."""
+    r = mask_text("postgres://user:p@ssw0rd-x@host:5432/db")
+    assert "ssw0rd" not in r.text, r.text
+    assert r.text == "postgres://user:[MASKED:URL_CREDENTIAL]@host:5432/db"
+    # 콜론이 들어간 값도 통째로 가린다
+    assert "my:pass" not in mask_text("mysql://admin:my:pass@host/db").text
+
+
+def test_quoted_secret_with_space_is_fully_masked():
+    """따옴표 안 공백이 있는 시크릿은 첫 공백에서 끊겨 뒤가 남는다."""
+    for text, leaked in (
+        ('password = "abc def"', "def"),
+        ("app.secret = 'abc def'", "def"),
+        ('{"apiKey": "tok en 123"}', "en 123"),
+    ):
+        out = mask_text(text).text
+        assert leaked not in out, f"{text} -> {out}"
+
+
 def test_rules_are_portable_ascii_boundary():
     """\\b 의 의미가 두 엔진에서 같아야 한다 — Python 은 ASCII 모드로 컴파일한다."""
     rules = load_rules()
@@ -131,6 +151,28 @@ def test_truncated_private_key_masks_the_header_only():
     out = mask_text("-----BEGIN PRIVATE KEY-----\nTAIL_MARKER").text
     assert "BEGIN PRIVATE KEY" not in out
     assert "TAIL_MARKER" in out
+
+
+def test_utf16_offset_matches_kotlin_string_indexing():
+    """스팬 좌표의 단위는 UTF-16 코드 단위다(규칙 스펙 `spanContract`).
+
+    Kotlin/Java 의 String 인덱스가 그 단위이고 Python 은 코드포인트로 센다. BMP 안에서는 두 값이
+    같아 차이가 드러나지 않으므로, **BMP 밖 문자**로 계약을 고정한다 — 이 검사가 없으면 증거의
+    좌표 변환을 지워도 gold 코퍼스(BMP 전용)로는 아무것도 붉어지지 않는다.
+    """
+    from lodestar_codegraph.mask import utf16_offset
+
+    # BMP 전용 텍스트: 코드포인트 인덱스와 같다
+    assert utf16_offset("abc홍길동", 4) == 4
+    # 이모지(서로게이트 페어)는 UTF-16 에서 2단위를 차지한다
+    assert utf16_offset("😀ab", 1) == 2
+    assert utf16_offset("😀😀x", 2) == 4
+
+    # 탐지 스팬을 그 단위로 옮기면 Kotlin 이 같은 문자열에서 보는 인덱스와 일치한다
+    text = "😀 mail=hong@example.com"
+    span = mask_text(text).spans[0]
+    assert text[span.start:span.end] == "hong@example.com"
+    assert utf16_offset(text, span.start) == span.start + 1
 
 
 def test_length_preserving_keeps_newlines_so_line_numbers_hold():

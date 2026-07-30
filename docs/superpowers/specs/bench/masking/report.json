@@ -111,7 +111,7 @@
       "spans": 28
     },
     "parity": true,
-    "ruleSpecHash": "sha256:053293aea2f573387998923bdf8e549a01a3a51462bcb67b102fcedb56c40de7"
+    "ruleSpecHash": "sha256:6210fae14e36c64fda4d16fb81dd79f0a060e09e0c0bc260056ff178782146fa"
   },
   "collectionPaths": {
     "db": {
@@ -167,7 +167,7 @@
   "evidenceRefs": {
     "emitCode": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-code-001/emit-code.json",
-      "contentHash": "sha256:c585b36611a8c8429f887d5fbd165feba9414c5c744734a7c59dd0d0999ff90d"
+      "contentHash": "sha256:94c4e9fa8b4406fa18ac72dc7c4b22346fd817973c776ad08c39825d25341d7c"
     },
     "engineKotlin": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-gold-001/engine-kotlin.json",
@@ -187,7 +187,7 @@
     },
     "ruleSpec": {
       "path": "docs/superpowers/specs/security/masking-rules.v0.json",
-      "contentHash": "sha256:053293aea2f573387998923bdf8e549a01a3a51462bcb67b102fcedb56c40de7"
+      "contentHash": "sha256:6210fae14e36c64fda4d16fb81dd79f0a060e09e0c0bc260056ff178782146fa"
     }
   }
 }

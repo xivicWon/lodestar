@@ -48,14 +48,37 @@ class SqlTextMasker(
      * - `E'...'` 의 백슬래시 이스케이프 (PostgreSQL) — `E'\''` 를 리터럴 종료로 읽지 않는다
      * - **중첩** 블록 주석 (PostgreSQL) — `/* /* x */ y */` 의 `y` 가 주석 밖으로 새지 않는다
      *
-     * 달러 인용(`$$ … $$`) 본문은 별도 구간으로 잡지 않는다 — 그 안의 따옴표 리터럴은 이 스캐너가
-     * 그대로 리터럴로 인식하므로 값은 여전히 마스킹된다.
+     * - **달러 인용**(`$tag$ … $tag$`) 본문을 한 구간으로 잡는다. 본문 안의 홀따옴표(영어 축약형 등)는
+     *   리터럴 시작이 아니며, 그걸 리터럴로 읽으면 스캐너가 어긋나 **그 뒤의 진짜 값이 구간 밖으로
+     *   빠져 마스킹되지 않는다**
+     * - **큰따옴표 식별자**(`"it's"`) 구간은 건너뛴다 — 같은 어긋남을 만든다. 식별자는 값이 아니므로
+     *   마스킹 대상도 아니다
      */
     private fun segments(sql: String): List<Segment> {
         val out = mutableListOf<Segment>()
         var i = 0
         while (i < sql.length) {
             when {
+                sql[i] == '"' -> {
+                    // 식별자 구간: 마스킹하지 않고 건너뛴다("" 이스케이프 인식).
+                    var j = i + 1
+                    while (j < sql.length) {
+                        if (sql[j] == '"') {
+                            if (j + 1 < sql.length && sql[j + 1] == '"') j += 2 else break
+                        } else j++
+                    }
+                    i = minOf(j + 1, sql.length)
+                }
+                sql[i] == '$' -> {
+                    val tag = dollarTag(sql, i)
+                    if (tag == null) i++
+                    else {
+                        val bodyStart = i + tag.length
+                        val close = sql.indexOf(tag, bodyStart).let { if (it < 0) sql.length else it }
+                        out.add(Segment(bodyStart, close, "LITERAL"))
+                        i = minOf(close + tag.length, sql.length)
+                    }
+                }
                 sql[i] == '\'' -> {
                     // 바로 앞 토큰이 E/e 면 백슬래시 이스케이프가 유효한 문자열이다.
                     val escaped = i > 0 && (sql[i - 1] == 'E' || sql[i - 1] == 'e') &&
@@ -93,5 +116,12 @@ class SqlTextMasker(
             }
         }
         return out
+    }
+
+    /** `$$` 또는 `$tag$` 여닫이 표식. 달러 인용이 아니면 null. */
+    private fun dollarTag(sql: String, at: Int): String? {
+        var j = at + 1
+        while (j < sql.length && (sql[j].isLetterOrDigit() || sql[j] == '_')) j++
+        return if (j < sql.length && sql[j] == '$') sql.substring(at, j + 1) else null
     }
 }

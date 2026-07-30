@@ -20,6 +20,8 @@ data class MaskRule(
     val regex: Regex,
     val valueGroup: Int = 0,
     val luhn: Boolean = false,
+    /** 대안 그룹 — 목록 순서대로 보고 처음 참여한 그룹을 가린다(따옴표 있는 값 / 없는 값 등). */
+    val valueGroups: List<Int> = emptyList(),
 )
 
 /** 마스킹 정책. 기본값이 곧 수집 경로의 기본 동작이다. */
@@ -93,6 +95,7 @@ class MaskingRules private constructor(
                 regex = Regex(n["regex"].asText()),
                 valueGroup = n["valueGroup"]?.asInt() ?: 0,
                 luhn = n["luhn"]?.asBoolean() ?: false,
+                valueGroups = n["valueGroups"]?.map { it.asInt() } ?: emptyList(),
             )
             return MaskingRules(
                 specVersion = root["specVersion"].asText(),
@@ -120,7 +123,9 @@ class MaskingEngine(private val rules: MaskingRules = MaskingRules.load()) {
         for (rule in rules.detect) {
             if (rule.cls in policy.disabledClasses) continue
             for (m in rule.regex.findAll(text)) {
-                val g = m.groups[rule.valueGroup] ?: continue
+                // 대안 그룹은 목록 순서대로 보고 처음 참여한 것을 쓴다(규칙 스펙 `maskToken.valueGroupsNote`).
+                val group = rule.valueGroups.firstOrNull { m.groups[it] != null } ?: rule.valueGroup
+                val g = m.groups[group] ?: continue
                 val start = g.range.first
                 val end = g.range.last + 1
                 if (end <= start) continue
