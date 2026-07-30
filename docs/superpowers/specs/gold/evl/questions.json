@@ -394,8 +394,9 @@
       "requiredEvidence": [
         {
           "source": "code",
-          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SampleLegacyDb.kt#L1",
-          "stance": "supports"
+          "locator": "backend/src/main/kotlin/com/ontostudio/rdb/SampleLegacyDb.kt#L14",
+          "stance": "supports",
+          "fact": "클래스가 선언돼 있다 — 코드는 present"
         }
       ],
       "notes": "VERIFY 의 핵심 클래스 후보군은 test·runtime 인데 test 는 absent, runtime 은 not_collected 다 — 전면 부재이므로 보류가 정답이다(조건 2). 코드가 present 라는 이유로 '코드를 읽어보니 잘 동작할 것' 이라고 답하면 검증되지 않은 것을 검증된 것처럼 말한 것이다. ABSTAIN 의 trigger 는 성립한 조건이 가리키는 부재 클래스여야 한다(EVL §2.6) — `evidence` 로 적으면 A16 오답이다."

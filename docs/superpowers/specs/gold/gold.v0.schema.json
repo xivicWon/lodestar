@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lodestar.local/schemas/gold.v0.schema.json",
   "title": "Lodestar M0 Gold Set v0 — 항목 파일",
-  "description": "L1·L2·PII gold 의 항목 파일 형식. L3 시나리오·EVL 질문·실패 픽스처는 구조가 달라 이 스키마가 아니라 validate_gold.py 의 교차 필드 규칙이 검사한다.",
+  "description": "L1·L2·PII gold 의 항목 파일 형식. L3 시나리오·EVL 질문·실패 픽스처는 구조가 달라 이 스키마가 아니라 validate_gold.py 의 교차 필드 규칙이 검사한다. 판정 규칙(`rules`) 또는 채점 게이트(`gate`) 중 **하나는 반드시 있어야 한다** — 규칙 없이 정답만 있으면 같은 산출물의 정오가 채점자마다 갈린다.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -359,5 +359,17 @@
         }
       ]
     }
-  }
+  },
+  "anyOf": [
+    {
+      "required": [
+        "rules"
+      ]
+    },
+    {
+      "required": [
+        "gate"
+      ]
+    }
+  ]
 }

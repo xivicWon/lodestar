@@ -141,6 +141,8 @@
                       "required": [
                         "action"
                       ],
+                      "additionalProperties": false,
+                      "description": "action 별로 허용 필드를 닫는다. 열어두면 `revison` 같은 오타가 조용히 통과해 그 단계는 revision 고정 없이 실행된 것이 되고(R-L3-4 위반), 아무도 모른다.",
                       "properties": {
                         "action": {
                           "enum": [
@@ -151,8 +153,223 @@
                             "CONFIRM_LABEL",
                             "CONTINUE_FROM"
                           ]
+                        },
+                        "source": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "revision": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "claim": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "by": {
+                          "type": "string",
+                          "pattern": "^@[A-Za-z0-9-]+$"
+                        },
+                        "keep": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "subject": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "note": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "scenario": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "afterStep": {
+                          "type": "integer",
+                          "minimum": 1
                         }
-                      }
+                      },
+                      "allOf": [
+                        {
+                          "if": {
+                            "properties": {
+                              "action": {
+                                "const": "IMPORT"
+                              }
+                            },
+                            "required": [
+                              "action"
+                            ]
+                          },
+                          "then": {
+                            "required": [
+                              "action",
+                              "source",
+                              "revision"
+                            ],
+                            "properties": {
+                              "by": false,
+                              "note": false,
+                              "afterStep": false,
+                              "keep": false,
+                              "claim": false,
+                              "subject": false,
+                              "scenario": false,
+                              "label": false
+                            }
+                          }
+                        },
+                        {
+                          "if": {
+                            "properties": {
+                              "action": {
+                                "const": "REIMPORT"
+                              }
+                            },
+                            "required": [
+                              "action"
+                            ]
+                          },
+                          "then": {
+                            "required": [
+                              "action",
+                              "source",
+                              "revision"
+                            ],
+                            "properties": {
+                              "by": false,
+                              "note": false,
+                              "afterStep": false,
+                              "keep": false,
+                              "claim": false,
+                              "subject": false,
+                              "scenario": false,
+                              "label": false
+                            }
+                          }
+                        },
+                        {
+                          "if": {
+                            "properties": {
+                              "action": {
+                                "const": "HUMAN_CONFIRM"
+                              }
+                            },
+                            "required": [
+                              "action"
+                            ]
+                          },
+                          "then": {
+                            "required": [
+                              "action",
+                              "claim",
+                              "by"
+                            ],
+                            "properties": {
+                              "note": false,
+                              "afterStep": false,
+                              "keep": false,
+                              "subject": false,
+                              "revision": false,
+                              "scenario": false,
+                              "label": false,
+                              "source": false
+                            }
+                          }
+                        },
+                        {
+                          "if": {
+                            "properties": {
+                              "action": {
+                                "const": "HUMAN_RESOLVE"
+                              }
+                            },
+                            "required": [
+                              "action"
+                            ]
+                          },
+                          "then": {
+                            "required": [
+                              "action",
+                              "keep",
+                              "by"
+                            ],
+                            "properties": {
+                              "note": false,
+                              "afterStep": false,
+                              "claim": false,
+                              "subject": false,
+                              "revision": false,
+                              "scenario": false,
+                              "label": false,
+                              "source": false
+                            }
+                          }
+                        },
+                        {
+                          "if": {
+                            "properties": {
+                              "action": {
+                                "const": "CONFIRM_LABEL"
+                              }
+                            },
+                            "required": [
+                              "action"
+                            ]
+                          },
+                          "then": {
+                            "required": [
+                              "action",
+                              "subject",
+                              "label"
+                            ],
+                            "properties": {
+                              "by": false,
+                              "afterStep": false,
+                              "keep": false,
+                              "claim": false,
+                              "scenario": false,
+                              "revision": false,
+                              "source": false
+                            }
+                          }
+                        },
+                        {
+                          "if": {
+                            "properties": {
+                              "action": {
+                                "const": "CONTINUE_FROM"
+                              }
+                            },
+                            "required": [
+                              "action"
+                            ]
+                          },
+                          "then": {
+                            "required": [
+                              "action",
+                              "scenario",
+                              "afterStep"
+                            ],
+                            "properties": {
+                              "by": false,
+                              "note": false,
+                              "keep": false,
+                              "claim": false,
+                              "subject": false,
+                              "revision": false,
+                              "label": false,
+                              "source": false
+                            }
+                          }
+                        }
+                      ]
                     },
                     "mustHold": {
                       "type": "array",

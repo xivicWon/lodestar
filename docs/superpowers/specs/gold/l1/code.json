@@ -43,7 +43,7 @@
     "R-CODE-2": "callee 가 backend main 소스셋(com.ontostudio.**) 밖이면 gold 범위 밖이다 — Kotlin 표준 라이브러리·Spring·JSqlParser 호출은 등재하지 않으며 추출되어도 오탐으로 세지 않는다(미측정).",
     "R-CODE-3": "생성자 호출은 callee 를 `<타입>.<init>` 로 적는다.",
     "R-CODE-4": "TYPE 은 소스에 선언된 것만 센다 — enum·data class·interface·object·class 를 모두 포함한다.",
-    "R-CODE-5": "컴파일러 생성 멤버(enum 의 `valueOf`/`values`, data class 의 `copy`/`componentN`/`equals`/`hashCode`/`toString`)는 TYPE·METHOD·CALL 어디에도 등재하지 않는다. 소스에 없는 것을 정답으로 요구하면 추출기마다 판정이 갈린다.",
+    "R-CODE-5": "컴파일러 생성 멤버(enum 의 `valueOf`/`values`, data class 의 `copy`/`componentN`/`equals`/`hashCode`/`toString`)는 TYPE·METHOD·CALL 어디에도 등재하지 않는다 — **음성 항목으로도 등재하지 않는다.** 소스에 없는 것을 정답으로 요구하면 추출기마다 판정이 갈리기 때문이다. 따라서 이런 호출은 산출돼도 **오탐이 아니라 미측정**이며 precision 의 분자·분모 어디에도 넣지 않는다(R-CODE-2 와 같은 취급). 경계 예: `ProvenanceVocab.provenanceOf` 는 소스에 `Provenance.valueOf` 호출이 문자로 있지만(ProvenanceVocab.kt#L18) callee 가 컴파일러 생성 멤버이므로 gold 밖이다. 이전 판에는 이 경계를 표시하려고 ABSENT CALL 항목을 뒀으나 ABSENT(=산출하면 오탐)와 미측정이 정면으로 모순돼 채점 분모 해석이 구현마다 갈렸다 — 항목을 없애고 규칙으로 옮겼다.",
     "R-CODE-6": "PROPERTY 항목은 **타입 본문에 선언된 프로퍼티**만 센다(override val · const val 포함). 생성자 파라미터 프로퍼티(`val`/`var`)는 소유 TYPE 항목의 `value.properties` 로 기록하고 PROPERTY 로 중복 계상하지 않으며, 프로퍼티가 아닌 생성자 파라미터(예: DdlSource 의 `schemaName`)는 어디에도 등재하지 않는다. Kotlin 프로퍼티를 getter/setter 로 펴서 METHOD 로 세는 것도 금지한다 — 같은 선언이 두 번 세어진다. 분모 정의가 없으면 recall 이 집계 방식에 따라 달라진다."
   },
   "counts": {
@@ -52,7 +52,7 @@
     "METHOD": 10,
     "PROPERTY": 7,
     "CALL": 11,
-    "negatives": 2
+    "negatives": 1
   },
   "items": [
     {
@@ -1033,25 +1033,6 @@
         "contentHash": "sha256:0f052080a26277ce86f43219d8e4eb17a69ceeef9cbf9f719062fef73d97440b"
       },
       "origin": "repo"
-    },
-    {
-      "id": "L1.CODE.CALL.NEG.ProvenanceVocab.provenanceOf__Provenance.valueOf",
-      "layer": "L1",
-      "track": "code",
-      "type": "CALL",
-      "expect": "ABSENT",
-      "value": {
-        "caller": "com.ontostudio.provenance.ProvenanceVocab.provenanceOf",
-        "callee": "com.ontostudio.provenance.Provenance.valueOf"
-      },
-      "ref": {
-        "sourceId": "code:provenance/ProvenanceVocab.kt",
-        "locator": "backend/src/main/kotlin/com/ontostudio/provenance/ProvenanceVocab.kt#L18",
-        "revision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
-        "contentHash": "sha256:cc4b53b0df762e10a8ed73065460e960195e279e1d7b1de5406d6fbd6ba11aab"
-      },
-      "origin": "repo",
-      "notes": "소스에 문자열로는 존재하지만 callee 가 컴파일러 생성 멤버라 R-CODE-5 로 범위 밖이다. 등재하면 '소스에 선언된 것만 센다'는 규칙이 무너지고 추출기별로 값이 갈린다. 이 항목은 규칙의 경계를 문서에 못박기 위해 음성으로 남긴다."
     }
   ]
 }

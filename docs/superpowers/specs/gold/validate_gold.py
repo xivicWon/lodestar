@@ -22,6 +22,7 @@ HERE = pathlib.Path(__file__).parent
 REPO = HERE.parents[3]
 SCHEMA = json.loads((HERE / "gold.v0.schema.json").read_text())
 DOC_SCHEMA = json.loads((HERE / "gold.docs.v0.schema.json").read_text())
+MANIFEST_SCHEMA = json.loads((HERE / "manifest.v0.schema.json").read_text())
 MANIFEST = json.loads((HERE / "manifest.json").read_text())
 CONTRACT_DOC = (HERE.parent / "2026-07-29-m0-i2-gold-set.md").read_text()
 
@@ -133,6 +134,18 @@ def derive_gold_set_id(m):
     return f"{m['goldSetVersion']}+{_digest(parts)[:12]}"
 
 
+# 매니페스트는 고정(pinning)의 정본이고 아래 모든 구조가 여기서 파생된다. 그래서
+# **다른 무엇보다 먼저** 검사한다 — 최상위 키에 오타가 나면(`pinedSources`) 규칙이
+# 돌기도 전에 확인기가 죽어 아무것도 보고되지 않는다. 여기서 걸러 이유를 남기고 멈춘다.
+_ms = sorted(Draft202012Validator(MANIFEST_SCHEMA).iter_errors(MANIFEST),
+             key=lambda e: list(e.path))
+if _ms:
+    print(f"FAIL — {len(_ms)}건 (매니페스트가 형식 계약을 어겨 나머지 검사를 진행할 수 없다)\n")
+    for e in _ms:
+        print(f"  [G1] manifest.json: {'/'.join(str(x) for x in e.path) or '<root>'}: "
+              f"{e.message[:200]}")
+    sys.exit(1)
+
 DOCS = {rel: load(rel) for rel in ITEM_FILES + OTHER_FILES}
 ALL_ITEMS = [(rel, it) for rel in ITEM_FILES for it in DOCS[rel]["items"]]
 ITEM_BY_ID = {it["id"]: it for _, it in ALL_ITEMS}
@@ -156,7 +169,10 @@ def _g1():
     for rel in ITEM_FILES + OTHER_FILES:
         v = doc_v[branch[rel]] if rel in branch else item_v
         for e in sorted(v.iter_errors(DOCS[rel]), key=lambda e: list(e.path)):
-            yield f"{rel}: {'/'.join(str(x) for x in e.path)}: {e.message}"
+            # 최상위 제약(anyOf 등)이 실패하면 jsonschema 가 문서 전체를 메시지에 담는다.
+            # 읽을 수 없는 오류는 보고되지 않은 것과 크게 다르지 않으므로 잘라낸다.
+            msg = e.message if len(e.message) <= 200 else e.message[:200] + " …(생략)"
+            yield f"{rel}: {'/'.join(str(x) for x in e.path) or '<root>'}: {msg}"
 
 
 # --- G2 id 단일 네임스페이스 ------------------------------------------------
@@ -210,7 +226,9 @@ def _g4():
             if rel not in pinned:
                 yield f"고정되지 않은 픽스처: {rel} (I1 §1.3 — fixture hash 없는 실행은 baseline 이 아니다)"
     listed = {e["path"] for e in MANIFEST["goldFiles"]}
-    for rel in ITEM_FILES + OTHER_FILES + ["gold.v0.schema.json", "gold.docs.v0.schema.json"]:
+    for rel in (ITEM_FILES + OTHER_FILES + ["gold.v0.schema.json",
+                                        "gold.docs.v0.schema.json",
+                                        "manifest.v0.schema.json"]):
         if rel not in listed:
             yield f"매니페스트 goldFiles 에서 누락: {rel}"
     # I3 로 넘기는 파생값은 **재계산 가능해야** 한다. 손으로 적어 둔 값이 내용과
@@ -259,6 +277,12 @@ def _g5():
                 yield (f"{sid}: fixtures[].sha256({fx['sha256']}) 와 "
                        f"pinnedSources.contentHash({s['contentHash']}) 가 다르다")
             continue
+        # 고정 축은 둘뿐이다(§6). 항목별 revision 과 contentHash 를 함께 다른 커밋 값으로
+        # 바꾸면 해시는 맞아떨어지므로, 축 자체를 검사하지 않으면 임의 커밋으로 슬쩍
+        # 옮겨진 원본이 통과한다 — 그 순간 "고정 revision 의 gold" 라는 주장이 거짓이 된다.
+        if s["revision"] not in (MANIFEST["sourceRevision"], MANIFEST["docsRevision"]):
+            yield (f"{sid}: revision 이 선언된 두 축(sourceRevision·docsRevision) 어느 쪽도 "
+                   f"아니다 ({s['revision'][:7]})")
         try:
             data = blob(sid)
         except (subprocess.CalledProcessError, FileNotFoundError) as e:

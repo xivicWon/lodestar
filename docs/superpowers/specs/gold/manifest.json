@@ -1,7 +1,10 @@
 {
   "goldSetVersion": "gold-set/v0",
   "issue": 99,
-  "status": "DRAFT — 에이전트 초안. 리뷰어(@xivicWon) 승인 전까지 정답으로 사용할 수 없다(I1 §1.2).",
+  "status": {
+    "state": "DRAFT",
+    "note": "에이전트 초안. 리뷰어(@xivicWon) 승인 전까지 정답으로 사용할 수 없다(I1 §1.2). APPROVED 로 바뀌는 시점에 #88 착수 게이트(I1 G2)가 열린다."
+  },
   "sourceRevision": "3c27259fe6c979e00912c5e3686c611a28cb977e",
   "docsRevision": "7d3db3ed77803c5603137e28a8d9069254db2771",
   "note": "코드·DB 원본은 sourceRevision 에, 계약 문서(ADR)는 docsRevision 에 고정한다 — I1·EVL 계약은 3c27259 이후에 작성돼 sourceRevision 에 존재하지 않기 때문이다. 한 revision 으로 우겨넣으면 그 좌표는 조회되지 않는 유령 좌표가 된다. I3(#100) 계약이 요구하는 두 값을 여기서 제공한다: `fixtureHash`(실행 하나가 인용할 단일 집계 해시)와 `goldSetId`(판정 규칙까지 포함한 정답셋 신원). 둘 다 파생값이며 validate_gold.py 가 재계산해 대조한다 — 손으로 적은 값은 내용과 어긋날 수 있다.",
@@ -177,7 +180,7 @@
   "goldFiles": [
     {
       "path": "evl/questions.json",
-      "sha256": "sha256:bbda3b3df7ba1a3e64123281f2566bfcdf57b934e9d8e2568f684f52812088e0"
+      "sha256": "sha256:2804c5f5e2131b80646386279560540224f73fc1f27ec80d7a35d17abcc26753"
     },
     {
       "path": "failures.json",
@@ -185,19 +188,19 @@
     },
     {
       "path": "gold.docs.v0.schema.json",
-      "sha256": "sha256:07f9ebfe1d7a4d4e3b36f5d7601bea3d803b05b88bdd07f6a6c317af2d7547b0"
+      "sha256": "sha256:3c0b3a5d1d5e414f0dac6457e5c0c0238634eb3e1e3e9ea3bcabe85b5026e7ce"
     },
     {
       "path": "gold.v0.schema.json",
-      "sha256": "sha256:0b400b525fae1e72c1a1bd1d4c0462d170f90834a28f6248faa05b64fe220591"
+      "sha256": "sha256:7d66f285468512857af6a1f6e7e213f947dad7ae2748b97853831f7747c81a16"
     },
     {
       "path": "l1/code.json",
-      "sha256": "sha256:c2af1e02328560722bd4c6b70ec238b1ab77f6e2b7fd275b3d030f95a470b0c8"
+      "sha256": "sha256:8943caf463e0697cf95b6738f4a3b4f23f5417f3bc4ee9b972c73fa60f7f98b9"
     },
     {
       "path": "l1/db.json",
-      "sha256": "sha256:245f0fa1eb9923496ff66a28fcec855125b78eeb1f6215f4160701a3cbcb2d5e"
+      "sha256": "sha256:b876cb751427dd72397d95f47bed8e2ecc19bd377a1bb5e8d518b9ca6fef452d"
     },
     {
       "path": "l2/links.json",
@@ -208,12 +211,16 @@
       "sha256": "sha256:721786ca9c0f04462d963359ed1bfe62602dd281821b4305f94ffaa9f8eb19e4"
     },
     {
+      "path": "manifest.v0.schema.json",
+      "sha256": "sha256:e738a8576ddab08551be019566d7b5e80fd1dccf81c7906b0e25b43a3bc1263b"
+    },
+    {
       "path": "pii.json",
       "sha256": "sha256:b6a3fcadd2f588c9b41223f755c9452d0ab104a3092349b6c20c51a248200d49"
     },
     {
       "path": "validate_gold.py",
-      "sha256": "sha256:d0fbdbe9a6cd4c6035b3cced75e98b5175cbff03068628da200dbba198468710"
+      "sha256": "sha256:12a51f3da16708ea9d181ce07a8d698e593307a82b9f0aa1d49a7808a2988aa3"
     }
   ],
   "fixtures": [
@@ -279,5 +286,5 @@
     }
   ],
   "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
-  "goldSetId": "gold-set/v0+a1a6d3dca210"
+  "goldSetId": "gold-set/v0+02073015d794"
 }

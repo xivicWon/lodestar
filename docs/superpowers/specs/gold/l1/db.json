@@ -9,6 +9,13 @@
     "contentHash": "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
     "note": "이 파일 전체가 닫힌 범위다 — 여기 없는 L1 DB 사실은 오탐(false positive)으로 집계한다."
   },
+  "rules": {
+    "R-DB-1": "TABLE 은 `CREATE TABLE <식별자> (` 로 시작하는 **문장**만 센다. 주석 안의 같은 문자열은 세지 않는다 — 이 구분을 놓친 것이 I1 §1.1 의 '28' 이며, 음성 항목 L1.DB.TABLE.NEG.만 이 그 자리다.",
+    "R-DB-2": "`sqlType` 은 DDL 표기를 그대로 쓰되 공백만 제거한다(`NUMERIC(15,2)`). 정규화·대문자화·XSD 매핑을 적용하지 않는다 — L1 은 명시 사실이고, 매핑은 상위 레이어의 판단이다.",
+    "R-DB-3": "PK 구성 컬럼의 `nullable` 은 **false** 다. SQL 의미상 PK 는 NOT NULL 이며, DDL 에 `NOT NULL` 이 문자로 없다는 이유로 true 로 두면 스키마 의미가 틀어진다. (현 DdlParser 는 문자열만 보므로 여기서 어긋난다 — 의도된 관측 지점이다.)",
+    "R-DB-4": "뷰는 `REPORTED_EXCLUDED` 다 — 테이블로 추출해도 실패이고 조용히 건너뛰어도 실패이며, 제외 사유와 함께 보고해야 통과다(I1 §4.1 오류 가시성).",
+    "R-DB-5": "복합 PK 의 `columns` 는 **선언 순서**를 보존한다. 정렬하거나 집합으로 다루면 `(WH_CD, ITEM_CD)` 와 `(ITEM_CD, WH_CD)` 가 같아져 키의 의미가 사라진다."
+  },
   "counts": {
     "TABLE": 27,
     "COLUMN": 119,
