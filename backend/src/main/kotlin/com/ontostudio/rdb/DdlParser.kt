@@ -1,18 +1,27 @@
 package com.ontostudio.rdb
 
+import com.ontostudio.security.MaskLedger
+import com.ontostudio.security.SqlTextMasker
 import net.sf.jsqlparser.parser.CCJSqlParserUtil
 import net.sf.jsqlparser.statement.create.table.CreateTable
 import net.sf.jsqlparser.statement.create.table.ForeignKeyIndex
 import net.sf.jsqlparser.statement.insert.Insert
 import org.springframework.stereotype.Component
 
+/** 파싱 결과 + 그 실행에서 무엇을 몇 건 가렸는지(원문 없음 · #115). */
+data class MaskedSchema(val schema: SchemaModel, val masking: Map<String, Any>)
+
 /**
  * DDL 텍스트 → SchemaModel. CREATE TABLE 만 사실로 산출하고, **처리하지 못한 문장은 좌표·사유와 함께
  * 반환형에 남긴다**(#114). 조용히 건너뛰는 경로는 없다 — 제외·실패·부분수집이 모두 [SchemaModel.issues] 에
  * 들어가므로 `tables + issues` 가 입력 문장 수를 설명한다(I3 R2).
+ *
+ * #115: 파싱 **전에** PII·시크릿 마스킹 단계를 통과한다. DDL 의 노출면은 주석과 DEFAULT 리터럴이며,
+ * 마스킹은 리터럴·주석 안에서만 길이를 보존해 일어나므로 스키마 구조와 좌표는 그대로다. 보고 좌표가
+ * 마스킹 후 텍스트에서 계산된다는 뜻이기도 하다 — 길이 보존이 곧 #114 좌표의 정확성 조건이다.
  */
 @Component
-class DdlParser {
+class DdlParser(private val masker: SqlTextMasker = SqlTextMasker()) {
 
     /** 문장 하나. [startLine]~[endLine] 은 1-base 이며 종결 ';' 행을 포함한다. */
     private data class RawStatement(val startLine: Int, val endLine: Int, val text: String)
@@ -30,6 +39,28 @@ class DdlParser {
         sourcePath: String? = null,
         sourceId: String = "db:ddl:schema",
         projectId: String = CollectionMetadata.DEFAULT_PROJECT_ID,
+    ): SchemaModel = parseMasked(sql, sourcePath, sourceId, projectId).schema
+
+    fun parseMasked(
+        sql: String,
+        sourcePath: String? = null,
+        sourceId: String = "db:ddl:schema",
+        projectId: String = CollectionMetadata.DEFAULT_PROJECT_ID,
+    ): MaskedSchema {
+        val ledger = MaskLedger()
+        val masked = masker.mask(sql, ledger)
+        // 파싱은 마스킹된 텍스트로, 신원은 **원문 바이트**로 만든다(#113). 마스킹된 바이트로 신원을
+        // 잡으면 PII 만 다른 두 입력이 같은 revision 으로 접혀 서로 다른 수집이 구분되지 않는다.
+        // 해시는 단방향이라 원문이 산출물에 남지 않는다.
+        return MaskedSchema(parseInternal(masked, sql, sourcePath, sourceId, projectId), ledger.summary())
+    }
+
+    private fun parseInternal(
+        sql: String,
+        identityBytes: String,
+        sourcePath: String?,
+        sourceId: String,
+        projectId: String,
     ): SchemaModel {
         val tables = mutableListOf<TableInfo>()
         val issues = mutableListOf<CollectionIssue>()
@@ -97,7 +128,7 @@ class DdlParser {
         // 신원은 수집기가 **실제로 읽은 바이트**(입력 SQL)에서 나온다 — 파싱 결과가 아니라.
         return SchemaModel(
             tables,
-            CollectionMetadata.fromContent(sourceId, sql.toByteArray(), "inline", projectId),
+            CollectionMetadata.fromContent(sourceId, identityBytes.toByteArray(), "inline", projectId),
             issues,
             partials,
         )
@@ -139,6 +170,9 @@ class DdlParser {
                     i++
                     while (i < sql.length) {
                         if (sql[i] == '\n') line++
+                        // 마스커와 **같은 규칙**으로 백슬래시 이스케이프를 인정한다(리뷰 LOD-123).
+                        // 두 스캐너가 리터럴 경계를 다르게 보면 마스킹된 구간과 문장 분리가 어긋난다.
+                        if (sql[i] == '\\') { i += 2; continue }
                         if (sql[i] == '\'') {
                             if (i + 1 < sql.length && sql[i + 1] == '\'') { i += 2; continue }
                             i++

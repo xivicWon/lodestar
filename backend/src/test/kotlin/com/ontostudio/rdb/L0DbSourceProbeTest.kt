@@ -51,7 +51,7 @@ class L0DbSourceProbeTest {
         RepoRoot.path
     }
     private val goldDir get() = File(repoRoot, "docs/superpowers/specs/gold")
-    private val runDir get() = File(repoRoot, "docs/superpowers/specs/bench/l0/runs/run-l0-db-3c27259-002")
+    private val runDir get() = File(repoRoot, "docs/superpowers/specs/bench/l0/runs/run-l0-db-3c27259-004")
     private val pinnedSqlPath = "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql"
 
     /** 수집기 신원 — 커밋이 아직 없는 재측정에서도 재현 대상을 특정할 수 있는 값이다. */
@@ -447,7 +447,11 @@ class L0DbSourceProbeTest {
 
         // 7) 샘플 적재 경로 — (a) MetadataService 수집 산출물 (b) 저장소에 남는 행 데이터
         val ingest = probe.putObject("ingestStore")
-        SampleLegacyDb().open().use { conn ->
+        // #115 이후 적재 경로의 **기본값은 마스킹**이다. 이 프로브는 3c27259 시점의 사실(행 데이터가
+        // 원문으로 남는다)을 재는 기준선 계측기이므로 마스킹을 끈 구성을 명시적으로 계측한다 —
+        // 그러지 않으면 아래 `masked: false` 와 note 가 현재 동작과 어긋난 거짓 기록이 된다.
+        // 기본값(마스킹 켜짐)의 관측은 DbIngestMaskingTest 와 bench/masking 증거가 담당한다.
+        SampleLegacyDb().open(IngestPolicy(maskRowData = false)).use { conn ->
             ingest.put("probe", "SampleLegacyDb.open() → MetadataService.extract(conn) + 저장소 질의")
             ingest.put("statementsExecuted", inv.size)
 

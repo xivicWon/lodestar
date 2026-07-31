@@ -1,0 +1,76 @@
+{
+  "evidenceVersion" : "mask-ingest-evidence/v1",
+  "track" : "db",
+  "probe" : "SampleLegacyDb.open() (적재 전 마스킹) + MetadataService.extract(conn)",
+  "input" : "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql",
+  "specVersion" : "masking-rules/v0",
+  "maskedTotal" : 11,
+  "maskedFields" : 11,
+  "byClass" : {
+    "KR_BIZ_NO" : 3,
+    "NAME" : 5,
+    "PHONE" : 3
+  },
+  "byRule" : {
+    "PII.KR_BIZ_NO" : 3,
+    "PII.KR_NAME" : 5,
+    "PII.KR_PHONE" : 3
+  },
+  "piiShapedColumns" : [ {
+    "table" : "TB_CUST_MST",
+    "column" : "CUST_NM",
+    "class" : "ORG_NAME",
+    "retrievableValues" : 3,
+    "unmaskedValues" : 3,
+    "maskingClassInScope" : false,
+    "locator" : "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L229-L262"
+  }, {
+    "table" : "TB_CUST_MST",
+    "column" : "RPRS_NM",
+    "class" : "NAME",
+    "retrievableValues" : 3,
+    "unmaskedValues" : 0,
+    "maskingClassInScope" : true,
+    "locator" : "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L229-L262"
+  }, {
+    "table" : "TB_CUST_MST",
+    "column" : "TEL_NO",
+    "class" : "PHONE",
+    "retrievableValues" : 3,
+    "unmaskedValues" : 0,
+    "maskingClassInScope" : true,
+    "locator" : "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L229-L262"
+  }, {
+    "table" : "TB_CUST_MST",
+    "column" : "BIZ_NO",
+    "class" : "KR_BIZ_NO",
+    "retrievableValues" : 3,
+    "unmaskedValues" : 0,
+    "maskingClassInScope" : true,
+    "locator" : "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L229-L262"
+  }, {
+    "table" : "TB_EMP_MST",
+    "column" : "EMP_NM",
+    "class" : "NAME",
+    "retrievableValues" : 2,
+    "unmaskedValues" : 0,
+    "maskingClassInScope" : true,
+    "locator" : "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L229-L262"
+  } ],
+  "retrievableUnmaskedPiiValues" : 0,
+  "unmaskedByPolicyValues" : 3,
+  "policyExclusionNote" : "ORG_NAME(법인명)은 개인정보가 아니므로 클래스를 도입하지 않았다 — #88 F7 이 센 14건 = 마스킹 11 + 정책상 제외 3. 정책상 제외를 0건으로 보이게 하려고 분모를 고르지 않는다",
+  "collectedTables" : 27,
+  "minimizePolicy" : {
+    "skippedDmlStatements" : 8,
+    "retrievableValues" : 0,
+    "collectedTables" : 27,
+    "default" : false,
+    "note" : "기본값 전환은 #88 baseline 계측기의 관측 대상을 바꾸므로 L0 재측정이 필요하다"
+  },
+  "ddlTextPath" : {
+    "maskedTotal" : 11,
+    "collectedTables" : 27,
+    "plaintextLiteralsInScope" : 11
+  }
+}

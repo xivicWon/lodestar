@@ -52,9 +52,19 @@ class SemanticEnricherTest {
         assertEquals("고객 마스터", cust.suggestedLabel)
         assertTrue(candidates.any { it.currentName == "TB_ORD_HD" })
 
-        // 프롬프트에 컬럼과 샘플 데이터(사업자번호 값)가 포함됐는지 = "샘플행 포함" 검증
+        // 프롬프트에 컬럼과 샘플 데이터가 포함됐는지 = "샘플행 포함" 검증.
+        // #115/#85: 샘플 행은 들어가지만 **마스킹된 뒤**다 — 마스킹 이전 원문은 AI 요청으로 나가지 않는다.
+        // "원문이 없다" 만 보면 값이 통째로 사라진 경우와 구별되지 않으므로, 기대 형태를 정확히 단언한다.
         assertTrue(fake.lastPrompt.contains("TB_CUST_MST"))
-        assertTrue(fake.lastPrompt.contains("120-88-12345"), "샘플 행 값이 프롬프트에 들어가야 함")
+        assertTrue(fake.lastPrompt.contains("CUST_NO=C000000001"), "내부 코드는 그대로 남아야 한다")
+        assertTrue(fake.lastPrompt.contains("BIZ_NO=************"), "사업자번호가 길이 보존 마스킹돼야 함")
+        assertTrue(fake.lastPrompt.contains("RPRS_NM=***"), "대표자명이 마스킹돼야 함")
+        assertTrue(fake.lastPrompt.contains("TEL_NO=***********"), "전화번호가 마스킹돼야 함")
+        assertTrue(fake.lastPrompt.contains("CUST_NM=(주)한빛무역"),
+            "법인명은 정책상 마스킹 대상이 아니다 — 이 신호가 사라지면 의미 추정의 근거가 사라진다")
+        assertFalse(fake.lastPrompt.contains("120-88-12345"), "PII 형태 원문이 AI 요청에 실렸다(#85)")
+        assertFalse(fake.lastPrompt.contains("김한빛"), "대표자명 원문이 AI 요청에 실렸다(#85)")
+        assertFalse(fake.lastPrompt.contains("02-555-1234"), "전화번호 원문이 AI 요청에 실렸다(#85)")
     }
 
     @Test fun `unknown tables in ai response are ignored`() {

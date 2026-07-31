@@ -15,7 +15,9 @@ verify_l0.py      커밋된 증거의 적합성 확인기 V1~V14 + 결함 주입
 test_bench_l0.py  **계측기 자체의 단위 테스트** — 귀속·게이트 산식·확인기 규칙이 거짓을 무는가
 manifest.json     규칙 범위·케이스 총계 고정
 runs/run-l0-db-3c27259-001/     probe-db.json · report.json    (#88 실측 — 보고율 0.0)
-runs/run-l0-db-3c27259-002/     probe-db.json · report.json    (#114 재측정 — 보고율 1.0 · 현행)
+runs/run-l0-db-3c27259-002/     probe-db.json · report.json    (#114 재측정 — 보고율 1.0)
+runs/run-l0-db-3c27259-003/     probe-db.json · report.json    (#115 재측정 — 수집기에 마스킹 단계 · 수치 변화 없음)
+runs/run-l0-db-3c27259-004/     probe-db.json · report.json    (#115 경계 문자 통합 수정 — 수치 변화 없음 · 현행)
 runs/run-l0-code-3c27259-001/   probe-code.json · report.json  (#88 실측 — 결정성 0.3333 · H1)
 runs/run-l0-code-3c27259-002/   probe-code.json · report.json  (#112 재측정 — 결정성 1.0)
 runs/run-l0-code-3c27259-003/   probe-code.json · report.json  (#114 재측정 — 보고율 1.0 · 현행)
@@ -24,7 +26,7 @@ test_bench_l0.py                계측기 자체의 단위 테스트 (합성 입
 metadata_completeness.py        #113 게이트 재측정 (코드 트랙 실측 + DB 트랙 결과 확인)
 metadata/completeness-{db,code}.json   그 결과```
 
-**현행 실행**은 db `002` · code `003` 이다(`build_report.RUNS` · `probe_code.RUN_DIR`). 각 트랙의 직전
+**현행 실행**은 db `004` · code `003` 이다(`build_report.RUNS` · `probe_code.RUN_DIR`). 각 트랙의 직전
 실행이 `PREVIOUS` 이며 새 보고서가 그것을 `baseline.previous` 로 인용한다 — 덮어쓰지 않는다(I3 §5.5).
 
 DB 트랙 프로브는 수집기가 Kotlin 이므로 백엔드 테스트가 겸한다 —
@@ -103,6 +105,21 @@ venv 를 쓰는 이유: 현재 워킹트리에서 `pip install -e codegraph` 를
 ```
 [FAIL] 프로브 산출물 표류 — 블록: ['determinismControl', 'input', 'inventory', 'provenance', 'readOnly']
 ```
+
+`#115`(마스킹) 브랜치에서도 같은 이유로 실패하며, 블록 목록이 달라진다:
+
+```
+[FAIL] 프로브 산출물 표류 — 블록: ['determinismControl', 'maskingCapability', 'provenance']
+```
+
+`maskingCapability.exists` 가 `false → true` 로 바뀐 것이 핵심이다 — `gate-security-masking`(L0-fix-5)의
+관측값이 뒤집혔다는 신호다. `provenance.metaKeys` 에 `masking` 이 늘고 `determinismControl` 의 산출물
+해시가 바뀐 것도 같은 변경의 결과다(결정성 자체는 1.0 · 시드 무관 유지).
+
+그럼에도 **코드 트랙에 새 runId 를 만들지 않는다** — 아래 gold 재고정 조건은 그대로이기 때문이다.
+게이트가 뒤집힌 것을 증거로 남기는 일은 I2 Gold Set 개정(승인 사항) 뒤에 한다. 지금 새 실행을 만들면
+승인되지 않은 입력 신원 위에 판정을 얹게 된다. DB 트랙은 사정이 다르다: 입력이 고정 SQL 픽스처이고
+`hashMatchesPinned` 가 참이라 같은 승인 아래서 재측정할 수 있어 `run-l0-db-3c27259-003` 을 남겼다.
 
 이것을 새 runId 로 정리하려면 **입력 revision 을 다시 고정해야** 한다. gold manifest 는
 `sourceRevision: 3c27259…` 를 **`APPROVED`** 상태로 고정하고 있고(`docs/superpowers/specs/gold/manifest.json`),

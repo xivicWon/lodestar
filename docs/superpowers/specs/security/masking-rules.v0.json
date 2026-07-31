@@ -1,0 +1,217 @@
+{
+  "specVersion": "masking-rules/v0",
+  "issue": "#115 (L0-fix-5) · 요구 통합: #85 · 정답셋: #99 gold/pii.json",
+  "note": "두 수집 경로(Kotlin 백엔드 · Python codegraph)가 같은 규칙으로 마스킹하기 위한 단일 원본이다. 사본은 backend/src/main/resources/com/ontostudio/security/ 와 codegraph/src/lodestar_codegraph/ 에 있고, 사본이 이 파일과 다르면 양 언어 테스트가 붉어진다. 정규식은 두 엔진에서 같은 결과를 내야 하므로 이식성 제약을 지킨다: \\d·\\w 금지([0-9]·[A-Za-z0-9_] 로 적는다 — Python 은 유니코드 숫자까지 먹는다), 이름있는 그룹 금지(문법이 다르다), 가변길이 역참조 금지. `\\s` 도 금지한다: Python 은 유니코드 공백(NBSP·전각 공백)까지 먹고 Java 는 ASCII 만 보므로 같은 입력에서 두 엔진의 스팬이 갈린다(리뷰 LOD-131). 공백은 `[ \\t\\n\\r\\f\\x0B]` 로 명시한다 — Java `\\s` 와 같은 집합이다. 예외는 '아무 문자' 관용구 `[\\s\\S]` 뿐이며 이것은 두 엔진에서 모두 전체 문자 집합이라 발산하지 않는다.",
+  "maskToken": {
+    "template": "[MASKED:{class}]",
+    "lengthPreservingChar": "*",
+    "note": "lengthPreserving 컨텍스트(SQL 리터럴 등 길이 제약이 있는 자리)는 원문 길이만큼 '*' 로 바꾸되 **개행은 그대로 둔다** — 문자 수와 행 구조가 보존되므로 컬럼 길이가 넘지 않고 `path#Lnn` 행 좌표도 밀리지 않는다. 여러 바이트 문자를 ASCII '*' 로 바꾸므로 **바이트 오프셋은 보존되지 않는다**(리뷰 LOD-055): 이 계약의 단위는 문자와 행이다. 두 경우 모두 원문은 어디에도 남기지 않는다(#85).",
+    "valueGroupsNote": "규칙은 `valueGroup`(단일) 또는 `valueGroups`(대안 중 참여한 첫 그룹)로 가릴 구간을 지정한다. 두 엔진이 같은 규칙을 같은 방식으로 해석해야 하므로 이 선택 규칙도 계약이다: 목록 순서대로 보고 **처음 참여한 그룹**을 쓴다."
+  },
+  "policy": {
+    "allowlistEnabled": true,
+    "defaultDisabledClasses": [],
+    "note": "allowlist 는 '가리면 추적이 끊기는 값' 의 최소 목록이다(#85 최소 allowlist). allow 스팬과 겹치는 탐지는 버린다 — 우선순위는 allow > detect 다.",
+    "secretsOverrideAllowlist": {
+      "enabled": true,
+      "detectPrefix": "SECRET.",
+      "overridableAllow": [
+        "ALLOW.INTERNAL_ID"
+      ],
+      "note": "allow > detect 는 무조건이 아니다. 다만 뒤집는 범위는 **여기 적힌 allow 규칙으로 한정**한다 — 기본값은 여전히 allow 가 이기는 쪽이고, 새 allow 규칙은 자동으로 안전한(문서화된) 쪽에 선다. ALLOW.INTERNAL_ID 를 넣은 이유: 그 근거가 '내부 코드… 그 자체로 개인을 식별하지 않는다' 는 **식별성** 논거뿐이고 가려도 끊기는 추적이 없다. 그래서 `apiKey=ITM000000009` 처럼 명시적 시크릿 문맥에서 그 형태의 값이 통째로 통과하던 결함(리뷰 후속: `password=ABC123456`)을 닫는다. GIT_SHA·CONTENT_HASH·UUID·TIMESTAMP 는 넣지 않았다 — 그 값들은 가리면 revision·fixture 대조·추적이 끊기고, 특히 GIT_SHA 는 '실제 40자 hex 시크릿이 가려진다' 는 교환을 이미 명시적으로 기록해 둔 항목이다. 그 교환을 바꾸는 것은 승인 사항이지 이 수정의 범위가 아니다 — `password=<40자 hex>` 가 통과하는 것은 **문서화된 잔여 위험**으로 남는다. ALLOW.MASK_TOKEN 도 넣지 않는다: 이미 가려진 자리를 다시 가리면 멱등성이 깨진다(#85)."
+    }
+  },
+  "allow": [
+    {
+      "id": "ALLOW.MASK_TOKEN",
+      "class": "MASK_TOKEN",
+      "regex": "\\[MASKED:[A-Z_]+\\]",
+      "note": "이미 가려진 자리를 다시 가리지 않는다 — 마스킹은 멱등이어야 한다(#85: 동일 입력 → 동일 결과)."
+    },
+    {
+      "id": "ALLOW.GIT_SHA",
+      "class": "GIT_SHA",
+      "regex": "\\b[0-9a-f]{40}\\b",
+      "note": "40자 hex. 시크릿 정규식이 가장 흔히 오탐하는 형태이며 가리면 I1 §1.3 revision 추적이 끊긴다(gold PII.NEG.PROPERTIES.L15.27). 실제 40자 hex 시크릿은 이 규칙에 가려진다 — 의도된 교환이며 §정책에 기록한다."
+    },
+    {
+      "id": "ALLOW.CONTENT_HASH",
+      "class": "CONTENT_HASH",
+      "regex": "\\bsha256:[0-9a-f]{64}\\b",
+      "note": "fixture hash 대조가 불가능해진다(gold PII.NEG.PROPERTIES.L16.28)."
+    },
+    {
+      "id": "ALLOW.UUID",
+      "class": "TRACE_ID",
+      "regex": "\\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\b",
+      "note": "추적 id. 개인 식별자가 아니다(gold PII.NEG.*.TRACE_ID)."
+    },
+    {
+      "id": "ALLOW.JDBC_URL",
+      "class": "CONNECTION_URL",
+      "regex": "\\bjdbc:[a-z0-9]+://(?![^ \\t\\n\\r\\f\\x0B\"'/@]*:[^ \\t\\n\\r\\f\\x0B\"'/@]*@)[^ \\t\\n\\r\\f\\x0B\"']*",
+      "note": "자격증명이 없는 접속 URL 은 스키마 추적에 필요하다(gold PII.NEG.*.CONNECTION_URL). 자격증명이 URL 에 박힌 형태는 SECRET.URL_CREDENTIAL 이 먼저 가린다."
+    },
+    {
+      "id": "ALLOW.TIMESTAMP",
+      "class": "TIMESTAMP",
+      "regex": "\\b[0-9]{4}-[0-9]{2}-[0-9]{2}(?:[ T][0-9]{2}:[0-9]{2}:[0-9]{2}Z?)?\\b",
+      "note": "업무 시각(gold PII.NEG.SQL.L26.17)."
+    },
+    {
+      "id": "ALLOW.INTERNAL_ID",
+      "class": "INTERNAL_ID",
+      "regex": "\\b[A-Z]{1,4}[0-9]{6,15}\\b",
+      "note": "내부 코드(회원·상품·주문번호). 그 자체로 개인을 식별하지 않는다(gold PII.NEG.*.INTERNAL_ID)."
+    }
+  ],
+  "detect": [
+    {
+      "id": "SECRET.AWS_ACCESS_KEY_ID",
+      "class": "AWS_ACCESS_KEY_ID",
+      "kind": "SECRET",
+      "regex": "\\b(?:AKIA|ASIA|AGPA|AIDA|AROA|ANPA)[0-9A-Z]{16}\\b",
+      "valueGroup": 0
+    },
+    {
+      "id": "SECRET.AWS_SECRET_ACCESS_KEY",
+      "class": "AWS_SECRET_ACCESS_KEY",
+      "kind": "SECRET",
+      "regex": "(?i)aws[._-]?secret[._-]?access[._-]?key[\"']?[ \\t\\n\\r\\f\\x0B]*[:=][ \\t\\n\\r\\f\\x0B]*[\"']?([A-Za-z0-9/+=]{40,})",
+      "valueGroup": 1,
+      "note": "일반 키드 시크릿 규칙도 이 값을 가리지만 클래스가 PASSWORD 로 기록된다 — gold 는 AWS_SECRET_ACCESS_KEY 로 선언한다. 보고서가 클래스별 건수를 주장하므로 귀속도 맞아야 한다(리뷰 LOD-065). 그래서 전용 규칙을 KEYED_VALUE 앞에 둔다. 길이는 40자 **이상**을 한 덩어리로 잡는다: 정확히 40자만 잡으면 41자 입력에서 마지막 1자가 평문으로 남아 '부분 마스킹 0건' 기준을 깬다(리뷰 후속)."
+    },
+    {
+      "id": "SECRET.GITHUB_TOKEN",
+      "class": "GITHUB_TOKEN",
+      "kind": "SECRET",
+      "regex": "\\b(?:gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{50,255})\\b",
+      "valueGroup": 0,
+      "note": "classic(ghp_ 계열)과 fine-grained(github_pat_) 둘 다 잡는다 — 한쪽만 보면 유효한 토큰이 원문으로 남는다(리뷰 LOD-078)."
+    },
+    {
+      "id": "SECRET.SLACK_TOKEN",
+      "class": "SLACK_TOKEN",
+      "kind": "SECRET",
+      "regex": "\\bxox[abprs]-[0-9A-Za-z-]{10,}",
+      "valueGroup": 0
+    },
+    {
+      "id": "SECRET.JWT",
+      "class": "JWT",
+      "kind": "SECRET",
+      "regex": "\\beyJ[A-Za-z0-9_-]{4,}\\.[A-Za-z0-9_-]{4,}\\.[A-Za-z0-9_=-]{2,}",
+      "valueGroup": 0
+    },
+    {
+      "id": "SECRET.PRIVATE_KEY_BLOCK",
+      "class": "PRIVATE_KEY",
+      "kind": "SECRET",
+      "regex": "-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----(?:[\\s\\S]*?-----END (?:[A-Z0-9]+ )*PRIVATE KEY-----|(?:[\\r\\n]+[A-Za-z0-9/+=]+(?![^\\r\\n]))*)",
+      "valueGroup": 0,
+      "note": "BEGIN 헤더가 아니라 **블록 전체**를 가린다 — 헤더만 가리면 Base64 본문이 그대로 남아 개인 키가 노출된다(리뷰 LOD-052). END 가 없는 잘린 입력에서는 **연속된 Base64 본문까지** 가린다: 헤더만 가리면 본문이 그대로 남고(로그 절단으로 흔한 형태), 끝까지 삼키면 무관한 내용까지 지운다 — Base64 가 아닌 줄에서 멈추는 것이 두 실패 사이의 자리다(리뷰 후속). 여러 줄에 걸치므로 길이 보존 모드에서도 개행은 보존된다(엔진 계약) — 그러지 않으면 행 좌표가 밀린다. 잘린 입력에서 삼키는 단위는 **줄 전체가 Base64 인 줄**이다 — 줄 일부만 먹으면 Base64 가 아닌 줄의 앞부분까지 지운다."
+    },
+    {
+      "id": "SECRET.URL_CREDENTIAL",
+      "class": "URL_CREDENTIAL",
+      "kind": "SECRET",
+      "regex": "(?i)\\b[a-z][a-z0-9+.-]*://[^ \\t\\n\\r\\f\\x0B:/@\"']+:([^ \\t\\n\\r\\f\\x0B/\"']+)@",
+      "valueGroup": 1,
+      "note": "접속 문자열에 박힌 비밀번호만 가린다 — 호스트·스키마·계정명은 남긴다(#85: 마스킹 후에도 구조 정보 유지). 값에서 '@' 를 배제하지 않는다: 배제하면 'p@ssw0rd' 가 첫 '@' 에서 끊겨 나머지가 평문으로 남는다(로컬 리뷰). 탐욕 수량자가 마지막 '@' 까지 잡는다."
+    },
+    {
+      "id": "SECRET.KEYED_VALUE",
+      "class": "PASSWORD",
+      "kind": "SECRET",
+      "regex": "(?i)(?:\\b(?:password|passwd|pwd|secret|apikey|api_key|accesskey|access_key|privatekey|private_key|credential|credentials|token|authorization)[\"']?[ \\t\\n\\r\\f\\x0B]*[:=][ \\t\\n\\r\\f\\x0B]*(?:\"([^\"\\r\\n]*)\"?|'([^'\\r\\n]*)'?|(?:Bearer |Basic |Token )?([^ \\t\\n\\r\\f\\x0B,;\"')]+))|\\b(?:password|passwd|pwd|secret|apikey|api_key|accesskey|access_key|privatekey|private_key|credential|credentials|token|authorization)(?:(?-i:[A-Z0-9_-])[A-Za-z0-9_-]{0,11})[\"']?[ \\t\\n\\r\\f\\x0B]*[:=][ \\t\\n\\r\\f\\x0B]*(?!(?:true|false|null|none|enabled|disabled|required|optional|[0-9]+)(?:[ \\t\\n\\r\\f\\x0B,;\"')]|$))(?:\"([^\"\\r\\n]*)\"?|'([^'\\r\\n]*)'?|(?:Bearer |Basic |Token )?([^ \\t\\n\\r\\f\\x0B,;\"')]+)))",
+      "note": "키 이름이 비밀을 뜻할 때만 값을 가린다. 'username'·'user'·'key'·'path' 는 목록에 없다 — gold 음성(DB_USERNAME · 'key=item:ITM…')이 정확히 그 자리다. Bearer/Basic/Token 접두는 값이 아니라 스킴이므로 남긴다. 따옴표로 묶인 값은 **닫는 따옴표까지** 한 덩어리로 잡는다 — 공백에서 끊으면 'abc def' 의 'def' 가 평문으로 남는다(로컬 리뷰). 키워드는 **키 안의 온전한 토큰**이어야 한다: 접미사는 대문자·숫자·`_`·`-` 로 시작할 때만 인정한다(camelCase 경계). 아무 소문자나 허용하면 `secret`+`ary`·`token`+`izer` 가 비밀 키로 읽혀 무관한 설정값이 가려진다(리뷰 후속). `secretAccessKey`·`password_hash` 는 경계를 넘으므로 그대로 잡힌다. `passwordPolicy` 처럼 경계를 넘는 비시크릿 키는 여전히 오탐이며 — 구조만으로는 `secretAccessKey` 와 구분되지 않는다 — 잔여 위험으로 기록한다. 따옴표 값은 **그 줄 안에서** 닫혀야 한다: 개행을 넘기면 다음 줄의 닫는 따옴표까지 한 값이 되어 그 사이의 무관한 줄이 산출물에서 통째로 사라진다(마스킹이 데이터를 지우는 것은 마스킹의 실패다). 경계 문자는 `(?-i:…)` 로 **대소문자 구분**을 되살려 검사한다 — 규칙 전체가 `(?i)` 이므로 그러지 않으면 `[A-Z]` 가 소문자까지 먹어 경계가 사라진다. 닫는 따옴표는 **선택**이다: 줄 안에서 닫히지 않은 값을 매칭 실패로 두면 그 값이 통째로 평문으로 남는다(줄 넘김을 막으면서 생기는 반대편 구멍). 닫히지 않으면 줄 끝까지가 값이다. 접미사가 붙은 키는 **설정 키일 수 있다** — 구조만으로는 secretAccessKey 와 passwordPolicy 를 구분할 수 없으므로 값을 본다: 접미사가 있을 때만 `true`·`false`·`enabled`·`required`·정수 같은 설정값 형태를 제외한다(리뷰 FP-CAMEL). 접미사가 없는 `password=123456` 은 그대로 가린다 — 그 자리는 비밀이 맞다.",
+      "valueGroups": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "id": "PII.KR_RRN",
+      "class": "KR_RRN",
+      "kind": "PII",
+      "regex": "\\b[0-9]{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12][0-9]|3[01])-[1-4][0-9]{6}\\b",
+      "valueGroup": 0,
+      "note": "주민등록번호. 앞 6자리를 날짜로 제약해 6자리 코드(gold PII.NEG.SQL.L28.18 '410100')와 갈라낸다."
+    },
+    {
+      "id": "PII.EMAIL",
+      "class": "EMAIL",
+      "kind": "PII",
+      "regex": "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b",
+      "valueGroup": 0
+    },
+    {
+      "id": "PII.KR_PHONE",
+      "class": "PHONE",
+      "kind": "PII",
+      "regex": "(?:\\+82-)?\\b0?[0-9]{1,2}-[0-9]{3,4}-[0-9]{4}\\b",
+      "valueGroup": 0,
+      "note": "국가코드·하이픈 표기를 모두 잡는다(gold PII.POS.SQL.L20.10 이 한쪽만 잡는 형식 의존 마스킹을 노린다)."
+    },
+    {
+      "id": "PII.CARD_NO_DELIMITED",
+      "class": "CARD_NO",
+      "kind": "PII",
+      "regex": "\\b[0-9]{4}[- ][0-9]{4}[- ][0-9]{4}[- ][0-9]{4}\\b",
+      "valueGroup": 0
+    },
+    {
+      "id": "PII.CARD_NO_PLAIN",
+      "class": "CARD_NO",
+      "kind": "PII",
+      "regex": "\\b[0-9]{16}\\b",
+      "valueGroup": 0,
+      "luhn": true,
+      "note": "구분자 없는 16자리는 Luhn 검사를 통과할 때만 카드로 본다 — 16자리 숫자 나열 전부를 가리면 수량·금액까지 삼킨다."
+    },
+    {
+      "id": "PII.KR_BANK_ACCOUNT",
+      "class": "BANK_ACCOUNT",
+      "kind": "PII",
+      "regex": "\\b[0-9]{3,4}-[0-9]{2,3}-[0-9]{6}\\b",
+      "valueGroup": 0
+    },
+    {
+      "id": "PII.KR_BIZ_NO",
+      "class": "KR_BIZ_NO",
+      "kind": "PII",
+      "regex": "\\b[0-9]{3}-[0-9]{2}-[0-9]{5}\\b",
+      "valueGroup": 0,
+      "note": "사업자등록번호. gold 에는 없지만 #88 F7 이 샘플 적재 경로에서 회수한 PII 형태 값(TB_CUST_MST.BIZ_NO)이다."
+    },
+    {
+      "id": "PII.IP_ADDRESS",
+      "class": "IP_ADDRESS",
+      "kind": "PII",
+      "regex": "\\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\b",
+      "valueGroup": 0,
+      "note": "접속자 IP 는 개인정보로 취급한다(gold PII.POS.LOG.L5.31)."
+    },
+    {
+      "id": "PII.KR_ADDRESS",
+      "class": "ADDRESS",
+      "kind": "PII",
+      "regex": "(?:서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)[가-힣]{0,3}[ \\t\\n\\r\\f\\x0B]?(?:[가-힣]{1,6}(?:시|군)[ \\t\\n\\r\\f\\x0B]+)?[가-힣]{1,6}(?:구|군|시)[ \\t\\n\\r\\f\\x0B]+[가-힣A-Za-z0-9]{1,12}(?:대로|로|길)[ \\t\\n\\r\\f\\x0B]*[0-9]+(?:-[0-9]+)?(?:[ \\t\\n\\r\\f\\x0B]*[0-9]+층)?",
+      "valueGroup": 0,
+      "note": "행정구역 + 도로명 + 번지. NAME 보다 먼저 두어 주소 안의 3음절 행정동(‘강남구’)이 인명으로 분류되는 것을 막는다 — 스팬 겹침은 스펙 순서가 이긴다. 도→시→구 3단계 주소(`경기도 성남시 분당구 …`)를 위해 시·군 단계를 선택으로 넣었다 — 광역 다음 한 단계만 허용하면 흔한 주소를 통째로 놓친다(리뷰 LOD-124)."
+    },
+    {
+      "id": "PII.KR_NAME",
+      "class": "NAME",
+      "kind": "PII",
+      "regex": "(?<![^'\"=:,\\[])(?:김|이|박|최|정|강|조|윤|장|임|한|오|서|신|권|황|안|송|류|전|홍|고|문|양|손|배|백|허|유|남|심|노|하|곽|성|차|주|우|구|민|나|진|지|엄|채|원|천|방|공|현|함|변|염|여|추|도|소|석|선|설|마|길|연|위|표|명|기|반|왕|금|옥|육|인|맹|제|모|탁|국|어|은|편|용|봉)[가-힣]{2}(?![^ \\t\\n\\r\\f\\x0B'\"=:),\\];<])",
+      "valueGroup": 0,
+      "note": "한국 성 + 2음절. ① 3음절로 못박아 4음절 이상 상호·업무용어(‘대성전자’·‘제품매출’)와 갈라내고, ② 앞뒤가 **필드 구분자**(따옴표·= · : · , · 괄호 · 문장 경계)일 때만 인정한다. 산문 한가운데의 3음절 낱말(‘마스킹’·‘구조가’·‘정답은’)은 성으로 시작해도 인명이 아니다 — 이 제약 하나가 코퍼스에서 오탐 13건을 없앤다. 그래도 휴리스틱이므로 보고서에 클래스별 건수를 따로 적는다. 여는 괄호는 구분자로 인정하지 않는다 — 산문의 ‘정답(마스킹 대상…’ 이 그 자리에 걸린다. 괄호 안의 인명(‘(김철수)’)은 잔여 위험으로 문서에 남긴다."
+    }
+  ],
+  "spanContract": "**기록·교차 비교에 쓰는 스팬 좌표의 단위는 UTF-16 코드 단위**다(Kotlin/Java 문자열 인덱스와 같다). 각 엔진의 메모리 안 스팬은 그 언어의 문자열 인덱스 단위를 쓴다 — Kotlin 은 UTF-16, Python 은 코드포인트다. 그래야 각 엔진이 자기 인덱스로 안전하게 자른다. 따라서 좌표를 **남기거나 두 엔진을 비교할 때는 반드시 변환한다**(Python `mask.spans_utf16`/`utf16_offset`). 변환 없이 두 엔진의 raw 좌표를 비교하면 BMP 밖 문자(이모지 등)가 앞에 있을 때 어긋난다 — 마스킹된 텍스트 자체는 각 엔진 안에서 일관되므로 이 차이는 좌표를 소비·영속화하는 자리에서만 드러난다(로컬 리뷰)."
+}

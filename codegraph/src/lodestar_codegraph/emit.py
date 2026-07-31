@@ -1,11 +1,34 @@
 from __future__ import annotations
 import json
 import os
+from .mask import MaskLedger, MaskPolicy, mask_field
 from .model import Node, Edge
+
+
+def _mask_meta(value, ledger: MaskLedger, policy: MaskPolicy | None):
+    """meta 의 문자열을 재귀적으로 마스킹한다. 수·불리언은 그대로 둔다.
+
+    **키도 마스킹한다** — 키에 원문을 넣으면 값만 가리는 관문을 우회한다(리뷰 LOD-073).
+    tuple·set 도 JSON 으로 직렬화되므로 함께 처리한다.
+    """
+    if isinstance(value, str):
+        return mask_field(value, ledger, policy)
+    if isinstance(value, (list, tuple)):
+        return [_mask_meta(v, ledger, policy) for v in value]
+    if isinstance(value, (set, frozenset)):
+        # set 은 순회 순서가 PYTHONHASHSEED 에 따라 달라진다 — 정렬하지 않으면 같은 입력의 산출물
+        # 순서와 해시가 실행마다 갈린다(리뷰 LOD-118). 마스킹 **후** 값으로 정렬해야 산출물이
+        # 결정적이다: 원문으로 정렬하면 서로 다른 원문이 같은 토큰으로 접힐 때 순서가 원문에 의존한다.
+        return sorted((_mask_meta(v, ledger, policy) for v in value), key=repr)
+    if isinstance(value, dict):
+        return {_mask_meta(k, ledger, policy) if isinstance(k, str) else k:
+                _mask_meta(v, ledger, policy) for k, v in value.items()}
+    return value
 
 
 def build_and_write(nodes: list[Node], edges: list[Edge], meta_extra: dict,
                     out_path: str, prune_dangling: bool = True,
+                    mask_policy: MaskPolicy | None = None,
                     file_hashes: dict[str, str] | None = None) -> dict:
     """[file_hashes] 는 상대경로 → `sha256:...`.
 
@@ -15,25 +38,41 @@ def build_and_write(nodes: list[Node], edges: list[Edge], meta_extra: dict,
     ids = {n.id for n in nodes}
     kept = [e for e in edges if not prune_dangling or (e.src in ids and e.dst in ids)]
 
+    # #115 마스킹 단계 — 산출물에 실리는 텍스트는 쓰기 전에 여기를 통과한다. `id` 는 엣지 참조 키이므로
+    # 손대지 않는다(원문이 아니라 정규화 이름이며, 바꾸면 그래프가 끊긴다).
+    ledger = MaskLedger()
+
+    # `path` 는 #88 문서가 코드 트랙의 sourceId 대용으로 지목한 필드다. 마스킹하면 좌표가 원본에서
+    # 조회되지 않을 수 있으므로(경로에 이메일·해시 형태가 들어간 드문 경우) **가려진 경로 수를 따로
+    # 센다** — 조용히 바뀌지 않게 하려는 것이다.
+    masked_paths = sum(1 for n in nodes if mask_field(n.path, None, mask_policy) != n.path)
+
     hashes = file_hashes or {}
-    node_docs = sorted(
-        ({"id": n.id, "kind": n.kind, "label": n.label,
-          "qualified_name": n.qualified_name, "path": n.path, "lang": n.lang,
-          "status": n.status,
-          "source_id": n.path, "content_hash": hashes.get(n.path),
-          "community": n.community, "degree": n.degree, "god_node": n.god_node}
-         for n in nodes),
-        key=lambda d: d["id"],
-    )
+
+    def _node_doc(n: Node) -> dict:
+        # path 는 **한 번만** 마스킹한다 — 두 번 부르면 같은 원문이 원장에 두 번 계수된다.
+        # `source_id` 는 그 결과를 그대로 쓴다: 산출물에 실리는 같은 문자열이므로 path 와 다른
+        # 노출 정책을 가질 이유가 없다. 해시 조회 키는 **원문 경로**여야 file_hashes 와 맞는다.
+        masked_path = mask_field(n.path, ledger, mask_policy)
+        return {"id": n.id, "kind": n.kind,
+                "label": mask_field(n.label, ledger, mask_policy),
+                "qualified_name": mask_field(n.qualified_name, ledger, mask_policy),
+                "path": masked_path, "lang": n.lang,
+                "status": n.status,
+                "source_id": masked_path, "content_hash": hashes.get(n.path),
+                "community": n.community, "degree": n.degree, "god_node": n.god_node}
+
+    node_docs = sorted((_node_doc(n) for n in nodes), key=lambda d: d["id"])
     edge_docs = sorted(
         ({"id": e.id, "from": e.src, "to": e.dst, "kind": e.kind,
           "provenance": e.provenance, "confidence": round(e.confidence, 4),
-          "alternatives": e.alternatives}
+          "alternatives": [mask_field(a, ledger, mask_policy) for a in e.alternatives]}
          for e in kept),
         key=lambda d: (d["from"], d["to"], d["kind"]),
     )
     communities = {n.community for n in nodes if n.community is not None}
-    meta = {**meta_extra,
+    meta = {**_mask_meta(meta_extra, ledger, mask_policy),
+            "masking": {**ledger.summary(), "masked_path_fields": masked_paths},
             "generated_by": "lodestar-codegraph v1",
             "node_count": len(node_docs),
             "edge_count": len(edge_docs),

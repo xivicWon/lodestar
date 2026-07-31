@@ -1,0 +1,234 @@
+{
+  "reportVersion": "masking-run-report/v0",
+  "issue": 115,
+  "note": "이 보고서는 Run Quality Report(I3)가 아니며 L0 레이어 판정을 갱신하지 않는다. #88 의 두 보고서는 수정 전 기준선으로 남는다 — L0 재측정은 gold sourceRevision 재고정과 승인이 선행된다(I2 §10.4 · I1 §7.4).",
+  "specVersion": "masking-rules/v0",
+  "goldSetVersion": "gold-set/v0",
+  "goldSetState": "APPROVED",
+  "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
+  "goldSetId": "gold-set/v0+f20edbad6bad",
+  "gates": [
+    {
+      "id": "gate-security-masking",
+      "name": "테스트 시크릿·PII 미마스킹 0건 + 부분 마스킹 0건 (gold 코퍼스)",
+      "required": 0,
+      "observed": 0,
+      "status": "PASS",
+      "scope": "gold PII 코퍼스 3파일 전문(문맥 포함) · 양성 28건 · 좌표 완전 피복 요구 · 치명 클래스(GIT_SHA·CONTENT_HASH) 오탐 0건 · gold 밖 스팬 0건"
+    },
+    {
+      "id": "gate-engine-parity",
+      "name": "두 수집 경로가 같은 규칙으로 같은 결과를 낸다 (Kotlin ↔ Python)",
+      "required": true,
+      "observed": true,
+      "status": "PASS",
+      "scope": "gold 코퍼스 3파일 · 스팬 좌표·클래스·규칙 id·마스킹 결과 해시"
+    },
+    {
+      "id": "gate-engine-parity-branches",
+      "name": "gold 가 지나가지 않는 분기에서도 두 엔진이 같다",
+      "required": true,
+      "observed": true,
+      "status": "PASS",
+      "scope": "패리티 픽스처 34케이스 × 정책 4종(기본·길이보존) · 대안 그룹·PEM·BMP 밖 문자·개행 보존"
+    },
+    {
+      "id": "gate-db-ingest-masking",
+      "name": "적재 저장소에 미마스킹 PII 0건 (#88 F7 노출 지점)",
+      "required": 0,
+      "observed": 0,
+      "status": "PASS",
+      "scope": "legacy-sample 적재 후 PII 형태 컬럼 질의"
+    },
+    {
+      "id": "gate-code-emit-masking",
+      "name": "코드 산출물 텍스트 필드에 미마스킹 양성 0건",
+      "required": 0,
+      "observed": 0,
+      "status": "PASS",
+      "scope": "emit 단계 · withLineContext 변형 · 심은 양성 28건"
+    },
+    {
+      "id": "gate-no-plaintext-in-records",
+      "name": "증거·보고서에 원문 미기록 (#85)",
+      "required": 0,
+      "observed": 0,
+      "status": "PASS",
+      "scope": "증거 7종 + 보고서 전문 × 양성 62건 = 496회 대조",
+      "hits": []
+    }
+  ],
+  "gold": {
+    "positives": 28,
+    "masked": 28,
+    "unmasked": [],
+    "fullyCovered": 28,
+    "partiallyCovered": [],
+    "negatives": 16,
+    "preserved": 16,
+    "falsePositives": [],
+    "falsePositiveRate": 0.0,
+    "criticalClassFalsePositives": {
+      "GIT_SHA": 0,
+      "CONTENT_HASH": 0
+    },
+    "spansOutsideGold": {
+      "pii:corpus.sql": 0,
+      "pii:corpus.properties": 0,
+      "pii:corpus.log": 0
+    },
+    "byClass": {
+      "ADDRESS": 2,
+      "AWS_ACCESS_KEY_ID": 1,
+      "AWS_SECRET_ACCESS_KEY": 1,
+      "BANK_ACCOUNT": 2,
+      "CARD_NO": 3,
+      "EMAIL": 3,
+      "GITHUB_TOKEN": 1,
+      "IP_ADDRESS": 1,
+      "JWT": 2,
+      "KR_RRN": 3,
+      "NAME": 3,
+      "PASSWORD": 2,
+      "PHONE": 3,
+      "SLACK_TOKEN": 1
+    },
+    "byRule": {
+      "PII.CARD_NO_DELIMITED": 1,
+      "PII.CARD_NO_PLAIN": 2,
+      "PII.EMAIL": 3,
+      "PII.IP_ADDRESS": 1,
+      "PII.KR_ADDRESS": 2,
+      "PII.KR_BANK_ACCOUNT": 2,
+      "PII.KR_NAME": 3,
+      "PII.KR_PHONE": 3,
+      "PII.KR_RRN": 3,
+      "SECRET.AWS_ACCESS_KEY_ID": 1,
+      "SECRET.AWS_SECRET_ACCESS_KEY": 1,
+      "SECRET.GITHUB_TOKEN": 1,
+      "SECRET.JWT": 2,
+      "SECRET.KEYED_VALUE": 2,
+      "SECRET.SLACK_TOKEN": 1
+    }
+  },
+  "engines": {
+    "kotlin": {
+      "engine": "kotlin:com.ontostudio.security.MaskingEngine",
+      "spans": 28
+    },
+    "python": {
+      "engine": "python:lodestar_codegraph.mask",
+      "spans": 28
+    },
+    "parity": true,
+    "branchParity": {
+      "fixtureVersion": "mask-parity-fixture/v1",
+      "fixtureHash": "sha256:1bc74d0d2d15035142784b553b4281cb70768785d0b0166130a7d2ec7dca87b8",
+      "cases": 34,
+      "policies": [
+        "default",
+        "lengthPreserving",
+        "noAllowlist",
+        "namesDisabled"
+      ],
+      "identical": true,
+      "spans": {
+        "default": 35,
+        "lengthPreserving": 35,
+        "noAllowlist": 40,
+        "namesDisabled": 32
+      },
+      "note": "이 픽스처에는 정답이 없다 — 확정하는 것은 두 엔진이 갈리지 않는다는 사실 하나이며, 정확성 판정은 gold(#99)가 한다"
+    },
+    "ruleSpecHash": "sha256:aafb26dd6afe705956fde7ded3727d68ef72572b9bf2794e79f50a3c285dec35"
+  },
+  "collectionPaths": {
+    "db": {
+      "probe": "SampleLegacyDb.open() (적재 전 마스킹) + MetadataService.extract(conn)",
+      "input": "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql",
+      "maskedTotal": 11,
+      "byClass": {
+        "KR_BIZ_NO": 3,
+        "NAME": 5,
+        "PHONE": 3
+      },
+      "retrievableUnmaskedPiiValues": 0,
+      "unmaskedByPolicyValues": 3,
+      "policyExclusionNote": "ORG_NAME(법인명)은 개인정보가 아니므로 클래스를 도입하지 않았다 — #88 F7 이 센 14건 = 마스킹 11 + 정책상 제외 3. 정책상 제외를 0건으로 보이게 하려고 분모를 고르지 않는다",
+      "collectedTables": 27,
+      "ddlTextPath": {
+        "maskedTotal": 11,
+        "collectedTables": 27,
+        "plaintextLiteralsInScope": 11
+      },
+      "minimizePolicy": {
+        "skippedDmlStatements": 8,
+        "retrievableValues": 0,
+        "collectedTables": 27,
+        "default": false,
+        "note": "기본값 전환은 #88 baseline 계측기의 관측 대상을 바꾸므로 L0 재측정이 필요하다"
+      }
+    },
+    "code": {
+      "probe": "lodestar_codegraph.emit.build_and_write — 기록된 산출물 파일의 텍스트 자리 전부",
+      "gateVariant": "withLineContext",
+      "goldGap": "gold v0 의 양성 28건은 전부 .sql/.properties/.log 에 있어 코드 수집기가 읽는 확장자(.kt/.java) 안에 양성이 없다(#88 F8). 따라서 실제 수집 실행이 아니라 산출 단계에 양성을 심어 마스킹 관문의 동작을 측정한다 — gold 개정(I2 §8.2) 전까지의 한계다.",
+      "variants": {
+        "withLineContext": {
+          "unmasked": 0,
+          "unmaskedInArtifact": [],
+          "maskedTotal": 628,
+          "idsPreserved": true
+        },
+        "bareValue": {
+          "unmasked": 3,
+          "unmaskedInArtifact": [
+            "PII.POS.PROPERTIES.L5.19",
+            "PII.POS.PROPERTIES.L7.21",
+            "PII.POS.LOG.L6.32"
+          ],
+          "maskedTotal": 146,
+          "idsPreserved": true
+        }
+      }
+    }
+  },
+  "evidenceRefs": {
+    "emitCode": {
+      "path": "docs/superpowers/specs/bench/masking/runs/run-mask-code-001/emit-code.json",
+      "contentHash": "sha256:3d90267dddd9970c7cc6a85fda43117f3e58e5e93ff72110a85a3e55da96e225"
+    },
+    "engineKotlin": {
+      "path": "docs/superpowers/specs/bench/masking/runs/run-mask-gold-001/engine-kotlin.json",
+      "contentHash": "sha256:4e3b9e6342dd729ab6fd0c784fd364ee4efed1f78188fc316ff24ef5b8e83317"
+    },
+    "enginePython": {
+      "path": "docs/superpowers/specs/bench/masking/runs/run-mask-gold-001/engine-python.json",
+      "contentHash": "sha256:39ab0808ebec288287af1867845764ff621ee36e3680b2309709b779e3be9a61"
+    },
+    "goldVerdicts": {
+      "path": "docs/superpowers/specs/bench/masking/runs/run-mask-gold-001/gold-verdicts.json",
+      "contentHash": "sha256:8eb07a87f7092fcb2245b81e3411f39e3ac2f3ecab4204103a43e177028d9c3d"
+    },
+    "ingestDb": {
+      "path": "docs/superpowers/specs/bench/masking/runs/run-mask-ingest-001/ingest-db.json",
+      "contentHash": "sha256:aa47d001c00026eb91cef04738c7ca436000a36d9feeda5d691e50499cff89f9"
+    },
+    "parityFixture": {
+      "path": "docs/superpowers/specs/bench/masking/fixtures/parity-cases.json",
+      "contentHash": "sha256:1bc74d0d2d15035142784b553b4281cb70768785d0b0166130a7d2ec7dca87b8"
+    },
+    "parityKotlin": {
+      "path": "docs/superpowers/specs/bench/masking/runs/run-mask-parity-001/engine-kotlin.json",
+      "contentHash": "sha256:a0a16b75370e45c1dfc6f90414a497423a5885dd777fcd23ad8ded117aaa759b"
+    },
+    "parityPython": {
+      "path": "docs/superpowers/specs/bench/masking/runs/run-mask-parity-001/engine-python.json",
+      "contentHash": "sha256:816cce01514b64ff64a272bcb164888d556ae106446b058c0c7597a4421bebe4"
+    },
+    "ruleSpec": {
+      "path": "docs/superpowers/specs/security/masking-rules.v0.json",
+      "contentHash": "sha256:aafb26dd6afe705956fde7ded3727d68ef72572b9bf2794e79f50a3c285dec35"
+    }
+  }
+}

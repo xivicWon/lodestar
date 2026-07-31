@@ -23,15 +23,15 @@ GOLD = REPO / "docs/superpowers/specs/gold"
 SCHEMAS = REPO / "docs/superpowers/specs/schemas"
 
 RUNS = {
-    "db": HERE / "runs/run-l0-db-3c27259-002",
+    "db": HERE / "runs/run-l0-db-3c27259-004",
     "code": HERE / "runs/run-l0-code-3c27259-003",
 }
 PROBE_NAME = {"db": "probe-db.json", "code": "probe-code.json"}
-RUN_ID = {"db": "run-l0-db-3c27259-002", "code": "run-l0-code-3c27259-003"}
+RUN_ID = {"db": "run-l0-db-3c27259-004", "code": "run-l0-code-3c27259-003"}
 # 이전 실행 — 있으면 그 보고서를 읽어 비교한다. 수치를 여기 적지 않는다: 손으로 옮긴 기준선은
 # 원본과 어긋나도 아무도 모른다(V2 가 보고서를 프로브+이 상수들에서 다시 만들어 대조한다).
 PREVIOUS = {
-    "db": HERE / "runs/run-l0-db-3c27259-001",
+    "db": HERE / "runs/run-l0-db-3c27259-003",
     "code": HERE / "runs/run-l0-code-3c27259-002",
 }
 # 실측 세션의 시각 (RFC 3339 축소 프로파일). 보고서를 다시 만들어도 흔들리지 않도록 못박는다 —
@@ -39,8 +39,14 @@ PREVIOUS = {
 TIMES = {
     # 실측이 끝난 시각과 그 실행의 소요다 — 프로브가 시각을 산출물에 넣으면 매 실행이 표류하므로
     # 여기 못박되, 지어내지 않는다.
-    "db": ("2026-07-30T13:35:00Z", "2026-07-30T13:35:12Z"),
+    "db": ("2026-07-31T08:05:00Z", "2026-07-31T08:05:12Z"),
     "code": ("2026-07-30T13:40:00Z", "2026-07-30T13:40:06Z"),
+}
+# 이번 실행에서 **수집기의 무엇이** 달라졌는가. 트랙마다 다르므로 한 문장을 공유하지 않는다 —
+# 공유하면 db 재측정에 code 트랙의 사유가 붙어 보고서가 근거를 잘못 가리킨다.
+COLLECTOR_CHANGE = {
+    "db": "#115 마스킹 경계 문자 처리 통합 수정(\\s·CRLF·백슬래시)",
+    "code": "#112 결정성 수정",
 }
 # 비교 가능성은 신원이 같을 때만 성립한다(I3 R17).
 IDENTITY = ("projectId", "layer", "track", "sourceRevision", "fixtureHash")
@@ -159,7 +165,7 @@ def gates(track: str, p: dict, f: dict) -> list[dict]:
         sec_observed = (
             f"코퍼스 양성 {f['piiPositives']}건 중 마스킹 {f['piiMasked']}건 "
             f"(미마스킹 {f['piiUnmasked']}건 · 미수집 {f['piiNotCollected']}건) · "
-            f"샘플 적재 경로에 미마스킹 PII 형태 값 {f['ingestUnmaskedValues']}건"
+            f"샘플 적재 경로(마스킹 opt-out 기준선)에 미마스킹 PII 형태 값 {f['ingestUnmaskedValues']}건"
         )
     else:
         sec_observed = (
@@ -284,7 +290,7 @@ def baseline_block(track: str, run: dict, schema_version: str, metrics: dict,
         "comparable": True,
         "reason": f"{ident['runId']} 과 project·layer·track·sourceRevision·fixtureHash·schemaVersion 이 "
                   "같다 — 같은 입력을 같은 계약으로 잰 실행이므로 수치를 직접 비교한다. 달라진 것은 "
-                  "수집기 버전이며(#112 결정성 수정), 그 변화량이 아래 deltas 다.",
+                  f"수집기 버전이며({COLLECTOR_CHANGE[track]}), 그 변화량이 아래 deltas 다.",
         "eligibleAsBaseline": eligible,
         "deltas": deltas,
     }
@@ -347,8 +353,13 @@ def feature_judgments(track: str, run_id: str, f: dict, gs: list[dict]) -> list[
                 "measured": True,
                 "rationale": (
                     "샘플 적재 경로(SampleLegacyDb)는 CREATE 뿐 아니라 INSERT 까지 전 문장을 실행해 행 데이터를 "
-                    f"저장소에 원문으로 남긴다 — 미마스킹 PII 형태 값 {f['ingestUnmaskedValues']}건이 질의로 회수됐다. "
-                    "L0 최소저장 원칙과 보안 게이트를 통과하지 못한다. 벤치 입력 픽스처로서의 가치는 유지되므로 Lab."
+                    "저장소에 남긴다 — 이 프로브가 잰 **마스킹 opt-out 기준선**"
+                    "(IngestPolicy(maskRowData=false))에서 미마스킹 PII 형태 값 "
+                    f"{f['ingestUnmaskedValues']}건이 질의로 회수됐다. 측정 조건을 빼고 읽으면 안 된다: "
+                    "기본 적재 경로는 #115 이후 적재 **전에** 마스킹한다. 이 판정은 기준선 기준이며, "
+                    "마스킹 적용 상태의 재판정은 gold 재고정(승인 사항) 뒤 새 runId 의 몫이다. "
+                    "L0 최소저장 원칙은 그와 별개로 여전히 미충족이다(행 자체를 두지 않는 최소화는 기본값이 아니다). "
+                    "벤치 입력 픽스처로서의 가치는 유지되므로 Lab."
                 ),
                 "evidenceRefs": [run_id],
             },
@@ -418,17 +429,25 @@ def build_from(track: str, p: dict) -> dict:
 
     if track == "db":
         collector_version = p["collector"]["citedVersion"]
+        # 남은 실패는 **이 보고서의 게이트 상태에서 뽑는다**. 손으로 적으면 게이트가 닫힌 뒤에도
+        # 문구가 남아, 같은 보고서가 "메타데이터 실패" 를 말하면서 그 게이트를 1.0 PASS 로 싣는다
+        # (리뷰 LOD-109 — run-l0-db-3c27259-003 에서 실제로 그랬다).
+        failed_gates = [GATE_FOLLOWUP.get(g["id"], g["id"]) for g in (gs or []) if g["status"] == "FAIL"]
+        remaining = f"남은 실패는 {' · '.join(failed_gates)} 다" if failed_gates \
+            else "무조건 게이트에 남은 실패는 없다"
         notes = (
-            "L0 DB 트랙 재실측(#114 — 오류 가시성 수정 후). 프로브 산출물: probe-db.json "
+            f"L0 DB 트랙 재실측({COLLECTOR_CHANGE['db']} 후). 프로브 산출물: probe-db.json "
             "(backend/src/test/kotlin/com/ontostudio/rdb/L0DbSourceProbeTest.kt 가 생성하며 표류 시 테스트가 "
             f"실패한다). counts.input 은 고정 입력의 SQL 문장 {f['input']}건이다 — 행 데이터(INSERT) 8건은 "
             "L0 최소저장 원칙상 제외이지만 분모에 남기고(I3 R20) 이제 사유·좌표와 함께 보고된다. 보고율은 "
             f"{f['reported']}/{f['shouldReport']} 이며, 실패 픽스처의 기대 보고 항목은 사유코드 일치와 좌표 "
             "겹침으로 귀속해 셌다 — 건수만 맞추거나 그럴듯한 좌표를 적어 통과하는 경로를 막는다. 조용한 부분 "
             f"복구는 {f['silentPartialRecovery']}건이다(TB_BAD_MIDDLE 은 부분 복구를 버리고 실패로 보고한다). "
-            "입력·fixture 는 run-l0-db-3c27259-001 과 같은 고정값이고 달라진 것은 수집기뿐이라 두 실행은 직접 "
-            "비교된다. 남은 실패는 메타데이터(L0-fix-2)와 보안(L0-fix-5)이며, 게이트 판정이 애매한 구간"
-            "(미마스킹 0건이지만 마스킹 단계 부재)은 I1 §3.2 에 따라 HALT 쪽으로 읽었다."
+            f"입력·fixture 는 {PREVIOUS['db'].name} 과 같은 고정값이고 달라진 것은 수집기뿐이라 두 실행은 직접 "
+            f"비교된다. {remaining}. 보안 게이트는 수집 경로에 마스킹 단계가 생긴 뒤에도 FAIL 로 읽는다 — "
+            "이 프로브가 재는 것은 샘플 적재 경로를 **마스킹 없이**(IngestPolicy(maskRowData=false)) 돌린 "
+            "기준선이기 때문이다. 마스킹 적용 상태의 게이트 회복은 I2 Gold Set 재고정(승인 사항) 뒤에 "
+            "새 runId 로 남긴다 — 승인 없이 판정을 올리지 않는다(I1 §3.2)."
         )
     else:
         collector_version = p["collector"]["citedVersion"]
