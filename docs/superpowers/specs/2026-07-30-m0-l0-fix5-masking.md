@@ -18,7 +18,7 @@
 | ✅ 확정 | 수집 경로 어디에 관문을 두었는가 | §2 |
 | ✅ 확정 | 정책 — 클래스·allowlist·토큰·길이/좌표 보존·설정 | §3 |
 | ✅ 확정 | gold(#99) 실측 결과와 오탐률 | §4 · `bench/masking/report.json` |
-| ✅ 확정 | 증거 적합성 확인기 M1~M11 + 결함 주입 48케이스 | §6 · `bench/masking/verify_masking.py` |
+| ✅ 확정 | 증거 적합성 확인기 M1~M11 + 결함 주입 51케이스 | §6 · `bench/masking/verify_masking.py` |
 | ⛔ 미확정 | **L0 레이어 판정(#88 BLOCKED)의 갱신** | §7 — gold `sourceRevision` 재고정 + 승인이 선행(I2 §10.4 · I1 §7.4) |
 | ⛔ 미확정 | 코드 트랙 gold 양성(`.kt/.java` 안의 PII) | #88 F8 · I2 §8.2 개정 안건 — gold 를 임의로 늘리지 않았다 |
 | ⛔ 미확정 | 행 데이터 미수집을 **기본값**으로 전환 | §7 · 정책 스위치는 구현했고 기본값 전환은 재측정을 요구한다 |
@@ -197,7 +197,7 @@ SQL 스캐너는 리터럴·주석 구간을 **끝까지 정확히** 끊어야 �
 
 ```bash
 python3 docs/superpowers/specs/bench/masking/verify_masking.py
-# 11 rules, 48 cases, 0 mismatches   (= bench/masking/manifest.json)
+# 11 rules, 51 cases, 0 mismatches   (= bench/masking/manifest.json)
 ```
 
 | ID | 불변식 | 위반 시 |

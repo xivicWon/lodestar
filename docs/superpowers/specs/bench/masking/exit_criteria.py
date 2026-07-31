@@ -74,13 +74,30 @@ def e2_verifier() -> tuple[bool, str]:
 
 
 def e3_open_items() -> tuple[bool, str]:
+    """blocking 여부를 **규칙에서 파생한다** — 항목마다 손으로 적지 않는다.
+
+    손으로 적으면 기준을 어기는 예외가 조용히 들어간다. 실제로 그랬다: `SOURCE-ID-COLLISION` 은
+    제품코드/MAJOR 인데 `blocking=false` 로 적혀 있었고, 기준 문장과 파일이 어긋난 채로 통과했다
+    (리뷰 후속). 이제 area·severity·scope 로 계산하므로 예외를 두려면 **기준 자체를 고쳐야** 한다.
+    """
     doc = json.loads((HERE / "open-items.json").read_text(encoding="utf-8"))
+    rule = doc["criteria"]["blockingRule"]
     items = doc["items"]
-    blocking = [i for i in items if i.get("blocking") and not i.get("resolved")]
-    open_n = sum(1 for i in items if not i.get("resolved"))
+
+    missing = [i["id"] for i in items
+               if not {"severity", "area", "scope", "resolved"} <= set(i)]
+    if missing:
+        return False, f"판정에 필요한 필드가 없는 항목: {missing}"
+
+    def is_blocking(i):
+        return (i["area"] in rule["area"] and i["severity"] in rule["severity"]
+                and i["scope"] in rule["scope"] and not i["resolved"])
+
+    blocking = [i for i in items if is_blocking(i)]
+    open_n = sum(1 for i in items if not i["resolved"])
     if blocking:
-        lines = "\n".join(f"      - [{i['id']}] {i['area']}/{i['severity']}: {i['summary']}"
-                          for i in blocking)
+        lines = "\n".join(f"      - [{i['id']}] {i['area']}/{i['severity']}/{i['scope']}: {i['summary']}"
+                           for i in blocking)
         return False, f"blocking 미해결 {len(blocking)}건 (등재 미해결 {open_n}건)\n{lines}"
     return True, f"blocking 0건 (등재 미해결 {open_n}건 — 전부 후속 이슈로 미룰 수 있는 종류)"
 
