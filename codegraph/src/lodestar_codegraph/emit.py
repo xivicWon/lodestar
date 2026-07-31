@@ -53,6 +53,7 @@ def build_and_write(nodes: list[Node], edges: list[Edge], meta_extra: dict,
                 "label": mask_field(n.label, ledger, mask_policy),
                 "qualified_name": mask_field(n.qualified_name, ledger, mask_policy),
                 "path": masked_path, "lang": n.lang,
+                "status": n.status,
                 "source_id": masked_path, "content_hash": hashes.get(n.path),
                 "community": n.community, "degree": n.degree, "god_node": n.god_node}
 

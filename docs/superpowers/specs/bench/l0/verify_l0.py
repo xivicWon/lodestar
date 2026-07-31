@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""#88 L0 Source — 커밋된 실측 증거의 적합성 확인기 (V1~V13).
+"""#88 L0 Source — 커밋된 실측 증거의 적합성 확인기 (V1~V14).
 
 보고서 하나가 스키마를 통과하는 것으로는 부족하다. 확인해야 하는 것은 **보고서의 수치가 프로브
 산출물에서 나왔고, 프로브의 입력이 고정 revision·gold 해시와 같고, 보고서가 가리키는 좌표가 실제로
@@ -7,7 +7,7 @@
 
     pip install jsonschema
     python3 docs/superpowers/specs/bench/l0/verify_l0.py
-    # 29 cases, 0 mismatches   (= manifest.json 의 caseCount)
+    # 31 cases, 0 mismatches   (= manifest.json 의 caseCount)
 
 각 규칙은 **결함 주입 케이스**를 가진다 — 규칙만 적고 검사가 없는 상태를 막는 장치다(I2 §5 · I3 §4.1
 과 같은 원칙). 규칙이 예외를 던지면 그 규칙의 실패로 기록하고 나머지 규칙을 계속 실행한다.
@@ -37,7 +37,7 @@ import validate_rqr  # noqa: E402
 from jsonschema import Draft202012Validator  # noqa: E402
 
 TRACKS = ("db", "code")
-MAX_RULE = 13
+MAX_RULE = 14
 L0_COLLECTOR_FEATURES = {"db": {"P-ddl-parser", "E1"}, "code": {"E17"}}
 
 
@@ -159,7 +159,11 @@ def v5_exclusion_locators_resolve(ctx):
                     errs.append(f"{t}: 좌표가 파일 범위를 벗어난다: {loc} (행수 {len(lines)})")
                 else:
                     target = re.search(r"\(([^)]+)\)\s*$", loc)
-                    if target and target.group(1) not in lines[line - 1]:
+                    # 파일 단위 제외(미지원 언어 등)의 대상은 그 파일 자신이다 — 파일 안의 어떤 행에도
+                    # 자기 경로가 적혀 있지 않으므로 행 내용 대조를 요구하면 정상 증거가 실패한다.
+                    file_level = target and (path.endswith(target.group(1))
+                                             or target.group(1).endswith(path))
+                    if target and not file_level and target.group(1) not in lines[line - 1]:
                         errs.append(f"{t}: 좌표가 가리키는 행에 대상이 없다: {loc} → {lines[line - 1]!r}")
     return errs, seen
 
@@ -362,12 +366,72 @@ def v13_cited_baseline_resolves(ctx):
             errs.append(f"{t}: 인용한 {prev['runId']} 가 스키마를 어긴다 — {e.json_path}: {e.message}")
         for e in validate_rqr.cross_field_errors(cited):
             errs.append(f"{t}: 인용한 {prev['runId']} 가 I3 규칙을 어긴다 — {e}")
-        # deltas 의 previous 값은 인용한 보고서의 지표와 같아야 한다.
+        # deltas 의 previous 값은 인용한 보고서의 지표(또는 게이트 관측값)와 같아야 한다.
+        cited_gates = {f"gates.{g['id']}": g.get("observed") for g in cited.get("gates", [])}
         for d in rep["baseline"]["deltas"]:
-            got = cited["metrics"].get(d["metric"], {}).get("value")
+            if d["metric"].startswith("gates."):
+                got = cited_gates.get(d["metric"])
+            else:
+                got = cited["metrics"].get(d["metric"], {}).get("value")
             if got != d["previous"]:
                 errs.append(f"{t}: deltas[{d['metric']}].previous={d['previous']} 인데 "
                             f"{prev['runId']} 의 값은 {got} 다")
+    return errs, seen
+
+
+def _range(locator: str):
+    m = re.search(r"#L(\d+)(?:-L(\d+))?", locator or "")
+    if not m:
+        return None
+    start = int(m.group(1))
+    return start, int(m.group(2) or start)
+
+
+def v14_report_attribution(ctx):
+    """V14 보고율은 **귀속**으로 센다 — 건수만 맞추거나 그럴듯한 좌표를 적어 통과하는 경로를 막는다(#114).
+
+    확인기는 프로브의 `reported: true` 를 믿지 않고, 그 항목이 인용한 관측 좌표가 gold 기대 좌표와
+    실제로 겹치는지·사유가 있는지를 다시 본다. 겹침을 다시 계산하지 않으면 '보고했다' 는 주장 자체가
+    검증되지 않은 채 오류 가시성 게이트를 통과한다.
+    """
+    errs, seen = [], 0
+    gold_failures = {f["id"]: f for f in json.loads((GOLD / "failures.json").read_text())["fixtures"]}
+    for t in TRACKS:
+        for fx in ctx["probes"][t]["failureFixtures"]:
+            att = fx.get("reportAttribution")
+            if att is None:
+                # 보고 채널이 없던 실행 — '보고 0건' 이라는 주장 자체를 검사한다.
+                seen += 1
+                if fx.get("actualReported", 0) != 0:
+                    errs.append(f"{t}: {fx['id']} 는 귀속 근거 없이 보고 건수를 주장한다")
+                continue
+            expected = gold_failures[fx["id"]]["reported"]
+            if len(att["expected"]) != len(expected):
+                errs.append(f"{t}: {fx['id']} 의 기대 항목 수가 gold 와 다르다")
+            for e, g in zip(att["expected"], expected):
+                seen += 1
+                if e["kind"] != g["kind"] or e["locator"] != g["locator"]:
+                    errs.append(f"{t}: {fx['id']} 의 기대 항목이 gold 선언과 다르다 "
+                                f"({e['kind']} {e['locator']} ≠ {g['kind']} {g['locator']})")
+                    continue
+                if not e["reported"]:
+                    continue
+                if not e.get("reasonPresent"):
+                    errs.append(f"{t}: {fx['id']} {g['kind']} 를 사유 없이 보고로 셌다(R-F-2)")
+                want, got = _range(g["locator"]), _range(e.get("observedLocator", ""))
+                if got is None:
+                    errs.append(f"{t}: {fx['id']} {g['kind']} 의 관측 좌표가 없다 — 보고로 셀 수 없다")
+                elif not (got[0] <= want[1] and want[0] <= got[1]):
+                    errs.append(f"{t}: {fx['id']} {g['kind']} 의 관측 좌표 {e['observedLocator']} 가 "
+                                f"gold 좌표 {g['locator']} 와 겹치지 않는다")
+            recomputed = sum(1 for e in att["expected"] if e["reported"])
+            if att["actualReported"] != recomputed or fx["actualReported"] != recomputed:
+                errs.append(f"{t}: {fx['id']} 의 보고 건수가 항목별 귀속과 맞지 않는다 "
+                            f"(주장 {fx['actualReported']} / 귀속 {recomputed})")
+            if att.get("unattributedReports"):
+                # 과대 집계는 R-F-4 위반 신호다 — 픽스처에서는 실패로 본다.
+                errs.append(f"{t}: {fx['id']} 에 gold 기대에 귀속되지 않은 보고가 있다: "
+                            f"{att['unattributedReports']}")
     return errs, seen
 
 
@@ -385,6 +449,7 @@ RULES = {
     "V11": v11_declared_paths_measured,
     "V12": v12_determinism_contract,
     "V13": v13_cited_baseline_resolves,
+    "V14": v14_report_attribution,
 }
 
 
@@ -405,15 +470,16 @@ def injections() -> list[tuple[str, str, callable]]:
         c["reports"]["db"]["counts"]["excluded"] += 1
 
     def handmade_metric(c):
-        # 실패한 게이트의 수치를 손으로 통과시킨 모양. (#112 이후 determinism 은 실제로 1.0 이라
-        # 그 값을 1.0 으로 바꾸는 주입은 아무것도 바꾸지 않는다 — 아직 실패인 지표를 고른다.)
-        c["reports"]["code"]["metrics"]["provenanceCompleteness"]["value"] = 1.0
+        # 수치를 손으로 고친 모양. **현재 값과 다른 값**으로 흔든다 — 특정 지표에 절대값을 박아두면
+        # 실측이 그 값이 되는 순간(예: #113 이후 provenance 1.0) 주입이 아무것도 바꾸지 않는다.
+        m = c["reports"]["code"]["metrics"]["provenanceCompleteness"]
+        m["value"] = 0.5 if m["value"] != 0.5 else 0.25
 
     def handmade_gate(c):
-        for g in c["reports"]["db"]["gates"]:
-            if g["id"] == "gate-error-visibility":
-                g["status"] = "PASS"
-                g["observed"] = 1.0
+        # **지금 실패 중인** 게이트를 손으로 통과시킨다. 특정 게이트 id 를 박아두면 그 게이트가
+        # 통과로 바뀌는 순간 주입이 아무것도 바꾸지 않아, 규칙이 무는지 확인하지 못한 채 케이스만 남는다.
+        failed = next(g for g in c["reports"]["db"]["gates"] if g["status"] == "FAIL")
+        failed["status"] = "PASS"
 
     def input_drift(c):
         c["probes"]["db"]["input"]["hashMatchesPinned"] = False
@@ -493,6 +559,16 @@ def injections() -> list[tuple[str, str, callable]]:
         c["probes"]["code"]["determinismObserved"].update(
             {"rate": 0.6667, "distinctHashes": 2, "divergingPaths": ["nodes[].community"]})
 
+    def fake_report_claim(c):
+        """관측 좌표 없이 '보고했다' 고 주장 — 귀속 근거 없는 보고율."""
+        att = c["probes"]["db"]["failureFixtures"][0]["reportAttribution"]
+        att["expected"][0].pop("observedLocator", None)
+
+    def wrong_report_locator(c):
+        """그럴듯하지만 gold 기대 구간과 겹치지 않는 관측 좌표."""
+        att = c["probes"]["code"]["failureFixtures"][0]["reportAttribution"]
+        att["expected"][0]["observedLocator"] = "code-broken-syntax.kt#L999"
+
     def phantom_baseline(c):
         c["reports"]["code"]["baseline"]["previous"]["runId"] = "run-l0-code-3c27259-999"
 
@@ -536,6 +612,8 @@ def injections() -> list[tuple[str, str, callable]]:
         ("V12", "결정성이 다시 갈렸는데 게이트는 PASS", determinism_regressed),
         ("V12", "시드를 바꾸면 산출물이 달라짐", seed_dependent),
         ("V13", "인용한 이전 실행이 실재하지 않음", phantom_baseline),
+        ("V14", "귀속 근거 없이 보고 주장", fake_report_claim),
+        ("V14", "관측 좌표가 gold 구간과 겹치지 않음", wrong_report_locator),
         ("V13", "deltas 의 기준선 값을 손으로 고침", forged_delta_baseline),
         ("V13", "인용한 실행의 신원을 다르게 적음", baseline_identity_lie),
     ]
@@ -564,6 +642,13 @@ def main() -> int:
     mismatches = 0
     for rid, name, fn in cases:
         bad = _inj(ctx, fn)
+        # 주입이 아무것도 바꾸지 않으면 그 케이스는 **무력화된 것**이다. 세상이 바뀌어(실패하던
+        # 게이트·지표가 통과로) 주입 대상이 이미 그 값이면 규칙은 멀쩡히 통과하고 케이스 수도 그대로라
+        # 아무도 알아채지 못한다 — 이번 M0 작업에서 실제로 세 번 일어났다.
+        if bad == ctx:
+            mismatches += 1
+            print(f"  [{rid}] {name}: 주입이 증거를 바꾸지 않았다 — 케이스가 무력화됐다")
+            continue
         try:
             errs, _ = RULES[rid](bad)
             caught = bool(errs)

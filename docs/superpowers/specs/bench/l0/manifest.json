@@ -3,6 +3,6 @@
   "issue": 88,
   "layer": "L0",
   "note": "L0 실측 증거의 고정 정본. 확인기(verify_l0.py)가 caseCount·ruleRange 를 실제 값과 대조하므로, 규칙이나 결함 주입 케이스가 늘었는데 이 수치가 그대로면 그 자체로 실패한다(I2 §5 · I3 §4.1 과 같은 장치).",
-  "ruleRange": "V1-V13",
-  "caseCount": 29
+  "ruleRange": "V1-V14",
+  "caseCount": 31
 }

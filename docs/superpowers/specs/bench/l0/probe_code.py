@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""#88 L0 Source — 코드 트랙 프로브.
+"""#114 L0 Source — 코드 트랙 프로브 **v2** (오류 가시성 수정 후 재측정).
 
 기능이 아니라 **계측기**다. 고정 revision(3c27259)의 `backend/src/main/kotlin` 을 입력으로 실제
 수집기(`lodestar_codegraph`)를 돌려 I1 §4.1 의 L0 무조건 게이트 4종을 측정하고, 결과를 결정적
@@ -7,6 +7,13 @@ JSON 프로브 산출물로 남긴다. 보고서(Run Quality Report v0)는 이 �
 
     python3 docs/superpowers/specs/bench/l0/probe_code.py            # 측정 + build/l0/probe-code.json
     python3 docs/superpowers/specs/bench/l0/probe_code.py --check    # 커밋된 산출물과 대조
+
+**이전 실행과의 차이**: run-002(#112)까지는 제외·실패를 사유와 함께 실을 자리가 없던 수집기를 쟀고,
+입력을 **작업 트리**에서 읽었다. #114 로 산출물에 `meta.issues` 채널이 생겼으므로 "보고율은 구조적으로 0"
+이라는 산식이 더 이상 성립하지 않는다. 지난 실행은 비교 기준선으로 그대로 두고(I3 §5.5) 새 runId 로
+재측정한다. 또한 수집 범위를 **고정 revision 의 blob 에서 재구성**해 측정한다 — 이 수정이
+`backend/src/main/kotlin` 을 함께 고치므로, 작업 트리를 입력으로 삼는 동안에는 "고정 revision 을 쟀다" 가
+성립하지 않는다.
 
 측정 규칙과 판정: docs/superpowers/specs/2026-07-30-m0-l0-source-validation.md
 """
@@ -27,7 +34,7 @@ import tomllib
 HERE = pathlib.Path(__file__).resolve().parent
 REPO = HERE.parents[4]
 GOLD = REPO / "docs/superpowers/specs/gold"
-RUN_DIR = HERE / "runs/run-l0-code-3c27259-002"
+RUN_DIR = HERE / "runs/run-l0-code-3c27259-003"
 COMMITTED = RUN_DIR / "probe-code.json"
 OUT = REPO / "build/l0/probe-code.json"
 
@@ -46,6 +53,9 @@ def collector_version() -> str:
 # M-CODE-2  결정성 = 3회 실행의 산출물 해시 중 최대 동일 그룹 크기 / 3.
 # M-CODE-3  provenance 는 필수 5필드가 **소스 단위로** 산출물에서 조회 가능한지로 센다.
 #           동등 식별자는 아래 별칭표로만 인정하고, 인정 근거를 함께 남긴다.
+# M-CODE-4  보고(REPORTED) = 산출물에 사유(빈 문자열 아님)·좌표·대상이 함께 실린 것.
+#           gold 기대 항목과의 대조는 (사유코드 일치 ∧ 좌표 행범위 겹침) 으로 귀속한다 —
+#           건수만 맞추거나 그럴듯한 좌표를 적어 통과하는 경로를 막는다.
 REQUIRED_PROVENANCE = ["projectId", "sourceId", "revision", "contentHash", "collectorVersion"]
 PROVENANCE_ALIASES = {
     # 필수 필드 -> (산출물 키, 인정 사유, 고정된 값인가)
@@ -124,16 +134,92 @@ def nondeterministic_paths(a: dict, b: dict) -> list[str]:
     return sorted(paths)
 
 
-def blob_tree(revision: str, prefix: str) -> dict[str, str]:
-    """고정 revision 의 `prefix` 아래 파일 전부의 blob 해시. 작업 트리가 아니라 revision 이 정본이다."""
+def materialize(revision: str, prefix: str, dest: pathlib.Path) -> dict[str, str]:
+    """고정 revision 의 `prefix` 아래 파일 전부를 `dest` 에 풀어놓고 {repo상대경로: 해시} 를 돌려준다.
+
+    작업 트리를 입력으로 삼으면 수집기를 고치는 순간 '고정 revision 을 쟀다' 가 거짓이 된다.
+    입력 신원을 revision 에 두면 수정 전후 실행이 같은 입력으로 비교된다.
+    """
     listing = subprocess.run(["git", "ls-tree", "-r", "--format=%(path)", revision, prefix],
                              cwd=REPO, capture_output=True, text=True, check=True).stdout
     out = {}
-    for path in filter(None, (l.strip() for l in listing.split("\n"))):
+    for path in sorted(filter(None, (l.strip() for l in listing.split("\n")))):
         content = subprocess.run(["git", "show", f"{revision}:{path}"],
                                  cwd=REPO, capture_output=True, check=True).stdout
+        target = dest / pathlib.Path(path).relative_to(prefix)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(content)
         out[path] = sha256_bytes(content)
     return out
+
+
+COLLECTED_EXT = {".kt", ".kts", ".java"}
+
+
+def classify_scope(rels: list[str], doc: dict, scope_root: str = SCOPE_ROOT) -> dict:
+    """수집 범위의 파일을 **프로브의 규칙으로** 나눈다 — 수집기 신고로 나누면 자기 인증이다.
+
+    - `factFiles`  사실을 낸 파일(파일 노드 status 가 parsed·partial)
+    - `readable`   확장자상 수집기가 읽을 수 있었던 파일(M-CODE-1)
+    - `notCollected` 읽을 수 없어 수집되지 않은 파일 → 제외 보고의 분모
+    - `failedFiles`  읽을 수 있었는데 사실을 못 낸 파일 → 실패 사례의 분모
+      (status=failed 도, 트리가 아예 서지 않아 노드조차 없는 파일도 여기 들어온다)
+
+    status 는 수집기가 스스로 붙인 표시라 '사실을 냈는가' 판정에만 쓰고, 분모는 프로브가 정한다.
+    """
+    fact_files = {n["path"] for n in doc["nodes"]
+                  if n["kind"] == "file" and n.get("status") in ("parsed", "partial")}
+    readable = [r for r in rels if pathlib.PurePosixPath(r).suffix in COLLECTED_EXT]
+    under = lambda r: str(pathlib.PurePosixPath(r).relative_to(scope_root))  # noqa: E731
+    return {
+        "factFiles": sorted(fact_files),
+        "readable": sorted(readable),
+        "notCollected": sorted(r for r in rels if r not in readable),
+        "failedFiles": sorted(under(r) for r in readable if under(r) not in fact_files),
+    }
+
+
+def line_range(locator: str) -> tuple[int, int] | None:
+    m = re.search(r"#L(\d+)(?:-L(\d+))?", locator)
+    if not m:
+        return None
+    start = int(m.group(1))
+    return start, int(m.group(2) or start)
+
+
+def attribute(gold_reported: list[dict], issues: list[dict]) -> dict:
+    """gold 기대 보고 항목 ↔ 산출물이 실제로 낸 항목의 귀속(M-CODE-4)."""
+    used: set[int] = set()
+    expected = []
+    for g in gold_reported:
+        want = line_range(g["locator"]) or (0, 0)
+        hit = None
+        for idx, i in enumerate(issues):
+            if idx in used or i["reason_code"] != g["kind"] or not i["reason"]:
+                continue
+            got = line_range(i["locator"])
+            if got and got[0] <= want[1] and want[0] <= got[1]:
+                hit = idx
+                break
+        e = {"kind": g["kind"], "target": g["target"], "locator": g["locator"]}
+        if hit is None:
+            e["reported"] = False
+        else:
+            used.add(hit)
+            i = issues[hit]
+            last = re.split(r"[\s./]+", g["target"])[-1]
+            e.update({"reported": True, "observedKind": i["kind"],
+                      "observedLocator": i["locator"], "observedTarget": i["target"],
+                      "reasonPresent": bool(i["reason"]),
+                      "targetMatches": last in i["target"]})
+        expected.append(e)
+    return {
+        "expected": expected,
+        "expectedReported": len(gold_reported),
+        "actualReported": sum(1 for e in expected if e["reported"]),
+        "unattributedReports": [f"{i['reason_code']} {i['locator']}"
+                                for idx, i in enumerate(issues) if idx not in used],
+    }
 
 
 def walk_all_files(root: pathlib.Path, ignore: list[str]) -> list[pathlib.Path]:
@@ -156,9 +242,11 @@ def measure() -> dict:
 
 
 def _measure(manifest: dict, work: pathlib.Path) -> dict:
-    scope = REPO / SCOPE_ROOT
+    rev = manifest["sourceRevision"]
+    scope = work / "scope"
+    rev_files = materialize(rev, SCOPE_ROOT, scope)
     probe: dict = {
-        "probeVersion": "l0-code-probe/v1",
+        "probeVersion": "l0-code-probe/v2",
         "layer": "L0",
         "track": "code",
         "projectId": "lodestar",
@@ -169,27 +257,29 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
             "impl": "lodestar_codegraph (walk → tree-sitter parse → extract → resolve → cluster → emit)",
             "declaredVersion": f"lodestar-codegraph v1 (meta.generated_by) · pyproject {collector_version()}",
             "citedVersion": f"lodestar-codegraph@{collector_version()}",
-            "note": "산출물이 선언하는 것은 이름과 세대뿐이다 — 커밋·semver 가 없어 산출물만으로는 재현 대상을 특정할 수 없다. "
-                    "입력 revision(3c27259)과 달리 수집기는 #112 의 결정성 수정이 들어간 0.1.1 이다 — 입력 신원과 수집기 버전은 다른 축이다.",
+            "note": "산출물이 선언하는 것은 이름과 세대뿐이다 — 커밋·semver 가 없어 산출물만으로는 재현 대상을 "
+                    "특정할 수 없다(L0-fix-2). 입력 revision(3c27259)과 수집기 버전은 다른 축이며, 이 실행의 "
+                    "수집기는 #112 의 결정성 수정과 #114 의 제외·실패 채널이 모두 들어간 판이다.",
         },
     }
 
-    # 1) 입력 신원 — gold 고정 해시 대조 + **고정 revision blob 전수 대조**
-    #    gold 가 고정한 것은 범위 59파일 중 7건뿐이다. 나머지 52건이 무검증으로 남으면
-    #    "고정 revision 을 쟀다" 는 주장이 성립하지 않으므로, 전 파일을 blob 과 직접 대조한다.
+    # 1) 입력 신원 — 고정 revision blob 에서 재구성한 범위를 gold 고정 해시와 대조한다.
+    #    gold 가 고정한 것은 범위 59파일 중 7건뿐이므로 나머지도 blob 해시와 전수 대조한다
+    #    (재구성 자체가 blob 이라 항등이지만, 경로 집합·건수의 어긋남은 여전히 잡힌다).
     ignore = ["build", ".gradle", ".git", "node_modules"]
     all_files = walk_all_files(scope, ignore)
-    hashes = {str(p.relative_to(REPO)): sha256_file(p) for p in all_files}
+    rel_of = {str(p): str(pathlib.PurePosixPath(SCOPE_ROOT) / p.relative_to(scope))
+              for p in all_files}
+    hashes = {rel_of[str(p)]: sha256_file(p) for p in all_files}
     pinned = {s["path"]: s for s in manifest["pinnedSources"]
               if s.get("origin") == "repo" and s["path"].startswith(SCOPE_ROOT)}
     mismatched = sorted(p for p, s in pinned.items()
                         if hashes.get(p) != s["contentHash"])
-    rev = manifest["sourceRevision"]
-    rev_files = {p: h for p, h in blob_tree(rev, SCOPE_ROOT).items()}
     rev_mismatched = sorted(p for p in set(hashes) | set(rev_files)
                             if hashes.get(p) != rev_files.get(p))
     probe["input"] = {
         "scopeRoot": SCOPE_ROOT,
+        "materializedFrom": f"git blob @{rev[:7]}",
         "fileCount": len(all_files),
         "pinnedComparedCount": len(pinned),
         "pinnedMismatched": mismatched,
@@ -205,7 +295,40 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
     doc = run_collector(scope, work / "scope.json")
     walked, parsed = doc["meta"]["walked"], doc["meta"]["parsed"]
     collected_ext = {".kt", ".kts", ".java"}
-    excluded = [str(p.relative_to(REPO)) for p in all_files if p.suffix not in collected_ext]
+    excluded = [rel_of[str(p)] for p in all_files if p.suffix not in collected_ext]
+    # 제외·실패는 프로브가 다시 분류하지 않고 **산출물이 스스로 말한 것** 을 읽는다.
+    issues = doc["meta"]["issues"]
+    reported = [i for i in issues if i["reason"] and line_range(i["locator"]) and i["target"]]
+    # 보고율의 분모는 **프로브가 독립적으로 센 것** 이어야 한다. 분자·분모를 모두 수집기 신고에서
+    # 가져오면 "보고한 것을 보고했다" 는 자기 인증이 되어 아무것도 재지 못한다. 그래서 범위 안에서
+    # 수집기가 읽지 않은 파일(walked 에 없는 파일)을 프로브가 직접 세고, 그 각각에 대해 사유가 달린
+    # 항목이 산출물에 있는지 본다.
+    # 분류는 **프로브의 규칙(M-CODE-1)** 으로 한다 — 수집기 신고로 나누면 "성공했다고 말한 것이
+    # 성공" 이 되어 자기 인증이다. 파일 노드의 status 는 수집기가 스스로 붙인 표시이므로
+    # '사실을 냈는가' 판정에만 쓰고, 분모(읽을 수 있었던 파일)는 확장자 규칙으로 프로브가 정한다.
+    cls = classify_scope(sorted(rel_of.values()), doc)
+    fact_files, not_collected = set(cls["factFiles"]), cls["notCollected"]
+    failed_files = cls["failedFiles"]
+    reported_paths = {f"{SCOPE_ROOT}/{i['locator'].split('#')[0]}"
+                      for i in reported if i["reason"]}
+    reported_not_collected = [r for r in not_collected if r in reported_paths]
+    # 제외 목록은 **분모와 같은 집합**(수집기가 읽지 않은 파일)에서 만든다. 수집기가 말한 것만 모으면
+    # 보고하지 않고 삼킨 파일이 목록에서도 사라져, 보고서의 제외 합계와 counts.excluded 가 서로를
+    # 확인해주지 못한다(I3 R2·R3). 사유가 없는 파일은 **그 사실 자체를 사유로** 남긴다.
+    by_path = {}
+    for i in issues:
+        if i["kind"] == "skipped":
+            by_path.setdefault(f"{SCOPE_ROOT}/{i['locator'].split('#')[0]}", i)
+    grouped: dict[str, list[str]] = {}
+    for rel in not_collected:
+        i = by_path.get(rel)
+        if i is None:
+            key = "UNREPORTED: 수집기가 읽지 않았는데 사유를 남기지 않았다 (조용한 제외)"
+            grouped.setdefault(key, []).append(f"{rel}#L1 ({rel})")
+        else:
+            key = f"{i['reason_code']}: {i['reason']}"
+            grouped.setdefault(key, []).append(
+                f"{rel}#L{line_range(i['locator'])[0]} ({i['target']})")
     probe["inventory"] = {
         "rule": "M-CODE-1",
         "input": len(all_files),
@@ -213,11 +336,24 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
         "parsed": parsed,
         "skippedByCollector": doc["meta"]["skipped"],
         "excludedByExtensionFilter": len(excluded),
-        "exclusions": ([{
-            "reason": "UNSUPPORTED_LANGUAGE: 확장자 필터가 .kt/.kts/.java 외 파일을 조용히 제외한다 (lang.py#lang_for_path)",
-            "count": len(excluded),
-            "examples": excluded,
-        }] if excluded else []),
+        "excludedReportedByCollector": doc["meta"]["excluded"],
+        "failedReportedByCollector": doc["meta"]["failed"],
+        "partialReportedByCollector": doc["meta"]["partial"],
+        "scopeRoot": SCOPE_ROOT,
+        # 사실을 낸 파일만 산출로 센다 — 파싱은 됐지만 사실이 0건인 파일을 output 에 넣으면
+        # 실패가 성공으로 위장된다(#114 가 수집기에서 없앤 것과 같은 위장이 보고서 층에서 재현된다).
+        "producedFacts": len(fact_files),
+        "failedFiles": failed_files,
+        "failedFilesReported": sorted(
+            f for f in failed_files
+            if any(i["locator"].split("#")[0] == f and i["reason"] for i in issues)),
+        "notCollected": not_collected,
+        "notCollectedCount": len(not_collected),
+        "reportedNotCollected": len(reported_not_collected),
+        "unreportedNotCollected": [r for r in not_collected if r not in reported_paths],
+        "reported": len(reported),
+        "exclusions": [{"reason": r, "count": len(v), "examples": v} for r, v in grouped.items()],
+        "issues": issues,
         "nodeCount": doc["meta"]["node_count"],
         "edgeCount": doc["meta"]["edge_count"],
         "externalCalls": doc["meta"]["external_calls"],
@@ -282,23 +418,32 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
         elif f in PROVENANCE_ALIASES:
             key, basis, pinned = PROVENANCE_ALIASES[f]
             present.append({"field": f, "via": key, "basis": basis, "pinned": pinned})
+    # 비율은 **#113 의 전용 측정을 인용한다**. 키가 있는지만 다시 재면 값이 비어 있거나
+    # 플레이스홀더여도 통과하는, 더 느슨한 근거로 같은 게이트를 판정하게 된다. 키 집합은
+    # 인용이 실재와 어긋나지 않는지 보는 보조 증거로만 남긴다.
+    cited = json.loads((HERE / "metadata/completeness-code.json").read_text())
     probe["provenance"] = {
-        "probe": "산출물(codegraph.json)의 meta·nodes 키 집합",
+        "probe": "#113 전용 측정(metadata/completeness-code.json)의 completeness 를 인용한다 — "
+                 "산출물 키 존재가 아니라 소스 단위로 값이 채워졌는지까지 본 결과다",
+        "citedEvidence": "docs/superpowers/specs/bench/l0/metadata/completeness-code.json",
+        "citedMeasurementVersion": cited["measurementVersion"],
         "metaKeys": meta_keys,
         "nodeKeys": node_keys,
         "required": REQUIRED_PROVENANCE,
         "present": present,
         "absent": [f for f in REQUIRED_PROVENANCE if f not in {p["field"] for p in present}],
-        "rate": round(len(present) / len(REQUIRED_PROVENANCE), 4),
+        "rate": cited["completeness"]["rate"],
     }
 
     # 6) 실패·제외 보고 채널
     probe["reporting"] = {
-        "probe": "산출물에 실패·제외를 사유와 함께 실을 자리가 있는가",
-        "aggregateKeys": [k for k in meta_keys if k in ("skipped", "external_calls")],
-        "perItemReasons": False,
-        "note": "meta.skipped 는 건수만 있고 대상·사유가 없다. 확장자 필터로 제외된 파일은 walked 에도 "
-                "들어가지 않아 산출물에서 흔적이 사라진다 — 'not_collected' 와 'absent' 가 L0 에서 이미 뭉개진다.",
+        "probe": "산출물에 실패·제외를 사유·좌표와 함께 실을 자리가 있는가",
+        "aggregateKeys": [k for k in meta_keys
+                          if k in ("skipped", "excluded", "failed", "partial", "external_calls")],
+        "channelKeys": [k for k in meta_keys if k in ("issues", "partial_files", "failed_files")],
+        "channelExists": "issues" in meta_keys,
+        "note": "#114 로 meta.issues 가 생겼다 — 제외·실패·부분수집이 사유·좌표·대상과 함께 실린다. "
+                "노드에는 status(parsed|partial|failed) 가 붙어 부분 추출이 완전 추출로 위장되지 않는다.",
     }
 
     # 7) 실패 재현 픽스처 (I2 gold failures.json 의 코드 3건)
@@ -312,10 +457,14 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
         d.mkdir(parents=True, exist_ok=True)
         shutil.copy(src, d / pathlib.Path(path).name)
         out = run_collector(d, work / f"{d.name}.json")
-        # FILE 노드와 심볼 노드를 나눠 적는다 — FILE 노드의 존재가 곧 '이 파일을 성공으로 표시했다' 다.
+        # FILE 노드와 심볼 노드를 나눠 적는다 — FILE 노드의 status 가 곧 '이 파일을 어떻게 표시했나' 다.
         labels = sorted({f"{n['kind']}:{n['qualified_name']}" for n in out["nodes"]})
         expected = sorted({e.get("fqn") or f"{e.get('owner','')}.{e.get('name','')}"
                            for e in f["extracted"]})
+        symbols = sorted({n["qualified_name"] for n in out["nodes"] if n["kind"] != "file"})
+        file_status = sorted({n["status"] for n in out["nodes"] if n["kind"] == "file"})
+        attribution = attribute(f["reported"], out["meta"]["issues"])
+        marked_ok = file_status == ["parsed"]
         fixtures.append({
             "id": f["id"],
             "kind": f["kind"],
@@ -327,13 +476,31 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
             "skipped": out["meta"]["skipped"],
             "expectedExtracted": expected,
             "actualExtracted": labels,
-            "expectedReported": len(f["reported"]),
-            "actualReported": 0,
-            "markedAsFullySucceeded": out["meta"]["parsed"] == out["meta"]["walked"] and out["meta"]["walked"] > 0,
+            "extractedSymbols": symbols,
+            "unexpectedExtracted": sorted(set(symbols) - set(expected)),
+            "missingExtracted": sorted(set(expected) - set(symbols)),
+            "fileStatus": file_status,
+            "expectedReported": attribution["expectedReported"],
+            "actualReported": attribution["actualReported"],
+            "reportAttribution": attribution,
+            "markedAsFullySucceeded": marked_ok,
             "silentSkipIsFailure": f["silentSkipIsFailure"],
-            "verdict": "UNREPORTED" if f["reported"] else "OK",
+            "verdict": (
+                "EXTRACTION_MISMATCH" if sorted(symbols) != expected else
+                "UNREPORTED" if attribution["actualReported"] < attribution["expectedReported"] else
+                "SILENT_SUCCESS" if f["reported"] and marked_ok else
+                "OVER_REPORTED" if attribution["unattributedReports"] else "OK"),
         })
     probe["failureFixtures"] = fixtures
+    # 보고 채널의 모양은 항목이 있는 실행에서만 확인된다 — 범위 실행에 제외·실패가 0건이면
+    # 픽스처 실행의 항목으로 판정한다(0건을 근거로 'reason 없음' 이라고 적으면 거짓이 된다).
+    seen_items = list(issues) + [e for fx in fixtures
+                                 for e in fx["reportAttribution"]["expected"] if e["reported"]]
+    probe["reporting"]["perItemReasons"] = bool(seen_items) and all(
+        i.get("reason") or i.get("reasonPresent") for i in seen_items)
+    probe["reporting"]["itemFields"] = sorted(issues[0].keys()) if issues else \
+        ["kind", "locator", "reason", "reason_code", "target"]
+    probe["reporting"]["itemsObserved"] = len(seen_items)
 
     # 8) PII·시크릿 — 코퍼스를 수집 범위에 두면 산출물 표면에 원문이 남는가
     pii = gold("pii.json")
@@ -352,6 +519,9 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
         "unmaskedInArtifact": unmasked,
         "notCollected": [i["id"] for i in positives if i["id"] not in unmasked],
         "walked": pout["meta"]["walked"],
+        # #114 이후 '수집하지 않았다' 는 사실 자체가 사유와 함께 남는다 — 미수집과 부재의 구분(EVL §2.5).
+        "exclusionsReported": pout["meta"]["excluded"],
+        "exclusionReasons": sorted({i["reason_code"] for i in pout["meta"]["issues"]}),
         "goldGap": "gold v0 의 양성 28건(전체 항목 44건 = 양성 28 + 음성 16)은 전부 "
                    ".sql/.properties/.log 에 있다 — 코드 수집기가 "
                    "실제로 읽는 확장자(.kt/.java) 안에 양성이 없어, 수집된 표면에서의 마스킹 동작은 "
@@ -375,8 +545,8 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
         "exists": bool(hits),
     }
 
-    # 10) read-only 확인
-    after = {str(p.relative_to(REPO)): sha256_file(p) for p in walk_all_files(scope, ignore)}
+    # 10) read-only 확인 — 재구성한 범위가 수집 실행 전후로 같은가
+    after = {rel_of[str(p)]: sha256_file(p) for p in walk_all_files(scope, ignore)}
     probe["readOnly"] = {
         "filesCompared": len(after),
         "unchanged": after == hashes,

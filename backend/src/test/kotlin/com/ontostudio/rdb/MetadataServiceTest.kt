@@ -44,4 +44,24 @@ class MetadataServiceTest {
                          live.columns.map { it.name.lowercase() }.toSet())
         }
     }
+
+    /** #114 — 타입 필터가 걸러낸 객체는 사유와 함께 반환형에 남는다. 조용한 제외 금지. */
+    @Test fun `타입 필터로 걸러진 뷰가 사유와 함께 보고된다`() {
+        openWithSchema().use { conn ->
+            conn.createStatement().use { st ->
+                st.execute("CREATE VIEW v_order_total AS SELECT id, total FROM orders")
+            }
+            val schema = MetadataService().extract(conn, "db:test:metadataservicetest")
+            assertEquals(setOf("customers", "orders"), schema.tables.map { it.name.lowercase() }.toSet())
+
+            // 테이블은 수집됐으므로 제외 목록에 없어야 한다 — TABLE_TYPE 문자열 비교로 판정하면
+            // H2 의 "BASE TABLE" 표기에 걸려 전 테이블이 미지원으로 오보고된다.
+            assertEquals(1, schema.issues.size, "제외는 뷰 1건뿐이어야 한다: ${schema.issues}")
+            val view = schema.issues.single { it.target.lowercase() == "v_order_total" }
+            assertEquals(IssueKind.SKIPPED, view.kind)
+            assertEquals(CollectionReason.UNSUPPORTED_OBJECT_TYPE, view.reasonCode)
+            kotlin.test.assertTrue(view.reason.contains("VIEW"), view.reason)
+            kotlin.test.assertTrue(view.locator.startsWith("jdbc://"), view.locator)
+        }
+    }
 }

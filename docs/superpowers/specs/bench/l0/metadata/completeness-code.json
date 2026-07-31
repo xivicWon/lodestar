@@ -20,11 +20,17 @@
       "community_count",
       "content_hash",
       "edge_count",
+      "excluded",
       "external_calls",
+      "failed",
+      "failed_files",
       "generated_by",
+      "issues",
       "languages",
       "node_count",
       "parsed",
+      "partial",
+      "partial_files",
       "project_id",
       "revision",
       "skipped",
@@ -43,7 +49,8 @@
       "lang",
       "path",
       "qualified_name",
-      "source_id"
+      "source_id",
+      "status"
     ],
     "present": [
       {
@@ -97,7 +104,7 @@
   },
   "identity": {
     "projectId": "lodestar",
-    "collectorVersion": "lodestar-codegraph@0.1.1"
+    "collectorVersion": "lodestar-codegraph@0.2.0"
   },
   "completeness": {
     "present": 5,
@@ -106,9 +113,9 @@
   },
   "volatile": {
     "note": "값은 수집 범위의 내용·리비전에 따라 달라진다 — 표류 검사 대상이 아니다",
-    "revision": "dirty:7781dd2d25e9",
-    "contentHash": "sha256:7781dd2d25e9bbbbe00e21c198f058038a50004b5618eb6404b77c35ff06af1d",
-    "nodeCount": 371,
+    "revision": "dirty:6589e65ecdc1",
+    "contentHash": "sha256:6589e65ecdc17c423b7440b8668a0dba5b6715d10b2cba21375e30eebe05d688",
+    "nodeCount": 384,
     "walked": 60
   }
 }
