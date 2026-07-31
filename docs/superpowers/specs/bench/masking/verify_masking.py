@@ -156,8 +156,23 @@ def m3_report_is_pure_function(ctx):
 
 
 def m4_positive_locators_resolve(ctx):
+    """gold 양성 ↔ 마스킹 스팬을 **정확히 1:1로** 대조한다.
+
+    이전 판정은 *그 줄에 같은 클래스의 스팬이 있는가* 였다. 그러면 같은 줄의 **다른 값**을 가린
+    스팬이나, 좌표가 밀린 스팬, gold 에 없는 여분의 스팬이 전부 통과한다 — "28개 스팬의 좌표·클래스
+    일치" 라는 수용조건이 실제로는 훨씬 약한 것을 재고 있었다(리뷰 LOD-116).
+
+    이제 검사하는 것:
+      1. gold 가 선언한 텍스트가 그 줄에서 조회된다(좌표 실재)
+      2. 그 출현 위치의 **정확한 (start, end)** 를 가진 스팬이 증거에 있다
+      3. 그 스팬의 class 가 gold 선언과 같고, ruleId 가 **그 class 를 산출하는 규칙**이다
+      4. 한 스팬은 한 양성에만 귀속된다(중복 귀속 금지)
+      5. 파일의 스팬 중 **어느 양성에도 귀속되지 않은 것이 없다**(여분 스팬 0건)
+    """
     pii = ctx["pii"]
-    spans = {f["sourceId"]: f["spans"] for f in ctx["enginePython"]["files"]}
+    spans_by_src = {f["sourceId"]: f["spans"] for f in ctx["enginePython"]["files"]}
+    rule_class = {r["id"]: r["class"] for r in ctx["ruleSpec"]["detect"]}
+    used: dict[str, set[int]] = {src: set() for src in spans_by_src}
     n = 0
     for item in pii["items"]:
         if item["expect"] != "MASKED":
@@ -165,19 +180,48 @@ def m4_positive_locators_resolve(ctx):
         n += 1
         src = item["ref"]["sourceId"]
         line_no = int(item["ref"]["locator"].rsplit("#L", 1)[1])
-        line = ctx["corpus"][src].split("\n")[line_no - 1]
-        if item["value"]["text"] not in line:
+        text_all = ctx["corpus"][src]
+        lines = text_all.split("\n")
+        if line_no > len(lines):
+            return False, n, f"{item['id']}: 좌표 행이 원본 범위를 벗어난다"
+        line = lines[line_no - 1]
+        needle = item["value"]["text"]
+        if needle not in line:
             return False, n, f"{item['id']}: 좌표가 원본에서 조회되지 않는다"
-        on_line = [s for s in spans[src] if s["line"] == line_no]
-        if not on_line:
-            return False, n, f"{item['id']}: 그 줄에 마스킹 스팬이 없다"
-        # 클래스까지 봐야 '엉뚱한 규칙이 우연히 덮은 것' 과 구별된다(리뷰 LOD-065).
-        if not any(s["class"] == item["value"]["class"] for s in on_line):
-            return False, n, (f"{item['id']}: 그 줄의 스팬 클래스가 gold 선언"
-                              f"({item['value']['class']})과 다르다: {[s['class'] for s in on_line]}")
+        # 행 시작의 파일 전역 오프셋 — 스팬 좌표와 같은 단위로 맞춘다.
+        line_start = sum(len(x) + 1 for x in lines[:line_no - 1])
+        wanted = {(line_start + i, line_start + i + len(needle))
+                  for i in _all_occurrences(line, needle)}
+        cand = [(k, s) for k, s in enumerate(spans_by_src[src])
+                if (s["start"], s["end"]) in wanted and k not in used[src]]
+        if not cand:
+            near = [(s["start"], s["end"], s["class"]) for s in spans_by_src[src]
+                    if s["line"] == line_no]
+            return False, n, (f"{item['id']}: gold 가 선언한 좌표 {sorted(wanted)} 와 정확히 일치하는 "
+                              f"스팬이 없다 — 그 줄의 스팬: {near}")
+        k, span = cand[0]
+        if span["class"] != item["value"]["class"]:
+            return False, n, (f"{item['id']}: 스팬 클래스가 gold 선언({item['value']['class']})과 "
+                              f"다르다: {span['class']}")
+        if rule_class.get(span["ruleId"]) != span["class"]:
+            return False, n, (f"{item['id']}: ruleId {span['ruleId']} 가 산출하는 클래스는 "
+                              f"{rule_class.get(span['ruleId'])} 인데 스팬은 {span['class']} 로 기록됐다")
+        used[src].add(k)
     if not n:
         return False, 0, "양성이 없다"
-    return True, n, f"양성 {n}건의 좌표·스팬 귀속 확인"
+    # 여분 스팬 0건 — gold 에 없는 자리를 가린 것은 오탐이며, 1:1 주장을 깬다.
+    for src, spans in spans_by_src.items():
+        extra = [(s["start"], s["end"], s["class"]) for k, s in enumerate(spans) if k not in used[src]]
+        if extra:
+            return False, n, f"{src}: 어느 양성에도 귀속되지 않은 스팬 {len(extra)}건: {extra[:3]}"
+    return True, n, f"양성 {n}건 ↔ 스팬 1:1 (정확 좌표·클래스·규칙 귀속)"
+
+
+def _all_occurrences(hay: str, needle: str):
+    i = hay.find(needle)
+    while i >= 0:
+        yield i
+        i = hay.find(needle, i + 1)
 
 
 def m5_gate_arithmetic(ctx):
@@ -375,7 +419,7 @@ RULES = {
     "M1": ("gold 신원 — 코퍼스 해시·승인 상태·항목 수·fixtureHash", m1_gold_identity),
     "M2": ("두 엔진의 결과가 같다 (Kotlin ↔ Python)", m2_engine_parity),
     "M3": ("보고서는 증거의 순수 함수다", m3_report_is_pure_function),
-    "M4": ("양성 좌표가 원본에서 조회되고 그 줄에 스팬이 있다", m4_positive_locators_resolve),
+    "M4": ("gold 양성 ↔ 스팬 1:1 (정확 좌표·클래스·규칙 귀속 · 여분 스팬 0건)", m4_positive_locators_resolve),
     "M5": ("게이트 산식 — 미마스킹 1건이라도 있으면 PASS 불가", m5_gate_arithmetic),
     "M6": ("오탐이 전부 회계된다 + 임계 클래스 별도 표기", m6_false_positives_are_accounted),
     "M7": ("규칙 스펙 단일 원본 + 이식성 제약", m7_rule_spec_single_source),
@@ -387,6 +431,25 @@ RULES = {
 
 
 # ---- 결함 주입 -------------------------------------------------------------------------------
+
+def _first_span(c):
+    return c["enginePython"]["files"][0]["spans"][0]
+
+
+def _shift_first_span(c, delta):
+    """좌표만 민다 — 줄·클래스는 그대로라 옛 M4 는 통과했다."""
+    sp = _first_span(c)
+    sp["start"] += delta
+    sp["end"] += delta
+
+
+def _add_extra_span(c):
+    """gold 에 없는 여분 스팬 — 옛 M4 는 `any()` 라 여분이 있어도 통과했다."""
+    spans = c["enginePython"]["files"][0]["spans"]
+    first = spans[0]
+    spans.append({"start": first["start"] + 1000, "end": first["start"] + 1003,
+                  "ruleId": first["ruleId"], "class": first["class"], "line": first["line"]})
+
 
 def _first_positive(ctx):
     return next(i for i in ctx["pii"]["items"] if i["expect"] == "MASKED")
@@ -455,6 +518,11 @@ CASES = [
         0, {**c["goldManifest"]["fixtures"][0], "path": "../../../../etc/hosts"})),
     ("C48", "M11", lambda c: [c["parityKotlin"].__setitem__("policies", ["default", "lengthPreserving"]),
                               c["parityFixture"].__setitem__("policies", ["default", "lengthPreserving"])]),
+    # 옛 M4(그 줄에 같은 클래스 스팬이 있는가)를 **통과하던** 결함들이다. 규칙을 조였으면 그 조임이
+    # 실제로 무는지도 케이스로 남긴다 — 조인 코드만 있고 검사가 없으면 다음 라운드에 그대로 풀린다.
+    ("C49", "M4", lambda c: _shift_first_span(c, 1)),
+    ("C50", "M4", lambda c: _add_extra_span(c)),
+    ("C51", "M4", lambda c: _first_span(c).__setitem__("ruleId", "PII.EMAIL")),
 ]
 
 

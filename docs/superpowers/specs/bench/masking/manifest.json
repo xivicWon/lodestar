@@ -3,7 +3,7 @@
   "issue": 115,
   "note": "#115 마스킹 단계 증거의 고정 정본. 확인기(verify_masking.py)가 caseCount·ruleRange 를 실제 값과 대조하므로, 규칙이나 결함 주입 케이스가 늘었는데 이 수치가 그대로면 그 자체로 실패한다. 이 벤치는 Run Quality Report(I3) 를 산출하지 않는다 — L0 레이어 판정은 #88 의 보고서가 유지하며, 재측정은 gold sourceRevision 재고정과 승인이 선행된다.",
   "ruleRange": "M1-M11",
-  "caseCount": 48,
+  "caseCount": 51,
   "evidence": [
     "runs/run-mask-gold-001/engine-kotlin.json",
     "runs/run-mask-gold-001/engine-python.json",
