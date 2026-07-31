@@ -360,8 +360,22 @@ def m10_declared_paths_are_measured(ctx):
         ("db:minimize", db["minimizePolicy"]["retrievableValues"] == 0, "최소화 정책이 동작하지 않는다"),
         ("db:schema", db["collectedTables"] == db["minimizePolicy"]["collectedTables"],
          "정책에 따라 수집 구조가 달라졌다 — 마스킹·최소화는 구조를 바꾸지 않아야 한다"),
+        # '일부라도 가려졌는가' 는 '전부 가려졌는가' 가 아니다(리뷰 LOD-128). M4 를 정확 대조로 조인
+        # 것과 같은 판정을 여기에도 둔다: 심은 양성 전부가 산출물에서 사라졌고, 게이트 관측값이 그
+        # 잔존 수와 일치하며, 심은 sink 조합이 선언과 같은가.
         ("code:emit", code["variants"][code["gateVariant"]]["maskingSummary"]["masked_total"] > 0,
          "코드 산출 경로가 계측되지 않았다"),
+        ("code:emit:noResidue", code["variants"][code["gateVariant"]]["unmasked"] == 0
+         and code["variants"][code["gateVariant"]]["unmaskedInArtifact"] == [],
+         "게이트 변형의 산출물에 원문이 남았다"),
+        ("code:emit:gateAgrees",
+         next(g["observed"] for g in rep["gates"] if g["id"] == "gate-code-emit-masking")
+         == code["variants"][code["gateVariant"]]["unmasked"],
+         "게이트 관측값이 증거의 잔존 수와 다르다 — 둘 중 하나가 틀렸다"),
+        ("code:emit:sinkCoverage",
+         len(code["planted"]) == code["variants"][code["gateVariant"]]["plantedPositives"]
+         and all(sorted(x["fields"]) == sorted(code["sinks"]) for x in code["planted"]),
+         "양성 × sink 전 조합이 심어지지 않았다 — sink 목록만 증거에 남고 일부만 지나간 것이다"),
         ("code:ids", all(v["idsPreserved"] for v in code["variants"].values()),
          "마스킹이 노드 id 를 바꿨다 — 엣지 참조가 끊긴다"),
         ("report:paths", set(rep["collectionPaths"]) == {"db", "code"}, "보고서가 두 경로를 분리 기록하지 않았다"),

@@ -30,7 +30,7 @@
       "required": true,
       "observed": true,
       "status": "PASS",
-      "scope": "패리티 픽스처 29케이스 × 정책 4종(기본·길이보존) · 대안 그룹·PEM·BMP 밖 문자·개행 보존"
+      "scope": "패리티 픽스처 34케이스 × 정책 4종(기본·길이보존) · 대안 그룹·PEM·BMP 밖 문자·개행 보존"
     },
     {
       "id": "gate-db-ingest-masking",
@@ -54,7 +54,7 @@
       "required": 0,
       "observed": 0,
       "status": "PASS",
-      "scope": "증거 7종 + 보고서 전문 × 양성 57건 = 456회 대조",
+      "scope": "증거 7종 + 보고서 전문 × 양성 62건 = 496회 대조",
       "hits": []
     }
   ],
@@ -123,8 +123,8 @@
     "parity": true,
     "branchParity": {
       "fixtureVersion": "mask-parity-fixture/v1",
-      "fixtureHash": "sha256:546d4c2fb3ce241fb6701225ccdf5e37757fa7d459f2b3a523892bbaa14f05c3",
-      "cases": 29,
+      "fixtureHash": "sha256:1bc74d0d2d15035142784b553b4281cb70768785d0b0166130a7d2ec7dca87b8",
+      "cases": 34,
       "policies": [
         "default",
         "lengthPreserving",
@@ -133,14 +133,14 @@
       ],
       "identical": true,
       "spans": {
-        "default": 29,
-        "lengthPreserving": 29,
-        "noAllowlist": 34,
-        "namesDisabled": 26
+        "default": 35,
+        "lengthPreserving": 35,
+        "noAllowlist": 40,
+        "namesDisabled": 32
       },
       "note": "이 픽스처에는 정답이 없다 — 확정하는 것은 두 엔진이 갈리지 않는다는 사실 하나이며, 정확성 판정은 gold(#99)가 한다"
     },
-    "ruleSpecHash": "sha256:a32f21a5cd8e94ae784240842d38c5300559456c0526c3efda7343e80a34bb84"
+    "ruleSpecHash": "sha256:aafb26dd6afe705956fde7ded3727d68ef72572b9bf2794e79f50a3c285dec35"
   },
   "collectionPaths": {
     "db": {
@@ -216,19 +216,19 @@
     },
     "parityFixture": {
       "path": "docs/superpowers/specs/bench/masking/fixtures/parity-cases.json",
-      "contentHash": "sha256:546d4c2fb3ce241fb6701225ccdf5e37757fa7d459f2b3a523892bbaa14f05c3"
+      "contentHash": "sha256:1bc74d0d2d15035142784b553b4281cb70768785d0b0166130a7d2ec7dca87b8"
     },
     "parityKotlin": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-parity-001/engine-kotlin.json",
-      "contentHash": "sha256:606061f64b9495da912b2d4ea055f9bbf31b0bb8d27cd8b1aab1aa24cfd92d37"
+      "contentHash": "sha256:a0a16b75370e45c1dfc6f90414a497423a5885dd777fcd23ad8ded117aaa759b"
     },
     "parityPython": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-parity-001/engine-python.json",
-      "contentHash": "sha256:0068c159a3f6a6e6b198faced4e1a054a72dd1235edfbf197a642e4384954ab6"
+      "contentHash": "sha256:816cce01514b64ff64a272bcb164888d556ae106446b058c0c7597a4421bebe4"
     },
     "ruleSpec": {
       "path": "docs/superpowers/specs/security/masking-rules.v0.json",
-      "contentHash": "sha256:a32f21a5cd8e94ae784240842d38c5300559456c0526c3efda7343e80a34bb84"
+      "contentHash": "sha256:aafb26dd6afe705956fde7ded3727d68ef72572b9bf2794e79f50a3c285dec35"
     }
   }
 }

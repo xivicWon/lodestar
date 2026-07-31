@@ -177,7 +177,9 @@ class MaskingEngine(private val rules: MaskingRules = MaskingRules.load()) {
         if (!lengthPreserving) return rules.template.replace("{class}", cls)
         if (original.isEmpty()) return rules.fillChar
         // 개행은 보존한다 — 여러 줄 값(PEM 개인 키 등)을 통째로 덮으면 뒤따르는 `path#Lnn` 좌표가 밀린다.
-        return original.map { if (it == '\n') "\n" else rules.fillChar }.joinToString("")
+        // **CR 도 보존한다**: `\n` 만 남기면 CRLF 입력의 줄 구분자가 `*\n` 이 되어 손상된다(리뷰 LOD-132).
+        return original.map { if (it == '\n' || it == '\r') it.toString() else rules.fillChar }
+            .joinToString("")
     }
 
     private fun luhn(digits: String): Boolean {

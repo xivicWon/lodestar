@@ -16,7 +16,8 @@ test_bench_l0.py  **계측기 자체의 단위 테스트** — 귀속·게이트
 manifest.json     규칙 범위·케이스 총계 고정
 runs/run-l0-db-3c27259-001/     probe-db.json · report.json    (#88 실측 — 보고율 0.0)
 runs/run-l0-db-3c27259-002/     probe-db.json · report.json    (#114 재측정 — 보고율 1.0)
-runs/run-l0-db-3c27259-003/     probe-db.json · report.json    (#115 재측정 — 수집기에 마스킹 단계 · 수치 변화 없음 · 현행)
+runs/run-l0-db-3c27259-003/     probe-db.json · report.json    (#115 재측정 — 수집기에 마스킹 단계 · 수치 변화 없음)
+runs/run-l0-db-3c27259-004/     probe-db.json · report.json    (#115 경계 문자 통합 수정 — 수치 변화 없음 · 현행)
 runs/run-l0-code-3c27259-001/   probe-code.json · report.json  (#88 실측 — 결정성 0.3333 · H1)
 runs/run-l0-code-3c27259-002/   probe-code.json · report.json  (#112 재측정 — 결정성 1.0)
 runs/run-l0-code-3c27259-003/   probe-code.json · report.json  (#114 재측정 — 보고율 1.0 · 현행)
@@ -25,7 +26,7 @@ test_bench_l0.py                계측기 자체의 단위 테스트 (합성 입
 metadata_completeness.py        #113 게이트 재측정 (코드 트랙 실측 + DB 트랙 결과 확인)
 metadata/completeness-{db,code}.json   그 결과```
 
-**현행 실행**은 db `003` · code `003` 이다(`build_report.RUNS` · `probe_code.RUN_DIR`). 각 트랙의 직전
+**현행 실행**은 db `004` · code `003` 이다(`build_report.RUNS` · `probe_code.RUN_DIR`). 각 트랙의 직전
 실행이 `PREVIOUS` 이며 새 보고서가 그것을 `baseline.previous` 로 인용한다 — 덮어쓰지 않는다(I3 §5.5).
 
 DB 트랙 프로브는 수집기가 Kotlin 이므로 백엔드 테스트가 겸한다 —

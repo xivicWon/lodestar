@@ -43,6 +43,9 @@ class MaskingGoldGateTest {
 
     private fun masked(): Map<String, String> = corpus().mapValues { engine.mask(it.value).text }
 
+    /** 파일별 탐지 스팬 — 좌표 대조의 기준이다. */
+    private fun spans(): Map<String, List<MaskSpan>> = corpus().mapValues { engine.detect(it.value) }
+
     @Test fun `gold corpus files match pinned hashes`() {
         for (f in gold()["scope"]["files"]) {
             val got = sha256(File(repoRoot, f["path"].asText()).readBytes())
@@ -50,13 +53,55 @@ class MaskingGoldGateTest {
         }
     }
 
-    @Test fun `no positive survives unmasked`() {
-        val masked = masked()
-        val survivors = gold()["items"]
-            .filter { it["expect"].asText() == "MASKED" }
-            .filter { masked.getValue(it["ref"]["sourceId"].asText()).contains(it["value"]["text"].asText()) }
-            .map { it["id"].asText() }
-        assertTrue(survivors.isEmpty(), "미마스킹 양성: $survivors")
+    /**
+     * gold 양성 ↔ 탐지 스팬을 **정확히 1:1로** 대조한다.
+     *
+     * '원문 전체가 남았는가' 만 보면 스팬이 값의 일부만 덮어도, 좌표가 밀려도, gold 에 없는 자리를
+     * 덮어도 통과한다(리뷰 LOD-130). Python 확인기의 M4 와 **같은 판정**을 Kotlin 쪽에도 둔다 —
+     * 두 관문이 다른 강도로 재면 한쪽만 통과하는 결함이 남는다.
+     */
+    @Test fun `every positive maps to exactly one span with exact coordinates`() {
+        val rules = MaskingRules.load()
+        val ruleClass = (rules.allow + rules.detect).associate { it.id to it.cls }
+        val used = mutableMapOf<String, MutableSet<Int>>()
+        var checked = 0
+
+        for (item in gold()["items"].filter { it["expect"].asText() == "MASKED" }) {
+            val src = item["ref"]["sourceId"].asText()
+            val corpus = corpus().getValue(src)
+            val lineNo = item["ref"]["locator"].asText().substringAfterLast("#L").toInt()
+            val lines = corpus.split("\n")
+            val line = lines[lineNo - 1]
+            val needle = item["value"]["text"].asText()
+            assertTrue(needle in line, "${item["id"].asText()}: 좌표가 원본에서 조회되지 않는다")
+
+            val lineStart = lines.take(lineNo - 1).sumOf { it.length + 1 }
+            val wanted = generateSequence(line.indexOf(needle)) { prev ->
+                line.indexOf(needle, prev + 1).takeIf { it >= 0 }
+            }.map { lineStart + it to lineStart + it + needle.length }.toSet()
+
+            val spans = spans().getValue(src)
+            val seen = used.getOrPut(src) { mutableSetOf() }
+            val hit = spans.withIndex().firstOrNull { (k, sp) ->
+                (sp.start to sp.end) in wanted && k !in seen
+            }
+            assertTrue(hit != null,
+                "${item["id"].asText()}: gold 좌표 $wanted 와 정확히 일치하는 스팬이 없다 — " +
+                    "그 줄의 스팬: ${spans.filter { it.start >= lineStart && it.start < lineStart + line.length }}")
+            val (idx, span) = hit!!
+            assertEquals(item["value"]["class"].asText(), span.cls, item["id"].asText())
+            assertEquals(span.cls, ruleClass[span.ruleId],
+                "${item["id"].asText()}: ruleId ${span.ruleId} 가 산출하는 클래스와 스팬 클래스가 다르다")
+            seen.add(idx)
+            checked++
+        }
+
+        assertTrue(checked > 0, "양성이 없다")
+        for ((src, spans) in spans()) {
+            val extra = spans.indices.filter { it !in (used[src] ?: emptySet<Int>()) }
+            assertTrue(extra.isEmpty(),
+                "$src: 어느 양성에도 귀속되지 않은 스팬 ${extra.size}건: ${extra.take(3).map { spans[it] }}")
+        }
     }
 
     @Test fun `negatives are preserved`() {

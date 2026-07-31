@@ -170,6 +170,9 @@ class DdlParser(private val masker: SqlTextMasker = SqlTextMasker()) {
                     i++
                     while (i < sql.length) {
                         if (sql[i] == '\n') line++
+                        // 마스커와 **같은 규칙**으로 백슬래시 이스케이프를 인정한다(리뷰 LOD-123).
+                        // 두 스캐너가 리터럴 경계를 다르게 보면 마스킹된 구간과 문장 분리가 어긋난다.
+                        if (sql[i] == '\\') { i += 2; continue }
                         if (sql[i] == '\'') {
                             if (i + 1 < sql.length && sql[i + 1] == '\'') { i += 2; continue }
                             i++

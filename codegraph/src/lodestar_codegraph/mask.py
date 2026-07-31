@@ -148,7 +148,8 @@ def _token(rules: Rules, cls: str, original: str, length_preserving: bool) -> st
     if not original:
         return rules.fill_char
     # 개행은 보존한다 — 여러 줄 값(PEM 개인 키 등)을 통째로 덮으면 뒤따르는 `path#Lnn` 좌표가 밀린다.
-    return "".join("\n" if c == "\n" else rules.fill_char for c in original)
+    # **CR 도 보존한다**: `\n` 만 남기면 CRLF 입력의 줄 구분자가 `*\n` 이 되어 손상된다(리뷰 LOD-132).
+    return "".join(c if c in ("\n", "\r") else rules.fill_char for c in original)
 
 
 def detect(text: str, policy: MaskPolicy | None = None,

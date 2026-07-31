@@ -29,7 +29,7 @@ python3 docs/superpowers/specs/bench/masking/build_masking_report.py --check
 
 ```bash
 python3 docs/superpowers/specs/bench/masking/verify_masking.py
-# 11 rules, 48 cases, 0 mismatches   (= manifest.json 의 ruleRange·caseCount)
+# 11 rules, 51 cases, 0 mismatches   (= manifest.json 의 ruleRange·caseCount)
 ```
 
 규칙 M1~M11 과 결함 주입 48케이스는 [`verify_masking.py`](verify_masking.py) 상단에 선언돼 있고,

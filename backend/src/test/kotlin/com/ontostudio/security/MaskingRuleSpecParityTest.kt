@@ -40,6 +40,11 @@ class MaskingRuleSpecParityTest {
             val p = r.regex.pattern
             assertTrue(!p.contains("\\d") && !p.contains("\\w"),
                 "${r.id}: \\d·\\w 는 Python 에서 유니코드까지 먹어 두 엔진 결과가 갈린다")
+            // `\s` 도 같은 이유로 막는다: Python 은 NBSP·전각 공백까지 공백으로 보고 Java 는 ASCII 만
+            // 본다 — 같은 입력에서 두 엔진의 스팬이 갈린다(리뷰 LOD-131). 공백은 명시 문자군으로 적는다.
+            // 예외는 '아무 문자' 관용구 `[\s\S]` 뿐이다(두 엔진 모두 전체 문자 집합이라 발산하지 않는다).
+            assertFalse(p.replace("[\\s\\S]", "").contains("\\s"),
+                "${r.id}: \\s 는 두 엔진의 공백 정의가 달라 스팬이 갈린다 — [ \\t\\n\\r\\f\\x0B] 로 적는다")
             assertTrue(!p.contains("(?P<"), "${r.id}: Python 형식 이름있는 그룹")
             // Java/Kotlin 형식도 거부한다 — Kotlin 에서는 컴파일되지만 Python 에서는 실패한다(리뷰 LOD-053).
             // 역참조 lookbehind `(?<!`·`(?<=` 는 허용해야 하므로 '<' 뒤에 문자가 오는 경우만 잡는다.

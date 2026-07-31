@@ -81,12 +81,14 @@ class SqlTextMasker(
                     }
                 }
                 sql[i] == '\'' -> {
-                    // 바로 앞 토큰이 E/e 면 백슬래시 이스케이프가 유효한 문자열이다.
-                    val escaped = i > 0 && (sql[i - 1] == 'E' || sql[i - 1] == 'e') &&
-                        (i == 1 || !sql[i - 2].isLetterOrDigit() && sql[i - 2] != '_')
+                    // 백슬래시 이스케이프는 **일반 리터럴에서도** 인정한다. MySQL 계열은 `'a\\'b'` 를
+                    // 한 문자열로 읽는데, 그것을 모르면 첫 `'` 에서 리터럴이 조기 종료되고 스캐너가
+                    // 어긋나 **그 뒤의 진짜 값이 마스킹 범위 밖으로 빠진다**(리뷰 LOD-123).
+                    // 표준(standard_conforming_strings) 방언에서는 이 해석이 구간을 더 넓게 잡을 수
+                    // 있는데, 그쪽 오류는 **과마스킹**이고 반대쪽 오류는 **누출**이다 — 안전한 쪽으로 둔다.
                     var j = i + 1
                     while (j < sql.length) {
-                        if (escaped && sql[j] == '\\') { j += 2; continue }
+                        if (sql[j] == '\\') { j += 2; continue }
                         if (sql[j] == '\'') {
                             if (j + 1 < sql.length && sql[j + 1] == '\'') j += 2 else break
                         } else j++

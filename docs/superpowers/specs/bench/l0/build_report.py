@@ -23,15 +23,15 @@ GOLD = REPO / "docs/superpowers/specs/gold"
 SCHEMAS = REPO / "docs/superpowers/specs/schemas"
 
 RUNS = {
-    "db": HERE / "runs/run-l0-db-3c27259-003",
+    "db": HERE / "runs/run-l0-db-3c27259-004",
     "code": HERE / "runs/run-l0-code-3c27259-003",
 }
 PROBE_NAME = {"db": "probe-db.json", "code": "probe-code.json"}
-RUN_ID = {"db": "run-l0-db-3c27259-003", "code": "run-l0-code-3c27259-003"}
+RUN_ID = {"db": "run-l0-db-3c27259-004", "code": "run-l0-code-3c27259-003"}
 # 이전 실행 — 있으면 그 보고서를 읽어 비교한다. 수치를 여기 적지 않는다: 손으로 옮긴 기준선은
 # 원본과 어긋나도 아무도 모른다(V2 가 보고서를 프로브+이 상수들에서 다시 만들어 대조한다).
 PREVIOUS = {
-    "db": HERE / "runs/run-l0-db-3c27259-002",
+    "db": HERE / "runs/run-l0-db-3c27259-003",
     "code": HERE / "runs/run-l0-code-3c27259-002",
 }
 # 실측 세션의 시각 (RFC 3339 축소 프로파일). 보고서를 다시 만들어도 흔들리지 않도록 못박는다 —
@@ -39,13 +39,13 @@ PREVIOUS = {
 TIMES = {
     # 실측이 끝난 시각과 그 실행의 소요다 — 프로브가 시각을 산출물에 넣으면 매 실행이 표류하므로
     # 여기 못박되, 지어내지 않는다.
-    "db": ("2026-07-31T01:47:00Z", "2026-07-31T01:47:12Z"),
+    "db": ("2026-07-31T08:05:00Z", "2026-07-31T08:05:12Z"),
     "code": ("2026-07-30T13:40:00Z", "2026-07-30T13:40:06Z"),
 }
 # 이번 실행에서 **수집기의 무엇이** 달라졌는가. 트랙마다 다르므로 한 문장을 공유하지 않는다 —
 # 공유하면 db 재측정에 code 트랙의 사유가 붙어 보고서가 근거를 잘못 가리킨다.
 COLLECTOR_CHANGE = {
-    "db": "#115 수집 경로 PII·시크릿 마스킹 단계 신설",
+    "db": "#115 마스킹 경계 문자 처리 통합 수정(\\s·CRLF·백슬래시)",
     "code": "#112 결정성 수정",
 }
 # 비교 가능성은 신원이 같을 때만 성립한다(I3 R17).

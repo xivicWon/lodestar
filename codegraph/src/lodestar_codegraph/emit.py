@@ -13,8 +13,13 @@ def _mask_meta(value, ledger: MaskLedger, policy: MaskPolicy | None):
     """
     if isinstance(value, str):
         return mask_field(value, ledger, policy)
-    if isinstance(value, (list, tuple, set)):
+    if isinstance(value, (list, tuple)):
         return [_mask_meta(v, ledger, policy) for v in value]
+    if isinstance(value, (set, frozenset)):
+        # set 은 순회 순서가 PYTHONHASHSEED 에 따라 달라진다 — 정렬하지 않으면 같은 입력의 산출물
+        # 순서와 해시가 실행마다 갈린다(리뷰 LOD-118). 마스킹 **후** 값으로 정렬해야 산출물이
+        # 결정적이다: 원문으로 정렬하면 서로 다른 원문이 같은 토큰으로 접힐 때 순서가 원문에 의존한다.
+        return sorted((_mask_meta(v, ledger, policy) for v in value), key=repr)
     if isinstance(value, dict):
         return {_mask_meta(k, ledger, policy) if isinstance(k, str) else k:
                 _mask_meta(v, ledger, policy) for k, v in value.items()}
