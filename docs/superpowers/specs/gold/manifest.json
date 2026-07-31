@@ -348,7 +348,7 @@
     },
     {
       "path": "firing.json",
-      "sha256": "sha256:5cb23df78579a065718ef2731aaae1e193a22aecbaeb6e274457d43d5663a7ae"
+      "sha256": "sha256:1421e05b92199a9e5085309fd25d49bcc87cd1bb2859f70f72d712ed59cec9ca"
     },
     {
       "path": "gold.docs.v0.schema.json",
@@ -450,7 +450,7 @@
     }
   ],
   "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
-  "goldSetId": "gold-set/v0+96328d403d80",
+  "goldSetId": "gold-set/v0+21d73b61b11d",
   "expectedCounts": {
     "l1/db.json": 178,
     "l1/code.json": 47,

@@ -4,7 +4,7 @@
   "track" : "db",
   "projectId" : "lodestar",
   "sourceRevision" : "aad4382cd3cbbf6ddc24e2a8587eae1a8c9289f0",
-  "goldSetId" : "gold-set/v0+96328d403d80",
+  "goldSetId" : "gold-set/v0+21d73b61b11d",
   "fixtureHash" : "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
   "collector" : {
     "impl" : "DdlParser + DdlSource (DDL 텍스트 경로) · SampleLegacyDb + MetadataService (샘플 적재 경로)",
@@ -204,7 +204,8 @@
     "note" : "'미마스킹 0건' 이 곧 마스킹 성공이 아니다 — 양성이 산출물 표면에 도달하지 못한 (not_collected) 결과이며 마스킹 단계는 존재하지 않는다(L0-fix-5 — #114 범위 밖)"
   },
   "ingestStore" : {
-    "probe" : "SampleLegacyDb.open() → MetadataService.extract(conn) + 저장소 질의",
+    "probe" : "SampleLegacyDb.open(IngestPolicy(maskRowData = false)) → MetadataService.extract(conn) + 저장소 질의",
+    "ingestPolicy" : "IngestPolicy(maskRowData = false) — 마스킹 opt-out 기준선. 기본값(마스킹 켜짐)의 관측은 DbIngestMaskingTest 와 bench/masking 증거가 담당한다",
     "statementsExecuted" : 36,
     "metadataService" : {
       "probe" : "MetadataService.extract(conn) — DatabaseMetaData 경로를 3회 실행",

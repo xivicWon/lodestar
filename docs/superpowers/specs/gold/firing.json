@@ -1037,6 +1037,22 @@
       }
     },
     {
+      "subcheck": "G5.6",
+      "why": "probe 축 원본의 행수 선언이 blob 실제와 다름 — 해시만 변형하면 행수 재계산이 사라져도 잡히지 않는다",
+      "mutations": [
+        {
+          "op": "set",
+          "file": "manifest.json",
+          "path": "probeAxis.sources[1].lines",
+          "value": 9999
+        }
+      ],
+      "expect": {
+        "rule": "G5",
+        "contains": "lines 선언 9999"
+      }
+    },
+    {
       "subcheck": "G5.7",
       "why": "probe 축 소스가 다른 revision 을 가리킴",
       "mutations": [

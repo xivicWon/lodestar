@@ -10,7 +10,7 @@
     "pinnedSourceCount": 7,
     "note": "L0 수집 입력 축(#125). gold 정답 축은 3c27259 에 그대로 있고, 이 실행이 잰 것은 이 축의 입력이다. 축의 승인 상태는 gold 에 있으며 여기 복사하지 않는다 — 복사하면 승인이 바뀔 때 프로브 산출물이 표류하고, 승인은 측정이 아니다."
   },
-  "goldSetId": "gold-set/v0+96328d403d80",
+  "goldSetId": "gold-set/v0+21d73b61b11d",
   "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
   "collector": {
     "impl": "lodestar_codegraph (walk → tree-sitter parse → extract → resolve → cluster → emit)",

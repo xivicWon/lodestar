@@ -467,7 +467,13 @@ class L0DbSourceProbeTest {
         // 그러지 않으면 아래 `masked: false` 와 note 가 현재 동작과 어긋난 거짓 기록이 된다.
         // 기본값(마스킹 켜짐)의 관측은 DbIngestMaskingTest 와 bench/masking 증거가 담당한다.
         SampleLegacyDb().open(IngestPolicy(maskRowData = false)).use { conn ->
-            ingest.put("probe", "SampleLegacyDb.open() → MetadataService.extract(conn) + 저장소 질의")
+            // 측정 **조건**을 산출물에 적는다. 무인자 `open()` 으로 적어 두면 #115 이후의 기본값
+            // (maskRowData=true)으로 재현하게 되어 아래 `masked: false`·`retrievableUnmaskedValues`
+            // 와 양립하지 않는다 — 재현할 수 없는 조건은 증거의 귀속을 잃는다.
+            ingest.put("probe",
+                "SampleLegacyDb.open(IngestPolicy(maskRowData = false)) → MetadataService.extract(conn) + 저장소 질의")
+            ingest.put("ingestPolicy", "IngestPolicy(maskRowData = false) — 마스킹 opt-out 기준선. " +
+                "기본값(마스킹 켜짐)의 관측은 DbIngestMaskingTest 와 bench/masking 증거가 담당한다")
             ingest.put("statementsExecuted", inv.size)
 
             // (a) JDBC 메타데이터 수집 경로를 실제로 돌린다 — DDL 텍스트 경로와 별개의 수집기다.

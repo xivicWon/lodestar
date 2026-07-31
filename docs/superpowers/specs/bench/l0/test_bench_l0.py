@@ -453,6 +453,12 @@ def test_미승인_입력축이면_기준선_자격이_없다():
     rep = build_report.build("code")
     assert rep["baseline"]["eligibleAsBaseline"] is False
     assert any(w["code"] == "BASELINE_NOT_COMPARABLE" for w in rep["warnings"])
+    # 자격을 false 로 두는 것만으로는 부족하다 — **그 이유가 보고서 안에** 있어야 한다(I3 R12).
+    # 경고 생성이 사라져도 통과하는 테스트는 그 불변식을 지키지 못한다.
+    unapproved = [w for w in rep["warnings"] if w["code"] == "GOLD_UNAPPROVED"]
+    assert len(unapproved) == 1, "미승인 축 위의 실행은 GOLD_UNAPPROVED 를 정확히 1건 실어야 한다"
+    assert unapproved[0]["trigger"] == "evl.conflictDetection.goldSetId"
+    assert validate_rqr.cross_field_errors(rep) == []
 
 
 def test_입력축이_승인되면_기준선_자격이_돌아온다(monkeypatch):
@@ -460,6 +466,10 @@ def test_입력축이_승인되면_기준선_자격이_돌아온다(monkeypatch)
     monkeypatch.setattr(build_report, "axis_approved", lambda: True)
     rep = build_report.build("code")
     assert rep["baseline"]["eligibleAsBaseline"] is True
+    # 반대 방향도 본다: 승인된 축에서 경고가 남아 있으면 R12 가 자격을 다시 false 로 요구해
+    # 보고서가 자기모순에 빠진다. 경고는 **승인 상태의 함수**여야 한다.
+    assert not [w for w in rep["warnings"] if w["code"] == "GOLD_UNAPPROVED"]
+    assert validate_rqr.cross_field_errors(rep) == []
 
 
 def test_확인기는_미승인_축의_기준선_주장을_문다(ctx):
