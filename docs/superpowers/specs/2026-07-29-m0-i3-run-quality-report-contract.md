@@ -159,7 +159,7 @@ collector·extractor·model·prompt **4개 전부 필수 키**이며 각각 `{st
 - `gates[]` 는 I1 §4.1 무조건 게이트의 실행별 결과다. **잠정 수치(I1 §4.2)는 게이트가 아니므로 여기에 적지 않는다.**
 - `status=FAIL` 이 하나라도 있으면 `GATE_FAILED` 경고가 필요하고 **판정 PASS 가 불가능**하다(R9 — I1 G4).
 - `status=NOT_MEASURED` 인 게이트도 **`METRIC_UNMEASURED` 경고를 낸다**(R10, `trigger: gates.<gateId>`). 지표의 미측정과 같은 원칙이다 — 측정하지 않은 게이트가 조용히 지나가면 보고서를 읽는 쪽에서 **통과한 게이트와 구분되지 않는다.**
-- 경고 `code` 는 **통제어휘 7종**이며 `trigger` 로 대상을 못박는다. 자유 문장은 "경고했는가"를 측정할 수 없다(EVL §2.6과 같은 원칙).
+- 경고 `code` 는 **통제어휘 8종**이며 `trigger` 로 대상을 못박는다. 자유 문장은 "경고했는가"를 측정할 수 없다(EVL §2.6과 같은 원칙).
 
 | code | 발동 조건 | `trigger` |
 |---|---|---|
@@ -170,6 +170,7 @@ collector·extractor·model·prompt **4개 전부 필수 키**이며 각각 `{st
 | `GATE_FAILED` | 게이트 `FAIL` — 게이트마다 한 건 | `gates.<gateId>` |
 | `BASELINE_NOT_COMPARABLE` | `baseline.comparable = false` | `baseline` |
 | `PATH_RESTRICTED` | 판정이 `PASS_RESTRICTED` | `verdict` |
+| `GOLD_UNAPPROVED` | 이 실행을 채점한 정답셋(또는 그 **입력 축**)이 승인 전 — I1 §7 · I2 §6 | `evl.conflictDetection.goldSetId` |
 
 형식은 스키마가, **대상 실재**는 검증기가 본다(R18).
 
@@ -198,8 +199,9 @@ runId 만 적으면 "같은 것을 잰 실행인가"를 보고서만으로 판�
 
 **`comparable=false`** → `deltas` 는 **비어 있고**, `reason` 이 필수이며, `BASELINE_NOT_COMPARABLE` 경고를 낸다. **비교 불가를 "변화 없음"으로 표기하지 않는다.**
 
-**`eligibleAsBaseline` = (`fixtureHash` 고정) ∧ (`reportKind = BASELINE`) ∧ (적용 대상 버전이 전부 `PINNED`)**(R12).
+**`eligibleAsBaseline` = (`fixtureHash` 고정) ∧ (`reportKind = BASELINE`) ∧ (적용 대상 버전이 전부 `PINNED`) ∧ (`GOLD_UNAPPROVED` 경고 없음)**(R12).
 세 번째 조건이 있는 이유: fixture 만 고정하고 모델·추출기 버전을 모르면 **같은 입력을 재현할 수 없고**, 재현할 수 없는 실행은 기준선이 아니다. `NOT_APPLICABLE`(그 레이어가 쓰지 않는 요소)은 조건에서 제외된다 — 안 쓰는 것의 버전은 재현에 영향이 없다.
+네 번째 조건(#125): **재현할 수 있어도 승인되지 않은 정답셋 위에서 잰 수치는 기준선이 아니다**(I1 §7 · I2 §6). 승인 상태는 보고서 밖(gold manifest)에 있으므로, 그 사실을 `GOLD_UNAPPROVED` 경고로 보고서 안에 남긴다 — 남기지 않으면 읽는 쪽이 승인 여부를 따로 조회해야 하고, 조회하지 않은 인용이 곧 승인 우회가 된다. 경고가 **실제 gold 상태와 맞는지**는 각 레이어의 확인기가 본다(L0 은 `verify_l0.py` V4).
 이 값이 `false` 인 보고서는 **다음 실행의 비교 대상이 되지 않는다**(I1 §1.3·§7.4).
 
 > **현재 상태:** #99(I2)가 fixture hash 를 고정하기 전이므로 **모든 실행이 `fixtureHash: UNPINNED`** 이고, 따라서 `comparable=true` 인 정상 예시는 아직 만들 수 없다(가공 해시로 만들면 그 자체가 이 계약이 막으려는 것이다). 커밋된 정상 예시 2건은 모두 비교 불가 상태이며, `comparable=true` 경로는 **음성 픽스처 3건**(deltas 누락 · revision 불일치 · fixture 미고정)으로 검사한다. 정상 예시는 #99 이후 실 해시로 추가한다.
@@ -232,7 +234,7 @@ runId 만 적으면 "같은 것을 잰 실행인가"를 보고서만으로 판�
 | **R9** | 게이트 `FAIL` ⟺ `GATE_FAILED` 경고, 그리고 `FAIL` 이 있으면 판정 ≠ `PASS` | validator | 게이트 무력화(I1 G4) |
 | **R10** | 지표·**게이트** `NOT_MEASURED` ⟺ `METRIC_UNMEASURED` 경고 (양방향) | validator | 미측정을 0과 섞음 · 미측정 게이트가 통과처럼 읽힘 |
 | **R11** | 버전 `UNPINNED` ⟺ `VERSION_UNPINNED` 경고 (양방향). `NOT_APPLICABLE` 은 경고 대상 아님 | validator | 버전 추적 거짓 · '안 씀' 과 '모름' 을 섞음 |
-| **R12** | `fixtureHash=UNPINNED` ⟺ `UNPINNED_FIXTURE` 경고 · `eligibleAsBaseline` = (fixture 고정 ∧ `BASELINE` ∧ **적용 대상 버전 전부 PINNED**) | validator | **재현 불가한 실행이 기준선이 됨**(I1 §1.3) |
+| **R12** | `fixtureHash=UNPINNED` ⟺ `UNPINNED_FIXTURE` 경고 · `eligibleAsBaseline` = (fixture 고정 ∧ `BASELINE` ∧ **적용 대상 버전 전부 PINNED** ∧ **`GOLD_UNAPPROVED` 경고 없음**) | validator | **재현 불가한 실행이 기준선이 됨**(I1 §1.3) · **미승인 gold 위의 수치가 기준선이 됨**(I1 §7) |
 | **R13** | calibration `MEASURED` → 모집단·ece·bins 존재 + bins 표본합 일치 · `missingRawCount>0` → `MEASURED` 불가 + 경고 (양방향) | validator | **미보정 수치 인용**(EVL §3.3) |
 | **R14** | conflict precision/recall `MEASURED` → `goldSetId` 존재 | validator | 대조 대상 없는 성능 주장 |
 | **R15** | `evl.coverageClasses` 의 소스 클래스 5종이 정확히 한 번씩 · `state≠present` ⟺ `warned` | validator | 안 본 클래스가 사라짐 |

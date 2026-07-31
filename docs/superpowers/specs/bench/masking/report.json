@@ -6,7 +6,7 @@
   "goldSetVersion": "gold-set/v0",
   "goldSetState": "APPROVED",
   "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
-  "goldSetId": "gold-set/v0+f20edbad6bad",
+  "goldSetId": "gold-set/v0+96328d403d80",
   "gates": [
     {
       "id": "gate-security-masking",

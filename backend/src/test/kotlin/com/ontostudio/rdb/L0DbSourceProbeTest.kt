@@ -11,11 +11,17 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * #114 L0 Source — DB 트랙 프로브 **v2** (오류 가시성 수정 후 재측정).
+ * #125 L0 Source — DB 트랙 프로브 **v3** (gold 입력 축 재고정 후 재측정).
  *
- * 이 테스트는 기능이 아니라 **계측기**다. 고정 revision(3c27259)의 `legacy-sample.sql` 을 입력으로
+ * 이 테스트는 기능이 아니라 **계측기**다. gold 입력 축(`probeAxis.revision`)의 `legacy-sample.sql` 을 입력으로
  * 실제 수집기(`DdlParser` · `SampleLegacyDb` · `MetadataService`)를 돌려 I1 §4.1 의 L0 무조건 게이트
  * 4종을 측정하고, 결과를 결정적 JSON 프로브 산출물로 남긴다. 보고서는 이 산출물에서만 만든다.
+ *
+ * **v3 의 차이**: 입력 신원을 gold 의 정답 축이 아니라 **입력 축**(`probeAxis`)에서 읽는다(#125).
+ * `legacy-sample.sql` 자체는 두 축에서 바이트가 같다(`sameAsAnswerAxis: true`) — 달라진 것은 이 실행이
+ * 무엇을 입력으로 삼았다고 **주장하는지**뿐이다. 그럼에도 새 runId 로 남기는 이유는 gold 개정으로
+ * `goldSetId` 가 바뀌었고, 개정 전 gold 로 채점된 실행은 비교 기준선에서 제외되기 때문이다(I1 §7.4).
+ * 입력 축이 아직 승인되지 않았으므로 이 실행의 보고서는 `eligibleAsBaseline=false` 다.
  *
  * **v1 과의 차이**: v1(run-l0-db-3c27259-001)은 `SchemaModel` 에 제외·실패를 실을 자리가 없던
  * 수집기를 쟀다. #114 로 반환형에 [CollectionIssue] 채널이 생겼으므로 v1 의 산식(보고율은 구조적으로 0)이
@@ -51,7 +57,7 @@ class L0DbSourceProbeTest {
         RepoRoot.path
     }
     private val goldDir get() = File(repoRoot, "docs/superpowers/specs/gold")
-    private val runDir get() = File(repoRoot, "docs/superpowers/specs/bench/l0/runs/run-l0-db-3c27259-004")
+    private val runDir get() = File(repoRoot, "docs/superpowers/specs/bench/l0/runs/run-l0-db-aad4382-001")
     private val pinnedSqlPath = "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql"
 
     /** 수집기 신원 — 커밋이 아직 없는 재측정에서도 재현 대상을 특정할 수 있는 값이다. */
@@ -68,8 +74,15 @@ class L0DbSourceProbeTest {
 
     private fun manifest(): ObjectNode = mapper.readTree(File(goldDir, "manifest.json")) as ObjectNode
 
-    private fun pinnedSource(sourceId: String): ObjectNode =
-        (manifest()["pinnedSources"] as ArrayNode).first { it["sourceId"].asText() == sourceId } as ObjectNode
+    /**
+     * L0 **수집 입력 축**의 고정값(#125). 정답 축(`sourceRevision`)이 아니라 여기서 읽는다 —
+     * 코드 트랙 프로브의 입력이 제품 코드 그 자체라 두 축을 분리했고(I2 §6), DB 트랙도 같은 축에서
+     * 잰다. 축이 트랙마다 다르면 두 트랙의 실행이 서로 다른 입력 신원 위에 놓여 함께 인용할 수 없다.
+     */
+    private fun probeAxis(): ObjectNode = manifest()["probeAxis"] as ObjectNode
+
+    private fun probeSource(sourceId: String): ObjectNode =
+        (probeAxis()["sources"] as ArrayNode).first { it["sourceId"].asText() == sourceId } as ObjectNode
 
     /**
      * 문장 인벤토리 — M-DB-1. 좌표는 그 문장의 **첫 실제 코드 행**을 가리킨다
@@ -221,13 +234,13 @@ class L0DbSourceProbeTest {
         val beforeModified = sqlFile.lastModified()
         val sql = before.toString(Charsets.UTF_8)
 
-        val pinned = pinnedSource("db:legacy-sample")
+        val pinned = probeSource("probe:db:legacy-sample")
         val probe = mapper.createObjectNode()
-        probe.put("probeVersion", "l0-db-probe/v2")
+        probe.put("probeVersion", "l0-db-probe/v3")
         probe.put("layer", "L0")
         probe.put("track", "db")
         probe.put("projectId", "lodestar")
-        probe.put("sourceRevision", manifest()["sourceRevision"].asText())
+        probe.put("sourceRevision", probeAxis()["revision"].asText())
         probe.put("goldSetId", manifest()["goldSetId"].asText())
         probe.put("fixtureHash", manifest()["fixtureHash"].asText())
 
@@ -246,6 +259,8 @@ class L0DbSourceProbeTest {
 
         probe.putObject("input").apply {
             put("sourceId", "db:legacy-sample")
+            put("axis", "probeAxis")
+            put("axisRevision", probeAxis()["revision"].asText())
             put("path", pinnedSqlPath)
             put("contentHash", beforeHash)
             put("pinnedContentHash", pinned["contentHash"].asText())

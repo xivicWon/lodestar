@@ -1,6 +1,8 @@
-# L0 Source 벤치 (#88 baseline · #112·#114 재측정)
+# L0 Source 벤치 (#88 baseline · #112·#114 재측정 · #125 입력 축 재고정)
 
-고정 revision `3c27259` 의 입력으로 수집기를 돌려 I1 §4.1 의 L0 무조건 게이트를 측정한 증거다.
+gold 가 고정한 **L0 수집 입력 축**(`probeAxis.revision` = `aad4382`)의 입력으로 수집기를 돌려
+I1 §4.1 의 L0 무조건 게이트를 측정한 증거다. `-3c27259-` 실행들은 그 축이 생기기 전, gold 정답 축을
+입력으로 쓰던 시절의 측정이며 **보존한다**(I3 §5.5).
 계약·판정·발견은 [`../../2026-07-30-m0-l0-source-validation.md`](../../2026-07-30-m0-l0-source-validation.md)
 (#88 baseline)과 [`../../2026-07-30-m0-l0-fix-error-visibility.md`](../../2026-07-30-m0-l0-fix-error-visibility.md)
 (#114 오류 가시성 수정 후 재측정)에 있다.
@@ -17,17 +19,22 @@ manifest.json     규칙 범위·케이스 총계 고정
 runs/run-l0-db-3c27259-001/     probe-db.json · report.json    (#88 실측 — 보고율 0.0)
 runs/run-l0-db-3c27259-002/     probe-db.json · report.json    (#114 재측정 — 보고율 1.0)
 runs/run-l0-db-3c27259-003/     probe-db.json · report.json    (#115 재측정 — 수집기에 마스킹 단계 · 수치 변화 없음)
-runs/run-l0-db-3c27259-004/     probe-db.json · report.json    (#115 경계 문자 통합 수정 — 수치 변화 없음 · 현행)
+runs/run-l0-db-3c27259-004/     probe-db.json · report.json    (#115 경계 문자 통합 수정 — 수치 변화 없음)
+runs/run-l0-db-aad4382-001/     probe-db.json · report.json    (#125 입력 축 재고정 후 재측정 · 현행)
 runs/run-l0-code-3c27259-001/   probe-code.json · report.json  (#88 실측 — 결정성 0.3333 · H1)
 runs/run-l0-code-3c27259-002/   probe-code.json · report.json  (#112 재측정 — 결정성 1.0)
-runs/run-l0-code-3c27259-003/   probe-code.json · report.json  (#114 재측정 — 보고율 1.0 · 현행)
+runs/run-l0-code-3c27259-003/   probe-code.json · report.json  (#114 재측정 — 보고율 1.0)
+runs/run-l0-code-aad4382-001/   probe-code.json · report.json  (#125 입력 축 재고정 후 재측정 · 현행 —
+                                                               메타데이터 5/5 PASS 가 이 실행에 기록된다)
 
 test_bench_l0.py                계측기 자체의 단위 테스트 (합성 입력)
 metadata_completeness.py        #113 게이트 재측정 (코드 트랙 실측 + DB 트랙 결과 확인)
 metadata/completeness-{db,code}.json   그 결과```
 
-**현행 실행**은 db `004` · code `003` 이다(`build_report.RUNS` · `probe_code.RUN_DIR`). 각 트랙의 직전
-실행이 `PREVIOUS` 이며 새 보고서가 그것을 `baseline.previous` 로 인용한다 — 덮어쓰지 않는다(I3 §5.5).
+**현행 실행**은 db·code 모두 `aad4382-001` 이다(`build_report.RUNS` · `probe_code.RUN_DIR`). 각 트랙의
+직전 실행이 `PREVIOUS` 이며 새 보고서가 그것을 `baseline.previous` 로 인용한다 — 덮어쓰지 않는다(I3 §5.5).
+현행 두 실행은 gold 입력 축이 아직 **미승인**(PROPOSED)이라 `eligibleAsBaseline: false` 이고
+`GOLD_UNAPPROVED` 경고를 싣는다 — 승인 전에는 다음 실행의 비교 기준선이 아니다(I3 R12 · I1 §7).
 
 DB 트랙 프로브는 수집기가 Kotlin 이므로 백엔드 테스트가 겸한다 —
 `backend/src/test/kotlin/com/ontostudio/rdb/L0DbSourceProbeTest.kt`.
@@ -35,8 +42,9 @@ DB 트랙 프로브는 수집기가 Kotlin 이므로 백엔드 테스트가 겸�
 두 프로브 모두 **현재 수집기**로 현행 실행을 재생성하고 커밋된 산출물과 대조한다. 지난 실행의 산출물은
 그 시점 수집기의 측정이라 지금 코드로 다시 만들 수 없다 — 증거로 동결하고, 현행 보고서가 그것을 읽어
 비교한다(V2 는 현행 보고서를 프로브에서 재생성해 대조하므로 손으로 고친 수치는 여전히 걸린다).
-코드 트랙 `-003` 은 수집 범위를 작업 트리가 아니라 **고정 revision 의 blob 에서 재구성**해 측정한다 —
-수집기를 고치면 작업 트리의 `backend/src/main/kotlin` 이 곧 바뀌기 때문이다.
+코드 트랙은 `-003` 부터 수집 범위를 작업 트리가 아니라 **고정 revision 의 blob 에서 재구성**해 측정한다 —
+수집기를 고치면 작업 트리의 `backend/src/main/kotlin` 이 곧 바뀌기 때문이다. `aad4382-001` 은 그 revision 을
+gold 의 **입력 축**에서 읽는다(정답 축이 아니다 — I2 §6).
 
 ## 재현
 
@@ -48,8 +56,8 @@ pip install -e codegraph                      # tree-sitter 수집기 의존성
 #    서브셸로 격리한다 — `cd backend && ... && cd ..` 는 gradle 이 실패하면 backend 에 남아
 #    이후 docs/... 경로가 전부 어긋난다.
 ( cd backend && ./gradlew test --tests 'com.ontostudio.rdb.L0DbSourceProbeTest' )
-# 아래는 **고정 revision 의 worktree 에서만** 성립한다 — #113 이후 현재 브랜치에서는 실패가 정상이다.
-# 이유와 절차: "기존 실행의 재현 조건" 절.
+# 현행 실행은 **main 워킹트리에서 그린이어야 한다**(#125 로 입력 축을 재고정해 그렇게 됐다).
+# 실패하면 입력(backend/src/main/kotlin)이나 수집기가 축 이후로 움직인 것이다 — 그때는 새 runId 로 남긴다.
 python3 docs/superpowers/specs/bench/l0/probe_code.py --check
 
 # 2) 보고서 재생성 (프로브에서 결정적으로 파생된다 — diff 가 나오면 근거가 표류했다)
@@ -58,8 +66,9 @@ git diff --exit-code docs/superpowers/specs/bench/l0/runs
 
 # 3) 증거 적합성 확인 (워킹트리와 무관 — 커밋된 산출물만 읽는다)
 python3 docs/superpowers/specs/bench/l0/verify_l0.py
-# 31 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount. #88 의 24 는 #112 가 V12~V13 을,
-#                            #114 가 V14 를 더하며 31 로 올렸다 — manifest 가 정본이고 확인기가 대조한다)
+# 33 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount. #88 의 24 는 #112 가 V12~V13 을,
+#                            #114 가 V14 를, #125 가 입력 축 케이스 2건을 더하며 33 으로 올렸다 —
+#                            manifest 가 정본이고 확인기가 대조한다)
 
 # 4) 계측기 자체의 테스트 (실측 없이 합성 입력으로 돈다)
 python3 -m pytest docs/superpowers/specs/bench/l0/test_bench_l0.py -q```
@@ -75,13 +84,12 @@ python3 -m pytest docs/superpowers/specs/bench/l0/test_bench_l0.py -q```
 사라져 예외를 없앴다 — 이제 `--check` 는 산출물 전체의 표류에 더해 **결정성 1.0** 과
 `determinismControl.seedIndependent`(PYTHONHASHSEED 를 바꿔도 동일)를 요구한다.
 
-## 기존 실행의 재현 조건 (#113 이후)
+## 기존 실행의 재현 조건
 
 코드 트랙 프로브의 **입력이 `backend/src/main/kotlin` 그 자체**다. 그래서 L0-fix 로 백엔드 코드가
-바뀌면 워킹트리에서의 `probe_code.py --check` 는 더 이상 고정 입력을 재지 못하고 실패한다 — 고장이
-아니라 그 프로브가 **입력 신원을 검사하고 있다는 증거**다(#113 은 `SchemaModel.kt` 등 그 범위 안의
-파일을 바꾼다). 기존 실행을 재현하려면 **그 실행을 만든 커밋**을 꺼낸다. 입력만이 아니라 수집기까지
-그 시점이어야 한다 — run-001 은 `lodestar-codegraph@0.1.0`, run-002 는 `0.1.1` 이 잰 것이다.
+바뀌면 그 이전 실행은 워킹트리에서 재현되지 않는다 — 고장이 아니라 그 프로브가 **입력 신원을
+검사하고 있다는 증거**다. 기존 실행을 재현하려면 **그 실행을 만든 커밋**을 꺼낸다. 입력만이 아니라
+수집기까지 그 시점이어야 한다 — run-001 은 `lodestar-codegraph@0.1.0`, run-002 는 `0.1.1` 이 잰 것이다.
 
 ```bash
 RUN_COMMIT=3944e50            # 그 실행을 만든 커밋 (run-002 는 #112 머지 커밋)
@@ -95,40 +103,31 @@ venv 를 쓰는 이유: 현재 워킹트리에서 `pip install -e codegraph` 를
 훅이 `sys.path` 보다 먼저 걸려, **역사적 입력에 현재 수집기**를 물릴 수 있다. 그러면 재현이 아니다.
 
 커밋된 증거 자체의 적합성(`verify_l0.py`)은 워킹트리와 무관하다 — 커밋된 산출물만 읽으므로
-현재 브랜치에서도 그대로 29 cases / 0 mismatches 여야 한다.
+현재 브랜치에서도 그대로 33 cases / 0 mismatches 여야 한다.
 
-### 코드 트랙 재측정은 gold 재고정이 선행이다 (열린 항목)
+### 코드 트랙 재측정과 gold 입력 축 (#125 — 해소)
 
-`#113` 브랜치에서 `probe_code.py --check` 는 실패한다. 확인된 표류 블록은
-`input`·`inventory`·`readOnly`(입력이 바뀌었다)와 `provenance`·`determinismControl`(수집기가 바뀌었다)이다.
+#113~#115 동안 `probe_code.py --check` 는 main 에서 상시 실패했다. 원인은 프로브의 입력 revision 이
+gold 의 **정답 축**(`sourceRevision` = 3c27259)에 묶여 있었다는 것이다 — 그 축을 옮기려면 `l1/code.json`
+의 닫힌 범위(전수 등재된 L1 코드 정답)까지 함께 옮겨야 해서, L0 재측정이 L1 정답 재열거를 인질로 잡고
+있었다.
 
-```
-[FAIL] 프로브 산출물 표류 — 블록: ['determinismControl', 'input', 'inventory', 'provenance', 'readOnly']
-```
+#125 로 gold 에 **L0 수집 입력 축**(`probeAxis.revision` = `aad4382`)을 신설해 그 매듭을 풀었다. 정답 축은
+승인된 3c27259 에 그대로 있고, "L0 이 무엇을 입력으로 쟀는가" 만 새 축이 고정한다(I2 §6 · §14 R1).
+그 결과:
 
-`#115`(마스킹) 브랜치에서도 같은 이유로 실패하며, 블록 목록이 달라진다:
+- `probe_code.py --check` 가 **main 워킹트리에서 그린**으로 돌아왔다.
+- `maskingCapability.exists` 가 `false → true` 로 뒤집힌 사실(#115)이 현행 코드 실행에 증거로 남는다.
+  다만 `gate-security-masking` 은 여전히 FAIL 이다 — gold 코퍼스의 PII 양성 28건이 전부
+  `.sql/.properties/.log` 라 코드 수집기가 읽는 확장자 밖이고(walked=0), 마스킹 **동작**은 이 gold 로
+  잴 수 없다. 미측정을 통과로 적지 않는다(gold 픽스처 보강은 I2 개정 안건으로 남아 있다).
+- `gate-l0-metadata-completeness` 5/5 PASS 가 별도 측정이 아니라 **현행 보고서의 게이트**로 기록된다.
 
-```
-[FAIL] 프로브 산출물 표류 — 블록: ['determinismControl', 'maskingCapability', 'provenance']
-```
+입력 축은 아직 **승인 전(PROPOSED)** 이다. 그래서 현행 두 실행은 `eligibleAsBaseline: false` +
+`GOLD_UNAPPROVED` 경고를 달고 있고, 승인되면 그 산식이 바뀌므로 **새 runId 로 다시 남긴다**(I3 §5.5).
 
-`maskingCapability.exists` 가 `false → true` 로 바뀐 것이 핵심이다 — `gate-security-masking`(L0-fix-5)의
-관측값이 뒤집혔다는 신호다. `provenance.metaKeys` 에 `masking` 이 늘고 `determinismControl` 의 산출물
-해시가 바뀐 것도 같은 변경의 결과다(결정성 자체는 1.0 · 시드 무관 유지).
-
-그럼에도 **코드 트랙에 새 runId 를 만들지 않는다** — 아래 gold 재고정 조건은 그대로이기 때문이다.
-게이트가 뒤집힌 것을 증거로 남기는 일은 I2 Gold Set 개정(승인 사항) 뒤에 한다. 지금 새 실행을 만들면
-승인되지 않은 입력 신원 위에 판정을 얹게 된다. DB 트랙은 사정이 다르다: 입력이 고정 SQL 픽스처이고
-`hashMatchesPinned` 가 참이라 같은 승인 아래서 재측정할 수 있어 `run-l0-db-3c27259-003` 을 남겼다.
-
-이것을 새 runId 로 정리하려면 **입력 revision 을 다시 고정해야** 한다. gold manifest 는
-`sourceRevision: 3c27259…` 를 **`APPROVED`** 상태로 고정하고 있고(`docs/superpowers/specs/gold/manifest.json`),
-확인기 V3·V4 가 프로브 입력을 그 값과 대조한다. 즉 코드 트랙의 새 실측은 **I2 Gold Set 개정**(승인 사항,
-I1 §7)을 거쳐야 하며, `gate-l0-metadata-completeness` 하나를 닫는 이 이슈 안에서 끝낼 수 없다.
-
-그때까지 코드 트랙의 메타데이터 완전성은 `metadata_completeness.py` 가 **고정 입력과 무관하게**
-현재 수집기를 직접 돌려 잰다(아래). 두 측정은 목적이 다르다 — 프로브는 *고정 revision 의 실측*,
-이쪽은 *지금 수집기가 계약을 지키는가* 다.
+`metadata_completeness.py` 는 계속 별도로 돈다. 프로브는 *고정 입력의 실측*, 이쪽은 *지금 수집기가
+계약을 지키는가* 로 목적이 다르다 — 후자는 워킹트리를 직접 재므로 입력 축과 무관하게 움직인다.
 
 ## #113 게이트 재측정
 
@@ -141,8 +140,11 @@ python3 docs/superpowers/specs/bench/l0/metadata_completeness.py           # 코
 ```
 
 최초 생성은 각각 `-DL0_METADATA_BOOTSTRAP=true` · `--bootstrap` 이다. 두 결과의 `volatile` 블록은
-입력 내용·리비전에 따라 달라지므로 표류 검사에서 제외한다.
+입력 내용·리비전에 따라 달라지므로 표류 검사에서 제외한다. 기준을 갱신할 때만 `--force` 를 쓴다 —
+#125 에서 코드 트랙 결과를 한 번 갱신했다(#113 측정 이후 #115 가 `meta.masking` 을 더하고 범위 파일이
+60→62 로 늘어 표류하고 있었다. 완전성은 그대로 5/5 다).
 
-L0 **전체 판정**은 여전히 `BLOCKED` 이다 — #112 로 결정성(H1)은 해소됐지만 PII 마스킹(H2)과
-오류 가시성이 남아 있다. 전체 판정을 움직이려면 그것들까지 고친 뒤 **새 runId 로 전 트랙을 다시 재는**
-별도 실행이 필요하다.
+L0 **전체 판정**은 여전히 `BLOCKED` 이다 — 결정성(#112)·오류 가시성(#114)·메타데이터(#113)는 현행
+실행에서 모두 PASS 지만 보안 게이트(H2)가 남아 있다. 그 게이트를 움직이려면 코드 수집 확장자 안에
+PII 양성을 둔 gold 픽스처가 필요하고(I2 개정 안건), 그 뒤 **새 runId 로 전 트랙을 다시 재는** 실행이
+있어야 한다.

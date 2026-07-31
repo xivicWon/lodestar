@@ -17,7 +17,8 @@
     "fixtures",
     "fixtureHash",
     "goldSetId",
-    "expectedCounts"
+    "expectedCounts",
+    "probeAxis"
   ],
   "properties": {
     "goldSetVersion": {
@@ -230,6 +231,147 @@
         "minimum": 1
       },
       "description": "파일별 총 항목 수의 고정값. 정답셋이 조용히 줄어드는 것을 막는다 — `--rehash` 는 이 값을 갱신하지 않으므로 축소는 반드시 손으로 적힌 편집이 된다."
+    },
+    "probeAxis": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "L0 수집 입력 축(#125). 정답 축(sourceRevision)과 분리해 고정한다 — L0 프로브의 입력은 제품 코드 그 자체라 L0-fix 가 그 입력을 바꾸는데, 정답 축을 함께 옮기면 닫힌 범위의 L1 정답을 피검사 수집기로 다시 만들게 되어 gold 의 독립성이 깨진다.",
+      "required": [
+        "revision",
+        "status",
+        "note",
+        "sources"
+      ],
+      "properties": {
+        "revision": {
+          "$ref": "#/$defs/rev"
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "이 축의 승인 게이트. 정답 축의 승인(status)과 별개다 — 축이 다르면 승인도 다르다. PROPOSED 인 동안 이 축으로 잰 실행은 기준선이 될 수 없다(verify_l0 V4).",
+          "required": [
+            "state",
+            "note"
+          ],
+          "properties": {
+            "state": {
+              "enum": [
+                "PROPOSED",
+                "APPROVED"
+              ],
+              "description": "PROPOSED = 재고정 제안. 승인은 리뷰어(@xivicWon)의 몫이며 에이전트가 올릴 수 없다(I1 §7)."
+            },
+            "note": {
+              "type": "string",
+              "minLength": 1
+            },
+            "approvedBy": {
+              "type": "string",
+              "pattern": "^@[A-Za-z0-9-]+$"
+            },
+            "approvedAt": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})$"
+            }
+          },
+          "allOf": [
+            {
+              "description": "APPROVED 는 누가 언제 승인했는지 없이는 성립하지 않는다(정답 축과 같은 규칙).",
+              "if": {
+                "properties": {
+                  "state": {
+                    "const": "APPROVED"
+                  }
+                },
+                "required": [
+                  "state"
+                ]
+              },
+              "then": {
+                "required": [
+                  "approvedBy",
+                  "approvedAt"
+                ]
+              },
+              "else": {
+                "not": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "approvedBy"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "approvedAt"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sourceId",
+              "track",
+              "path",
+              "revision",
+              "contentHash",
+              "lines",
+              "answerAxisSourceId",
+              "sameAsAnswerAxis"
+            ],
+            "properties": {
+              "sourceId": {
+                "type": "string",
+                "pattern": "^probe:",
+                "description": "입력 축 신원은 정답 축 sourceId 와 구분한다 — 같은 id 를 두 축이 쓰면 어느 축의 해시인지 모호해진다."
+              },
+              "track": {
+                "enum": [
+                  "db",
+                  "code"
+                ]
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "revision": {
+                "$ref": "#/$defs/rev"
+              },
+              "contentHash": {
+                "$ref": "#/$defs/sha"
+              },
+              "lines": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "answerAxisSourceId": {
+                "type": "string",
+                "minLength": 1,
+                "description": "같은 파일의 정답 축 sourceId. 두 축의 대응을 명시해야 '같은 파일인데 내용이 다르다' 를 확인기가 볼 수 있다."
+              },
+              "sameAsAnswerAxis": {
+                "type": "boolean",
+                "description": "두 축의 contentHash 가 같은가. 파생값이며 확인기가 재계산해 대조한다(G5.8) — 손으로 적은 true 는 재고정의 영향 범위를 숨긴다."
+              }
+            }
+          }
+        }
+      }
     }
   },
   "$defs": {

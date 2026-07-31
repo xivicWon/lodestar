@@ -82,7 +82,10 @@ SUBCHECKS = {
            "G4.6 계약 문서의 파생값 최신"],
     "G5": ["G5.1 픽스처 해시·행수 실물 대조", "G5.2 fixtures[] ↔ pinnedSources 교차",
            "G5.3 repo 원본 해시 = 고정 revision blob", "G5.4 repo 원본 행수 = blob 실제",
-           "G5.5 revision 이 선언 축(axis)과 일치"],
+           "G5.5 revision 이 선언 축(axis)과 일치",
+           "G5.6 probe 축 원본 해시·행수 = probeRevision blob",
+           "G5.7 probe 축 revision = probeAxis.revision",
+           "G5.8 sameAsAnswerAxis 재계산 일치"],
     "G6": ["G6.1 ref 의 sourceId 등록", "G6.2 ref 의 contentHash·revision = 소스 고정값"],
     "G7": ["G7.1 좌표 경로 = 등록 경로", "G7.2 좌표가 blob 범위 안·시작≤끝",
            "G7.3 EVL 근거 좌표도 동일 기준"],
@@ -459,6 +462,40 @@ def _g5():
         real = len(data.decode().splitlines())
         if s.get("lines") != real:
             yield f"{sid}: lines 선언 {s.get('lines')} ≠ 실제 {real} (G7 의 범위 판정이 헐거워진다)"
+        touched("G5", 1)
+
+    # L0 수집 입력 축(#125)도 같은 대조를 받는다. 여기서 검사하지 않으면 축을 하나 더
+    # 만든 것이 곧 **아무도 보지 않는 고정값**을 하나 더 만든 것이 된다 — 프로브가 그 값을
+    # 입력 신원의 근거로 쓰므로, 대조 없는 축은 "고정 revision 을 쟀다" 를 다시 거짓으로 만든다.
+    by_answer_id = {s["sourceId"]: s for s in MANIFEST["pinnedSources"]}
+    for s in MANIFEST["probeAxis"]["sources"]:
+        sid = s["sourceId"]
+        if s["revision"] != MANIFEST["probeAxis"]["revision"]:
+            yield (f"{sid}: probe 축 소스인데 revision 이 그 축"
+                   f"({MANIFEST['probeAxis']['revision'][:7]})과 다르다 ({s['revision'][:7]})")
+        answer = by_answer_id.get(s["answerAxisSourceId"])
+        if answer is None:
+            yield f"{sid}: answerAxisSourceId '{s['answerAxisSourceId']}' 가 pinnedSources 에 없다"
+        elif answer["path"] != s["path"]:
+            yield (f"{sid}: 정답 축의 같은 id 가 다른 파일을 가리킨다 "
+                   f"({answer['path']} / {s['path']})")
+        try:
+            data = subprocess.run(["git", "show", f"{s['revision']}:{s['path']}"],
+                                  cwd=REPO, capture_output=True, check=True).stdout
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            yield f"{sid}: probe revision 에서 원본을 읽을 수 없다 ({s['path']}): {e}"
+            continue
+        got = "sha256:" + hashlib.sha256(data).hexdigest()
+        if got != s["contentHash"]:
+            yield f"{sid}: {s['revision'][:7]} 의 실제 해시 {got} ≠ 고정값 {s['contentHash']}"
+        real = len(data.decode().splitlines())
+        if s["lines"] != real:
+            yield f"{sid}: lines 선언 {s['lines']} ≠ 실제 {real}"
+        # 두 축의 관계는 **재계산**한다. 손으로 적은 true 는 "입력이 정답과 같다" 는
+        # 거짓 안심을 만들고, 그 위에서 재고정의 영향 범위가 보이지 않게 된다.
+        if answer is not None and s["sameAsAnswerAxis"] != (got == answer["contentHash"]):
+            yield (f"{sid}: sameAsAnswerAxis 선언 {s['sameAsAnswerAxis']} ≠ 재계산 "
+                   f"{got == answer['contentHash']}")
         touched("G5", 1)
 
 
@@ -1011,6 +1048,10 @@ def main():
           f"L3 시나리오 {n_s} · 실패 픽스처 {n_f}")
     print(f"     고정 revision {MANIFEST['sourceRevision'][:7]} · "
           f"픽스처 {len(MANIFEST['fixtures'])}개 해시 고정")
+    # 입력 축은 승인 상태와 함께 찍는다 — 값만 보이면 미승인 축이 승인된 것처럼 인용된다(#125).
+    pa = MANIFEST["probeAxis"]
+    print(f"     probe 축(L0 입력) {pa['revision'][:7]} [{pa['status']['state']}] · "
+          f"소스 {len(pa['sources'])}건")
     # Run Quality Report(#100) 작성자가 그대로 인용할 값이다.
     print(f"     run.fixtureHash = {MANIFEST['fixtureHash']}")
     print(f"     goldSetId       = {MANIFEST['goldSetId']}")

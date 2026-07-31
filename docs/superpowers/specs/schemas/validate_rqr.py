@@ -46,6 +46,9 @@ TRIGGER_KIND = {
     "GATE_FAILED": "gate",
     "BASELINE_NOT_COMPARABLE": "baseline",
     "PATH_RESTRICTED": "verdict",
+    # 승인되지 않은 정답셋·입력 축으로 잰 실행(I1 §7 · I2 §6). 재현할 수 있어도 기준선이 아니다 —
+    # 그 사실이 보고서 안에 남아야 읽는 쪽이 승인 상태를 따로 조회하지 않고도 안다.
+    "GOLD_UNAPPROVED": "gold",
 }
 TIME_RE = re.compile(r"(T\d{2}:\d{2}:)60")
 
@@ -243,14 +246,20 @@ def cross_field_errors(d):
         # 실행은 기준선이 아니다. NOT_APPLICABLE(그 레이어가 안 쓰는 요소)은 대상이 아니다.
         unpinned_versions = sorted(k for k, v in versions.items()
                                    if isinstance(v, dict) and v.get("status") == "UNPINNED")
+        # 재현 가능성만으로는 부족하다: 정답셋(또는 그 입력 축)이 승인되지 않았으면 그 위에서 잰
+        # 수치는 기준선이 아니다(I1 §7). 승인 상태는 보고서 밖에 있으므로 GOLD_UNAPPROVED 경고를
+        # 그 사실의 자리로 쓴다 — 경고가 실제 gold 상태와 맞는지는 각 레이어의 확인기가 본다
+        # (L0 은 verify_l0.py V4).
+        unapproved_gold = ("GOLD_UNAPPROVED", "evl.conflictDetection.goldSetId") in warns
         eligible = ((not unpinned) and run["reportKind"] == "BASELINE"
-                    and not unpinned_versions)
+                    and not unpinned_versions and not unapproved_gold)
         if baseline["eligibleAsBaseline"] != eligible:
             errs.append(
                 f"R12: eligibleAsBaseline={baseline['eligibleAsBaseline']} 인데 "
                 f"fixtureHash={'UNPINNED' if unpinned else 'pinned'} · "
                 f"reportKind={run['reportKind']} · "
-                f"미고정 버전={unpinned_versions or '없음'} (기대 {eligible})")
+                f"미고정 버전={unpinned_versions or '없음'} · "
+                f"gold 미승인={unapproved_gold} (기대 {eligible})")
     rule(_r12)
 
     # R13 — calibration 은 원자료가 완전할 때만 수치를 인용한다(EVL §3.3).
@@ -363,6 +372,8 @@ def cross_field_errors(d):
                 ok = trg == "evl.confidenceCalibration"
             elif kind == "gate":
                 ok = trg.startswith("gates.") and trg.split(".", 1)[1] in gate_ids
+            elif kind == "gold":
+                ok = trg == "evl.conflictDetection.goldSetId"
             elif kind == "baseline":
                 ok = trg == "baseline"
             else:

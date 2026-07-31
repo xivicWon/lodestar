@@ -402,14 +402,15 @@
               "CALIBRATION_RAW_MISSING",
               "GATE_FAILED",
               "BASELINE_NOT_COMPARABLE",
-              "PATH_RESTRICTED"
+              "PATH_RESTRICTED",
+              "GOLD_UNAPPROVED"
             ],
             "description": "통제어휘. 자유 문장은 '경고했는가' 를 측정할 수 없다(EVL §2.6과 같은 원칙)."
           },
           "message": { "type": "string", "minLength": 1 },
           "trigger": {
             "type": "string",
-            "pattern": "^(run\\.fixtureHash|versions\\.(collector|extractor|model|prompt)|metrics\\.(precision|recall|scopeCoverage|determinism|provenanceCompleteness)|evl\\.confidenceCalibration|evl\\.conflictDetection\\.(precision|recall)|gates\\.gate-[A-Za-z0-9][A-Za-z0-9._-]*|baseline|verdict)$",
+            "pattern": "^(run\\.fixtureHash|versions\\.(collector|extractor|model|prompt)|metrics\\.(precision|recall|scopeCoverage|determinism|provenanceCompleteness)|evl\\.confidenceCalibration|evl\\.conflictDetection\\.(precision|recall)|gates\\.gate-[A-Za-z0-9][A-Za-z0-9._-]*|baseline|verdict|evl\\.conflictDetection\\.goldSetId)$",
             "description": "경고 대상. code 마다 가리킬 수 있는 대상의 종류가 다르며(계약 §3.6) 형식은 여기서, 대상 실재는 검증기가 본다(R18)."
           }
         }
