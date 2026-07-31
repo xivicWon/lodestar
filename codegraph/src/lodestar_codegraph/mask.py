@@ -43,6 +43,11 @@ class Rules:
     allowlist_default: bool
     allow: tuple[Rule, ...]
     detect: tuple[Rule, ...]
+    # 명시적 시크릿 문맥이 이기는 allow 규칙 id. 여기 없는 allow 는 여전히 이긴다
+    # (규칙 스펙 `policy.secretsOverrideAllowlist`).
+    secrets_override_allowlist: bool = False
+    secret_prefix: str = "SECRET."
+    overridable_allow: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -110,8 +115,16 @@ def load_rules(path: str | pathlib.Path | None = None) -> Rules:
                      tuple(int(g) for g in r.get("valueGroups", ())))
                 for r in raw["detect"]
             ),
+            secrets_override_allowlist=bool(_sov(raw).get("enabled", False)),
+            secret_prefix=str(_sov(raw).get("detectPrefix", "SECRET.")),
+            overridable_allow=frozenset(_sov(raw).get("overridableAllow", ())),
         )
     return _CACHE[key]
+
+
+def _sov(raw: dict) -> dict:
+    """규칙 스펙의 `policy.secretsOverrideAllowlist` — 없으면 종전 동작(allow 가 항상 이긴다)."""
+    return raw.get("policy", {}).get("secretsOverrideAllowlist", {}) or {}
 
 
 def _luhn(digits: str) -> bool:
@@ -145,11 +158,13 @@ def detect(text: str, policy: MaskPolicy | None = None,
     policy = policy or MaskPolicy()
     allow_on = rules.allowlist_default if policy.allowlist_enabled is None else policy.allowlist_enabled
 
-    allowed: list[tuple[int, int]] = []
+    # allow 스팬은 **어느 규칙이 만들었는지** 와 함께 든다. 스팬만 모으면 시크릿이 이길 수 있는
+    # allow 와 그러면 안 되는 allow(추적 근거·멱등 토큰)를 구분할 자리가 없다.
+    allowed: list[tuple[str, int, int]] = []
     if allow_on:
         for rule in rules.allow:
             for m in rule.compiled().finditer(text):
-                allowed.append((m.start(), m.end()))
+                allowed.append((rule.id, m.start(), m.end()))
 
     kept: list[MaskSpan] = []
     for rule in rules.detect:
@@ -167,7 +182,10 @@ def detect(text: str, policy: MaskPolicy | None = None,
                 continue
             if rule.luhn and not _luhn(text[start:end]):
                 continue
-            if any(a < end and start < b for a, b in allowed):
+            # 명시적 시크릿 문맥은 **스펙이 지목한** allow 규칙만 이긴다 — Kotlin 엔진과 같은 규칙이다.
+            is_secret = rules.secrets_override_allowlist and rule.id.startswith(rules.secret_prefix)
+            if any(a < end and start < b and not (is_secret and rid in rules.overridable_allow)
+                   for rid, a, b in allowed):
                 continue
             if any(s.start < end and start < s.end for s in kept):
                 continue

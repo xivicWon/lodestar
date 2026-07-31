@@ -133,14 +133,14 @@
       ],
       "identical": true,
       "spans": {
-        "default": 25,
-        "lengthPreserving": 25,
+        "default": 26,
+        "lengthPreserving": 26,
         "noAllowlist": 31,
-        "namesDisabled": 22
+        "namesDisabled": 23
       },
       "note": "이 픽스처에는 정답이 없다 — 확정하는 것은 두 엔진이 갈리지 않는다는 사실 하나이며, 정확성 판정은 gold(#99)가 한다"
     },
-    "ruleSpecHash": "sha256:240c6ac5213781a8c24c24ad713a9ec5fa50ba774e8fc061e2594f3a3f04afdf"
+    "ruleSpecHash": "sha256:768673beacd5f1dc05b9cc35c322bae4afc987633c93e76fef11cae9a9d44f8e"
   },
   "collectionPaths": {
     "db": {
@@ -220,15 +220,15 @@
     },
     "parityKotlin": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-parity-001/engine-kotlin.json",
-      "contentHash": "sha256:76361e523dedd146945c6ba6072fb6ad031abbe6a17477482b3c668aee73be84"
+      "contentHash": "sha256:a1d65d6e934fd7acc888d9c1d35fc316daac612436c3f52dad8875a38fceb213"
     },
     "parityPython": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-parity-001/engine-python.json",
-      "contentHash": "sha256:1c43e16486a407da7ac2fc0dd34ea0ecd7c6e2aabba49c10c7ddcf6187e923ee"
+      "contentHash": "sha256:472600d594de4dc97052c332d28f303b956c24b5dfd5948d23c4b0f59926577a"
     },
     "ruleSpec": {
       "path": "docs/superpowers/specs/security/masking-rules.v0.json",
-      "contentHash": "sha256:240c6ac5213781a8c24c24ad713a9ec5fa50ba774e8fc061e2594f3a3f04afdf"
+      "contentHash": "sha256:768673beacd5f1dc05b9cc35c322bae4afc987633c93e76fef11cae9a9d44f8e"
     }
   }
 }

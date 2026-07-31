@@ -73,6 +73,11 @@ class MaskingRules private constructor(
     val allowlistDefault: Boolean,
     val allow: List<MaskRule>,
     val detect: List<MaskRule>,
+    /** 명시적 시크릿 문맥이 allowlist 를 이기는가. 규칙 스펙 `policy.secretsOverrideAllowlist`. */
+    val secretsOverrideAllowlist: Boolean,
+    val secretPrefix: String,
+    /** 명시적 시크릿 문맥에 **양보하는** allow 규칙 id. 여기 없는 allow 는 여전히 이긴다. */
+    val overridableAllow: Set<String>,
 ) {
     companion object {
         const val RESOURCE = "/com/ontostudio/security/masking-rules.v0.json"
@@ -89,6 +94,7 @@ class MaskingRules private constructor(
 
         fun parse(json: String): MaskingRules {
             val root = ObjectMapper().readTree(json)
+            val sov: JsonNode? = root["policy"]?.get("secretsOverrideAllowlist")
             fun rule(n: JsonNode) = MaskRule(
                 id = n["id"].asText(),
                 cls = n["class"].asText(),
@@ -104,6 +110,10 @@ class MaskingRules private constructor(
                 allowlistDefault = root["policy"]["allowlistEnabled"].asBoolean(),
                 allow = root["allow"].map { rule(it) },
                 detect = root["detect"].map { rule(it) },
+                secretsOverrideAllowlist = sov?.get("enabled")?.asBoolean() ?: false,
+                secretPrefix = sov?.get("detectPrefix")?.asText() ?: "SECRET.",
+                overridableAllow =
+                    sov?.get("overridableAllow")?.map { it.asText() }?.toSet() ?: emptySet(),
             )
         }
     }
@@ -115,8 +125,10 @@ class MaskingEngine(private val rules: MaskingRules = MaskingRules.load()) {
     /** 탐지만 한다(치환 없음). allow 스팬과 겹치는 탐지는 버리고, 겹치는 탐지끼리는 스펙 순서가 이긴다. */
     fun detect(text: String, policy: MaskPolicy = MaskPolicy()): List<MaskSpan> {
         val allowOn = policy.allowlistEnabled ?: rules.allowlistDefault
+        // allow 스팬을 **어느 규칙이 만들었는지** 함께 들고 있어야 한다. 스팬만 모으면 시크릿이
+        // 이길 수 있는 allow 와 그러면 안 되는 allow(멱등 토큰)를 구분할 자리가 없다.
         val allowed = if (!allowOn) emptyList() else rules.allow.flatMap { r ->
-            r.regex.findAll(text).map { it.range.first to it.range.last + 1 }.toList()
+            r.regex.findAll(text).map { Triple(r.id, it.range.first, it.range.last + 1) }.toList()
         }
 
         val kept = mutableListOf<MaskSpan>()
@@ -130,7 +142,13 @@ class MaskingEngine(private val rules: MaskingRules = MaskingRules.load()) {
                 val end = g.range.last + 1
                 if (end <= start) continue
                 if (rule.luhn && !luhn(text.substring(start, end))) continue
-                if (allowed.any { (a, b) -> a < end && start < b }) continue
+                // 명시적 시크릿 문맥은 **스펙이 지목한** allow 규칙만 이긴다. 전부 이기게 하면
+                // 추적 근거로 등재된 allow(GIT_SHA·CONTENT_HASH…)의 문서화된 교환까지 조용히
+                // 뒤집힌다(규칙 스펙 policy.secretsOverrideAllowlist).
+                val isSecret = rules.secretsOverrideAllowlist && rule.id.startsWith(rules.secretPrefix)
+                if (allowed.any { (id, a, b) ->
+                        a < end && start < b && !(isSecret && id in rules.overridableAllow)
+                    }) continue
                 if (kept.any { it.start < end && start < it.end }) continue
                 kept.add(MaskSpan(start, end, rule.id, rule.cls))
             }

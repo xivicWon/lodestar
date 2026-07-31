@@ -150,4 +150,67 @@ class MaskingEngineTest {
         // 산문 한가운데의 3음절 낱말은 성으로 시작해도 인명이 아니다
         assertEquals("각 줄의 정답(마스킹 대상 여부)", engine.mask("각 줄의 정답(마스킹 대상 여부)").text)
     }
+
+    // ---- allowlist 우선순위 (리뷰 후속) ------------------------------------------------
+
+    /**
+     * allowlist 는 "가리면 추적이 끊기는 값" 의 목록이고, 그 근거는 전부 **식별성**이다
+     * (ALLOW.INTERNAL_ID: "내부 코드… 그 자체로 개인을 식별하지 않는다"). 식별성 논거로
+     * **명시적 시크릿 문맥**을 덮으면 안 된다 — `password=` 는 그 값이 무엇을 닮았든 비밀이다.
+     */
+    @Test fun `explicit secret context beats the allowlist`() {
+        // ABC123456 은 ALLOW.INTERNAL_ID(`[A-Z]{1,4}[0-9]{6,15}`) 와 겹친다
+        assertEquals("password=[MASKED:PASSWORD]", engine.mask("password=ABC123456").text)
+        assertEquals("apikey=[MASKED:PASSWORD]", engine.mask("apikey=AB1234567890").text)
+        // 문맥 없는 같은 값은 여전히 음성이다 — allowlist 를 통째로 끄는 변경이 아니다
+        assertEquals("order=ORD202401000001", engine.mask("order=ORD202401000001").text)
+    }
+
+    /** 멱등성은 예외다: 이미 가려진 자리를 다시 가리면 `[MASKED:...]` 가 중첩된다(#85). */
+    @Test fun `already masked token is never re-masked even in secret context`() {
+        val once = engine.mask("password=ABC123456").text
+        assertEquals(once, engine.mask(once).text)
+    }
+
+    // ---- 부분 마스킹 0건 (리뷰 후속) ---------------------------------------------------
+
+    /**
+     * 탐지 스팬의 **모든 문자**가 치환돼야 한다. 원문 전체 문자열의 부재만 검사하면 한 글자만
+     * 남기는 구현이 통과한다(리뷰 LOD-107).
+     */
+    @Test fun `every detected span is fully replaced`() {
+        val samples = listOf(
+            "password=ABC123456",
+            "aws_secret_access_key = " + "A".repeat(41),
+            "contact hong@example.com now",
+            "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA1234\n",
+        )
+        for (text in samples) {
+            val r = engine.mask(text, MaskPolicy(lengthPreserving = true))
+            for (s in r.spans) {
+                val replaced = r.text.substring(s.start, s.end)
+                assertTrue(replaced.all { it == '*' || it == '\n' },
+                    "스팬 [${s.start},${s.end}) 이 완전히 치환되지 않았다: '$replaced' (입력: $text)")
+            }
+        }
+    }
+
+    /** 40자 경계 뒤에 문자가 더 있으면 접미사가 평문으로 남았다(리뷰 질문 — AWS 규칙 경계). */
+    @Test fun `aws secret longer than forty chars leaves no plaintext suffix`() {
+        val r = engine.mask("aws_secret_access_key = " + "A".repeat(41))
+        assertEquals("aws_secret_access_key = [MASKED:AWS_SECRET_ACCESS_KEY]", r.text)
+    }
+
+    /**
+     * 종료 표식이 없는 개인 키. 헤더만 가리면 Base64 본문이 그대로 남는다 — 로그 절단으로 흔히
+     * 생기는 형태다. 뒤를 무한정 삼키지는 않는다: **연속된 Base64 본문까지만** 가린다.
+     */
+    @Test fun `truncated private key masks the key body but stops at non-base64 content`() {
+        val text = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA1234\nabcdEFGH0123\n" +
+            "무관한 뒷내용은 남는다"
+        val out = engine.mask(text).text
+        assertFalse(out.contains("MIIEowIBAAKCAQEA1234"), "개인 키 본문이 남았다: $out")
+        assertFalse(out.contains("abcdEFGH0123"), "개인 키 본문이 남았다: $out")
+        assertTrue(out.contains("무관한 뒷내용은 남는다"), "무관한 내용까지 삼켰다: $out")
+    }
 }

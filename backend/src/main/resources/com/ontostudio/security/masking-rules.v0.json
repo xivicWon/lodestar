@@ -11,7 +11,15 @@
   "policy": {
     "allowlistEnabled": true,
     "defaultDisabledClasses": [],
-    "note": "allowlist 는 '가리면 추적이 끊기는 값' 의 최소 목록이다(#85 최소 allowlist). allow 스팬과 겹치는 탐지는 버린다 — 우선순위는 allow > detect 다."
+    "note": "allowlist 는 '가리면 추적이 끊기는 값' 의 최소 목록이다(#85 최소 allowlist). allow 스팬과 겹치는 탐지는 버린다 — 우선순위는 allow > detect 다.",
+    "secretsOverrideAllowlist": {
+      "enabled": true,
+      "detectPrefix": "SECRET.",
+      "overridableAllow": [
+        "ALLOW.INTERNAL_ID"
+      ],
+      "note": "allow > detect 는 무조건이 아니다. 다만 뒤집는 범위는 **여기 적힌 allow 규칙으로 한정**한다 — 기본값은 여전히 allow 가 이기는 쪽이고, 새 allow 규칙은 자동으로 안전한(문서화된) 쪽에 선다. ALLOW.INTERNAL_ID 를 넣은 이유: 그 근거가 '내부 코드… 그 자체로 개인을 식별하지 않는다' 는 **식별성** 논거뿐이고 가려도 끊기는 추적이 없다. 그래서 `apiKey=ITM000000009` 처럼 명시적 시크릿 문맥에서 그 형태의 값이 통째로 통과하던 결함(리뷰 후속: `password=ABC123456`)을 닫는다. GIT_SHA·CONTENT_HASH·UUID·TIMESTAMP 는 넣지 않았다 — 그 값들은 가리면 revision·fixture 대조·추적이 끊기고, 특히 GIT_SHA 는 '실제 40자 hex 시크릿이 가려진다' 는 교환을 이미 명시적으로 기록해 둔 항목이다. 그 교환을 바꾸는 것은 승인 사항이지 이 수정의 범위가 아니다 — `password=<40자 hex>` 가 통과하는 것은 **문서화된 잔여 위험**으로 남는다. ALLOW.MASK_TOKEN 도 넣지 않는다: 이미 가려진 자리를 다시 가리면 멱등성이 깨진다(#85)."
+    }
   },
   "allow": [
     {
@@ -69,9 +77,9 @@
       "id": "SECRET.AWS_SECRET_ACCESS_KEY",
       "class": "AWS_SECRET_ACCESS_KEY",
       "kind": "SECRET",
-      "regex": "(?i)aws[._-]?secret[._-]?access[._-]?key[\"']?\\s*[:=]\\s*[\"']?([A-Za-z0-9/+=]{40})",
+      "regex": "(?i)aws[._-]?secret[._-]?access[._-]?key[\"']?\\s*[:=]\\s*[\"']?([A-Za-z0-9/+=]{40,})",
       "valueGroup": 1,
-      "note": "일반 키드 시크릿 규칙도 이 값을 가리지만 클래스가 PASSWORD 로 기록된다 — gold 는 AWS_SECRET_ACCESS_KEY 로 선언한다. 보고서가 클래스별 건수를 주장하므로 귀속도 맞아야 한다(리뷰 LOD-065). 그래서 전용 규칙을 KEYED_VALUE 앞에 둔다."
+      "note": "일반 키드 시크릿 규칙도 이 값을 가리지만 클래스가 PASSWORD 로 기록된다 — gold 는 AWS_SECRET_ACCESS_KEY 로 선언한다. 보고서가 클래스별 건수를 주장하므로 귀속도 맞아야 한다(리뷰 LOD-065). 그래서 전용 규칙을 KEYED_VALUE 앞에 둔다. 길이는 40자 **이상**을 한 덩어리로 잡는다: 정확히 40자만 잡으면 41자 입력에서 마지막 1자가 평문으로 남아 '부분 마스킹 0건' 기준을 깬다(리뷰 후속)."
     },
     {
       "id": "SECRET.GITHUB_TOKEN",
@@ -99,9 +107,9 @@
       "id": "SECRET.PRIVATE_KEY_BLOCK",
       "class": "PRIVATE_KEY",
       "kind": "SECRET",
-      "regex": "-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----(?:[\\s\\S]*?-----END (?:[A-Z0-9]+ )*PRIVATE KEY-----)?",
+      "regex": "-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----(?:[\\s\\S]*?-----END (?:[A-Z0-9]+ )*PRIVATE KEY-----|(?:[\\r\\n]+[A-Za-z0-9/+=]+(?![^\\r\\n]))*)",
       "valueGroup": 0,
-      "note": "BEGIN 헤더가 아니라 **블록 전체**를 가린다 — 헤더만 가리면 Base64 본문이 그대로 남아 개인 키가 노출된다(리뷰 LOD-052). END 가 없는 잘린 입력에서는 헤더만 가린다: 뒤를 끝까지 삼키면 무관한 내용까지 지운다. 여러 줄에 걸치므로 길이 보존 모드에서도 개행은 보존된다(엔진 계약) — 그러지 않으면 행 좌표가 밀린다."
+      "note": "BEGIN 헤더가 아니라 **블록 전체**를 가린다 — 헤더만 가리면 Base64 본문이 그대로 남아 개인 키가 노출된다(리뷰 LOD-052). END 가 없는 잘린 입력에서는 **연속된 Base64 본문까지** 가린다: 헤더만 가리면 본문이 그대로 남고(로그 절단으로 흔한 형태), 끝까지 삼키면 무관한 내용까지 지운다 — Base64 가 아닌 줄에서 멈추는 것이 두 실패 사이의 자리다(리뷰 후속). 여러 줄에 걸치므로 길이 보존 모드에서도 개행은 보존된다(엔진 계약) — 그러지 않으면 행 좌표가 밀린다. 잘린 입력에서 삼키는 단위는 **줄 전체가 Base64 인 줄**이다 — 줄 일부만 먹으면 Base64 가 아닌 줄의 앞부분까지 지운다."
     },
     {
       "id": "SECRET.URL_CREDENTIAL",

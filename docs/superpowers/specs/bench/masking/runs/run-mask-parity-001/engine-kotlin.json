@@ -471,12 +471,12 @@
     "inputChars" : 66,
     "inputLines" : 3,
     "default" : {
-      "maskedTextHash" : "sha256:f29b73f960313641d0da75d5d14dccb36c7b4d84289350e85b5a47acf4a7c615",
-      "maskedChars" : 51,
-      "maskedLines" : 3,
+      "maskedTextHash" : "sha256:a0f45829cf09e853516c5d98f9705992fb9b3a5f9a018d9bd2b787f65761d7d2",
+      "maskedChars" : 34,
+      "maskedLines" : 2,
       "spans" : [ {
         "start" : 0,
-        "end" : 35,
+        "end" : 52,
         "ruleId" : "SECRET.PRIVATE_KEY_BLOCK",
         "class" : "PRIVATE_KEY"
       } ],
@@ -485,12 +485,12 @@
       }
     },
     "lengthPreserving" : {
-      "maskedTextHash" : "sha256:8297a07264b80580271b02911da19ec845a45f886b1c6d3301e8d4b3018d2eb8",
+      "maskedTextHash" : "sha256:797ccd0dfa84bf5f52f16f0ca22a5e664e3e2be0b3195b0dbf94d4c151b0f536",
       "maskedChars" : 66,
       "maskedLines" : 3,
       "spans" : [ {
         "start" : 0,
-        "end" : 35,
+        "end" : 52,
         "ruleId" : "SECRET.PRIVATE_KEY_BLOCK",
         "class" : "PRIVATE_KEY"
       } ],
@@ -499,12 +499,12 @@
       }
     },
     "noAllowlist" : {
-      "maskedTextHash" : "sha256:f29b73f960313641d0da75d5d14dccb36c7b4d84289350e85b5a47acf4a7c615",
-      "maskedChars" : 51,
-      "maskedLines" : 3,
+      "maskedTextHash" : "sha256:a0f45829cf09e853516c5d98f9705992fb9b3a5f9a018d9bd2b787f65761d7d2",
+      "maskedChars" : 34,
+      "maskedLines" : 2,
       "spans" : [ {
         "start" : 0,
-        "end" : 35,
+        "end" : 52,
         "ruleId" : "SECRET.PRIVATE_KEY_BLOCK",
         "class" : "PRIVATE_KEY"
       } ],
@@ -513,12 +513,12 @@
       }
     },
     "namesDisabled" : {
-      "maskedTextHash" : "sha256:f29b73f960313641d0da75d5d14dccb36c7b4d84289350e85b5a47acf4a7c615",
-      "maskedChars" : 51,
-      "maskedLines" : 3,
+      "maskedTextHash" : "sha256:a0f45829cf09e853516c5d98f9705992fb9b3a5f9a018d9bd2b787f65761d7d2",
+      "maskedChars" : 34,
+      "maskedLines" : 2,
       "spans" : [ {
         "start" : 0,
-        "end" : 35,
+        "end" : 52,
         "ruleId" : "SECRET.PRIVATE_KEY_BLOCK",
         "class" : "PRIVATE_KEY"
       } ],
@@ -1323,18 +1323,32 @@
     "inputChars" : 19,
     "inputLines" : 1,
     "default" : {
-      "maskedTextHash" : "sha256:f84ebc41c7c76137dd0574c45873a30a3441075e905adede2b005d501065a9b4",
-      "maskedChars" : 19,
+      "maskedTextHash" : "sha256:a314078a31452fb0f0d25b3e261b8c3e7235c3f33468d69e646a61d4f9372108",
+      "maskedChars" : 24,
       "maskedLines" : 1,
-      "spans" : [ ],
-      "byRule" : { }
+      "spans" : [ {
+        "start" : 7,
+        "end" : 19,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
     },
     "lengthPreserving" : {
-      "maskedTextHash" : "sha256:f84ebc41c7c76137dd0574c45873a30a3441075e905adede2b005d501065a9b4",
+      "maskedTextHash" : "sha256:f231addd5ae2ab045bfe330890d7c3ab55f4191acbd31851a7556d7edbaefdcd",
       "maskedChars" : 19,
       "maskedLines" : 1,
-      "spans" : [ ],
-      "byRule" : { }
+      "spans" : [ {
+        "start" : 7,
+        "end" : 19,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
     },
     "noAllowlist" : {
       "maskedTextHash" : "sha256:a314078a31452fb0f0d25b3e261b8c3e7235c3f33468d69e646a61d4f9372108",
@@ -1351,11 +1365,18 @@
       }
     },
     "namesDisabled" : {
-      "maskedTextHash" : "sha256:f84ebc41c7c76137dd0574c45873a30a3441075e905adede2b005d501065a9b4",
-      "maskedChars" : 19,
+      "maskedTextHash" : "sha256:a314078a31452fb0f0d25b3e261b8c3e7235c3f33468d69e646a61d4f9372108",
+      "maskedChars" : 24,
       "maskedLines" : 1,
-      "spans" : [ ],
-      "byRule" : { }
+      "spans" : [ {
+        "start" : 7,
+        "end" : 19,
+        "ruleId" : "SECRET.KEYED_VALUE",
+        "class" : "PASSWORD"
+      } ],
+      "byRule" : {
+        "SECRET.KEYED_VALUE" : 1
+      }
     }
   }, {
     "id" : "PARITY.URL.JDBC_WITH_CREDENTIAL",

@@ -212,3 +212,60 @@ def test_length_preserving_keeps_newlines_so_line_numbers_hold():
     assert out.count("\n") == text.count("\n")
     assert out.split("\n").index("MARKER") == text.split("\n").index("MARKER")
     assert "MIIEowIBAAKCAQEA" not in out
+
+
+# ---- allowlist 우선순위 · 부분 마스킹 0건 (리뷰 후속) --------------------------------------
+
+
+def test_explicit_secret_context_beats_the_allowlist():
+    """allowlist 의 근거는 전부 **식별성**이다 — 그 논거로 명시적 시크릿 문맥을 덮으면 안 된다.
+
+    `ABC123456` 은 ALLOW.INTERNAL_ID(`[A-Z]{1,4}[0-9]{6,15}`)와 겹치지만 `password=` 문맥에서는
+    비밀이다. 문맥이 없으면 여전히 음성이다 — allowlist 를 통째로 끄는 변경이 아니다.
+    """
+    from lodestar_codegraph.mask import mask_field
+
+    assert mask_field("password=ABC123456", None, None) == "password=[MASKED:PASSWORD]"
+    assert mask_field("apikey=AB1234567890", None, None) == "apikey=[MASKED:PASSWORD]"
+    assert mask_field("order=ORD202401000001", None, None) == "order=ORD202401000001"
+
+
+def test_already_masked_token_is_never_re_masked_in_secret_context():
+    """멱등성은 예외다 — 이미 가려진 자리를 다시 가리면 토큰이 중첩된다(#85)."""
+    from lodestar_codegraph.mask import mask_field
+
+    once = mask_field("password=ABC123456", None, None)
+    assert mask_field(once, None, None) == once
+
+
+def test_every_detected_span_is_fully_replaced():
+    """스팬의 모든 문자가 치환돼야 한다 — 원문 부재만 보면 한 글자 남기는 구현이 통과한다(LOD-107)."""
+    from lodestar_codegraph.mask import MaskPolicy, mask_field, detect
+
+    policy = MaskPolicy(length_preserving=True)
+    for text in ("password=ABC123456",
+                 "aws_secret_access_key = " + "A" * 41,
+                 "contact hong@example.com now",
+                 "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA1234\n"):
+        out = mask_field(text, None, policy)
+        for s in detect(text, policy):
+            assert set(out[s.start:s.end]) <= {"*", "\n"}, (text, out[s.start:s.end])
+
+
+def test_aws_secret_longer_than_forty_chars_leaves_no_plaintext_suffix():
+    from lodestar_codegraph.mask import mask_field
+
+    out = mask_field("aws_secret_access_key = " + "A" * 41, None, None)
+    assert out == "aws_secret_access_key = [MASKED:AWS_SECRET_ACCESS_KEY]"
+
+
+def test_truncated_private_key_masks_body_but_stops_at_non_base64():
+    """종료 표식이 없어도 Base64 본문까지는 가린다. 뒤를 무한정 삼키지는 않는다."""
+    from lodestar_codegraph.mask import mask_field
+
+    text = ("-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA1234\nabcdEFGH0123\n"
+            "무관한 뒷내용은 남는다")
+    out = mask_field(text, None, None)
+    assert "MIIEowIBAAKCAQEA1234" not in out
+    assert "abcdEFGH0123" not in out
+    assert "무관한 뒷내용은 남는다" in out

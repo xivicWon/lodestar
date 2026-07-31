@@ -118,8 +118,13 @@ def _plant(texts: list[str], meta_text: str) -> tuple[str, dict, bool]:
                 meta_notes.append(text)
     with tempfile.TemporaryDirectory() as tmp:
         out = pathlib.Path(tmp) / "codegraph.json"
+        # #113 은 노드마다 content_hash 를 요구한다(emit 이 없으면 예외를 던진다). 이 프로브의
+        # 노드는 합성이라 실제 파일이 없으므로, **마스킹 전 원문 경로**를 키로 합성 해시를 준다 —
+        # 마스킹된 경로로 키를 잡으면 PII 가 섞인 경로의 노드만 신원이 비어 계약이 깨진다.
+        hashes = {n.path: "sha256:" + f"{i:064x}" for i, n in enumerate(nodes)}
         doc = build_and_write(
-            nodes, edges, {"source_root": meta_text, "notes": meta_notes}, str(out)
+            nodes, edges, {"source_root": meta_text, "notes": meta_notes}, str(out),
+            file_hashes=hashes,
         )
         # 반환값이 아니라 **디스크에 기록된 산출물**을 검사한다 — 새어나가는 자리는 파일이다.
         artifact = out.read_text(encoding="utf-8")
