@@ -165,7 +165,7 @@ def gates(track: str, p: dict, f: dict) -> list[dict]:
         sec_observed = (
             f"코퍼스 양성 {f['piiPositives']}건 중 마스킹 {f['piiMasked']}건 "
             f"(미마스킹 {f['piiUnmasked']}건 · 미수집 {f['piiNotCollected']}건) · "
-            f"샘플 적재 경로에 미마스킹 PII 형태 값 {f['ingestUnmaskedValues']}건"
+            f"샘플 적재 경로(마스킹 opt-out 기준선)에 미마스킹 PII 형태 값 {f['ingestUnmaskedValues']}건"
         )
     else:
         sec_observed = (
@@ -353,8 +353,13 @@ def feature_judgments(track: str, run_id: str, f: dict, gs: list[dict]) -> list[
                 "measured": True,
                 "rationale": (
                     "샘플 적재 경로(SampleLegacyDb)는 CREATE 뿐 아니라 INSERT 까지 전 문장을 실행해 행 데이터를 "
-                    f"저장소에 원문으로 남긴다 — 미마스킹 PII 형태 값 {f['ingestUnmaskedValues']}건이 질의로 회수됐다. "
-                    "L0 최소저장 원칙과 보안 게이트를 통과하지 못한다. 벤치 입력 픽스처로서의 가치는 유지되므로 Lab."
+                    "저장소에 남긴다 — 이 프로브가 잰 **마스킹 opt-out 기준선**"
+                    "(IngestPolicy(maskRowData=false))에서 미마스킹 PII 형태 값 "
+                    f"{f['ingestUnmaskedValues']}건이 질의로 회수됐다. 측정 조건을 빼고 읽으면 안 된다: "
+                    "기본 적재 경로는 #115 이후 적재 **전에** 마스킹한다. 이 판정은 기준선 기준이며, "
+                    "마스킹 적용 상태의 재판정은 gold 재고정(승인 사항) 뒤 새 runId 의 몫이다. "
+                    "L0 최소저장 원칙은 그와 별개로 여전히 미충족이다(행 자체를 두지 않는 최소화는 기본값이 아니다). "
+                    "벤치 입력 픽스처로서의 가치는 유지되므로 Lab."
                 ),
                 "evidenceRefs": [run_id],
             },
