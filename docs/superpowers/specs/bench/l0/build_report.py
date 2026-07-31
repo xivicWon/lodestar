@@ -424,17 +424,25 @@ def build_from(track: str, p: dict) -> dict:
 
     if track == "db":
         collector_version = p["collector"]["citedVersion"]
+        # 남은 실패는 **이 보고서의 게이트 상태에서 뽑는다**. 손으로 적으면 게이트가 닫힌 뒤에도
+        # 문구가 남아, 같은 보고서가 "메타데이터 실패" 를 말하면서 그 게이트를 1.0 PASS 로 싣는다
+        # (리뷰 LOD-109 — run-l0-db-3c27259-003 에서 실제로 그랬다).
+        failed_gates = [GATE_FOLLOWUP.get(g["id"], g["id"]) for g in (gs or []) if g["status"] == "FAIL"]
+        remaining = f"남은 실패는 {' · '.join(failed_gates)} 다" if failed_gates \
+            else "무조건 게이트에 남은 실패는 없다"
         notes = (
-            "L0 DB 트랙 재실측(#114 — 오류 가시성 수정 후). 프로브 산출물: probe-db.json "
+            f"L0 DB 트랙 재실측({COLLECTOR_CHANGE['db']} 후). 프로브 산출물: probe-db.json "
             "(backend/src/test/kotlin/com/ontostudio/rdb/L0DbSourceProbeTest.kt 가 생성하며 표류 시 테스트가 "
             f"실패한다). counts.input 은 고정 입력의 SQL 문장 {f['input']}건이다 — 행 데이터(INSERT) 8건은 "
             "L0 최소저장 원칙상 제외이지만 분모에 남기고(I3 R20) 이제 사유·좌표와 함께 보고된다. 보고율은 "
             f"{f['reported']}/{f['shouldReport']} 이며, 실패 픽스처의 기대 보고 항목은 사유코드 일치와 좌표 "
             "겹침으로 귀속해 셌다 — 건수만 맞추거나 그럴듯한 좌표를 적어 통과하는 경로를 막는다. 조용한 부분 "
             f"복구는 {f['silentPartialRecovery']}건이다(TB_BAD_MIDDLE 은 부분 복구를 버리고 실패로 보고한다). "
-            "입력·fixture 는 run-l0-db-3c27259-001 과 같은 고정값이고 달라진 것은 수집기뿐이라 두 실행은 직접 "
-            "비교된다. 남은 실패는 메타데이터(L0-fix-2)와 보안(L0-fix-5)이며, 게이트 판정이 애매한 구간"
-            "(미마스킹 0건이지만 마스킹 단계 부재)은 I1 §3.2 에 따라 HALT 쪽으로 읽었다."
+            f"입력·fixture 는 {PREVIOUS['db'].name} 과 같은 고정값이고 달라진 것은 수집기뿐이라 두 실행은 직접 "
+            f"비교된다. {remaining}. 보안 게이트는 수집 경로에 마스킹 단계가 생긴 뒤에도 FAIL 로 읽는다 — "
+            "이 프로브가 재는 것은 샘플 적재 경로를 **마스킹 없이**(IngestPolicy(maskRowData=false)) 돌린 "
+            "기준선이기 때문이다. 마스킹 적용 상태의 게이트 회복은 I2 Gold Set 재고정(승인 사항) 뒤에 "
+            "새 runId 로 남긴다 — 승인 없이 판정을 올리지 않는다(I1 §3.2)."
         )
     else:
         collector_version = p["collector"]["citedVersion"]
