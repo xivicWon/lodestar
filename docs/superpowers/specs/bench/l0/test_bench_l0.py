@@ -86,6 +86,41 @@ def test_귀속_한_항목이_두_기대를_동시에_채우지_않는다():
     assert att["actualReported"] == 1, "한 보고를 두 번 세면 보고율이 부풀어 오른다"
 
 
+# ---- 프로브: 범위 분류 (수집기 신고가 아니라 프로브 규칙으로) ------------------------------
+
+def _doc(*file_nodes) -> dict:
+    return {"nodes": [{"kind": "file", "path": p, "status": st} for p, st in file_nodes]}
+
+
+def test_분류_사실을_낸_파일만_산출이다():
+    """파싱만 되고 사실이 0건인 파일을 산출로 세면 실패가 성공으로 위장된다 — 수집기에서 없앤 위장이
+    보고서 층에서 되살아나는 자리다."""
+    rels = ["scope/Ok.kt", "scope/Broken.kt", "scope/notes.txt"]
+    cls = probe_code.classify_scope(rels, _doc(("Ok.kt", "parsed"), ("Broken.kt", "failed")), "scope")
+    assert cls["factFiles"] == ["Ok.kt"]
+    assert cls["failedFiles"] == ["Broken.kt"], "status=failed 는 산출이 아니라 실패다"
+    assert cls["notCollected"] == ["scope/notes.txt"]
+
+
+def test_분류_노드조차_없는_파일도_실패로_잡힌다():
+    """트리가 아예 서지 않으면 파일 노드가 없다 — 그 파일이 어느 집계에도 안 남으면 조용히 사라진다."""
+    cls = probe_code.classify_scope(["scope/Gone.kt"], _doc(), "scope")
+    assert cls["failedFiles"] == ["Gone.kt"] and cls["notCollected"] == []
+
+
+def test_분류_부분_추출은_산출이다():
+    """부분 추출은 사실을 냈다 — 실패로 세면 이번엔 반대 방향으로 거짓이 된다(상한은 status 가 맡는다)."""
+    cls = probe_code.classify_scope(["scope/Partial.kt"], _doc(("Partial.kt", "partial")), "scope")
+    assert cls["factFiles"] == ["Partial.kt"] and cls["failedFiles"] == []
+
+
+def test_분류는_수집기_신고와_무관하게_분모를_정한다():
+    """수집기가 파일 노드를 아예 안 만들어도 '읽을 수 있었던 파일' 은 프로브의 확장자 규칙이 정한다."""
+    cls = probe_code.classify_scope(["scope/A.kt", "scope/B.java", "scope/c.md"], _doc(), "scope")
+    assert cls["failedFiles"] == ["A.kt", "B.java"]
+    assert cls["notCollected"] == ["scope/c.md"]
+
+
 # ---- 보고서: 게이트 산식 ---------------------------------------------------------------
 
 def _facts(reported, should, **over):
@@ -98,8 +133,8 @@ def _facts(reported, should, **over):
     return f
 
 
-def _gate(f, gid="gate-error-visibility"):
-    return {g["id"]: g for g in build_report.gates("db", {}, f)}[gid]
+def _gate(f, gid="gate-error-visibility", track="db"):
+    return {g["id"]: g for g in build_report.gates(track, {}, f)}[gid]
 
 
 def test_보고율_전량_보고는_PASS():
@@ -170,11 +205,11 @@ def test_코드_트랙_분모는_수집기가_읽지_않은_파일이다():
 
 
 @pytest.mark.parametrize("patch,expected", [
-    ({"walked": 59, "parsed": 58, "failedFiles": ["a/Broken.kt"]},
+    ({"parsed": 59, "producedFacts": 58, "failedFiles": ["a/Broken.kt"]},
      {"output": 58, "failed": 1, "excluded": 0}),
-    ({"walked": 57, "parsed": 57, "notCollectedCount": 2, "reportedNotCollected": 2},
+    ({"parsed": 57, "producedFacts": 57, "notCollectedCount": 2, "reportedNotCollected": 2},
      {"output": 57, "failed": 0, "excluded": 2}),
-    ({"walked": 55, "parsed": 54, "failedFiles": ["a/Broken.kt"],
+    ({"parsed": 55, "producedFacts": 54, "failedFiles": ["a/Broken.kt"],
       "notCollectedCount": 4, "reportedNotCollected": 4},
      {"output": 54, "failed": 1, "excluded": 4}),
 ])
@@ -191,10 +226,31 @@ def test_counts_는_인벤토리에서_항등으로_나온다(patch, expected):
     assert f["input"] == f["output"] + f["failed"] + f["excluded"]
 
 
+def test_사실을_못_낸_파일은_산출로_세지_않는다():
+    p = copy.deepcopy(_probe("code"))
+    p["inventory"].update({"parsed": 59, "producedFacts": 58, "failedFiles": ["a/Broken.kt"],
+                           "failedFilesReported": ["a/Broken.kt"]})
+    f = build_report._code_facts(p)
+    assert f["output"] == 58 and f["failed"] == 1
+    assert f["input"] == f["output"] + f["failed"] + f["excluded"]
+
+
+def test_실패도_보고돼야_하는_대상이라_분모에_들어간다():
+    """읽었는데 사실을 못 낸 파일은 사유와 함께 보고돼야 한다 — 분모에서 빠지면 침묵이 통과가 된다."""
+    p = copy.deepcopy(_probe("code"))
+    base = build_report._code_facts(p)["shouldReport"]
+    p["inventory"].update({"parsed": 59, "producedFacts": 58,
+                           "failedFiles": ["a/Silent.kt"], "failedFilesReported": []})
+    f = build_report._code_facts(p)
+    assert f["shouldReport"] == base + 1
+    assert f["reported"] == base, "사유 없는 실패는 보고로 세지 않는다"
+    assert _gate(f, track="code")["status"] == "FAIL"
+
+
 def test_파싱_실패가_있어도_보고서가_계약을_통과한다():
     """건수와 사례를 같은 집합에서 만들어야 R2·R4 가 서로를 확인한다."""
     p = copy.deepcopy(_probe("code"))
-    p["inventory"].update({"walked": 59, "parsed": 58, "failedFiles": ["a/Broken.kt"],
+    p["inventory"].update({"parsed": 59, "producedFacts": 58, "failedFiles": ["a/Broken.kt"],
                            "failedFilesReported": ["a/Broken.kt"]})
     rep = build_report.build_from("code", p)
     assert rep["counts"] == {"input": 59, "output": 58, "failed": 1, "excluded": 0}
@@ -204,7 +260,7 @@ def test_파싱_실패가_있어도_보고서가_계약을_통과한다():
 
 def test_사유_없는_실패는_사례에_그_사실로_적힌다():
     p = copy.deepcopy(_probe("code"))
-    p["inventory"].update({"walked": 59, "parsed": 58, "failedFiles": ["a/Silent.kt"],
+    p["inventory"].update({"parsed": 59, "producedFacts": 58, "failedFiles": ["a/Silent.kt"],
                            "failedFilesReported": []})
     rep = build_report.build_from("code", p)
     assert "사유를 남기지 않았다" in rep["failures"][0]["summary"]

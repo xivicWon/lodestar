@@ -118,7 +118,9 @@ def _code_facts(p: dict) -> dict:
     scope_root = inv.get("scopeRoot", "backend/src/main/kotlin")
     return {
         "input": inv["input"],
-        "output": inv["parsed"],
+        # 사실을 낸 파일만 산출이다. 파싱만 되고 사실이 0건인 파일을 output 에 넣으면 실패가 성공으로
+        # 위장된다 — 이 이슈가 수집기에서 없앤 위장이 보고서 층에서 되살아나는 자리다.
+        "output": inv.get("producedFacts", inv["parsed"]),
         "failed": len(failed_files) if "failedFiles" in inv else inv["walked"] - inv["parsed"],
         "failures": [
             {"id": f"fail-code-{i}",
@@ -134,9 +136,9 @@ def _code_facts(p: dict) -> dict:
         "provenance": p["provenance"]["rate"],
         # db 트랙과 같은 규칙: 분모는 프로브가 직접 센 '수집기가 읽지 않은 파일' 과 gold 픽스처의
         # 기대 보고 항목이고, 분자는 그 각각이 사유와 함께 산출물에 남았는지다(자기 인증 방지).
-        "shouldReport": (inv.get("notCollectedCount", inv["excludedByExtensionFilter"])
+        "shouldReport": (not_collected + len(failed_files)
                          + sum(f["expectedReported"] for f in fixtures)),
-        "reported": (inv.get("reportedNotCollected", 0)
+        "reported": (inv.get("reportedNotCollected", 0) + len(reported_failures)
                      + sum(f.get("actualReported", 0) for f in fixtures)),
         "markedFullySucceeded": sum(1 for f in fixtures if f["markedAsFullySucceeded"]),
         "piiPositives": p["pii"]["positives"],

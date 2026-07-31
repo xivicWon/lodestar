@@ -35,6 +35,7 @@
     "failedReportedByCollector": 0,
     "partialReportedByCollector": 0,
     "scopeRoot": "backend/src/main/kotlin",
+    "producedFacts": 59,
     "failedFiles": [],
     "failedFilesReported": [],
     "notCollected": [],

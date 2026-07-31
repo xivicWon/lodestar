@@ -153,6 +153,32 @@ def materialize(revision: str, prefix: str, dest: pathlib.Path) -> dict[str, str
     return out
 
 
+COLLECTED_EXT = {".kt", ".kts", ".java"}
+
+
+def classify_scope(rels: list[str], doc: dict, scope_root: str = SCOPE_ROOT) -> dict:
+    """수집 범위의 파일을 **프로브의 규칙으로** 나눈다 — 수집기 신고로 나누면 자기 인증이다.
+
+    - `factFiles`  사실을 낸 파일(파일 노드 status 가 parsed·partial)
+    - `readable`   확장자상 수집기가 읽을 수 있었던 파일(M-CODE-1)
+    - `notCollected` 읽을 수 없어 수집되지 않은 파일 → 제외 보고의 분모
+    - `failedFiles`  읽을 수 있었는데 사실을 못 낸 파일 → 실패 사례의 분모
+      (status=failed 도, 트리가 아예 서지 않아 노드조차 없는 파일도 여기 들어온다)
+
+    status 는 수집기가 스스로 붙인 표시라 '사실을 냈는가' 판정에만 쓰고, 분모는 프로브가 정한다.
+    """
+    fact_files = {n["path"] for n in doc["nodes"]
+                  if n["kind"] == "file" and n.get("status") in ("parsed", "partial")}
+    readable = [r for r in rels if pathlib.PurePosixPath(r).suffix in COLLECTED_EXT]
+    under = lambda r: str(pathlib.PurePosixPath(r).relative_to(scope_root))  # noqa: E731
+    return {
+        "factFiles": sorted(fact_files),
+        "readable": sorted(readable),
+        "notCollected": sorted(r for r in rels if r not in readable),
+        "failedFiles": sorted(under(r) for r in readable if under(r) not in fact_files),
+    }
+
+
 def line_range(locator: str) -> tuple[int, int] | None:
     m = re.search(r"#L(\d+)(?:-L(\d+))?", locator)
     if not m:
@@ -277,16 +303,15 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
     # 가져오면 "보고한 것을 보고했다" 는 자기 인증이 되어 아무것도 재지 못한다. 그래서 범위 안에서
     # 수집기가 읽지 않은 파일(walked 에 없는 파일)을 프로브가 직접 세고, 그 각각에 대해 사유가 달린
     # 항목이 산출물에 있는지 본다.
-    walked_rel = {n["path"] for n in doc["nodes"] if n["kind"] == "file"}
-    not_collected = sorted(r for p_, r in rel_of.items()
-                           if str(pathlib.PurePosixPath(r).relative_to(SCOPE_ROOT)) not in walked_rel)
-    reported_paths = {f"{SCOPE_ROOT}/{i['locator'].split('#')[0]}" for i in reported}
+    # 분류는 **프로브의 규칙(M-CODE-1)** 으로 한다 — 수집기 신고로 나누면 "성공했다고 말한 것이
+    # 성공" 이 되어 자기 인증이다. 파일 노드의 status 는 수집기가 스스로 붙인 표시이므로
+    # '사실을 냈는가' 판정에만 쓰고, 분모(읽을 수 있었던 파일)는 확장자 규칙으로 프로브가 정한다.
+    cls = classify_scope(sorted(rel_of.values()), doc)
+    fact_files, not_collected = set(cls["factFiles"]), cls["notCollected"]
+    failed_files = cls["failedFiles"]
+    reported_paths = {f"{SCOPE_ROOT}/{i['locator'].split('#')[0]}"
+                      for i in reported if i["reason"]}
     reported_not_collected = [r for r in not_collected if r in reported_paths]
-    # 읽었으나 사실을 산출하지 못한 파일 — 실패 사례의 분모다(I3 R4). 수집기가 사유를 남기지 않아도
-    # 프로브가 직접 알 수 있어야 한다: 그렇지 않으면 조용히 사라진 파일은 어느 집계에도 안 남는다.
-    walked_paths = {str(pathlib.PurePosixPath(r).relative_to(SCOPE_ROOT)) for r in rel_of.values()}
-    failed_files = sorted(walked_paths - walked_rel - {
-        str(pathlib.PurePosixPath(r).relative_to(SCOPE_ROOT)) for r in not_collected})
     # 제외 목록은 **분모와 같은 집합**(수집기가 읽지 않은 파일)에서 만든다. 수집기가 말한 것만 모으면
     # 보고하지 않고 삼킨 파일이 목록에서도 사라져, 보고서의 제외 합계와 counts.excluded 가 서로를
     # 확인해주지 못한다(I3 R2·R3). 사유가 없는 파일은 **그 사실 자체를 사유로** 남긴다.
@@ -315,6 +340,9 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
         "failedReportedByCollector": doc["meta"]["failed"],
         "partialReportedByCollector": doc["meta"]["partial"],
         "scopeRoot": SCOPE_ROOT,
+        # 사실을 낸 파일만 산출로 센다 — 파싱은 됐지만 사실이 0건인 파일을 output 에 넣으면
+        # 실패가 성공으로 위장된다(#114 가 수집기에서 없앤 것과 같은 위장이 보고서 층에서 재현된다).
+        "producedFacts": len(fact_files),
         "failedFiles": failed_files,
         "failedFilesReported": sorted(
             f for f in failed_files
