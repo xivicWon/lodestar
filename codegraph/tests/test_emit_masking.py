@@ -46,6 +46,24 @@ def test_emitted_text_fields_are_masked(tmp_path):
     assert disk["nodes"][0]["id"] == "type:A"  # 엣지 참조 키는 유지
 
 
+def test_node_id_is_preserved_even_when_it_matches_a_rule(tmp_path):
+    """`type:A` 는 어떤 규칙에도 매칭될 수 없어 ID 보존 단언이 공허했다(리뷰 LOD-112).
+
+    **가려질 수 있는** ID 와 그것을 참조하는 엣지를 넣어야 회귀를 잡는다 — ID 가 마스킹되면
+    엣지 endpoint 와 어긋나 그래프가 끊기고, 외부 조회 키 호환성도 깨진다.
+    """
+    nid = "type:hong@example.com"
+    nodes = [_node(nid, "A", "A", "p"), _node("type:B", "B", "B", "p")]
+    edges = [Edge(1, nid, "type:B", "calls", EXTRACTED, 1.0)]
+    out = tmp_path / "cg.json"
+    doc = build_and_write(nodes, edges, {}, str(out), file_hashes=_hashes(nodes))
+    disk, _ = _written(out)
+    assert {n["id"] for n in disk["nodes"]} == {nid, "type:B"}, disk["nodes"]
+    assert disk["edges"][0]["from"] == nid
+    assert disk["edges"][0]["to"] == "type:B"
+    assert doc["meta"]["edge_count"] == 1, "ID 가 바뀌어 엣지가 잘렸다"
+
+
 def test_masking_summary_is_recorded_without_plaintext(tmp_path):
     nodes = [_node("type:A", "hong@example.com", "A", "p")]
     out = tmp_path / "cg.json"

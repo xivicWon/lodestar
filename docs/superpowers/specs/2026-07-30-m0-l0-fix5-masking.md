@@ -414,3 +414,76 @@ gold 증거(`run-mask-gold-001/engine-{kotlin,python}.json` · `gold-verdicts.js
 `main`(#113) 머지 이후 `probe_masking.py` 는 합성 노드에 `file_hashes` 를 넘기지 않아
 `build_and_write` 의 신원 게이트에서 예외로 죽었다. gradle·pytest 어디에도 걸려 있지 않아
 드러나지 않았다. 마스킹 전 **원문 경로**를 키로 합성 해시를 넘겨 고쳤다.
+
+---
+
+## 15. AI 코드리뷰(ctx-2ba0a4) 반영 — 키 토큰 경계 · 값 줄 경계 · 게이트 산식
+
+### 왜 게이트가 초록이었나부터
+
+이번 결함들은 "고치고 게이트 초록" 으로 입증할 수 없는 종류였다. **고치기 전에도 초록**이었기
+때문이다. 원인은 두 가지다.
+
+1. gold 코퍼스에 그 형태(`secretary=`·줄 넘김 값)가 **없다**.
+2. `gate-security-masking` 의 PASS 조건이 미마스킹·부분 마스킹만 봤다.
+
+그래서 **정답지를 먼저 넓히고** 고쳤다. 단위 테스트(양 엔진) → 패리티 픽스처 → 프로브 sink →
+게이트 산식 순으로 넓힌 뒤 규칙을 손댔고, 각 단계에서 수정 전 red 를 먼저 확인했다.
+
+### 수정 전 / 후
+
+| 입력 | 수정 전 | 수정 후 |
+|---|---|---|
+| `secretary=Kim` | `secretary=[MASKED:PASSWORD]` (오탐) | `secretary=Kim` |
+| `tokenizer=bert` | `tokenizer=[MASKED:PASSWORD]` (오탐) | `tokenizer=bert` |
+| `aws.secretAccessKey=wJal…` | `[MASKED:AWS_SECRET_ACCESS_KEY]` | 동일 (회귀 없음) |
+| `password_hash=abc123` | `[MASKED:PASSWORD]` | 동일 |
+| `password="abc⏎unrelated=keep⏎other="` | `password="[MASKED:PASSWORD]"` — **두 줄 소실** | 값만 가리고 두 줄 보존 |
+
+키워드 접미사는 이제 **대문자·숫자·`_`·`-` 로 시작할 때만** 인정한다(camelCase 경계).
+규칙 전체가 `(?i)` 라 `[A-Z]` 가 소문자까지 먹으므로 경계 문자만 `(?-i:…)` 로 대소문자 구분을 되살렸다.
+
+### 반대편 구멍도 함께 막았다
+
+줄 넘김을 막자 **닫히지 않은 따옴표 값이 아예 안 가려지는** 구멍이 생겼다(`password="abc` → 평문).
+한쪽을 막으면 다른 쪽이 열리는 자리라, 닫는 따옴표를 선택으로 두고 **닫히지 않으면 줄 끝까지**를
+값으로 본다. 두 방향을 한 테스트에서 정확한 기대 문자열로 고정했다.
+
+### 게이트 산식 — 정책을 지키면서 조인다
+
+gold 정책은 *"오탐은 게이트가 아니라 기록 대상이다(I1 §4.1). 다만 GIT_SHA·CONTENT_HASH 오탐은
+revision·fixture hash 추적을 끊으므로 별도 표기한다"* 이다. 그래서 **모든 오탐**을 PASS 조건에 넣지
+않고, **치명 클래스 오탐**과 `spansOutsideGold` 만 넣었다. 둘 다 이미 재고 있던 값인데 판정식에서만
+빠져 있었다.
+
+주입으로 확인한 결과다.
+
+| 주입 | gate-security-masking |
+|---|---|
+| 없음 | PASS (observed 0) |
+| 치명 클래스 오탐 1건 | **FAIL** (observed 1) |
+| gold 밖 스팬 1건 | **FAIL** (observed 1) |
+| 일반 오탐 1건 | PASS — 정책대로 기록만 |
+
+마지막 줄이 중요하다: 과하게 조여 정책을 어기지 않았다는 증거다.
+
+### 회귀 없음의 근거
+
+`run-mask-gold-001`·`run-mask-ingest-001` 증거는 **바이트 무변화**다. 움직인 것은 패리티(케이스
+27→29)와 code emit(메타 키 sink 추가)뿐이며, 패리티 마스킹 건수는 default·lengthPreserving
+26→29, noAllowlist 31→34, namesDisabled 23→26 으로 **추가한 2케이스가 만든 증가분과 일치**한다.
+
+### 함께 닫은 테스트 구멍
+
+| 지적 | 조치 |
+|---|---|
+| LOD-110 | ledger 원문 비포함 검사가 `김한빛` 하나만 봤다 → 원본 SQL 에서 PII 형태 값을 **전부 뽑아** 요약 어디에도 없음을 확인 |
+| LOD-112 | ID 보존 단언이 `type:A`(매칭 불가)라 공허했다 → **가려질 수 있는** ID 와 그것을 참조하는 엣지로 endpoint 보존까지 확인 |
+| LOD-113 | 프로브 sink 에 메타데이터 **문자열 키** 가 없었다 → `meta_key` sink 추가(양성 × sink 전 조합) |
+| LOD-114 | `tables.size >= 27` 은 테이블이 늘어도 통과 → `assertEquals(27, …)` |
+
+### 남은 잔여 위험 (새로 기록)
+
+`passwordPolicy=required` 는 여전히 오탐이다. 접미사가 camelCase 경계를 넘으므로 구조만으로는
+`secretAccessKey` 와 구분되지 않는다. 값 쪽 휴리스틱(엔트로피)은 §5-1 이 이미 기각한 방향이다.
+과마스킹이라 노출 위험은 없고, gold 정책상 게이트가 아니라 기록 대상이다.

@@ -145,6 +145,16 @@
       "id": "PARITY.NAME.CLASS_TOGGLE",
       "note": "namesDisabled 정책에서 인명이 남아야 한다 — 클래스 비활성화 분기의 관측 지점",
       "text": "owner=박서준 mail=park.sj@example.net"
+    },
+    {
+      "id": "PARITY.KEYED.TOKEN_BOUNDARY",
+      "note": "키워드 뒤 접미사의 경계 — 소문자로 이어지면 비밀 키가 아니다(secret+ary · token+izer). 대문자·언더스코어 경계는 인정한다. 두 엔진이 `(?-i:…)` 를 같게 읽는지도 여기서 갈린다",
+      "text": "secretary=Kim tokenizer=bert password_hash=abc123 PASSWORD_HASH=def456"
+    },
+    {
+      "id": "PARITY.KEYED.QUOTED_CROSSES_LINE",
+      "note": "따옴표 값이 줄을 넘으면 다음 줄의 닫는 따옴표까지 한 값이 되어 사이의 무관한 줄이 사라진다 — 마스킹이 데이터를 지우는 자리이고, 두 엔진이 같은 경계를 봐야 한다",
+      "text": "password=\"abc\nunrelated_setting=keep-me\nother=\""
     }
   ],
   "policyNote": "정책 4종을 각각 잰다. `noAllowlist`·`namesDisabled` 는 두 엔진의 **정책 분기**(allowlist 끄기 · 클래스 비활성화)를 지나가게 하려고 있다 — 기본 정책만 재면 그 분기에서 갈려도 조용히 통과한다. 덧붙여 `default` 와 `noAllowlist` 의 스팬 차이는 'allowlist 가 실제로 탐지를 눌렀다' 는 관측이 된다(M11 이 그 발생 건수를 요구한다)."

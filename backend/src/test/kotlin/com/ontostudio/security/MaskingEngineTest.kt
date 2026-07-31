@@ -213,4 +213,35 @@ class MaskingEngineTest {
         assertFalse(out.contains("abcdEFGH0123"), "개인 키 본문이 남았다: $out")
         assertTrue(out.contains("무관한 뒷내용은 남는다"), "무관한 내용까지 삼켰다: $out")
     }
+
+    // ---- 키 토큰 경계 · 값 경계 (리뷰 ctx-2ba0a4 후속) ---------------------------------
+
+    /**
+     * 비밀 키워드는 **키 안의 온전한 토큰**이어야 한다. 키워드 뒤에 아무 소문자나 붙여도 되면
+     * `secret`+`ary`, `token`+`izer` 가 비밀 키로 읽혀 무관한 설정값이 가려진다.
+     * 경계는 camelCase·`_`·`-`·숫자다 — `secretAccessKey` 같은 진짜 키는 그대로 살아야 한다.
+     */
+    @Test fun `secret keyword must be a whole token inside the key`() {
+        assertEquals("secretary=Kim", engine.mask("secretary=Kim").text)
+        assertEquals("tokenizer=bert", engine.mask("tokenizer=bert").text)
+        // 진짜 비밀 키는 계속 가린다 — 경계를 넘은 접미사(대문자·언더스코어)는 인정한다
+        assertEquals("aws.secretAccessKey=[MASKED:AWS_SECRET_ACCESS_KEY]",
+            engine.mask("aws.secretAccessKey=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY").text)
+        assertEquals("password_hash=[MASKED:PASSWORD]", engine.mask("password_hash=abc123").text)
+        assertEquals("spring.datasource.password=[MASKED:PASSWORD]",
+            engine.mask("spring.datasource.password=P@ssw0rd-not-real-123").text)
+    }
+
+    /**
+     * 따옴표 값은 **그 줄 안에서** 닫혀야 한다. 개행을 넘으면 다음 줄의 닫는 따옴표까지 한 값으로
+     * 읽혀 그 사이의 무관한 설정이 통째로 사라진다 — 마스킹이 데이터를 지우는 것은 마스킹의 실패다.
+     */
+    @Test fun `quoted secret value does not cross a line`() {
+        val text = "password=\"abc\nunrelated_setting=keep-me\nother=\""
+        val out = engine.mask(text).text
+        assertTrue(out.contains("unrelated_setting=keep-me"), "무관한 줄이 삼켜졌다: $out")
+        // 줄 넘김을 막으면서 값을 통째로 놓치면 반대편 구멍이 생긴다 — 닫는 따옴표가 없으면
+        // 줄 끝까지가 값이다.
+        assertEquals("password=\"[MASKED:PASSWORD]\nunrelated_setting=keep-me\nother=\"", out)
+    }
 }

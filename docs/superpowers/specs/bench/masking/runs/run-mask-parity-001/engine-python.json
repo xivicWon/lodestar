@@ -3,7 +3,7 @@
   "engine": "python:lodestar_codegraph.mask",
   "specVersion": "masking-rules/v0",
   "fixtureVersion": "mask-parity-fixture/v1",
-  "fixtureHash": "sha256:7da83bae5a1c46ce8782d9839ed2a1f6537a443c6ae8d217807abf04ea11c9c2",
+  "fixtureHash": "sha256:546d4c2fb3ce241fb6701225ccdf5e37757fa7d459f2b3a523892bbaa14f05c3",
   "policies": [
     "default",
     "lengthPreserving",
@@ -1831,6 +1831,170 @@
         ],
         "byRule": {
           "PII.EMAIL": 1
+        }
+      }
+    },
+    {
+      "id": "PARITY.KEYED.TOKEN_BOUNDARY",
+      "inputHash": "sha256:1849f6797f8286b1c246c912d00ad7488ba7f303261d1aaa56878d7fe05125c4",
+      "inputChars": 70,
+      "inputLines": 1,
+      "default": {
+        "maskedTextHash": "sha256:5a0f76eaa83e8a282b51f2fdc9e6854ebebdecf6e5ae5bed51b009022b744a37",
+        "maskedChars": 92,
+        "maskedLines": 1,
+        "spans": [
+          {
+            "start": 43,
+            "end": 49,
+            "ruleId": "SECRET.KEYED_VALUE",
+            "class": "PASSWORD"
+          },
+          {
+            "start": 64,
+            "end": 70,
+            "ruleId": "SECRET.KEYED_VALUE",
+            "class": "PASSWORD"
+          }
+        ],
+        "byRule": {
+          "SECRET.KEYED_VALUE": 2
+        }
+      },
+      "lengthPreserving": {
+        "maskedTextHash": "sha256:c7045caf533eb0a59fb81600ea4dc956bd2ec22481eb232645cacb4650b47eeb",
+        "maskedChars": 70,
+        "maskedLines": 1,
+        "spans": [
+          {
+            "start": 43,
+            "end": 49,
+            "ruleId": "SECRET.KEYED_VALUE",
+            "class": "PASSWORD"
+          },
+          {
+            "start": 64,
+            "end": 70,
+            "ruleId": "SECRET.KEYED_VALUE",
+            "class": "PASSWORD"
+          }
+        ],
+        "byRule": {
+          "SECRET.KEYED_VALUE": 2
+        }
+      },
+      "noAllowlist": {
+        "maskedTextHash": "sha256:5a0f76eaa83e8a282b51f2fdc9e6854ebebdecf6e5ae5bed51b009022b744a37",
+        "maskedChars": 92,
+        "maskedLines": 1,
+        "spans": [
+          {
+            "start": 43,
+            "end": 49,
+            "ruleId": "SECRET.KEYED_VALUE",
+            "class": "PASSWORD"
+          },
+          {
+            "start": 64,
+            "end": 70,
+            "ruleId": "SECRET.KEYED_VALUE",
+            "class": "PASSWORD"
+          }
+        ],
+        "byRule": {
+          "SECRET.KEYED_VALUE": 2
+        }
+      },
+      "namesDisabled": {
+        "maskedTextHash": "sha256:5a0f76eaa83e8a282b51f2fdc9e6854ebebdecf6e5ae5bed51b009022b744a37",
+        "maskedChars": 92,
+        "maskedLines": 1,
+        "spans": [
+          {
+            "start": 43,
+            "end": 49,
+            "ruleId": "SECRET.KEYED_VALUE",
+            "class": "PASSWORD"
+          },
+          {
+            "start": 64,
+            "end": 70,
+            "ruleId": "SECRET.KEYED_VALUE",
+            "class": "PASSWORD"
+          }
+        ],
+        "byRule": {
+          "SECRET.KEYED_VALUE": 2
+        }
+      }
+    },
+    {
+      "id": "PARITY.KEYED.QUOTED_CROSSES_LINE",
+      "inputHash": "sha256:fd10362b0c88c9c5412d97a09b782fd207200dd0bead3867d5c4225b373ce916",
+      "inputChars": 47,
+      "inputLines": 3,
+      "default": {
+        "maskedTextHash": "sha256:af4316b5b21db8b906171968dec764a6626b02939ea7fda1348c3a9f6e9446d3",
+        "maskedChars": 61,
+        "maskedLines": 3,
+        "spans": [
+          {
+            "start": 10,
+            "end": 13,
+            "ruleId": "SECRET.KEYED_VALUE",
+            "class": "PASSWORD"
+          }
+        ],
+        "byRule": {
+          "SECRET.KEYED_VALUE": 1
+        }
+      },
+      "lengthPreserving": {
+        "maskedTextHash": "sha256:5f7c89a0b611a7308fe3108c039141d242442e662fc5b582b2e9aab48054bd02",
+        "maskedChars": 47,
+        "maskedLines": 3,
+        "spans": [
+          {
+            "start": 10,
+            "end": 13,
+            "ruleId": "SECRET.KEYED_VALUE",
+            "class": "PASSWORD"
+          }
+        ],
+        "byRule": {
+          "SECRET.KEYED_VALUE": 1
+        }
+      },
+      "noAllowlist": {
+        "maskedTextHash": "sha256:af4316b5b21db8b906171968dec764a6626b02939ea7fda1348c3a9f6e9446d3",
+        "maskedChars": 61,
+        "maskedLines": 3,
+        "spans": [
+          {
+            "start": 10,
+            "end": 13,
+            "ruleId": "SECRET.KEYED_VALUE",
+            "class": "PASSWORD"
+          }
+        ],
+        "byRule": {
+          "SECRET.KEYED_VALUE": 1
+        }
+      },
+      "namesDisabled": {
+        "maskedTextHash": "sha256:af4316b5b21db8b906171968dec764a6626b02939ea7fda1348c3a9f6e9446d3",
+        "maskedChars": 61,
+        "maskedLines": 3,
+        "spans": [
+          {
+            "start": 10,
+            "end": 13,
+            "ruleId": "SECRET.KEYED_VALUE",
+            "class": "PASSWORD"
+          }
+        ],
+        "byRule": {
+          "SECRET.KEYED_VALUE": 1
         }
       }
     }

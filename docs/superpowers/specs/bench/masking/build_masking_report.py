@@ -94,6 +94,11 @@ def build() -> dict:
                      and pk["fixtureHash"] == pp["fixtureHash"] == sha256_file(EVIDENCE["parityFixture"]))
     code_gate = code["variants"][code["gateVariant"]]
     partial = [i["id"] for i in positives if not i["fullyCovered"]]
+    critical_fp = {
+        c: sum(1 for i in negatives if i["class"] == c and i["verdict"] == "FALSE_POSITIVE")
+        for c in CRITICAL_FP_CLASSES
+    }
+    outside_gold = verdicts["spansOutsideGold"]
 
     gates = [
         {
@@ -102,9 +107,20 @@ def build() -> dict:
             "required": 0,
             # 원문 소멸만으로는 부족하다 — 스팬이 양성 구간을 **완전히** 덮었는지도 게이트에 넣는다.
             # 부분 마스킹은 값의 일부가 남는 것이며 "가렸다" 고 부를 수 없다(리뷰 질문 3).
-            "observed": len(unmasked) + len(partial),
-            "status": "PASS" if not unmasked and not partial else "FAIL",
-            "scope": "gold PII 코퍼스 3파일 전문(문맥 포함) · 양성 %d건 · 좌표 완전 피복 요구" % len(positives),
+            #
+            # 여기에 **치명 클래스 오탐**과 `spansOutsideGold` 도 넣는다(리뷰 후속). 일반 오탐은
+            # gold 정책상 게이트가 아니라 기록 대상이지만(pii.json NOT_MASKED · I1 §4.1),
+            # GIT_SHA·CONTENT_HASH 오탐은 revision·fixture 추적을 끊고, gold 밖 스팬은 정답지에
+            # 없는 자리를 가린 것이라 오탐 회계 자체가 성립하지 않는다. 둘 다 이미 재고 있었는데
+            # 판정식에서만 빠져 있어, 그 값이 0 이 아니어도 게이트가 초록이었다.
+            "observed": (len(unmasked) + len(partial)
+                         + sum(critical_fp.values()) + sum(outside_gold.values())),
+            "status": ("PASS" if not unmasked and not partial
+                       and not any(critical_fp.values()) and not any(outside_gold.values())
+                       else "FAIL"),
+            "scope": ("gold PII 코퍼스 3파일 전문(문맥 포함) · 양성 %d건 · 좌표 완전 피복 요구 · "
+                      "치명 클래스(%s) 오탐 0건 · gold 밖 스팬 0건"
+                      % (len(positives), "·".join(CRITICAL_FP_CLASSES))),
         },
         {
             "id": "gate-engine-parity",
@@ -163,10 +179,7 @@ def build() -> dict:
             "preserved": sum(1 for i in negatives if i["verdict"] == "PRESERVED"),
             "falsePositives": false_positives,
             "falsePositiveRate": round(len(false_positives) / len(negatives), 4),
-            "criticalClassFalsePositives": {
-                c: sum(1 for i in negatives if i["class"] == c and i["verdict"] == "FALSE_POSITIVE")
-                for c in CRITICAL_FP_CLASSES
-            },
+            "criticalClassFalsePositives": critical_fp,
             "spansOutsideGold": verdicts["spansOutsideGold"],
             "byClass": merge_counts(python, "byClass"),
             "byRule": merge_counts(python, "byRule"),

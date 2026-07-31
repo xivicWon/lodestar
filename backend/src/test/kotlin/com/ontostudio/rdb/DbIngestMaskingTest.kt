@@ -121,7 +121,17 @@ class DbIngestMaskingTest {
         assertEquals(5, byClass["NAME"])
         assertEquals(3, byClass["PHONE"])
         assertEquals(3, byClass["KR_BIZ_NO"])
-        assertTrue(!summary.toString().contains("김한빛"))
+        // 한 값만 검사하면 다른 이름·전화·사업자번호가 요약에 실려도 통과한다(리뷰 LOD-110).
+        // 원본 SQL 에서 마스킹 대상 형태를 **전부 뽑아** 요약 어디에도 없음을 확인한다.
+        val text = summary.toString()
+        val plaintexts = Regex("'([^']*)'").findAll(pinnedSql).map { it.groupValues[1] }
+            .filter { v ->
+                Regex("^[0-9]{3}-[0-9]{2}-[0-9]{5}$").matches(v) ||          // 사업자번호
+                    Regex("^0[0-9]{1,2}-[0-9]{3,4}-[0-9]{4}$").matches(v) || // 전화
+                    Regex("^[가-힣]{2,4}$").matches(v)                        // 인명 형태
+            }.toSet()
+        assertTrue(plaintexts.size >= 11, "검사 대상 원문을 못 뽑았다: $plaintexts")
+        for (v in plaintexts) assertFalse(text.contains(v), "요약에 원문이 실렸다: $v")
     }
 
     @Test fun `minimize policy stores no row data at all`() {
@@ -129,7 +139,8 @@ class DbIngestMaskingTest {
         db.open(IngestPolicy(minimizeRowData = true)).use { conn ->
             // 등록된 컬럼만 보면 다른 테이블에 남은 행을 놓친다(리뷰 LOD-075) — 전 테이블을 센다.
             val tables = MetadataService().extract(conn, SampleSource.SOURCE_ID).tables.map { it.name }
-            assertTrue(tables.size >= 27, "수집 테이블이 줄었다: ${tables.size}")
+            // >= 로 두면 테이블이 **늘어도** 통과한다 — baseline 계약은 정확히 27이다(리뷰 LOD-114).
+            assertEquals(27, tables.size, "수집 테이블 수가 baseline 과 다르다")
             for (t in tables) {
                 conn.createStatement().use { st ->
                     st.executeQuery("SELECT COUNT(*) FROM \"$t\"").use { rs ->

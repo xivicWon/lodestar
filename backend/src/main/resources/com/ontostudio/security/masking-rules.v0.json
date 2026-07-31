@@ -123,8 +123,8 @@
       "id": "SECRET.KEYED_VALUE",
       "class": "PASSWORD",
       "kind": "SECRET",
-      "regex": "(?i)\\b(?:password|passwd|pwd|secret|apikey|api_key|accesskey|access_key|privatekey|private_key|credential|credentials|token|authorization)[A-Za-z0-9_]{0,12}[\"']?\\s*[:=]\\s*(?:\"([^\"]*)\"|'([^']*)'|(?:Bearer |Basic |Token )?([^\\s,;\"')]+))",
-      "note": "키 이름이 비밀을 뜻할 때만 값을 가린다. 'username'·'user'·'key'·'path' 는 목록에 없다 — gold 음성(DB_USERNAME · 'key=item:ITM…')이 정확히 그 자리다. Bearer/Basic/Token 접두는 값이 아니라 스킴이므로 남긴다. 따옴표로 묶인 값은 **닫는 따옴표까지** 한 덩어리로 잡는다 — 공백에서 끊으면 'abc def' 의 'def' 가 평문으로 남는다(로컬 리뷰).",
+      "regex": "(?i)\\b(?:password|passwd|pwd|secret|apikey|api_key|accesskey|access_key|privatekey|private_key|credential|credentials|token|authorization)(?:(?-i:[A-Z0-9_-])[A-Za-z0-9_-]{0,11})?[\"']?\\s*[:=]\\s*(?:\"([^\"\\r\\n]*)\"?|'([^'\\r\\n]*)'?|(?:Bearer |Basic |Token )?([^\\s,;\"')]+))",
+      "note": "키 이름이 비밀을 뜻할 때만 값을 가린다. 'username'·'user'·'key'·'path' 는 목록에 없다 — gold 음성(DB_USERNAME · 'key=item:ITM…')이 정확히 그 자리다. Bearer/Basic/Token 접두는 값이 아니라 스킴이므로 남긴다. 따옴표로 묶인 값은 **닫는 따옴표까지** 한 덩어리로 잡는다 — 공백에서 끊으면 'abc def' 의 'def' 가 평문으로 남는다(로컬 리뷰). 키워드는 **키 안의 온전한 토큰**이어야 한다: 접미사는 대문자·숫자·`_`·`-` 로 시작할 때만 인정한다(camelCase 경계). 아무 소문자나 허용하면 `secret`+`ary`·`token`+`izer` 가 비밀 키로 읽혀 무관한 설정값이 가려진다(리뷰 후속). `secretAccessKey`·`password_hash` 는 경계를 넘으므로 그대로 잡힌다. `passwordPolicy` 처럼 경계를 넘는 비시크릿 키는 여전히 오탐이며 — 구조만으로는 `secretAccessKey` 와 구분되지 않는다 — 잔여 위험으로 기록한다. 따옴표 값은 **그 줄 안에서** 닫혀야 한다: 개행을 넘기면 다음 줄의 닫는 따옴표까지 한 값이 되어 그 사이의 무관한 줄이 산출물에서 통째로 사라진다(마스킹이 데이터를 지우는 것은 마스킹의 실패다). 경계 문자는 `(?-i:…)` 로 **대소문자 구분**을 되살려 검사한다 — 규칙 전체가 `(?i)` 이므로 그러지 않으면 `[A-Z]` 가 소문자까지 먹어 경계가 사라진다. 닫는 따옴표는 **선택**이다: 줄 안에서 닫히지 않은 값을 매칭 실패로 두면 그 값이 통째로 평문으로 남는다(줄 넘김을 막으면서 생기는 반대편 구멍). 닫히지 않으면 줄 끝까지가 값이다.",
       "valueGroups": [
         1,
         2,

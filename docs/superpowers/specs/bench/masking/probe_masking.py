@@ -87,7 +87,9 @@ def engine_evidence() -> dict:
 
 
 # 산출물이 텍스트를 실을 수 있는 모든 자리 — 하나라도 관문 밖이면 그 자리로 원문이 새어나간다.
-SINKS = ("label", "qualified_name", "path", "alternatives", "meta")
+# `meta_key` 는 메타데이터의 **문자열 키** 자리다. 값만 심으면 키를 가리지 않는 구현에서도
+# "원문 잔존 0건" 증거가 통과한다 — 키에 원문을 넣는 것이 값 관문을 우회하는 경로다(리뷰 LOD-113).
+SINKS = ("label", "qualified_name", "path", "alternatives", "meta", "meta_key")
 
 
 def field_for(index: int) -> str:
@@ -100,7 +102,7 @@ def _plant(texts: list[str], meta_text: str) -> tuple[str, dict, bool]:
     각 양성을 **모든 sink 에** 심는다(양성 × sink 전 조합). 하나씩 돌려 심으면 sink 별 관문이
     대부분 미검증으로 남는다 — sink 목록만 증거에 적히고 실제로는 5분의 1만 지나간다(리뷰 LOD-070).
     """
-    nodes, edges, meta_notes = [], [], []
+    nodes, edges, meta_notes, meta_keys = [], [], [], {}
     for n, text in enumerate(texts):
         for k, field in enumerate(SINKS):
             nid = f"type:P{n:03d}S{k}"
@@ -116,6 +118,9 @@ def _plant(texts: list[str], meta_text: str) -> tuple[str, dict, bool]:
                 edges.append(Edge(len(edges) + 1, nid, nid, "calls", EXTRACTED, 1.0, [text]))
             if field == "meta":
                 meta_notes.append(text)
+            if field == "meta_key":
+                # 키가 마스킹되면 서로 다른 키가 한 토큰으로 접힐 수 있으므로 값에 출처를 남긴다.
+                meta_keys[text] = f"owner-count-{n:03d}" 
     with tempfile.TemporaryDirectory() as tmp:
         out = pathlib.Path(tmp) / "codegraph.json"
         # #113 은 노드마다 content_hash 를 요구한다(emit 이 없으면 예외를 던진다). 이 프로브의
@@ -123,7 +128,8 @@ def _plant(texts: list[str], meta_text: str) -> tuple[str, dict, bool]:
         # 마스킹된 경로로 키를 잡으면 PII 가 섞인 경로의 노드만 신원이 비어 계약이 깨진다.
         hashes = {n.path: "sha256:" + f"{i:064x}" for i, n in enumerate(nodes)}
         doc = build_and_write(
-            nodes, edges, {"source_root": meta_text, "notes": meta_notes}, str(out),
+            nodes, edges,
+            {"source_root": meta_text, "notes": meta_notes, "by_owner": meta_keys}, str(out),
             file_hashes=hashes,
         )
         # 반환값이 아니라 **디스크에 기록된 산출물**을 검사한다 — 새어나가는 자리는 파일이다.

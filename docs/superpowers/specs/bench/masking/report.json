@@ -14,7 +14,7 @@
       "required": 0,
       "observed": 0,
       "status": "PASS",
-      "scope": "gold PII 코퍼스 3파일 전문(문맥 포함) · 양성 28건 · 좌표 완전 피복 요구"
+      "scope": "gold PII 코퍼스 3파일 전문(문맥 포함) · 양성 28건 · 좌표 완전 피복 요구 · 치명 클래스(GIT_SHA·CONTENT_HASH) 오탐 0건 · gold 밖 스팬 0건"
     },
     {
       "id": "gate-engine-parity",
@@ -30,7 +30,7 @@
       "required": true,
       "observed": true,
       "status": "PASS",
-      "scope": "패리티 픽스처 27케이스 × 정책 4종(기본·길이보존) · 대안 그룹·PEM·BMP 밖 문자·개행 보존"
+      "scope": "패리티 픽스처 29케이스 × 정책 4종(기본·길이보존) · 대안 그룹·PEM·BMP 밖 문자·개행 보존"
     },
     {
       "id": "gate-db-ingest-masking",
@@ -54,7 +54,7 @@
       "required": 0,
       "observed": 0,
       "status": "PASS",
-      "scope": "증거 7종 + 보고서 전문 × 양성 55건 = 440회 대조",
+      "scope": "증거 7종 + 보고서 전문 × 양성 57건 = 456회 대조",
       "hits": []
     }
   ],
@@ -123,8 +123,8 @@
     "parity": true,
     "branchParity": {
       "fixtureVersion": "mask-parity-fixture/v1",
-      "fixtureHash": "sha256:7da83bae5a1c46ce8782d9839ed2a1f6537a443c6ae8d217807abf04ea11c9c2",
-      "cases": 27,
+      "fixtureHash": "sha256:546d4c2fb3ce241fb6701225ccdf5e37757fa7d459f2b3a523892bbaa14f05c3",
+      "cases": 29,
       "policies": [
         "default",
         "lengthPreserving",
@@ -133,14 +133,14 @@
       ],
       "identical": true,
       "spans": {
-        "default": 26,
-        "lengthPreserving": 26,
-        "noAllowlist": 31,
-        "namesDisabled": 23
+        "default": 29,
+        "lengthPreserving": 29,
+        "noAllowlist": 34,
+        "namesDisabled": 26
       },
       "note": "이 픽스처에는 정답이 없다 — 확정하는 것은 두 엔진이 갈리지 않는다는 사실 하나이며, 정확성 판정은 gold(#99)가 한다"
     },
-    "ruleSpecHash": "sha256:768673beacd5f1dc05b9cc35c322bae4afc987633c93e76fef11cae9a9d44f8e"
+    "ruleSpecHash": "sha256:a32f21a5cd8e94ae784240842d38c5300559456c0526c3efda7343e80a34bb84"
   },
   "collectionPaths": {
     "db": {
@@ -177,7 +177,7 @@
         "withLineContext": {
           "unmasked": 0,
           "unmaskedInArtifact": [],
-          "maskedTotal": 600,
+          "maskedTotal": 628,
           "idsPreserved": true
         },
         "bareValue": {
@@ -187,7 +187,7 @@
             "PII.POS.PROPERTIES.L7.21",
             "PII.POS.LOG.L6.32"
           ],
-          "maskedTotal": 125,
+          "maskedTotal": 146,
           "idsPreserved": true
         }
       }
@@ -196,7 +196,7 @@
   "evidenceRefs": {
     "emitCode": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-code-001/emit-code.json",
-      "contentHash": "sha256:f22b475e25126e2e0995246348d4ce0f0535f2a70b873454fa5f8b980092050c"
+      "contentHash": "sha256:3d90267dddd9970c7cc6a85fda43117f3e58e5e93ff72110a85a3e55da96e225"
     },
     "engineKotlin": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-gold-001/engine-kotlin.json",
@@ -216,19 +216,19 @@
     },
     "parityFixture": {
       "path": "docs/superpowers/specs/bench/masking/fixtures/parity-cases.json",
-      "contentHash": "sha256:7da83bae5a1c46ce8782d9839ed2a1f6537a443c6ae8d217807abf04ea11c9c2"
+      "contentHash": "sha256:546d4c2fb3ce241fb6701225ccdf5e37757fa7d459f2b3a523892bbaa14f05c3"
     },
     "parityKotlin": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-parity-001/engine-kotlin.json",
-      "contentHash": "sha256:a1d65d6e934fd7acc888d9c1d35fc316daac612436c3f52dad8875a38fceb213"
+      "contentHash": "sha256:606061f64b9495da912b2d4ea055f9bbf31b0bb8d27cd8b1aab1aa24cfd92d37"
     },
     "parityPython": {
       "path": "docs/superpowers/specs/bench/masking/runs/run-mask-parity-001/engine-python.json",
-      "contentHash": "sha256:472600d594de4dc97052c332d28f303b956c24b5dfd5948d23c4b0f59926577a"
+      "contentHash": "sha256:0068c159a3f6a6e6b198faced4e1a054a72dd1235edfbf197a642e4384954ab6"
     },
     "ruleSpec": {
       "path": "docs/superpowers/specs/security/masking-rules.v0.json",
-      "contentHash": "sha256:768673beacd5f1dc05b9cc35c322bae4afc987633c93e76fef11cae9a9d44f8e"
+      "contentHash": "sha256:a32f21a5cd8e94ae784240842d38c5300559456c0526c3efda7343e80a34bb84"
     }
   }
 }

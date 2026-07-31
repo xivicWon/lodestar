@@ -269,3 +269,25 @@ def test_truncated_private_key_masks_body_but_stops_at_non_base64():
     assert "MIIEowIBAAKCAQEA1234" not in out
     assert "abcdEFGH0123" not in out
     assert "무관한 뒷내용은 남는다" in out
+
+
+def test_secret_keyword_must_be_a_whole_token_inside_the_key():
+    """키워드 뒤에 아무 소문자나 붙여도 되면 `secret`+`ary` 가 비밀 키로 읽혀 무관한 값이 가려진다."""
+    from lodestar_codegraph.mask import mask_field
+
+    assert mask_field("secretary=Kim", None, None) == "secretary=Kim"
+    assert mask_field("tokenizer=bert", None, None) == "tokenizer=bert"
+    # 진짜 비밀 키는 계속 가린다 — camelCase·`_` 경계를 넘은 접미사는 인정한다
+    assert mask_field("aws.secretAccessKey=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+                      None, None) == "aws.secretAccessKey=[MASKED:AWS_SECRET_ACCESS_KEY]"
+    assert mask_field("password_hash=abc123", None, None) == "password_hash=[MASKED:PASSWORD]"
+
+
+def test_quoted_secret_value_does_not_cross_a_line():
+    """개행을 넘으면 다음 줄의 닫는 따옴표까지 한 값이 되어 그 사이 설정이 통째로 사라진다."""
+    from lodestar_codegraph.mask import mask_field
+
+    out = mask_field('password="abc\nunrelated_setting=keep-me\nother="', None, None)
+    assert "unrelated_setting=keep-me" in out, out
+    # 반대편 구멍도 막는다: 닫히지 않은 값을 매칭 실패로 두면 그 값이 평문으로 남는다
+    assert out == 'password="[MASKED:PASSWORD]\nunrelated_setting=keep-me\nother="', out

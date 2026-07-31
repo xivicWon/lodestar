@@ -14,40 +14,40 @@
       "idsPreserved": true,
       "maskingSummary": {
         "spec_version": "masking-rules/v0",
-        "masked_total": 600,
-        "masked_fields": 140,
+        "masked_total": 628,
+        "masked_fields": 153,
         "by_class": {
-          "ADDRESS": 70,
-          "AWS_ACCESS_KEY_ID": 5,
-          "AWS_SECRET_ACCESS_KEY": 5,
-          "BANK_ACCOUNT": 70,
-          "CARD_NO": 85,
-          "EMAIL": 80,
-          "GITHUB_TOKEN": 5,
-          "IP_ADDRESS": 10,
-          "JWT": 10,
-          "KR_RRN": 75,
-          "NAME": 85,
-          "PASSWORD": 10,
-          "PHONE": 85,
-          "SLACK_TOKEN": 5
+          "ADDRESS": 72,
+          "AWS_ACCESS_KEY_ID": 6,
+          "AWS_SECRET_ACCESS_KEY": 6,
+          "BANK_ACCOUNT": 72,
+          "CARD_NO": 88,
+          "EMAIL": 83,
+          "GITHUB_TOKEN": 6,
+          "IP_ADDRESS": 11,
+          "JWT": 12,
+          "KR_RRN": 78,
+          "NAME": 88,
+          "PASSWORD": 12,
+          "PHONE": 88,
+          "SLACK_TOKEN": 6
         },
         "by_rule": {
-          "PII.CARD_NO_DELIMITED": 35,
-          "PII.CARD_NO_PLAIN": 50,
-          "PII.EMAIL": 80,
-          "PII.IP_ADDRESS": 10,
-          "PII.KR_ADDRESS": 70,
-          "PII.KR_BANK_ACCOUNT": 70,
-          "PII.KR_NAME": 85,
-          "PII.KR_PHONE": 85,
-          "PII.KR_RRN": 75,
-          "SECRET.AWS_ACCESS_KEY_ID": 5,
-          "SECRET.AWS_SECRET_ACCESS_KEY": 5,
-          "SECRET.GITHUB_TOKEN": 5,
-          "SECRET.JWT": 10,
-          "SECRET.KEYED_VALUE": 10,
-          "SECRET.SLACK_TOKEN": 5
+          "PII.CARD_NO_DELIMITED": 36,
+          "PII.CARD_NO_PLAIN": 52,
+          "PII.EMAIL": 83,
+          "PII.IP_ADDRESS": 11,
+          "PII.KR_ADDRESS": 72,
+          "PII.KR_BANK_ACCOUNT": 72,
+          "PII.KR_NAME": 88,
+          "PII.KR_PHONE": 88,
+          "PII.KR_RRN": 78,
+          "SECRET.AWS_ACCESS_KEY_ID": 6,
+          "SECRET.AWS_SECRET_ACCESS_KEY": 6,
+          "SECRET.GITHUB_TOKEN": 6,
+          "SECRET.JWT": 12,
+          "SECRET.KEYED_VALUE": 12,
+          "SECRET.SLACK_TOKEN": 6
         },
         "masked_path_fields": 28
       }
@@ -64,36 +64,36 @@
       "idsPreserved": true,
       "maskingSummary": {
         "spec_version": "masking-rules/v0",
-        "masked_total": 125,
-        "masked_fields": 125,
+        "masked_total": 146,
+        "masked_fields": 146,
         "by_class": {
-          "ADDRESS": 10,
-          "AWS_ACCESS_KEY_ID": 5,
-          "BANK_ACCOUNT": 10,
-          "CARD_NO": 15,
-          "EMAIL": 15,
-          "GITHUB_TOKEN": 5,
-          "IP_ADDRESS": 5,
-          "JWT": 10,
-          "KR_RRN": 15,
-          "NAME": 15,
-          "PHONE": 15,
-          "SLACK_TOKEN": 5
+          "ADDRESS": 12,
+          "AWS_ACCESS_KEY_ID": 6,
+          "BANK_ACCOUNT": 12,
+          "CARD_NO": 18,
+          "EMAIL": 17,
+          "GITHUB_TOKEN": 6,
+          "IP_ADDRESS": 6,
+          "JWT": 12,
+          "KR_RRN": 17,
+          "NAME": 17,
+          "PHONE": 17,
+          "SLACK_TOKEN": 6
         },
         "by_rule": {
-          "PII.CARD_NO_DELIMITED": 5,
-          "PII.CARD_NO_PLAIN": 10,
-          "PII.EMAIL": 15,
-          "PII.IP_ADDRESS": 5,
-          "PII.KR_ADDRESS": 10,
-          "PII.KR_BANK_ACCOUNT": 10,
-          "PII.KR_NAME": 15,
-          "PII.KR_PHONE": 15,
-          "PII.KR_RRN": 15,
-          "SECRET.AWS_ACCESS_KEY_ID": 5,
-          "SECRET.GITHUB_TOKEN": 5,
-          "SECRET.JWT": 10,
-          "SECRET.SLACK_TOKEN": 5
+          "PII.CARD_NO_DELIMITED": 6,
+          "PII.CARD_NO_PLAIN": 12,
+          "PII.EMAIL": 17,
+          "PII.IP_ADDRESS": 6,
+          "PII.KR_ADDRESS": 12,
+          "PII.KR_BANK_ACCOUNT": 12,
+          "PII.KR_NAME": 17,
+          "PII.KR_PHONE": 17,
+          "PII.KR_RRN": 17,
+          "SECRET.AWS_ACCESS_KEY_ID": 6,
+          "SECRET.GITHUB_TOKEN": 6,
+          "SECRET.JWT": 12,
+          "SECRET.SLACK_TOKEN": 6
         },
         "masked_path_fields": 25
       }
@@ -104,9 +104,10 @@
     "qualified_name",
     "path",
     "alternatives",
-    "meta"
+    "meta",
+    "meta_key"
   ],
-  "plantingNote": "각 양성을 모든 sink 에 심는다 — 양성 28 × sink 5 조합 전부가 관문을 지난다",
+  "plantingNote": "각 양성을 모든 sink 에 심는다 — 양성 28 × sink 6 조합 전부가 관문을 지난다",
   "planted": [
     {
       "goldId": "PII.POS.SQL.L18.0",
@@ -116,7 +117,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -127,7 +129,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -138,7 +141,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -149,7 +153,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -160,7 +165,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -171,7 +177,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -182,7 +189,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -193,7 +201,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -204,7 +213,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -215,7 +225,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -226,7 +237,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -237,7 +249,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -248,7 +261,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -259,7 +273,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -270,7 +285,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -281,7 +297,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -292,7 +309,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -303,7 +321,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -314,7 +333,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -325,7 +345,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -336,7 +357,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -347,7 +369,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -358,7 +381,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -369,7 +393,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -380,7 +405,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -391,7 +417,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -402,7 +429,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     },
     {
@@ -413,7 +441,8 @@
         "qualified_name",
         "path",
         "alternatives",
-        "meta"
+        "meta",
+        "meta_key"
       ]
     }
   ]
