@@ -6,7 +6,10 @@
 > `gate-security-masking` FAIL. 미마스킹 0건이었지만 그것은 마스킹이 아니라 **미수집** 때문이었고,
 > 마스킹 단계 자체가 리포에 0건이었다.
 > 리뷰어/승인권자: **@xivicWon**
-> 상태: **구현·실측 완료 · 마스킹 게이트 6종 PASS** — 단, 이 문서는 L0 레이어 판정을 갱신하지 않는다(§7).
+> 상태: 마스킹 게이트 **6종 PASS** · 확인기 11 rules/51 cases 0 mismatches — 그러나 **종료 조건 미충족**
+> (`bench/masking/exit_criteria.py` E3 FAIL · blocking 미해결 있음 · §16). 게이트 통과와 작업 완료는
+> 다르다: 게이트는 정답지가 담고 있는 것만 본다. 남은 항목은 `bench/masking/open-items.json` 이 정본이다.
+> 이 문서는 L0 레이어 판정도 갱신하지 않는다(§7).
 
 ---
 

@@ -67,7 +67,8 @@
       "target": "backend/src/test/kotlin/com/ontostudio/security/MaskingParityTest.kt",
       "summary": "패리티 픽스처의 필수 정책 집합을 정확 비교하지 않는다(단언 방향이 반대)",
       "resolved": false,
-      "scope": "#115"
+      "scope": "#115",
+      "note": "LOD-134 로 재지적되며 범위가 넓어졌다: 필수 정책 집합 강제에 더해 astral·multiline 입력이 **실제로 탐지 스팬을 만들었는지**(그 분기를 정말 지나갔는지)까지 단언해야 한다."
     },
     {
       "id": "LOD-108",
@@ -190,7 +191,7 @@
       "scope": "#115",
       "target": "backend/src/test/kotlin/com/ontostudio/security/MaskingGoldGateTest.kt",
       "summary": "Kotlin gold 관문이 '원문 전체 문자열이 남았는가' 만 본다 — 정확한 좌표·클래스·ruleId·완전 피복을 대조하지 않는다",
-      "note": "LOD-116(Python 확인기 M4)·LOD-128(code emit M10)과 **같은 뿌리**다. M4 만 조이고 Kotlin 쌍둥이를 같이 조이지 않았다 — 세 관문을 한 번에 정리해야 한다.",
+      "note": "LOD-116(Python 확인기 M4)·LOD-128(code emit M10)과 **같은 뿌리**다. M4 만 조이고 Kotlin 쌍둥이를 같이 조이지 않았다 — 세 관문을 한 번에 정리해야 한다. 같은 지적이 LOD-133 으로 재게시됐다(같은 파일·같은 줄) — ID 는 달라도 내용은 하나다.",
       "resolved": false
     },
     {
@@ -201,6 +202,26 @@
       "target": "docs/superpowers/specs/security/masking-rules.v0.json · MaskingRuleSpecParityTest",
       "summary": "규칙이 쓰는 \\s 의 의미가 두 엔진에서 다르다(Python 은 유니코드 공백 포함, Java 는 ASCII 전용) — 이식성 금지 목록이 \\d·\\w 만 막고 \\s 를 허용한다",
       "note": "실측 확인: 같은 입력 'password:<NBSP>secret123' 이 Python 은 'password:[MASKED:PASSWORD]', Kotlin 은 'password:<NBSP>[MASKED:PASSWORD]' 를 낸다. 전각 공백은 텍스트는 같지만 스팬 경계가 다르다. 두 엔진 동일 결과라는 #115 수용조건이 깨지는 자리다. 패리티 픽스처에 유니코드 공백 케이스가 없어 게이트가 못 잡았다.",
+      "resolved": false
+    },
+    {
+      "id": "LOD-132",
+      "severity": "MAJOR",
+      "area": "제품코드",
+      "scope": "#115",
+      "target": "backend/src/main/kotlin/com/ontostudio/security/MaskingEngine.kt · codegraph/src/lodestar_codegraph/mask.py",
+      "summary": "길이 보존 마스킹이 \\n 만 보존하고 \\r 을 마스크 문자로 바꾼다 — 스팬 안의 CRLF 가 '*\\n' 이 되어 줄 구분자가 손상된다",
+      "note": "실측(Python): 여러 줄 값의 CR 2건 → 0건, `*\\n` 으로 치환(문자 수·행 수는 보존). 스팬 **밖**의 CRLF 는 그대로다. 두 엔진이 같은 코드라 패리티는 깨지지 않지만 **계약이 양쪽에서 똑같이 틀렸다** — 규칙 스펙의 maskToken.note 는 '개행은 그대로 둔다' 고 적는다. 고치려면 두 엔진의 token() 에서 \\r 도 보존한다.",
+      "resolved": false
+    },
+    {
+      "id": "LOD-135",
+      "severity": "MAJOR",
+      "area": "증거",
+      "scope": "#115",
+      "target": "docs/superpowers/specs/bench/masking/verify_masking.py",
+      "summary": "M8(결정성·멱등성)이 Python 엔진만 재실행한다 — Kotlin 은 자기 테스트에만 의존하고 확인기가 독립 검증하지 않는다",
+      "note": "M2 가 두 엔진 증거를 대조하므로 기록된 산출물의 동일성은 본다. 빠진 것은 **Kotlin 재실행**에 의한 결정성·멱등성 독립 확인이다.",
       "resolved": false
     }
   ]
