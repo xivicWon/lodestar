@@ -106,6 +106,23 @@ class DdlParserIssueReportingTest {
         assertEquals(emptyList(), out.issues)
     }
 
+    @Test fun `신원과 좌표는 다른 축이다 — 경로를 몰라도 신원은 성립한다`() {
+        val sql = "CREATE TABLE T (ID INT PRIMARY KEY);\nCREATE INDEX IX ON T (ID);"
+
+        // 경로를 모르는 호출(요청 본문의 DDL): 좌표에 경로가 없지만 신원은 그대로 있다.
+        val noPath = DdlParser().parse(sql, sourceId = "db:ddl:sales")
+        assertEquals("db:ddl:sales", noPath.metadata.sourceId)
+        assertTrue(noPath.issues.single().locator.startsWith("#L"), noPath.issues.single().locator)
+
+        // 경로를 아는 호출: 좌표에 경로가 붙고, 신원은 경로와 무관하게 호출자가 정한 값이다.
+        val withPath = DdlParser().parse(sql, sourcePath = "a/b.sql", sourceId = "db:ddl:sales")
+        assertTrue(withPath.issues.single().locator.startsWith("a/b.sql#L"))
+        assertEquals("db:ddl:sales", withPath.metadata.sourceId)
+
+        // 같은 바이트면 좌표 표기가 달라도 내용 신원은 같다 — contentHash 는 읽은 바이트에서 나온다.
+        assertEquals(noPath.metadata.contentHash, withPath.metadata.contentHash)
+    }
+
     @Test fun `정당한 제외도 사유와 분모로 보고된다 (legacy-sample INSERT·VIEW)`() {
         val sqlPath = "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql"
         val out = DdlParser().parse(File(repoRoot, sqlPath).readText(), sqlPath)

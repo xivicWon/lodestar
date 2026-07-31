@@ -88,3 +88,18 @@ def test_온전한_입력은_보고할_것이_없다(tmp_path):
     assert m["failed"] == 0 and m["partial"] == 0
     assert all(i["reason_code"] != "PARSE_ERROR" for i in m["issues"]), m["issues"]
     assert all(n["status"] == "parsed" for n in doc["nodes"])
+
+
+def test_노드는_신원과_상태를_함께_싣는다(tmp_path):
+    """#113(신원)과 #114(상태)는 다른 축이고, 한 노드에서 둘 다 조회돼야 한다.
+
+    부분 추출 파일의 사실은 status=partial 로 상한이 걸리는데, 그 사실이 어느 소스에서 왔는지
+    (source_id·content_hash) 없으면 상한을 어디에 적용할지 알 수 없다.
+    """
+    doc = _run(_scope(tmp_path, "code-partial-extract.kt"), tmp_path / "o.json")
+    for n in doc["nodes"]:
+        assert n["status"] == "partial"
+        assert n["source_id"] == "code-partial-extract.kt"
+        assert n["content_hash"].startswith("sha256:")
+    m = doc["meta"]
+    assert m["project_id"] and m["revision"] and m["collector_version"]

@@ -282,13 +282,28 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
                            if str(pathlib.PurePosixPath(r).relative_to(SCOPE_ROOT)) not in walked_rel)
     reported_paths = {f"{SCOPE_ROOT}/{i['locator'].split('#')[0]}" for i in reported}
     reported_not_collected = [r for r in not_collected if r in reported_paths]
-    grouped: dict[str, list[str]] = {}
+    # 읽었으나 사실을 산출하지 못한 파일 — 실패 사례의 분모다(I3 R4). 수집기가 사유를 남기지 않아도
+    # 프로브가 직접 알 수 있어야 한다: 그렇지 않으면 조용히 사라진 파일은 어느 집계에도 안 남는다.
+    walked_paths = {str(pathlib.PurePosixPath(r).relative_to(SCOPE_ROOT)) for r in rel_of.values()}
+    failed_files = sorted(walked_paths - walked_rel - {
+        str(pathlib.PurePosixPath(r).relative_to(SCOPE_ROOT)) for r in not_collected})
+    # 제외 목록은 **분모와 같은 집합**(수집기가 읽지 않은 파일)에서 만든다. 수집기가 말한 것만 모으면
+    # 보고하지 않고 삼킨 파일이 목록에서도 사라져, 보고서의 제외 합계와 counts.excluded 가 서로를
+    # 확인해주지 못한다(I3 R2·R3). 사유가 없는 파일은 **그 사실 자체를 사유로** 남긴다.
+    by_path = {}
     for i in issues:
-        if i["kind"] != "skipped":
-            continue
-        key = f"{i['reason_code']}: {i['reason']}"
-        grouped.setdefault(key, []).append(
-            f"{SCOPE_ROOT}/{i['locator'].split('#')[0]}#L{line_range(i['locator'])[0]} ({i['target']})")
+        if i["kind"] == "skipped":
+            by_path.setdefault(f"{SCOPE_ROOT}/{i['locator'].split('#')[0]}", i)
+    grouped: dict[str, list[str]] = {}
+    for rel in not_collected:
+        i = by_path.get(rel)
+        if i is None:
+            key = "UNREPORTED: 수집기가 읽지 않았는데 사유를 남기지 않았다 (조용한 제외)"
+            grouped.setdefault(key, []).append(f"{rel}#L1 ({rel})")
+        else:
+            key = f"{i['reason_code']}: {i['reason']}"
+            grouped.setdefault(key, []).append(
+                f"{rel}#L{line_range(i['locator'])[0]} ({i['target']})")
     probe["inventory"] = {
         "rule": "M-CODE-1",
         "input": len(all_files),
@@ -299,6 +314,11 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
         "excludedReportedByCollector": doc["meta"]["excluded"],
         "failedReportedByCollector": doc["meta"]["failed"],
         "partialReportedByCollector": doc["meta"]["partial"],
+        "scopeRoot": SCOPE_ROOT,
+        "failedFiles": failed_files,
+        "failedFilesReported": sorted(
+            f for f in failed_files
+            if any(i["locator"].split("#")[0] == f and i["reason"] for i in issues)),
         "notCollected": not_collected,
         "notCollectedCount": len(not_collected),
         "reportedNotCollected": len(reported_not_collected),

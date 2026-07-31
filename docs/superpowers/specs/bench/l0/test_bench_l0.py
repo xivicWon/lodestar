@@ -124,6 +124,18 @@ def _probe(track):
     return build_report.probe(track)
 
 
+def _run_collector(source_root, out) -> dict:
+    """수집기를 실제로 돌린다 — 프로브가 읽는 산출물과 같은 것을 본다."""
+    import os
+    import subprocess
+    cg = REPO / "codegraph"
+    env = dict(os.environ, PYTHONPATH=str(cg / "src"))
+    proc = subprocess.run([sys.executable, "-m", "lodestar_codegraph", str(source_root),
+                           "-o", str(out)], cwd=cg, env=env, capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr
+    return json.loads(pathlib.Path(out).read_text())
+
+
 def test_보고_채널이_없던_실행은_보고_0으로_읽힌다():
     """v1 프로브(반환형에 채널 없음)에는 귀속 자리가 없다 — 없으면 0 이며, 그것이 그 실행의 측정이다."""
     p = copy.deepcopy(_probe("db"))
@@ -155,6 +167,48 @@ def test_코드_트랙_분모는_수집기가_읽지_않은_파일이다():
     f = build_report._code_facts(p)
     assert f["shouldReport"] == 3 + sum(fx["expectedReported"] for fx in p["failureFixtures"])
     assert f["reported"] == 1 + sum(fx["actualReported"] for fx in p["failureFixtures"])
+
+
+@pytest.mark.parametrize("patch,expected", [
+    ({"walked": 59, "parsed": 58, "failedFiles": ["a/Broken.kt"]},
+     {"output": 58, "failed": 1, "excluded": 0}),
+    ({"walked": 57, "parsed": 57, "notCollectedCount": 2, "reportedNotCollected": 2},
+     {"output": 57, "failed": 0, "excluded": 2}),
+    ({"walked": 55, "parsed": 54, "failedFiles": ["a/Broken.kt"],
+      "notCollectedCount": 4, "reportedNotCollected": 4},
+     {"output": 54, "failed": 1, "excluded": 4}),
+])
+def test_counts_는_인벤토리에서_항등으로_나온다(patch, expected):
+    """input = output + failed + excluded (I3 R2).
+
+    실패를 0 으로 박아두면 수집기가 **정직하게** 실패를 보고하는 순간 R2 가 깨져 보고서 생성이
+    거부된다 — 정직한 수집이 형식 위반이 되는 자리는 계약이 아니라 산식의 결함이다.
+    """
+    p = copy.deepcopy(_probe("code"))
+    p["inventory"].update(patch)
+    f = build_report._code_facts(p)
+    assert {k: f[k] for k in expected} == expected
+    assert f["input"] == f["output"] + f["failed"] + f["excluded"]
+
+
+def test_파싱_실패가_있어도_보고서가_계약을_통과한다():
+    """건수와 사례를 같은 집합에서 만들어야 R2·R4 가 서로를 확인한다."""
+    p = copy.deepcopy(_probe("code"))
+    p["inventory"].update({"walked": 59, "parsed": 58, "failedFiles": ["a/Broken.kt"],
+                           "failedFilesReported": ["a/Broken.kt"]})
+    rep = build_report.build_from("code", p)
+    assert rep["counts"] == {"input": 59, "output": 58, "failed": 1, "excluded": 0}
+    assert len(rep["failures"]) == 1 and rep["failures"][0]["fixture"].endswith("a/Broken.kt")
+    assert validate_rqr.cross_field_errors(rep) == []
+
+
+def test_사유_없는_실패는_사례에_그_사실로_적힌다():
+    p = copy.deepcopy(_probe("code"))
+    p["inventory"].update({"walked": 59, "parsed": 58, "failedFiles": ["a/Silent.kt"],
+                           "failedFilesReported": []})
+    rep = build_report.build_from("code", p)
+    assert "사유를 남기지 않았다" in rep["failures"][0]["summary"]
+    assert validate_rqr.cross_field_errors(rep) == []
 
 
 def test_재지_못한_게이트는_경고와_함께_보고서에_실린다():
@@ -196,6 +250,22 @@ def test_판정_근거는_이_실행을_가리킨다():
         assert rep["run"]["runId"] in j["evidenceRefs"]
         # 게이트가 하나라도 실패면 Core 로 올릴 수 없다(I1 G4).
         assert j["judgment"] != "Core" or all(g["status"] == "PASS" for g in rep["gates"])
+
+
+def test_사유_없는_미수집은_제외_목록에_그_사실로_남는다(tmp_path):
+    """수집기가 말한 것만 모으면 삼킨 파일이 목록에서도 사라진다 — 제외 합계가 counts 를 확인해주지 못한다.
+
+    프로브는 분모와 같은 집합(수집기가 읽지 않은 파일)에서 목록을 만들고, 사유가 없으면 'UNREPORTED' 로
+    남긴다. 그래야 R3(합계 일치)와 오류 가시성 게이트가 같은 사실을 가리킨다.
+    """
+    scope = tmp_path / "scope"
+    (scope / "sub").mkdir(parents=True)
+    (scope / "Ok.kt").write_text("package p\nclass Ok { fun a(): Int = 1 }\n")
+    (scope / "notes.txt").write_text("수집 대상이 아닌 파일\n")
+    doc = _run_collector(scope, tmp_path / "out.json")
+    issues = doc["meta"]["issues"]
+    assert [i["reason_code"] for i in issues] == ["UNSUPPORTED_LANGUAGE"], issues
+    assert issues[0]["locator"] == "notes.txt#L1" and issues[0]["reason"]
 
 
 # ---- 확인기: 규칙이 실제로 무는가 --------------------------------------------------------

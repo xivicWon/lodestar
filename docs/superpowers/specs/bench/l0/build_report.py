@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import re
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -46,6 +47,14 @@ IDENTITY = ("projectId", "layer", "track", "sourceRevision", "fixtureHash")
 COMPARED_METRICS = ("determinism", "provenanceCompleteness", "scopeCoverage")
 
 
+def line_range(locator: str) -> tuple[int, int] | None:
+    m = re.search(r"#L(\d+)(?:-L(\d+))?", locator or "")
+    if not m:
+        return None
+    start = int(m.group(1))
+    return start, int(m.group(2) or start)
+
+
 def measurement(status: str, value, note: str) -> dict:
     return {"status": status, "value": value, "note": note}
 
@@ -71,6 +80,14 @@ def _db_facts(p: dict) -> dict:
         "input": p["statementInventory"]["total"],
         "output": acq["acquired"],
         "failed": acq["failed"],
+        # 실패는 집계만 남기지 않고 사례를 그대로 옮긴다(I3 R4) — 사례가 없으면 재현도 회귀도 없다.
+        "failures": [
+            {"id": f"fail-db-L{(line_range(x['locator']) or (0,))[0]}",
+             "summary": f"{x['reasonCode']}: {x['target']} — {x['reason']}",
+             "link": f"artifact://{p['input']['path']}",
+             "fixture": x["locator"].split("#")[0] or p["input"]["path"]}
+            for x in acq.get("failures", [])
+        ],
         "excluded": acq["excluded"],
         "exclusions": acq["exclusions"],
         "determinism": p["determinism"]["rate"],
@@ -90,11 +107,28 @@ def _db_facts(p: dict) -> dict:
 def _code_facts(p: dict) -> dict:
     inv = p["inventory"]
     fixtures = p["failureFixtures"]
+    # counts 는 인벤토리에서 **항등으로** 나온다: input = parsed + (walked-parsed) + (input-walked).
+    # 실패를 0 으로 박아두면 수집기가 정직하게 실패를 보고하는 순간 R2 가 깨져 보고서 생성 자체가
+    # 거부된다 — 정직한 수집이 형식 위반이 되는 자리는 계약이 아니라 산식의 결함이다.
+    not_collected = inv.get("notCollectedCount", inv["excludedByExtensionFilter"])
+    # 실패의 분모도 프로브가 직접 센 것이다: 읽었으나 사실을 산출하지 못한 파일.
+    # 건수와 사례를 같은 집합에서 만들어야 R2·R4 가 서로를 확인한다.
+    failed_files = inv.get("failedFiles", [])
+    reported_failures = set(inv.get("failedFilesReported", []))
+    scope_root = inv.get("scopeRoot", "backend/src/main/kotlin")
     return {
         "input": inv["input"],
         "output": inv["parsed"],
-        "failed": 0,
-        "excluded": inv["excludedByExtensionFilter"],
+        "failed": len(failed_files) if "failedFiles" in inv else inv["walked"] - inv["parsed"],
+        "failures": [
+            {"id": f"fail-code-{i}",
+             "summary": (f"파싱 실패로 사실을 산출하지 못했다: {path}" if path in reported_failures
+                         else f"사실을 산출하지 못했는데 수집기가 사유를 남기지 않았다: {path}"),
+             "link": "artifact://build/l0/probe-code.json",
+             "fixture": f"{scope_root}/{path}"}
+            for i, path in enumerate(sorted(failed_files), start=1)
+        ],
+        "excluded": not_collected,
         "exclusions": inv["exclusions"],
         "determinism": p["determinismObserved"]["rate"],
         "provenance": p["provenance"]["rate"],
@@ -471,7 +505,7 @@ def build_from(track: str, p: dict) -> dict:
             "failed": f["failed"], "excluded": f["excluded"],
         },
         "exclusions": f["exclusions"],
-        "failures": [],
+        "failures": f.get("failures", []),
         "metrics": metrics,
         "evl": {
             "confidenceCalibration": {
