@@ -1,5 +1,6 @@
 package com.ontostudio.rdb
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -7,20 +8,21 @@ import java.io.File
 import java.security.MessageDigest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * #88 L0 Source — DB 트랙 프로브.
+ * #114 L0 Source — DB 트랙 프로브 **v2** (오류 가시성 수정 후 재측정).
  *
  * 이 테스트는 기능이 아니라 **계측기**다. 고정 revision(3c27259)의 `legacy-sample.sql` 을 입력으로
- * 실제 수집기(`DdlParser` · `SampleLegacyDb`)를 돌려 I1 §4.1 의 L0 무조건 게이트 4종을 측정하고,
- * 결과를 결정적 JSON 프로브 산출물로 남긴다. 보고서(Run Quality Report v0)는 이 산출물에서만 만든다.
+ * 실제 수집기(`DdlParser` · `SampleLegacyDb` · `MetadataService`)를 돌려 I1 §4.1 의 L0 무조건 게이트
+ * 4종을 측정하고, 결과를 결정적 JSON 프로브 산출물로 남긴다. 보고서는 이 산출물에서만 만든다.
+ *
+ * **v1 과의 차이**: v1(run-l0-db-3c27259-001)은 `SchemaModel` 에 제외·실패를 실을 자리가 없던
+ * 수집기를 쟀다. #114 로 반환형에 [CollectionIssue] 채널이 생겼으므로 v1 의 산식(보고율은 구조적으로 0)이
+ * 더 이상 성립하지 않는다. v1 산출물·보고서는 비교 기준선으로 **그대로 남기고**(I3 §5.5 — 사후 수정은
+ * 새 runId), 이 프로브는 새 runId 로 재측정한다. 입력은 v1 과 같은 고정 원본이므로 두 실행은 비교 가능하다.
  *
  * 측정 규칙과 판정은 docs/superpowers/specs/2026-07-30-m0-l0-source-validation.md 에 있다.
- *
- * 단언은 **측정된 사실**에 걸린다 — 계약 위반(메타데이터 0%·오류 가시성 0%)은 여기서 붉게 만들지
- * 않고 보고서의 게이트 FAIL 로 남긴다. 프로브가 스스로 붉어지면 그 이후를 측정할 수 없다.
  */
 class L0DbSourceProbeTest {
 
@@ -34,17 +36,31 @@ class L0DbSourceProbeTest {
     // M-DB-3  CREATE VIEW = 미지원(UNSUPPORTED), INSERT = L0 최소저장 원칙상 범위 밖(OUT_OF_SCOPE).
     //         둘 다 '사유와 함께 보고되어야 하는 제외' 다.
     // M-DB-4  결정성 = 3회 실행의 정규화 산출물 해시 중 최대 동일 그룹 크기 / 3.
+    // M-DB-5  보고(REPORTED) = 수집기 **반환형**에 사유(빈 문자열 아님)·좌표·대상이 함께 실린 것.
+    //         gold 기대 항목과의 대조는 (사유코드 일치 ∧ 좌표 행범위 겹침) 으로 귀속한다 —
+    //         건수만 맞추거나 그럴듯한 좌표를 적어 통과하는 경로를 막는다.
     private val requiredProvenanceFields =
         listOf("projectId", "sourceId", "revision", "contentHash", "collectorVersion")
+    // 보고 채널로 인정하는 멤버 이름. v1 의 목록에 #114 가 도입한 어휘(issue·partial)를 더했다 —
+    // 이름 목록은 선언된 휴리스틱이므로, 늘렸다는 사실 자체를 프로브 산출물에 남긴다.
     private val reportingChannelNames =
-        listOf("failure", "failed", "error", "excluded", "exclusion", "skipped", "warning", "reported")
+        listOf("failure", "failed", "error", "excluded", "exclusion", "skipped", "warning", "reported",
+            "issue", "partial")
 
     private val repoRoot: File by lazy {
         RepoRoot.path
     }
     private val goldDir get() = File(repoRoot, "docs/superpowers/specs/gold")
-    private val runDir get() = File(repoRoot, "docs/superpowers/specs/bench/l0/runs/run-l0-db-3c27259-001")
+    private val runDir get() = File(repoRoot, "docs/superpowers/specs/bench/l0/runs/run-l0-db-3c27259-002")
     private val pinnedSqlPath = "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql"
+
+    /** 수집기 신원 — 커밋이 아직 없는 재측정에서도 재현 대상을 특정할 수 있는 값이다. */
+    private val collectorSources = listOf(
+        "backend/src/main/kotlin/com/ontostudio/rdb/DdlParser.kt",
+        "backend/src/main/kotlin/com/ontostudio/rdb/SchemaModel.kt",
+        "backend/src/main/kotlin/com/ontostudio/rdb/MetadataService.kt",
+        "backend/src/main/kotlin/com/ontostudio/rdb/SampleLegacyDb.kt",
+    )
 
     private fun sha256(bytes: ByteArray): String =
         "sha256:" + MessageDigest.getInstance("SHA-256").digest(bytes)
@@ -92,19 +108,16 @@ class L0DbSourceProbeTest {
         }
     }
 
-    private fun targetOf(kind: String, body: String): String {
-        val re = when (kind) {
-            "CREATE_TABLE" -> Regex("(?is)CREATE\\s+TABLE\\s+([\\w\"`.]+)")
-            "CREATE_VIEW" -> Regex("(?is)CREATE\\s+VIEW\\s+([\\w\"`.]+)")
-            "INSERT" -> Regex("(?is)INSERT\\s+INTO\\s+([\\w\"`.]+)")
-            else -> Regex("^(\\S+)")
-        }
-        return re.find(body)?.groupValues?.get(1)?.trim('"', '`') ?: "?"
-    }
-
-    /** 수집기 산출물의 정규화 표현 — 결정성 해시와 PII 노출 검사의 대상이다. */
+    /**
+     * 수집기 산출물의 정규화 표현 — 결정성 해시와 PII 노출 검사의 대상이다.
+     *
+     * 샘플 적재 경로의 H2 DB 이름(`LEGACY_<nanoTime>`)만 정규화한다. 그것은 이 실행의 접속 신원이지
+     * 수집 결과가 아니다 — 정규화하지 않으면 '수집기가 비결정적' 이라고 잘못 적게 된다
+     * (코드 트랙 프로브가 `meta.source_root` 를 빼는 것과 같은 이유).
+     */
     private fun canonical(schema: SchemaModel): String {
-        val root = mapper.createArrayNode()
+        val root = mapper.createObjectNode()
+        val tabs = root.putArray("tables")
         for (t in schema.tables.sortedBy { it.name }) {
             val n = mapper.createObjectNode()
             n.put("name", t.name)
@@ -123,9 +136,71 @@ class L0DbSourceProbeTest {
                 fn.putArray("refColumns").also { a -> f.refColumns.forEach { a.add(it) } }
                 fks.add(fn)
             }
-            root.add(n)
+            tabs.add(n)
         }
-        return mapper.writeValueAsString(root)
+        // 제외·실패도 산출물의 일부다 — 결정성은 이쪽까지 포함해서 재야 의미가 있다.
+        val iss = root.putArray("issues")
+        for (i in (schema.issues + schema.partials).sortedWith(compareBy({ it.locator }, { it.reasonCode }))) {
+            iss.add(mapper.createObjectNode().apply {
+                put("kind", i.kind.name); put("reasonCode", i.reasonCode)
+                put("locator", i.locator); put("target", i.target); put("reason", i.reason)
+            })
+        }
+        return mapper.writeValueAsString(root).replace(Regex("LEGACY_\\d+"), "LEGACY_<nanoTime>")
+    }
+
+    /** 좌표에서 행 범위를 뽑는다: `path#L11-L14` · `#L16` → (11,14) · (16,16). */
+    private fun lineRange(locator: String): Pair<Int, Int>? {
+        val m = Regex("#L(\\d+)(?:-L(\\d+))?").find(locator) ?: return null
+        val s = m.groupValues[1].toInt()
+        return s to (m.groupValues[2].takeIf { it.isNotEmpty() }?.toInt() ?: s)
+    }
+
+    private fun overlaps(a: Pair<Int, Int>, b: Pair<Int, Int>) = a.first <= b.second && b.first <= a.second
+
+    /** gold 기대 보고 항목 ↔ 수집기가 실제로 낸 항목의 귀속(M-DB-5). */
+    private fun attribute(gold: JsonNode, issues: List<CollectionIssue>): ObjectNode {
+        val node = mapper.createObjectNode()
+        val expected = node.putArray("expected")
+        val used = mutableSetOf<Int>()
+        var matched = 0
+        for (g in gold) {
+            val want = lineRange(g["locator"].asText()) ?: (0 to 0)
+            val hitIdx = issues.indices.firstOrNull { idx ->
+                idx !in used &&
+                    issues[idx].reasonCode == g["kind"].asText() &&
+                    issues[idx].reason.isNotBlank() &&
+                    lineRange(issues[idx].locator)?.let { overlaps(it, want) } == true
+            }
+            val e = mapper.createObjectNode()
+            e.put("kind", g["kind"].asText())
+            e.put("target", g["target"].asText())
+            e.put("locator", g["locator"].asText())
+            if (hitIdx != null) {
+                used.add(hitIdx)
+                matched++
+                val i = issues[hitIdx]
+                e.put("reported", true)
+                e.put("observedKind", i.kind.name)
+                e.put("observedLocator", i.locator)
+                e.put("observedTarget", i.target)
+                e.put("reasonPresent", i.reason.isNotBlank())
+                // 대상 표기에는 자유도가 있다(경로 대 FQN) — 마지막 식별자로만 대조하고 기록에 남긴다.
+                val last = g["target"].asText().split(Regex("[\\s./]+")).last()
+                e.put("targetMatches", i.target.contains(last))
+            } else {
+                e.put("reported", false)
+            }
+            expected.add(e)
+        }
+        node.put("expectedReported", gold.size())
+        node.put("actualReported", matched)
+        // gold 기대에 귀속되지 않은 보고 — 과대 집계(R-F-4)를 드러낸다.
+        node.putArray("unattributedReports").also { a ->
+            issues.indices.filter { it !in used }
+                .forEach { a.add("${issues[it].reasonCode} ${issues[it].locator}") }
+        }
+        return node
     }
 
     // ---- 프로브 -----------------------------------------------------------------------
@@ -148,7 +223,7 @@ class L0DbSourceProbeTest {
 
         val pinned = pinnedSource("db:legacy-sample")
         val probe = mapper.createObjectNode()
-        probe.put("probeVersion", "l0-db-probe/v1")
+        probe.put("probeVersion", "l0-db-probe/v2")
         probe.put("layer", "L0")
         probe.put("track", "db")
         probe.put("projectId", "lodestar")
@@ -156,11 +231,17 @@ class L0DbSourceProbeTest {
         probe.put("goldSetId", manifest()["goldSetId"].asText())
         probe.put("fixtureHash", manifest()["fixtureHash"].asText())
 
+        val collectorHash = sha256(
+            collectorSources.joinToString("\n") { "$it ${sha256(File(repoRoot, it).readBytes())}" }
+                .toByteArray())
         probe.putObject("collector").apply {
             put("impl", "DdlParser + DdlSource (DDL 텍스트 경로) · SampleLegacyDb + MetadataService (샘플 적재 경로)")
             put("declaredVersion", "none")
-            put("citedVersion", "DdlParser@3c27259")
-            put("note", "수집기 자체가 버전을 선언하지 않는다 — 보고서의 collector 버전은 revision 으로 대신 고정한다")
+            put("citedVersion", "DdlParser+SampleLegacyDb@$collectorHash")
+            put("sourceHash", collectorHash)
+            putArray("sourceFiles").also { a -> collectorSources.forEach { a.add(it) } }
+            put("note", "수집기 자체는 여전히 버전을 선언하지 않는다(L0-fix-2 — #114 범위 밖). 재측정 시점의 " +
+                "커밋이 아직 없으므로 수집기 신원은 구성 파일 해시로 고정한다 — 값은 재계산으로 검증된다")
         }
 
         probe.putObject("input").apply {
@@ -173,44 +254,61 @@ class L0DbSourceProbeTest {
             put("pinnedLines", pinned["lines"].asInt())
         }
 
-        // 1) 문장 인벤토리와 수집 결과 대조
+        // 1) 문장 인벤토리와 수집 결과 대조 — 제외·실패는 **수집기 반환형에서** 읽는다.
         val inv = statements(sql)
-        val parsed = DdlParser().parse(sql)
+        val parsed = DdlParser().parse(sql, pinnedSqlPath)
         val acquiredNames = parsed.tables.map { it.name }.toSet()
 
         val byKind = linkedMapOf<String, Int>()
-        val exclusions = linkedMapOf<String, MutableList<String>>()
-        var acquired = 0
-        var missing = mutableListOf<String>()
-        for ((line, body) in inv) {
+        for ((_, body) in inv) {
             val kind = kindOf(body)
             byKind[kind] = (byKind[kind] ?: 0) + 1
-            val target = targetOf(kind, body)
-            val locator = "$pinnedSqlPath#L$line"
-            when (kind) {
-                "CREATE_TABLE" ->
-                    if (target in acquiredNames) acquired++ else missing.add("$locator ($target)")
-                "CREATE_VIEW" -> exclusions
-                    .getOrPut("UNSUPPORTED_STATEMENT: CREATE VIEW 는 수집기가 처리하지 않는다 (DdlParser 는 CREATE TABLE 만 본다)") { mutableListOf() }
-                    .add("$locator ($target)")
-                "INSERT" -> exclusions
-                    .getOrPut("OUT_OF_SCOPE_BY_DESIGN: 행 데이터는 L0 최소저장 범위 밖이다 (구조·메타데이터만 보관)") { mutableListOf() }
-                    .add("$locator ($target)")
-                else -> exclusions
-                    .getOrPut("OTHER: 인벤토리 규칙이 분류하지 못한 문장") { mutableListOf() }
-                    .add("$locator ($target)")
-            }
         }
+        val missing = inv.filter { kindOf(it.second) == "CREATE_TABLE" }
+            .mapNotNull { (line, body) ->
+                val name = Regex("(?is)CREATE\\s+TABLE\\s+([\\w\"`.]+)").find(body)
+                    ?.groupValues?.get(1)?.trim('"', '`')
+                if (name != null && name !in acquiredNames) "$pinnedSqlPath#L$line ($name)" else null
+            }
+
+        val exclusions = linkedMapOf<String, MutableList<String>>()
+        for (i in parsed.issues.filter { it.kind == IssueKind.SKIPPED }) {
+            exclusions.getOrPut("${i.reasonCode}: ${i.reason}") { mutableListOf() }
+                .add("${i.locator.substringBefore("-L")} (${i.target})")
+        }
+        val failures = parsed.issues.filter { it.kind == IssueKind.FAILED }
 
         probe.putObject("statementInventory").apply {
             put("rule", "M-DB-1")
             put("total", inv.size)
             putObject("byKind").also { n -> byKind.forEach { (k, v) -> n.put(k, v) } }
+            put("collectorAccountedTotal", parsed.tables.size + parsed.issues.size)
+            put("accountingMatchesInventory", parsed.tables.size + parsed.issues.size == inv.size)
         }
+        // 보고율의 분모는 **프로브가 독립적으로 센 것** 이어야 한다. 분자·분모를 모두 수집기 신고에서
+        // 가져오면 "보고한 것을 보고했다" 는 자기 인증이 되어 아무것도 재지 못한다. 그래서 인벤토리
+        // 규칙(M-DB-1·M-DB-3)으로 '수집 대상이 아닌 문장' 을 직접 세고, 그 문장의 시작 행을 덮는
+        // 항목이 산출물에 사유와 함께 있는지 본다.
+        val reportable = inv.filter { kindOf(it.second) != "CREATE_TABLE" }
+        val reportedLines = parsed.issues
+            .filter { it.reason.isNotBlank() && it.target.isNotBlank() }
+            .mapNotNull { lineRange(it.locator) }
+        val unreportedByInventory = reportable.filter { (line, _) ->
+            reportedLines.none { line >= it.first && line <= it.second }
+        }.map { "$pinnedSqlPath#L${it.first}" }
+
         probe.putObject("acquisition").apply {
-            put("acquired", acquired)
-            put("failed", 0)
-            put("excluded", exclusions.values.sumOf { it.size })
+            put("acquired", parsed.tables.size)
+            put("failed", failures.size)
+            put("excluded", parsed.issues.count { it.kind == IssueKind.SKIPPED })
+            // 사유·좌표·대상을 함께 실은 항목만 보고로 센다(M-DB-5).
+            put("reported", parsed.issues.count {
+                it.reason.isNotBlank() && lineRange(it.locator) != null && it.target.isNotBlank()
+            })
+            put("reportableByInventory", reportable.size)
+            put("reportedByInventory", reportable.size - unreportedByInventory.size)
+            putArray("unreportedByInventory").also { a -> unreportedByInventory.forEach { a.add(it) } }
+            put("partial", parsed.partials.size)
             putArray("missing").also { a -> missing.forEach { a.add(it) } }
             putArray("exclusions").also { arr ->
                 exclusions.forEach { (reason, examples) ->
@@ -220,10 +318,18 @@ class L0DbSourceProbeTest {
                     arr.add(e)
                 }
             }
+            putArray("failures").also { arr ->
+                failures.forEach { f ->
+                    arr.add(mapper.createObjectNode().apply {
+                        put("reasonCode", f.reasonCode); put("reason", f.reason)
+                        put("locator", f.locator); put("target", f.target)
+                    })
+                }
+            }
         }
 
         // 2) 결정성 — 3회 실행 (M-DB-4)
-        val hashes = (1..3).map { sha256(canonical(DdlParser().parse(sql)).toByteArray()) }
+        val hashes = (1..3).map { sha256(canonical(DdlParser().parse(sql, pinnedSqlPath)).toByteArray()) }
         val largestGroup = hashes.groupingBy { it }.eachCount().values.max()
         probe.putObject("determinism").apply {
             put("runs", 3)
@@ -232,26 +338,41 @@ class L0DbSourceProbeTest {
             put("rate", largestGroup.toDouble() / 3.0)
         }
 
-        // 3) provenance 필수 식별 필드 — 산출물 타입에 자리가 있는가 (리플렉션)
+        // 3) provenance — **#113 의 전용 측정을 인용한다**. 여기서 리플렉션으로 "자리가 있는가" 만
+        //    다시 재면 값이 비어 있거나 플레이스홀더여도 통과하는, 더 느슨한 근거로 같은 게이트를
+        //    판정하게 된다. 측정이 이미 있는 자리를 다시 재지 않고, 그 산출물을 좌표로 인용한다.
         val memberNames = listOf(
-            SchemaModel::class, TableInfo::class, ColumnInfo::class, ForeignKeyInfo::class
+            SchemaModel::class, TableInfo::class, ColumnInfo::class, ForeignKeyInfo::class,
+            CollectionIssue::class, CollectionMetadata::class
         ).flatMap { k -> k.members.map { it.name } }.map { it.lowercase() }.toSet()
-        val present = requiredProvenanceFields.filter { f -> memberNames.any { it.contains(f.lowercase()) } }
+        val metadataEvidence = File(repoRoot, "docs/superpowers/specs/bench/l0/metadata/completeness-db.json")
+        val completeness = mapper.readTree(metadataEvidence)["completeness"]
         probe.putObject("provenance").apply {
-            put("probe", "kotlin-reflect — SchemaModel/TableInfo/ColumnInfo/ForeignKeyInfo 의 선언 멤버 이름")
+            put("probe", "#113 전용 측정(metadata/completeness-db.json)의 completeness 를 인용한다 — " +
+                "타입 그래프의 자리와 수집 경로별 실제 값 중 **최소값**이라 자리만 있고 값이 없는 통과를 막는다")
+            put("citedEvidence", "docs/superpowers/specs/bench/l0/metadata/completeness-db.json")
+            put("citedMeasurementVersion", mapper.readTree(metadataEvidence)["measurementVersion"].asText())
             putArray("required").also { a -> requiredProvenanceFields.forEach { a.add(it) } }
-            putArray("present").also { a -> present.forEach { a.add(it) } }
-            put("rate", present.size.toDouble() / requiredProvenanceFields.size)
+            put("present", completeness["present"].asInt())
+            put("rate", completeness["rate"].asDouble())
+            // 인용이 실재와 어긋나지 않는지 최소 확인: 산출물 타입에 자리가 없는데 5/5 일 수는 없다.
+            putArray("typeGraphPresent").also { a ->
+                requiredProvenanceFields.filter { f -> memberNames.any { it.contains(f.lowercase()) } }
+                    .forEach { a.add(it) }
+            }
         }
 
         // 4) 오류·제외 보고 채널이 산출물에 존재하는가
         val channels = reportingChannelNames.filter { c -> memberNames.any { it.contains(c) } }
         probe.putObject("reporting").apply {
-            put("probe", "산출물 타입에 실패·제외를 담을 멤버가 있는가")
+            put("probe", "산출물 타입에 실패·제외를 사유·좌표와 함께 실을 자리가 있는가")
             putArray("channelsFound").also { a -> channels.forEach { a.add(it) } }
             put("channelExists", channels.isNotEmpty())
-            put("note", "DdlParser.parse 의 반환형은 SchemaModel 뿐이다 — 제외·실패를 실을 자리가 없으므로 " +
-                "제외 사유 보고율은 구조적으로 0 이다(I1 §4.1 오류 가시성)")
+            put("perItemReasons", true)
+            put("channelMembers", "SchemaModel.issues · SchemaModel.partials " +
+                "(CollectionIssue: kind · reasonCode · reason · locator · target)")
+            put("note", "#114 로 DdlParser.parse 의 반환형에 제외·실패·부분수집 채널이 생겼다 — 보고율은 " +
+                "구조가 아니라 실제 귀속으로 측정된다(M-DB-5)")
         }
 
         // 5) 실패 재현 픽스처 (I2 gold failures.json 의 DB 3건)
@@ -262,12 +383,11 @@ class L0DbSourceProbeTest {
             if (!path.endsWith(".sql")) continue
             val file = File(repoRoot, path)
             val bytes = file.readBytes()
-            val fixSql = bytes.toString(Charsets.UTF_8)
-            val out = DdlParser().parse(fixSql)
-            val expectedReported = f["reported"].size()
+            val out = DdlParser().parse(bytes.toString(Charsets.UTF_8))
             val expectedNames = f["extracted"].filter { it["type"].asText() == "TABLE" }
                 .map { it["name"].asText() }.sorted()
             val actualNames = out.tables.map { it.name }.sorted()
+            val attribution = attribute(f["reported"], out.issues)
             val n = mapper.createObjectNode()
             n.put("id", f["id"].asText())
             n.put("kind", f["kind"].asText())
@@ -284,13 +404,15 @@ class L0DbSourceProbeTest {
             }
             n.putArray("missingExtracted")
                 .also { a -> (expectedNames - actualNames.toSet()).forEach { x -> a.add(x) } }
-            n.put("expectedReported", expectedReported)
-            n.put("actualReported", 0)
+            n.put("expectedReported", attribution["expectedReported"].asInt())
+            n.put("actualReported", attribution["actualReported"].asInt())
+            n.set<JsonNode>("reportAttribution", attribution)
+            n.put("markedAsPartial", out.partials.isNotEmpty())
             n.put("silentSkipIsFailure", f["silentSkipIsFailure"].asBoolean())
             n.put("verdict", when {
-                expectedReported > 0 && actualNames != expectedNames -> "UNREPORTED+SILENT_PARTIAL_RECOVERY"
-                expectedReported > 0 -> "UNREPORTED"
                 actualNames != expectedNames -> "EXTRACTION_MISMATCH"
+                attribution["actualReported"].asInt() < attribution["expectedReported"].asInt() -> "UNREPORTED"
+                attribution["unattributedReports"].size() > 0 -> "OVER_REPORTED"
                 else -> "OK"
             })
             fixArr.add(n)
@@ -300,7 +422,7 @@ class L0DbSourceProbeTest {
         val piiGold = mapper.readTree(File(goldDir, "pii.json"))
         val corpusPath = "docs/superpowers/specs/gold/fixtures/pii/corpus.sql"
         val corpusSql = File(repoRoot, corpusPath).readText()
-        val corpusArtifact = canonical(DdlParser().parse(corpusSql))
+        val corpusArtifact = canonical(DdlParser().parse(corpusSql, corpusPath))
         val unmasked = mutableListOf<String>()
         val notCollected = mutableListOf<String>()
         var positives = 0
@@ -320,7 +442,7 @@ class L0DbSourceProbeTest {
             putArray("unmaskedInArtifact").also { a -> unmasked.forEach { a.add(it) } }
             putArray("notCollected").also { a -> notCollected.forEach { a.add(it) } }
             put("note", "'미마스킹 0건' 이 곧 마스킹 성공이 아니다 — 양성이 산출물 표면에 도달하지 못한 " +
-                "(not_collected) 결과이며 마스킹 단계는 존재하지 않는다")
+                "(not_collected) 결과이며 마스킹 단계는 존재하지 않는다(L0-fix-5 — #114 범위 밖)")
         }
 
         // 7) 샘플 적재 경로 — (a) MetadataService 수집 산출물 (b) 저장소에 남는 행 데이터
@@ -341,17 +463,28 @@ class L0DbSourceProbeTest {
                 put("acquiredTables", jdbcNames.size)
                 put("sameTableSetAsDdlPath", jdbcNames == acquiredNames.sorted())
                 put("viewAcquired", jdbcNames.contains("VW_ORD_SUMMARY"))
-                put("viewReported", false)
-                put("viewExclusionNote", "getTables(..., arrayOf(\"TABLE\")) 가 뷰를 타입 필터로 걸러낸다" +
-                    "(MetadataService.kt#L21) — DDL 텍스트 경로와 같은 조용한 제외이며 사유가 산출물에 남지 않는다")
+                put("viewReported", jdbcModel.issues.any { it.target == "VW_ORD_SUMMARY" })
+                putArray("reportedIssues").also { arr ->
+                    jdbcModel.issues.forEach { i ->
+                        arr.add(mapper.createObjectNode().apply {
+                            put("kind", i.kind.name); put("reasonCode", i.reasonCode)
+                            // 샘플 DB 이름은 실행마다 다르다(SampleLegacyDb 가 nanoTime 을 붙인다) —
+                            // 프로브 산출물은 결정적이어야 하므로 그 부분만 정규화하고 사실을 남긴다.
+                            put("locator", i.locator.replace(Regex("LEGACY_\\d+"), "LEGACY_<nanoTime>"))
+                            put("target", i.target); put("reason", i.reason)
+                        })
+                    }
+                }
+                put("viewExclusionNote", "getTables(..., arrayOf(\"TABLE\")) 가 뷰를 타입 필터로 걸러낸다 — " +
+                    "#114 이후 그 제외는 UNSUPPORTED_OBJECT_TYPE 사유로 반환형에 남는다")
                 put("foreignKeys", jdbcModel.tables.sumOf { it.foreignKeys.size })
                 put("runs", 3)
                 putArray("artifactHashes").also { a -> jdbcHashes.forEach { a.add(it) } }
                 put("largestIdenticalGroup", jdbcGroup)
                 put("determinismRate", jdbcGroup.toDouble() / 3.0)
-                put("provenanceRate", present.size.toDouble() / requiredProvenanceFields.size)
+                put("provenanceRate", completeness["rate"].asDouble())
                 put("note", "DDL 텍스트 경로와 같은 SchemaModel 로 수렴하므로 provenance·보고 채널 결과도 같다 " +
-                    "— 두 경로의 결함은 산출물 타입에서 공유된다")
+                    "— 두 경로의 결함도, 이번 수정도 산출물 타입에서 공유된다")
             }
             // (b) 저장소에 남는 행 데이터. 값은 산출물에 적지 않고 메모리에서만 쓴다.
             val rowProbes = ingest.putArray("piiShapedColumns")
@@ -422,10 +555,23 @@ class L0DbSourceProbeTest {
                 probe["acquisition"]["excluded"].asInt(),
             "input = acquired + failed + excluded 가 성립해야 한다(I3 R2)")
         assertTrue(missing.isEmpty(), "CREATE TABLE 인데 산출물에 없는 대상: $missing")
-        assertFalse(probe["reporting"]["channelExists"].asBoolean(),
-            "산출물에 실패·제외 보고 채널이 생겼다면 이 프로브의 게이트 산식을 갱신해야 한다")
+        assertTrue(probe["reporting"]["channelExists"].asBoolean(),
+            "제외·실패 보고 채널이 사라졌다면 #114 가 되돌려진 것이다")
+        assertEquals(
+            probe["acquisition"]["excluded"].asInt() + probe["acquisition"]["failed"].asInt(),
+            probe["acquisition"]["reported"].asInt(),
+            "제외·실패는 전부 사유·좌표와 함께 보고돼야 한다(I1 §4.1 오류 가시성 100%)")
+        assertEquals(
+            probe["acquisition"]["reportableByInventory"].asInt(),
+            probe["acquisition"]["reportedByInventory"].asInt(),
+            "인벤토리가 '수집 대상이 아니다' 로 센 문장 중 산출물에 사유와 함께 남지 않은 것: " +
+                probe["acquisition"]["unreportedByInventory"])
         assertTrue(probe["failureFixtures"].size() == 3, "DB 실패 픽스처 3건을 모두 돌려야 한다")
         assertTrue(probe["failureFixtures"].all { it["hashMatchesPinned"].asBoolean() },
             "실패 픽스처 해시가 gold 고정값과 다르다")
+        assertTrue(probe["failureFixtures"].all { it["verdict"].asText() == "OK" },
+            "픽스처 판정: " + probe["failureFixtures"].joinToString {
+                it["id"].asText() + "=" + it["verdict"].asText()
+            })
     }
 }

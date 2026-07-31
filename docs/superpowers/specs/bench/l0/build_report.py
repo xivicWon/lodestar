@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import re
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -22,28 +23,36 @@ GOLD = REPO / "docs/superpowers/specs/gold"
 SCHEMAS = REPO / "docs/superpowers/specs/schemas"
 
 RUNS = {
-    "db": HERE / "runs/run-l0-db-3c27259-001",
-    "code": HERE / "runs/run-l0-code-3c27259-002",
+    "db": HERE / "runs/run-l0-db-3c27259-002",
+    "code": HERE / "runs/run-l0-code-3c27259-003",
 }
 PROBE_NAME = {"db": "probe-db.json", "code": "probe-code.json"}
-RUN_ID = {"db": "run-l0-db-3c27259-001", "code": "run-l0-code-3c27259-002"}
+RUN_ID = {"db": "run-l0-db-3c27259-002", "code": "run-l0-code-3c27259-003"}
 # 이전 실행 — 있으면 그 보고서를 읽어 비교한다. 수치를 여기 적지 않는다: 손으로 옮긴 기준선은
 # 원본과 어긋나도 아무도 모른다(V2 가 보고서를 프로브+이 상수들에서 다시 만들어 대조한다).
 PREVIOUS = {
-    "db": None,
-    "code": HERE / "runs/run-l0-code-3c27259-001",
+    "db": HERE / "runs/run-l0-db-3c27259-001",
+    "code": HERE / "runs/run-l0-code-3c27259-002",
 }
 # 실측 세션의 시각 (RFC 3339 축소 프로파일). 보고서를 다시 만들어도 흔들리지 않도록 못박는다 —
 # 사후 수정은 새 runId 로 남긴다(I3 §5.5).
 TIMES = {
-    "db": ("2026-07-30T09:05:00Z", "2026-07-30T09:07:00Z"),
-    # code 002 는 실측이 끝난 시각(커밋된 probe-code.json 이 쓰인 시각)과 그 실행의 소요(약 2초)다 —
-    # 프로브가 시각을 산출물에 넣으면 매 실행이 표류하므로 여기 못박되, 지어내지 않는다.
-    "code": ("2026-07-30T09:16:12Z", "2026-07-30T09:16:14Z"),
+    # 실측이 끝난 시각과 그 실행의 소요다 — 프로브가 시각을 산출물에 넣으면 매 실행이 표류하므로
+    # 여기 못박되, 지어내지 않는다.
+    "db": ("2026-07-30T13:35:00Z", "2026-07-30T13:35:12Z"),
+    "code": ("2026-07-30T13:40:00Z", "2026-07-30T13:40:06Z"),
 }
 # 비교 가능성은 신원이 같을 때만 성립한다(I3 R17).
 IDENTITY = ("projectId", "layer", "track", "sourceRevision", "fixtureHash")
 COMPARED_METRICS = ("determinism", "provenanceCompleteness", "scopeCoverage")
+
+
+def line_range(locator: str) -> tuple[int, int] | None:
+    m = re.search(r"#L(\d+)(?:-L(\d+))?", locator or "")
+    if not m:
+        return None
+    start = int(m.group(1))
+    return start, int(m.group(2) or start)
 
 
 def measurement(status: str, value, note: str) -> dict:
@@ -57,19 +66,36 @@ def probe(track: str) -> dict:
 def _db_facts(p: dict) -> dict:
     acq = p["acquisition"]
     fixtures = p["failureFixtures"]
-    should_report = acq["excluded"] + sum(f["expectedReported"] for f in fixtures)
+    # 분모는 **프로브가 독립적으로 센 것** 이다: 인벤토리가 '수집 대상이 아니다' 로 분류한 문장 수와
+    # gold 가 선언한 픽스처 기대 보고 항목. 수집기 신고를 분모로 쓰면 "보고한 것을 보고했다" 는
+    # 자기 인증이 된다. 그 자리가 없던 실행(v1 프로브)은 excluded+failed 로 읽는다.
+    should_report = (acq.get("reportableByInventory", acq["excluded"] + acq["failed"])
+                     + sum(f["expectedReported"] for f in fixtures))
+    # 분자도 귀속으로 센다 — 인벤토리 문장을 덮는 항목이 사유와 함께 있는가, 픽스처 기대 항목이
+    # 좌표 겹침으로 귀속되는가.
+    reported = (acq.get("reportedByInventory", 0)
+                + sum(f.get("actualReported", 0) for f in fixtures))
     ingest_values = sum(c["retrievableValues"] for c in p["ingestStore"]["piiShapedColumns"])
     return {
         "input": p["statementInventory"]["total"],
         "output": acq["acquired"],
         "failed": acq["failed"],
+        # 실패는 집계만 남기지 않고 사례를 그대로 옮긴다(I3 R4) — 사례가 없으면 재현도 회귀도 없다.
+        "failures": [
+            {"id": f"fail-db-L{(line_range(x['locator']) or (0,))[0]}",
+             "summary": f"{x['reasonCode']}: {x['target']} — {x['reason']}",
+             "link": f"artifact://{p['input']['path']}",
+             "fixture": x["locator"].split("#")[0] or p["input"]["path"]}
+            for x in acq.get("failures", [])
+        ],
         "excluded": acq["excluded"],
         "exclusions": acq["exclusions"],
         "determinism": p["determinism"]["rate"],
         "provenance": p["provenance"]["rate"],
         "shouldReport": should_report,
-        "reported": 0,
-        "silentPartialRecovery": sum(len(f["unexpectedExtracted"]) for f in fixtures),
+        "reported": reported,
+        "silentPartialRecovery": sum(
+            len(f["unexpectedExtracted"]) for f in fixtures if not f.get("markedAsPartial")),
         "piiPositives": p["pii"]["positives"],
         "piiMasked": p["pii"]["masked"],
         "piiUnmasked": len(p["pii"]["unmaskedInArtifact"]),
@@ -81,16 +107,39 @@ def _db_facts(p: dict) -> dict:
 def _code_facts(p: dict) -> dict:
     inv = p["inventory"]
     fixtures = p["failureFixtures"]
+    # counts 는 인벤토리에서 **항등으로** 나온다: input = parsed + (walked-parsed) + (input-walked).
+    # 실패를 0 으로 박아두면 수집기가 정직하게 실패를 보고하는 순간 R2 가 깨져 보고서 생성 자체가
+    # 거부된다 — 정직한 수집이 형식 위반이 되는 자리는 계약이 아니라 산식의 결함이다.
+    not_collected = inv.get("notCollectedCount", inv["excludedByExtensionFilter"])
+    # 실패의 분모도 프로브가 직접 센 것이다: 읽었으나 사실을 산출하지 못한 파일.
+    # 건수와 사례를 같은 집합에서 만들어야 R2·R4 가 서로를 확인한다.
+    failed_files = inv.get("failedFiles", [])
+    reported_failures = set(inv.get("failedFilesReported", []))
+    scope_root = inv.get("scopeRoot", "backend/src/main/kotlin")
     return {
         "input": inv["input"],
-        "output": inv["parsed"],
-        "failed": 0,
-        "excluded": inv["excludedByExtensionFilter"],
+        # 사실을 낸 파일만 산출이다. 파싱만 되고 사실이 0건인 파일을 output 에 넣으면 실패가 성공으로
+        # 위장된다 — 이 이슈가 수집기에서 없앤 위장이 보고서 층에서 되살아나는 자리다.
+        "output": inv.get("producedFacts", inv["parsed"]),
+        "failed": len(failed_files) if "failedFiles" in inv else inv["walked"] - inv["parsed"],
+        "failures": [
+            {"id": f"fail-code-{i}",
+             "summary": (f"파싱 실패로 사실을 산출하지 못했다: {path}" if path in reported_failures
+                         else f"사실을 산출하지 못했는데 수집기가 사유를 남기지 않았다: {path}"),
+             "link": "artifact://build/l0/probe-code.json",
+             "fixture": f"{scope_root}/{path}"}
+            for i, path in enumerate(sorted(failed_files), start=1)
+        ],
+        "excluded": not_collected,
         "exclusions": inv["exclusions"],
         "determinism": p["determinismObserved"]["rate"],
         "provenance": p["provenance"]["rate"],
-        "shouldReport": inv["excludedByExtensionFilter"] + sum(f["expectedReported"] for f in fixtures),
-        "reported": 0,
+        # db 트랙과 같은 규칙: 분모는 프로브가 직접 센 '수집기가 읽지 않은 파일' 과 gold 픽스처의
+        # 기대 보고 항목이고, 분자는 그 각각이 사유와 함께 산출물에 남았는지다(자기 인증 방지).
+        "shouldReport": (not_collected + len(failed_files)
+                         + sum(f["expectedReported"] for f in fixtures)),
+        "reported": (inv.get("reportedNotCollected", 0) + len(reported_failures)
+                     + sum(f.get("actualReported", 0) for f in fixtures)),
         "markedFullySucceeded": sum(1 for f in fixtures if f["markedAsFullySucceeded"]),
         "piiPositives": p["pii"]["positives"],
         "piiMasked": p["pii"]["masked"],
@@ -101,7 +150,11 @@ def _code_facts(p: dict) -> dict:
 
 def gates(track: str, p: dict, f: dict) -> list[dict]:
     """I1 §4.1 의 L0 무조건 게이트 4종 — 이 레이어에 해당하는 항목만 적는다(I3 §3.6)."""
-    err_visibility = 0.0 if f["shouldReport"] else 1.0
+    # 보고율 = 보고된 항목 / 보고돼야 하는 항목.
+    # 분모가 0 이면 **재지 못한 것이지 통과한 것이 아니다** — 0/0 을 1.0 으로 적으면 '보고할 것이
+    # 없었다' 와 '전부 보고했다' 가 같은 값이 되어 그 자리는 더 이상 지표가 아니다(I3 R20 이 
+    # scopeCoverage 에 건 것과 같은 규칙). 계약의 어휘로 NOT_MEASURED 를 쓰고 경고를 함께 낸다(R10).
+    err_visibility = round(f["reported"] / f["shouldReport"], 4) if f["shouldReport"] else None
     if track == "db":
         sec_observed = (
             f"코퍼스 양성 {f['piiPositives']}건 중 마스킹 {f['piiMasked']}건 "
@@ -133,7 +186,8 @@ def gates(track: str, p: dict, f: dict) -> list[dict]:
             "name": "L0 오류 가시성 (실패·제외 보고율)",
             "required": 1.0,
             "observed": err_visibility,
-            "status": "PASS" if err_visibility >= 1.0 else "FAIL",
+            "status": "NOT_MEASURED" if err_visibility is None
+                      else ("PASS" if err_visibility >= 1.0 else "FAIL"),
         },
         {
             "id": "gate-security-masking",
@@ -178,7 +232,7 @@ def coverage_classes(track: str, p: dict) -> list[dict]:
 
 
 def baseline_block(track: str, run: dict, schema_version: str, metrics: dict,
-                   eligible: bool) -> dict:
+                   eligible: bool, gs: list[dict] | None = None) -> dict:
     """이전 기준선 대비 변화(I3 R17). 비교 대상이 없으면 '변화 없음' 이 아니라 '비교 불가' 다."""
     prev_dir = PREVIOUS.get(track)
     if prev_dir is None:
@@ -215,6 +269,16 @@ def baseline_block(track: str, run: dict, schema_version: str, metrics: dict,
             continue
         deltas.append({"metric": m, "previous": a["value"], "current": b["value"],
                        "delta": round(b["value"] - a["value"], 4)})
+    # 게이트 관측값도 비교한다 — 수집기 수정의 효과가 지표가 아니라 게이트에만 나타나는 실행이 있다
+    # (#114 의 오류 가시성이 그렇다). 수치로 비교할 수 있는 게이트만 넣는다(보안 게이트는 문장이다).
+    prev_gates = {g["id"]: g for g in prev.get("gates", [])}
+    for g in gs or []:
+        a = prev_gates.get(g["id"], {}).get("observed")
+        b = g["observed"]
+        if isinstance(a, (int, float)) and isinstance(b, (int, float)) \
+                and not isinstance(a, bool) and not isinstance(b, bool):
+            deltas.append({"metric": f"gates.{g['id']}", "previous": a, "current": b,
+                           "delta": round(b - a, 4)})
     return {
         "previous": ident,
         "comparable": True,
@@ -226,20 +290,55 @@ def baseline_block(track: str, run: dict, schema_version: str, metrics: dict,
     }
 
 
-def feature_judgments(track: str, run_id: str, f: dict) -> list[dict]:
+GATE_FOLLOWUP = {
+    "gate-determinism": "L0-fix-1",
+    "gate-l0-metadata-completeness": "L0-fix-2",
+    "gate-error-visibility": "L0-fix-3·4",
+    "gate-security-masking": "L0-fix-5",
+}
+
+
+def _open_gates(gs: list[dict]) -> str:
+    """아직 열려 있는 무조건 게이트를 **게이트 결과에서** 문장으로 만든다.
+
+    판정문에 남은 게이트를 손으로 적으면, 그 게이트가 통과로 바뀐 뒤에도 보고서가 "아직 실패다" 라고
+    말한다 — 근거와 서술이 어긋나는 순간 판정문은 증거가 아니라 장식이 된다(#114 재측정에서 실제로
+    그렇게 될 뻔했다: 식별 필드가 5/5 가 됐는데 "5/5 라 추적 가능성 게이트가 남아 있다" 고 적혔다).
+    """
+    open_ = [g for g in gs if g["status"] != "PASS"]
+    if not open_:
+        return "무조건 게이트는 전부 통과했다 — Core 승격은 판정 승인권자의 몫이다(I1 §1.2)."
+    names = " · ".join(f"{g['name'].split('(')[0].strip()}({GATE_FOLLOWUP.get(g['id'], '후속')})"
+                       for g in open_)
+    return f"그래도 Core 는 아니다 — 남은 무조건 게이트: {names}. 그래서 Lab 이다."
+
+
+def feature_judgments(track: str, run_id: str, f: dict, gs: list[dict]) -> list[dict]:
+    reported_all = f["reported"] >= f["shouldReport"]
     if track == "db":
+        if reported_all:
+            ddl_rationale = (
+                f"고정 입력에서 CREATE TABLE 27건을 빠짐없이 수집하고 3회 실행이 동일했다"
+                f"(결정성 {f['determinism']}). #114 로 제외·실패·부분수집이 반환형에 실려 보고율 "
+                f"{f['reported']}/{f['shouldReport']} 이고 조용한 부분 복구는 {f['silentPartialRecovery']}건이다 "
+                f"— TB_BAD_MIDDLE 은 부분 복구를 버리고 실패로 보고한다. 필수 식별 필드는 "
+                f"{int(f['provenance'] * 5)}/5 다(#113). {_open_gates(gs)} 수집 능력 자체는 쓸 만하므로 "
+                "Retire 도 아니다."
+            )
+        else:
+            ddl_rationale = (
+                "고정 입력에서 CREATE TABLE 27건을 빠짐없이 수집하고 3회 실행이 동일했다(결정성 1.0). "
+                f"그러나 필수 식별 필드 {int(f['provenance'] * 5)}/5, 제외·실패 보고율 0.0 이며 "
+                f"부분 복구를 조용히 수행한 사례 {f['silentPartialRecovery']}건(TB_BAD_MIDDLE — 컬럼 1개만 살려 추출)이 "
+                "확인됐다. 추적 가능성과 정직성 게이트를 통과하지 못해 Core 로 올릴 수 없고, 수집 능력 자체는 "
+                "쓸 만하므로 Retire 도 아니다."
+            )
         return [
             {
                 "featureId": "P-ddl-parser",
                 "judgment": "Lab",
                 "measured": True,
-                "rationale": (
-                    "고정 입력에서 CREATE TABLE 27건을 빠짐없이 수집하고 3회 실행이 동일했다(결정성 1.0). "
-                    f"그러나 필수 식별 필드 {int(f['provenance'] * 5)}/5, 제외·실패 보고율 0.0 이며 "
-                    f"부분 복구를 조용히 수행한 사례 {f['silentPartialRecovery']}건(TB_BAD_MIDDLE — 컬럼 1개만 살려 추출)이 "
-                    "확인됐다. 추적 가능성과 정직성 게이트를 통과하지 못해 Core 로 올릴 수 없고, 수집 능력 자체는 "
-                    "쓸 만하므로 Retire 도 아니다."
-                ),
+                "rationale": ddl_rationale,
                 "evidenceRefs": [run_id],
             },
             {
@@ -260,13 +359,21 @@ def feature_judgments(track: str, run_id: str, f: dict) -> list[dict]:
             f"실행의 산출물이 서로 달라 결정성 {f['determinism']} (군집 라벨 비결정 — cluster.py 의 집합 순회 "
             "순서). H1 이 발동하는 상태이므로 Core 판정 불가, 원인이 국소적이고 수정 가능하므로 Retire 도 아니다."
         )
-    else:
+    elif not reported_all:
         rationale = (
             f"수집 범위 {f['input']}개 파일을 전량 파싱했고, #112 로 군집 라벨의 집합 순회 순서 의존을 없애 "
             f"결정성 {f['determinism']} 이 됐다 (PYTHONHASHSEED 무관 · H1 해소). 그래도 Core 는 아니다 — 필수 식별 "
             f"{int(f['provenance'] * 5)}/5 이고, 보고돼야 할 실패·제외 {f['shouldReport']}건 중 산출물에 남는 것이 "
             f"0건이다(픽스처 {f['markedFullySucceeded']}건은 오히려 전량 성공으로 표시된다). 추적 가능성·정직성 "
             "게이트가 남아 있으므로 Lab."
+        )
+    else:
+        rationale = (
+            f"수집 범위 {f['input']}개 파일을 전량 파싱했고 결정성 {f['determinism']}(#112 · H1 해소), "
+            f"필수 식별 {int(f['provenance'] * 5)}/5(#113), #114 로 제외·실패·부분수집이 meta.issues 에 "
+            f"사유·좌표와 함께 실려 보고율 {f['reported']}/{f['shouldReport']} 이다. 파싱 오류가 있는 파일은 "
+            f"status 로 표시되어 완전 성공으로 위장된 실패 픽스처가 {f['markedFullySucceeded']}건이다. "
+            f"{_open_gates(gs)}"
         )
     return [
         {
@@ -299,28 +406,44 @@ def build_from(track: str, p: dict) -> dict:
         }
         for g in gs if g["status"] == "FAIL"
     ]
+    # 재지 못한 게이트는 경고로 드러낸다 — 침묵하면 '통과' 와 구분되지 않는다(I3 R10).
+    warnings += [
+        {
+            "code": "METRIC_UNMEASURED",
+            "message": f"게이트를 재지 못했다(분모 0): {g['name']}",
+            "trigger": f"gates.{g['id']}",
+        }
+        for g in gs if g["status"] == "NOT_MEASURED"
+    ]
 
     if track == "db":
-        collector_version = "DdlParser+SampleLegacyDb@3c27259"
+        collector_version = p["collector"]["citedVersion"]
         notes = (
-            "L0 DB 트랙 실측. 프로브 산출물: probe-db.json (backend/src/test/kotlin/com/ontostudio/rdb/"
-            "L0DbSourceProbeTest.kt 가 생성하며 표류 시 테스트가 실패한다). "
-            f"counts.input 은 고정 입력의 SQL 문장 {f['input']}건이다 — 행 데이터(INSERT) 8건은 L0 최소저장 "
-            "원칙상 제외이지만 분모에 남긴다(I3 R20). 제외가 설계상 정당하더라도 사유·좌표를 보고하지 않으면 "
-            "오류 가시성 게이트는 통과하지 않는다. 수집기는 제외·실패를 실을 자리(반환형)가 없어 보고율이 "
-            "구조적으로 0 이다. 게이트 판정이 애매한 구간(미마스킹 0건이지만 마스킹 단계 부재)은 I1 §3.2 에 "
-            "따라 HALT 쪽으로 읽었다."
+            "L0 DB 트랙 재실측(#114 — 오류 가시성 수정 후). 프로브 산출물: probe-db.json "
+            "(backend/src/test/kotlin/com/ontostudio/rdb/L0DbSourceProbeTest.kt 가 생성하며 표류 시 테스트가 "
+            f"실패한다). counts.input 은 고정 입력의 SQL 문장 {f['input']}건이다 — 행 데이터(INSERT) 8건은 "
+            "L0 최소저장 원칙상 제외이지만 분모에 남기고(I3 R20) 이제 사유·좌표와 함께 보고된다. 보고율은 "
+            f"{f['reported']}/{f['shouldReport']} 이며, 실패 픽스처의 기대 보고 항목은 사유코드 일치와 좌표 "
+            "겹침으로 귀속해 셌다 — 건수만 맞추거나 그럴듯한 좌표를 적어 통과하는 경로를 막는다. 조용한 부분 "
+            f"복구는 {f['silentPartialRecovery']}건이다(TB_BAD_MIDDLE 은 부분 복구를 버리고 실패로 보고한다). "
+            "입력·fixture 는 run-l0-db-3c27259-001 과 같은 고정값이고 달라진 것은 수집기뿐이라 두 실행은 직접 "
+            "비교된다. 남은 실패는 메타데이터(L0-fix-2)와 보안(L0-fix-5)이며, 게이트 판정이 애매한 구간"
+            "(미마스킹 0건이지만 마스킹 단계 부재)은 I1 §3.2 에 따라 HALT 쪽으로 읽었다."
         )
     else:
         collector_version = p["collector"]["citedVersion"]
         notes = (
-            "L0 코드 트랙 재실측(#112). 프로브 산출물: probe-code.json (probe_code.py --check 로 표류 검사 + "
-            "결정성 1.0·시드 무관 확인). determinism 은 기본 인터프리터 설정 3회 실행의 최대 동일 그룹/3 이며, "
-            "PYTHONHASHSEED 를 바꾼 실행까지 산출물이 같다는 통제 실험이 프로브에 함께 남아 있다"
-            "(determinismControl.seedIndependent). 입력은 run-l0-code-3c27259-001 과 같은 고정 revision 이고 "
-            "달라진 것은 수집기 버전뿐이라 두 실행은 직접 비교된다. 남은 게이트 3종(메타데이터·오류 가시성·보안)은 "
-            "그대로 실패이며 H2 로 판정은 여전히 BLOCKED 다. precision/recall 은 L1(#89)의 몫이라 "
-            "NOT_APPLICABLE 이다."
+            "L0 코드 트랙 재실측(#114 — 오류 가시성 수정 후. 결정성은 #112 에서 이미 해소됐다). 프로브 산출물: "
+            "probe-code.json (probe_code.py --check 로 표류 검사 + 결정성 1.0·시드 무관 확인). determinism 은 "
+            "기본 인터프리터 설정 3회 실행의 최대 동일 그룹/3 이며, PYTHONHASHSEED 를 바꾼 실행까지 산출물이 "
+            "같다는 통제 실험이 프로브에 함께 남아 있다(determinismControl.seedIndependent). 수집 범위는 고정 "
+            "revision 의 blob 에서 재구성해 측정한다 — 이 수정이 backend/src/main/kotlin 을 함께 고치므로, 작업 "
+            "트리를 입력으로 삼는 동안에는 '고정 revision 을 쟀다' 가 성립하지 않는다. 보고율 "
+            f"{f['reported']}/{f['shouldReport']} 의 분모는 확장자 제외 {f['excluded']}건과 실패 픽스처 3건의 "
+            "기대 보고 항목이고, 산출물은 파일마다 status(parsed|partial|failed)를 실어 파싱 오류 구간과 겹치는 "
+            f"선언을 사실로 내지 않는다(완전 성공으로 표시된 실패 픽스처 {f['markedFullySucceeded']}건). 남은 "
+            "실패는 메타데이터(L0-fix-2)와 보안(L0-fix-5)이라 판정은 여전히 BLOCKED(H2)다. precision/recall 은 "
+            "L1(#89)의 몫이라 NOT_APPLICABLE 이다."
         )
 
     schema_version = "run-quality-report/v0"
@@ -361,7 +484,7 @@ def build_from(track: str, p: dict) -> dict:
     # R12 — 재현할 수 없는 실행은 기준선이 아니다.
     eligible = (run_obj["fixtureHash"] != "UNPINNED" and run_obj["reportKind"] == "BASELINE"
                 and not [v for v in versions.values() if v["status"] == "UNPINNED"])
-    bl = baseline_block(track, run_obj, schema_version, metrics, eligible)
+    bl = baseline_block(track, run_obj, schema_version, metrics, eligible, gs)
     if not bl["comparable"]:
         # 경고 문구는 실제 사유에서 나와야 한다 — '비교 대상이 없다' 와 '비교 대상은 있으나 신원이
         # 다르다' 는 다른 사실이고, previous 가 채워진 보고서에 전자를 적으면 그 자체가 거짓이다.
@@ -384,7 +507,7 @@ def build_from(track: str, p: dict) -> dict:
             "failed": f["failed"], "excluded": f["excluded"],
         },
         "exclusions": f["exclusions"],
-        "failures": [],
+        "failures": f.get("failures", []),
         "metrics": metrics,
         "evl": {
             "confidenceCalibration": {
@@ -405,7 +528,7 @@ def build_from(track: str, p: dict) -> dict:
             "haltRules": halts,
             "restrictions": [],
         },
-        "featureJudgments": feature_judgments(track, run_id, f),
+        "featureJudgments": feature_judgments(track, run_id, f, gs),
         "warnings": warnings,
         "notes": notes,
     }
