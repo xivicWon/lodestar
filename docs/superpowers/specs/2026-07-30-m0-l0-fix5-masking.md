@@ -50,7 +50,7 @@ docs/superpowers/specs/security/masking-rules.v0.json      ← 단일 원본 (�
 - 두 엔진이 gold 코퍼스에서 **같은 스팬 28건·같은 마스킹 결과 해시**를 낸다(§4 · M2).
 - gold 는 나중에 신설·수정된 분기를 지나가지 않는다(따옴표 값 대안 그룹 · `@` 든 URL 비밀번호 · 여러 줄
   PEM · BMP 밖 문자 · 길이 보존의 개행 보존). 그 구멍은 **패리티 픽스처**
-  ([`bench/masking/fixtures/parity-cases.json`](bench/masking/fixtures/parity-cases.json), 27케이스 ×
+  ([`bench/masking/fixtures/parity-cases.json`](bench/masking/fixtures/parity-cases.json), 29케이스 ×
   정책 4종)가 닫는다. 이 픽스처에는 **정답이 없다** — 확정하는 것은 두 엔진이 갈리지 않는다는 사실
   하나이며 정확성 판정은 gold 가 한다. 픽스처가 실제로 그 분기를 지나가는지는 M11 이 검사한다.
 
@@ -116,9 +116,9 @@ SQL 스캐너는 리터럴·주석 구간을 **끝까지 정확히** 끊어야 �
 
 | 게이트 | 기준 | 관측 | 판정 |
 |---|---|---|---|
-| `gate-security-masking` | 미마스킹 0건 **+ 부분 마스킹 0건** | 양성 28건 중 **28건 완전 마스킹 · 0건 미마스킹 · 부분 0건** | **PASS** |
+| `gate-security-masking` | 미마스킹 0건 **+ 부분 마스킹 0건 + 치명 클래스(GIT_SHA·CONTENT_HASH) 오탐 0건 + gold 밖 스팬 0건** (§15) | 양성 28건 중 **28건 완전 마스킹 · 0건 미마스킹 · 부분 0건 · 치명 오탐 0/0 · gold 밖 스팬 0건** | **PASS** |
 | `gate-engine-parity` | 두 엔진 동일 (gold) | 스팬 28건 좌표·클래스·규칙·결과 해시 동일 | **PASS** |
-| `gate-engine-parity-branches` | 두 엔진 동일 (**gold 가 지나가지 않는 분기**) | 패리티 픽스처 27케이스 × 정책 4종 전부 동일 | **PASS** |
+| `gate-engine-parity-branches` | 두 엔진 동일 (**gold 가 지나가지 않는 분기**) | 패리티 픽스처 29케이스 × 정책 4종 전부 동일 | **PASS** |
 | `gate-db-ingest-masking` | 적재 미마스킹 PII 0건 | **0건** (질의로 회수 · #88 F7 지점) | **PASS** |
 | `gate-code-emit-masking` | 산출물 미마스킹 양성 0건 | 심은 28건 중 **0건 잔존** | **PASS** |
 | `gate-no-plaintext-in-records` | 원문 미기록 | 증거 5종 + 보고서 전문 × 양성 28건 = 168회 대조에서 **0건** (보고서가 직접 계산한다) | **PASS** |
@@ -203,7 +203,7 @@ python3 docs/superpowers/specs/bench/masking/verify_masking.py
 | ID | 불변식 | 위반 시 |
 |---|---|---|
 | **M1** | gold 신원 — 코퍼스 해시 = 고정값 · `APPROVED` · 항목 수 44 · **디스크의 픽스처 15건에서 `fixtureHash` 재계산** | 미승인·변조된 정답셋으로 잰 수치 |
-| **M2** | 두 엔진의 스팬·클래스·규칙·결과 해시가 같다 — gold 코퍼스 **와 패리티 픽스처 27케이스×정책 4종** | "같은 정책" 주장이 거짓 |
+| **M2** | 두 엔진의 스팬·클래스·규칙·결과 해시가 같다 — gold 코퍼스 **와 패리티 픽스처 29케이스×정책 4종** | "같은 정책" 주장이 거짓 |
 | **M3** | 보고서는 증거의 **순수 함수**다 (같은 함수로 재생성해 대조) | 손으로 고친 수치 |
 | **M4** | 양성 좌표가 원본에서 조회되고 그 줄에 스팬이 있다 | 그럴듯하지만 조회되지 않는 좌표 |
 | **M5** | 게이트 산식 — 미마스킹·부분마스킹 1건이라도 있으면 PASS 불가 · 게이트 **6종** 존재 | 게이트 무력화 |
@@ -487,3 +487,45 @@ revision·fixture hash 추적을 끊으므로 별도 표기한다"* 이다. 그�
 `passwordPolicy=required` 는 여전히 오탐이다. 접미사가 camelCase 경계를 넘으므로 구조만으로는
 `secretAccessKey` 와 구분되지 않는다. 값 쪽 휴리스틱(엔트로피)은 §5-1 이 이미 기각한 방향이다.
 과마스킹이라 노출 위험은 없고, gold 정책상 게이트가 아니라 기록 대상이다.
+
+### 15.1 자기 지적 — 게이트를 조이면서 확인기를 같이 조이지 않았다
+
+§15 에서 `gate-security-masking` 산식에 치명 클래스 오탐과 `spansOutsideGold` 를 넣었는데,
+그 게이트를 검사하는 `verify_masking.py` 의 **M5 는 옛 식 그대로**였다:
+`observed == len(unmasked + partiallyCovered)`.
+
+주입으로 확인한 결과다.
+
+| 상태 | gate observed | M5 기대 | M5 판정 |
+|---|---|---|---|
+| 수정 전 | 1 (치명 오탐 1건) | 0 | **거짓 경보** — "게이트 관측값이 판정 목록과 다르다" |
+| 수정 후 | 1 | 1 | 일치 |
+
+게이트가 **정당하게 FAIL 한 실행**에서 확인기가 엉뚱한 이유로 붉어지는 자리였다. 새 항을 M5 에도
+넣었다. 판정식을 넓힐 때는 그 판정식을 검사하는 쪽도 같이 넓혀야 한다 — 이 리포가 반복해서
+확인하는 규칙(증거·보고서·확인기가 같은 산식을 봐야 한다)이 확인기 자신에게도 적용된다.
+
+### 15.2 문서 일관성 (리뷰 LOD-120·121)
+
+- 대표 게이트 표(§4.1)가 옛 산식(미마스킹·부분 마스킹만)을 제시하고 있었다 → 치명 클래스 오탐·
+  gold 밖 스팬을 조건에 명시했다. 표와 최종 산식이 어긋나면 승인자가 PASS 기준을 잘못 읽는다.
+- 패리티 픽스처 수가 문서 안에서 27과 29로 갈렸다 → 현행 기술은 29 로 통일했다.
+  §12 의 `18 → 27케이스` 는 그 시점의 **이력**이므로 그대로 둔다.
+
+### 15.3 남은 오탐 — 범위를 정정한다
+
+§15 는 `passwordPolicy=required` 하나를 잔여 오탐으로 적었는데, **범위를 좁게 적었다**.
+경계 수정이 닫은 것은 *소문자 연속*(`secret`+`ary` · `token`+`izer`)뿐이고,
+camelCase·`_` 경계를 넘는 복합 키는 그대로다.
+
+```
+tokenCount=5              -> tokenCount=[MASKED:PASSWORD]
+token_count=5             -> token_count=[MASKED:PASSWORD]
+secretEnabled=true        -> secretEnabled=[MASKED:PASSWORD]
+authorizationEnabled=false-> authorizationEnabled=[MASKED:PASSWORD]
+```
+
+구조만으로는 `secretAccessKey`(진짜 비밀 키)와 구분되지 않는다. 값 쪽 신호를 봐야 하며,
+`true`·`false`·정수 같은 **설정값 형태를 값 denylist 로 제외**하는 것이 가장 좁은 수정이다
+(엔트로피 휴리스틱은 §5-1 이 이미 기각했다). 과마스킹이라 노출 위험은 없고 gold 정책상 게이트가
+아니라 기록 대상이지만, 산출물에서 설정값이 사라지는 손실은 실재한다.

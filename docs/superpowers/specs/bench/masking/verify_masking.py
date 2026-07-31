@@ -188,10 +188,17 @@ def m5_gate_arithmetic(ctx):
     if sorted(ids) != sorted(required):
         return False, len(ids), f"게이트 목록이 다르다: {ids}"
     by_id = {g["id"]: g for g in rep["gates"]}
+    # 산식은 보고서와 **같은 항을 전부** 세야 한다. 미마스킹·부분마스킹만 세던 시절의 식을
+    # 남겨두면, 치명 클래스 오탐으로 게이트가 정당하게 FAIL 한 실행에서 확인기가 거짓 경보를
+    # 낸다(observed=1 vs len(broken)=0). 게이트를 조이면서 확인기를 같이 조이지 않은 자리다.
     broken = rep["gold"]["unmasked"] + rep["gold"]["partiallyCovered"]
-    if bool(broken) == (by_id["gate-security-masking"]["status"] == "PASS"):
-        return False, len(ids), "미마스킹·부분마스킹 건수와 게이트 상태가 어긋난다"
-    if by_id["gate-security-masking"]["observed"] != len(broken):
+    critical_fp = sum(rep["gold"]["criticalClassFalsePositives"].values())
+    outside_gold = sum(rep["gold"]["spansOutsideGold"].values())
+    failing = len(broken) + critical_fp + outside_gold
+    if bool(failing) == (by_id["gate-security-masking"]["status"] == "PASS"):
+        return False, len(ids), ("미마스킹·부분마스킹·치명 클래스 오탐·gold 밖 스팬 건수와 "
+                                 "게이트 상태가 어긋난다")
+    if by_id["gate-security-masking"]["observed"] != failing:
         return False, len(ids), "게이트 관측값이 판정 목록과 다르다"
     db = ctx["ingestDb"]["retrievableUnmaskedPiiValues"]
     if (by_id["gate-db-ingest-masking"]["status"] == "PASS") != (db == 0):
