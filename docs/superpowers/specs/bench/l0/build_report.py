@@ -521,7 +521,9 @@ def build_from(track: str, p: dict) -> dict:
             "미측정을 통과로 적지 않는다. precision/recall 은 L1(#89)의 몫이라 NOT_APPLICABLE 이다."
         )
 
-    schema_version = "run-quality-report/v0"
+    # I3 §7.3 — 통제어휘 변경·R규칙 의미 변경은 버전을 올린다. #125 가 GOLD_UNAPPROVED 와
+    # R12 의 승인 항을 더했으므로 이 실행부터 v1 이다. 이전 실행(v0)과는 직접 비교하지 않는다.
+    schema_version = "run-quality-report/v1"
     versions = {
         "collector": {"status": "PINNED", "value": collector_version},
         "extractor": {"status": "NOT_APPLICABLE", "value": None},
@@ -618,7 +620,7 @@ def validate(report: dict) -> list[str]:
     from jsonschema import Draft202012Validator  # noqa: E402
     import validate_rqr  # noqa: E402
 
-    schema = json.loads((SCHEMAS / "run-quality-report.v0.schema.json").read_text())
+    schema = validate_rqr.schema_for(report)
     errs = [f"[schema] {e.json_path}: {e.message}"
             for e in Draft202012Validator(schema).iter_errors(report)]
     errs += [f"[R] {e}" for e in validate_rqr.cross_field_errors(report)]

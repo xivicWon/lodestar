@@ -305,7 +305,7 @@ L0-fix-1 이 머지되면 코드 트랙을 **새 runId 로 재측정**한다. �
 확인기는 규칙 **V14**(보고 귀속)와 결함 주입 2건이 늘어 그 시점 **V1-V14 · 31 케이스** 가 됐고, 계측기
 자체의 단위 테스트(`bench/l0/test_bench_l0.py`)가 생겼다. 이 문서의 수치·판정은 **수정 전 기준선으로
 유효하며 고쳐 쓰지 않는다**(I3 §5.5). 다만 §7 은 *측정*이 아니라 *현재 확인기의 명세*이므로 확인기를
-고칠 때 함께 갱신한다 — #125 기준 **V1-V14 · 33 케이스** 다.
+고칠 때 함께 갱신한다 — #125 기준 **V1-V14 · 35 케이스** 다.
 상세: [L0-fix 문서](2026-07-30-m0-l0-fix-error-visibility.md).
 
 ### 6.3 gold 입력 축 재고정 (#125 — 제안 · 미승인)
@@ -324,7 +324,7 @@ main 워킹트리에서 상시 실패했다. gold 에 **L0 수집 입력 축**(`
 
 두 실행 모두 `eligibleAsBaseline: false` 이며 `GOLD_UNAPPROVED` 경고를 싣는다 — 입력 축이 아직
 승인 전이라 **기준선이 아니다**(I3 R12 · I1 §7). 이전 실행들은 덮어쓰지 않고 `baseline.previous` 로
-인용만 한다(I3 §5.5). 확인기는 결함 주입 2건이 늘어 **V1-V14 · 33 케이스** 가 됐다.
+인용만 한다(I3 §5.5). 확인기는 결함 주입 4건이 늘어 **V1-V14 · 35 케이스** 가 됐다.
 
 **이 문서의 §3 수치는 #88 시점의 기준선이며 고쳐 쓰지 않는다.**
 ---
@@ -341,7 +341,7 @@ main 워킹트리에서 상시 실패했다. gold 에 **L0 수집 입력 축**(`
 ```bash
 pip install jsonschema
 python3 docs/superpowers/specs/bench/l0/verify_l0.py
-# 33 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount)
+# 35 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount)
 ```
 
 | ID | 불변식 | 위반 시 |

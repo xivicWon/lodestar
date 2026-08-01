@@ -66,8 +66,8 @@ git diff --exit-code docs/superpowers/specs/bench/l0/runs
 
 # 3) 증거 적합성 확인 (워킹트리와 무관 — 커밋된 산출물만 읽는다)
 python3 docs/superpowers/specs/bench/l0/verify_l0.py
-# 33 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount. #88 의 24 는 #112 가 V12~V13 을,
-#                            #114 가 V14 를, #125 가 입력 축 케이스 2건을 더하며 33 으로 올렸다 —
+# 35 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount. #88 의 24 는 #112 가 V12~V13 을,
+#                            #114 가 V14 를, #125 가 입력 축·승인 경고 케이스 4건을 더하며 35 로 올렸다 —
 #                            manifest 가 정본이고 확인기가 대조한다)
 
 # 4) 계측기 자체의 테스트 (실측 없이 합성 입력으로 돈다)
@@ -103,7 +103,7 @@ venv 를 쓰는 이유: 현재 워킹트리에서 `pip install -e codegraph` 를
 훅이 `sys.path` 보다 먼저 걸려, **역사적 입력에 현재 수집기**를 물릴 수 있다. 그러면 재현이 아니다.
 
 커밋된 증거 자체의 적합성(`verify_l0.py`)은 워킹트리와 무관하다 — 커밋된 산출물만 읽으므로
-현재 브랜치에서도 그대로 33 cases / 0 mismatches 여야 한다.
+현재 브랜치에서도 그대로 35 cases / 0 mismatches 여야 한다.
 
 ### 코드 트랙 재측정과 gold 입력 축 (#125 — 해소)
 

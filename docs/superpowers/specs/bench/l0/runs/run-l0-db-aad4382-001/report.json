@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "run-quality-report/v0",
+  "schemaVersion": "run-quality-report/v1",
   "run": {
     "runId": "run-l0-db-aad4382-001",
     "projectId": "lodestar",
@@ -107,7 +107,7 @@
         "value": null,
         "note": "L0 은 충돌 판정을 만들지 않는다"
       },
-      "goldSetId": "gold-set/v0+21d73b61b11d"
+      "goldSetId": "gold-set/v0+9fc75363c803"
     },
     "coverageClasses": [
       {

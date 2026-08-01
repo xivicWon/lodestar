@@ -4,7 +4,7 @@
   "track" : "db",
   "projectId" : "lodestar",
   "sourceRevision" : "aad4382cd3cbbf6ddc24e2a8587eae1a8c9289f0",
-  "goldSetId" : "gold-set/v0+21d73b61b11d",
+  "goldSetId" : "gold-set/v0+9fc75363c803",
   "fixtureHash" : "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
   "collector" : {
     "impl" : "DdlParser + DdlSource (DDL 텍스트 경로) · SampleLegacyDb + MetadataService (샘플 적재 경로)",

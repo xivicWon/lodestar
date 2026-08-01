@@ -85,7 +85,9 @@ SUBCHECKS = {
            "G5.5 revision 이 선언 축(axis)과 일치",
            "G5.6 probe 축 원본 해시·행수 = probeRevision blob",
            "G5.7 probe 축 revision = probeAxis.revision",
-           "G5.8 sameAsAnswerAxis 재계산 일치"],
+           "G5.8 sameAsAnswerAxis 재계산 일치",
+           "G5.9 probe 축 sourceId·answerAxisSourceId 유일",
+           "G5.10 probe 축 ↔ scopeRoots 범위 양방향 완전성"],
     "G6": ["G6.1 ref 의 sourceId 등록", "G6.2 ref 의 contentHash·revision = 소스 고정값"],
     "G7": ["G7.1 좌표 경로 = 등록 경로", "G7.2 좌표가 blob 범위 안·시작≤끝",
            "G7.3 EVL 근거 좌표도 동일 기준"],
@@ -468,11 +470,35 @@ def _g5():
     # 만든 것이 곧 **아무도 보지 않는 고정값**을 하나 더 만든 것이 된다 — 프로브가 그 값을
     # 입력 신원의 근거로 쓰므로, 대조 없는 축은 "고정 revision 을 쟀다" 를 다시 거짓으로 만든다.
     by_answer_id = {s["sourceId"]: s for s in MANIFEST["pinnedSources"]}
-    for s in MANIFEST["probeAxis"]["sources"]:
+    axis = MANIFEST["probeAxis"]
+    # 신원은 **유일해야** 한다. 같은 파일이 두 번 고정되면 어느 항목이 정본인지 알 수 없고, 한쪽만
+    # 고쳐도 검사가 통과한다. 정답 축 매핑이 겹치면 서로 다른 입력이 같은 정답 소스를 주장한다.
+    for key in ("sourceId", "answerAxisSourceId"):
+        seen_ids = [s[key] for s in axis["sources"]]
+        for dup in sorted({i for i in seen_ids if seen_ids.count(i) > 1}):
+            yield f"probeAxis.sources 의 {key} 가 중복된다: {dup}"
+    # 선언한 범위와 실제 고정 목록을 **양방향으로** 대조한다. 한 방향만 보면 항목을 빼도(범위에 있는데
+    # 고정되지 않은 파일) 조용히 통과해 프로브의 입력 신원 검사가 그만큼 줄어든다.
+    roots = [(r["track"], r["root"]) for r in axis["scopeRoots"]]
+    in_scope = {s["sourceId"]: t for s in MANIFEST["pinnedSources"]
+                if s.get("origin") == "repo" and s.get("axis") == "source"
+                for t, root in roots if s["path"].startswith(root)}
+    declared = {s["answerAxisSourceId"]: s for s in axis["sources"]}
+    for missing in sorted(set(in_scope) - set(declared)):
+        yield (f"probeAxis 범위(scopeRoots) 안의 {missing} 가 sources 에 고정되지 않았다 — "
+               "프로브가 그 파일의 입력 신원을 대조하지 않게 된다")
+    for extra in sorted(set(declared) - set(in_scope)):
+        yield f"probeAxis.sources 의 {extra} 가 선언한 범위(scopeRoots) 밖이다"
+    for sid, track in sorted(in_scope.items()):
+        s = declared.get(sid)
+        if s is not None and s["track"] != track:
+            yield (f"{s['sourceId']}: track 선언 {s['track']} ≠ 범위가 정한 트랙 {track}")
+    touched("G5", len(roots))
+    for s in axis["sources"]:
         sid = s["sourceId"]
-        if s["revision"] != MANIFEST["probeAxis"]["revision"]:
+        if s["revision"] != axis["revision"]:
             yield (f"{sid}: probe 축 소스인데 revision 이 그 축"
-                   f"({MANIFEST['probeAxis']['revision'][:7]})과 다르다 ({s['revision'][:7]})")
+                   f"({axis['revision'][:7]})과 다르다 ({s['revision'][:7]})")
         answer = by_answer_id.get(s["answerAxisSourceId"])
         if answer is None:
             yield f"{sid}: answerAxisSourceId '{s['answerAxisSourceId']}' 가 pinnedSources 에 없다"

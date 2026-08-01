@@ -60,11 +60,11 @@ def load_ctx() -> dict:
 
 def v1_schema_and_i3_rules(ctx):
     """V1 두 보고서가 스키마와 I3 R1~R20 을 통과한다."""
-    schema = json.loads((SCHEMAS / "run-quality-report.v0.schema.json").read_text())
     errs, seen = [], 0
     for t, rep in ctx["reports"].items():
         seen += 1
-        for e in Draft202012Validator(schema).iter_errors(rep):
+        # 보고서가 **선언한 계약 버전**의 스키마로 잰다(I3 §7.3).
+        for e in Draft202012Validator(validate_rqr.schema_for(rep)).iter_errors(rep):
             errs.append(f"{t}: [schema] {e.json_path}: {e.message}")
         for e in validate_rqr.cross_field_errors(rep):
             errs.append(f"{t}: [I3] {e}")
@@ -367,7 +367,6 @@ def v13_cited_baseline_resolves(ctx):
     현재 실행만 검사하는 V1 은 인용된 실행을 보지 않는다.
     """
     errs, seen = [], 0
-    schema = json.loads((SCHEMAS / "run-quality-report.v0.schema.json").read_text())
     for t, rep in ctx["reports"].items():
         prev = rep["baseline"]["previous"]
         if prev is None:
@@ -391,7 +390,9 @@ def v13_cited_baseline_resolves(ctx):
         if cited["schemaVersion"] != prev["schemaVersion"]:
             errs.append(f"{t}: baseline.previous.schemaVersion 이 인용한 실행과 다르다")
         # 인용된 증거가 그 자체로 계약을 통과하지 못하면 비교의 기준이 될 수 없다.
-        for e in Draft202012Validator(schema).iter_errors(cited):
+        # 인용된 실행은 그 시점의 계약 버전으로 쓰였다 — 현재 스키마로 재면 옛 증거가 형식
+        # 위반으로 뒤집힌다(#125 로 v0 → v1 이 됐다).
+        for e in Draft202012Validator(validate_rqr.schema_for(cited)).iter_errors(cited):
             errs.append(f"{t}: 인용한 {prev['runId']} 가 스키마를 어긴다 — {e.json_path}: {e.message}")
         for e in validate_rqr.cross_field_errors(cited):
             errs.append(f"{t}: 인용한 {prev['runId']} 가 I3 규칙을 어긴다 — {e}")
@@ -531,6 +532,17 @@ def injections() -> list[tuple[str, str, callable]]:
         # 프로브가 잰 입력과 gold 가 고정한 입력이 다른 실행.
         c["gold"]["probeAxis"]["revision"] = "deadbeef" + "0" * 32
 
+    def unapproved_warning_dropped(c):
+        # 미승인 축인데 경고만 지운 보고서. 경고가 R12 의 자격 산식에 들어가므로(V10), 경고를
+        # 지우면 eligibleAsBaseline=false 의 **근거가 사라진 채** 형식은 멀쩡해진다.
+        for t in TRACKS:
+            c["reports"][t]["warnings"] = [w for w in c["reports"][t]["warnings"]
+                                           if w["code"] != "GOLD_UNAPPROVED"]
+
+    def approved_but_warned(c):
+        # 반대 방향: 승인된 축인데 경고가 남은 보고서. 승인된 실행의 기준선 자격을 임의로 낮춘다.
+        c["gold"]["probeAxis"]["status"]["state"] = "APPROVED"
+
     def phantom_locator(c):
         c["reports"]["db"]["exclusions"][0]["examples"][0] = \
             "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L9999 (VW_ORD_SUMMARY)"
@@ -634,6 +646,8 @@ def injections() -> list[tuple[str, str, callable]]:
         ("V4", "미승인 gold 로 baseline 주장", gold_not_approved),
         ("V4", "미승인 입력 축 위에서 baseline 자격 주장", unapproved_axis_baseline),
         ("V4", "프로브가 잰 입력이 gold 입력 축과 다름", axis_revision_drift),
+        ("V4", "미승인 축인데 GOLD_UNAPPROVED 경고를 지움", unapproved_warning_dropped),
+        ("V4", "승인된 축인데 GOLD_UNAPPROVED 경고가 남음", approved_but_warned),
         ("V5", "좌표가 파일 범위를 벗어남", phantom_locator),
         ("V5", "좌표가 다른 행을 가리킴", wrong_line),
         ("V6", "미등록 픽스처", unregistered_fixture),

@@ -20,7 +20,23 @@ from jsonschema import Draft202012Validator
 HERE = pathlib.Path(__file__).parent
 EX = HERE / "rqr-examples"
 REPO = HERE.parents[3]  # docs/superpowers/specs/schemas -> 리포 루트
-SCHEMA = json.loads((HERE / "run-quality-report.v0.schema.json").read_text())
+# 계약 버전마다 스키마가 하나다. 한 파일을 고쳐 여러 버전을 겸하게 하면 §7.3(통제어휘·규칙 변경 시
+# 버전 상승)이 형식만 남고, 옛 버전으로 쓰인 보고서가 새 어휘를 쓸 수 있게 되어 버전이 뜻을 잃는다.
+SCHEMAS = {v: json.loads((HERE / f"run-quality-report.{v}.schema.json").read_text())
+           for v in ("v0", "v1")}
+CURRENT = "v1"
+SCHEMA = SCHEMAS[CURRENT]
+
+
+def schema_for(report):
+    """보고서가 **선언한** 버전의 스키마를 돌려준다.
+
+    선언과 다른 스키마로 재면 두 방향 모두 거짓이 된다: 옛 보고서가 새 어휘를 안 썼다는 이유로
+    통과하거나(느슨), 새 어휘를 쓴 보고서가 옛 스키마에서 위반으로 잡힌다(엄격). 선언이 이상하면
+    그 자체를 위반으로 보고해야 하므로 모르는 버전은 현재 스키마로 재서 const 위반을 내게 한다.
+    """
+    v = report.get("schemaVersion", "") if isinstance(report, dict) else ""
+    return SCHEMAS.get(str(v).rsplit("/", 1)[-1], SCHEMA)
 MANIFEST = json.loads((EX / "manifest.json").read_text())
 # 계약 §4 가 정의한 불변식 개수 — 규칙이 늘면 여기도 올린다(커버리지 검사에 쓰인다).
 MAX_RULE = 20
@@ -575,8 +591,8 @@ def manifest_errors():
 
 
 def main():
-    Draft202012Validator.check_schema(SCHEMA)
-    validator = Draft202012Validator(SCHEMA)
+    for v, s in SCHEMAS.items():
+        Draft202012Validator.check_schema(s)
     mismatches = 0
     verified_rules = set()  # 라벨·계층·위치·메시지 대조까지 통과한 규칙만 집계한다
 
@@ -598,7 +614,10 @@ def main():
                   f"{'' if ok else sub[0]}")
             continue
 
-        schema_errs = sorted(validator.iter_errors(doc), key=lambda e: list(e.path))
+        # 픽스처가 **선언한 버전**의 스키마로 잰다 — 옛 버전 보고서를 새 스키마로 재면 그 자체가
+        # 버전 정책(§7.3)을 무의미하게 만든다.
+        schema_errs = sorted(Draft202012Validator(schema_for(doc)).iter_errors(doc),
+                             key=lambda e: list(e.path))
         cross_errs = cross_field_errors(doc)
         accepted = not schema_errs and not cross_errs
         expected = case["expect"] == "valid"
