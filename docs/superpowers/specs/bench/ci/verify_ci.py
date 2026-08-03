@@ -42,7 +42,7 @@ PARITY_MARKER = "<!-- ci-parity -->"
 
 # #124 이슈 표의 검사. 키는 규칙 위반 메시지에 쓰는 이름, 값은 워크플로 run 블록에 있어야 할 조각.
 REQUIRED_CHECKS: dict[str, str] = {
-    "verify_l0.py (V1~V14)": "bench/l0/verify_l0.py",
+    "verify_l0.py (V1~V15)": "bench/l0/verify_l0.py",
     "probe_code.py --check": "bench/l0/probe_code.py --check",
     "build_report.py": "bench/l0/build_report.py",
     "보고서 표류 검사": "git diff --exit-code docs/superpowers/specs/bench/l0/runs",

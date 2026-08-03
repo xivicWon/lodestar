@@ -66,7 +66,7 @@ jobs:
         run: git diff --exit-code docs/superpowers/specs/bench/l0/runs
 
       # ── 커밋된 증거의 적합성 ───────────────────────────────────────────────
-      - name: verify_l0 — 증거 적합성 (V1~V14)
+      - name: verify_l0 — 증거 적합성 (V1~V15)
         run: python3 docs/superpowers/specs/bench/l0/verify_l0.py
 
       - name: 계측기 자체의 테스트
