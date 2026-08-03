@@ -82,7 +82,12 @@ SUBCHECKS = {
            "G4.6 계약 문서의 파생값 최신"],
     "G5": ["G5.1 픽스처 해시·행수 실물 대조", "G5.2 fixtures[] ↔ pinnedSources 교차",
            "G5.3 repo 원본 해시 = 고정 revision blob", "G5.4 repo 원본 행수 = blob 실제",
-           "G5.5 revision 이 선언 축(axis)과 일치"],
+           "G5.5 revision 이 선언 축(axis)과 일치",
+           "G5.6 probe 축 원본 해시·행수 = probeRevision blob",
+           "G5.7 probe 축 revision = probeAxis.revision",
+           "G5.8 sameAsAnswerAxis 재계산 일치",
+           "G5.9 probe 축 sourceId·answerAxisSourceId 유일",
+           "G5.10 probe 축 ↔ scopeRoots 범위 양방향 완전성"],
     "G6": ["G6.1 ref 의 sourceId 등록", "G6.2 ref 의 contentHash·revision = 소스 고정값"],
     "G7": ["G7.1 좌표 경로 = 등록 경로", "G7.2 좌표가 blob 범위 안·시작≤끝",
            "G7.3 EVL 근거 좌표도 동일 기준"],
@@ -459,6 +464,64 @@ def _g5():
         real = len(data.decode().splitlines())
         if s.get("lines") != real:
             yield f"{sid}: lines 선언 {s.get('lines')} ≠ 실제 {real} (G7 의 범위 판정이 헐거워진다)"
+        touched("G5", 1)
+
+    # L0 수집 입력 축(#125)도 같은 대조를 받는다. 여기서 검사하지 않으면 축을 하나 더
+    # 만든 것이 곧 **아무도 보지 않는 고정값**을 하나 더 만든 것이 된다 — 프로브가 그 값을
+    # 입력 신원의 근거로 쓰므로, 대조 없는 축은 "고정 revision 을 쟀다" 를 다시 거짓으로 만든다.
+    by_answer_id = {s["sourceId"]: s for s in MANIFEST["pinnedSources"]}
+    axis = MANIFEST["probeAxis"]
+    # 신원은 **유일해야** 한다. 같은 파일이 두 번 고정되면 어느 항목이 정본인지 알 수 없고, 한쪽만
+    # 고쳐도 검사가 통과한다. 정답 축 매핑이 겹치면 서로 다른 입력이 같은 정답 소스를 주장한다.
+    for key in ("sourceId", "answerAxisSourceId"):
+        seen_ids = [s[key] for s in axis["sources"]]
+        for dup in sorted({i for i in seen_ids if seen_ids.count(i) > 1}):
+            yield f"probeAxis.sources 의 {key} 가 중복된다: {dup}"
+    # 선언한 범위와 실제 고정 목록을 **양방향으로** 대조한다. 한 방향만 보면 항목을 빼도(범위에 있는데
+    # 고정되지 않은 파일) 조용히 통과해 프로브의 입력 신원 검사가 그만큼 줄어든다.
+    roots = [(r["track"], r["root"]) for r in axis["scopeRoots"]]
+    in_scope = {s["sourceId"]: t for s in MANIFEST["pinnedSources"]
+                if s.get("origin") == "repo" and s.get("axis") == "source"
+                for t, root in roots if s["path"].startswith(root)}
+    declared = {s["answerAxisSourceId"]: s for s in axis["sources"]}
+    for missing in sorted(set(in_scope) - set(declared)):
+        yield (f"probeAxis 범위(scopeRoots) 안의 {missing} 가 sources 에 고정되지 않았다 — "
+               "프로브가 그 파일의 입력 신원을 대조하지 않게 된다")
+    for extra in sorted(set(declared) - set(in_scope)):
+        yield f"probeAxis.sources 의 {extra} 가 선언한 범위(scopeRoots) 밖이다"
+    for sid, track in sorted(in_scope.items()):
+        s = declared.get(sid)
+        if s is not None and s["track"] != track:
+            yield (f"{s['sourceId']}: track 선언 {s['track']} ≠ 범위가 정한 트랙 {track}")
+    touched("G5", len(roots))
+    for s in axis["sources"]:
+        sid = s["sourceId"]
+        if s["revision"] != axis["revision"]:
+            yield (f"{sid}: probe 축 소스인데 revision 이 그 축"
+                   f"({axis['revision'][:7]})과 다르다 ({s['revision'][:7]})")
+        answer = by_answer_id.get(s["answerAxisSourceId"])
+        if answer is None:
+            yield f"{sid}: answerAxisSourceId '{s['answerAxisSourceId']}' 가 pinnedSources 에 없다"
+        elif answer["path"] != s["path"]:
+            yield (f"{sid}: 정답 축의 같은 id 가 다른 파일을 가리킨다 "
+                   f"({answer['path']} / {s['path']})")
+        try:
+            data = subprocess.run(["git", "show", f"{s['revision']}:{s['path']}"],
+                                  cwd=REPO, capture_output=True, check=True).stdout
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            yield f"{sid}: probe revision 에서 원본을 읽을 수 없다 ({s['path']}): {e}"
+            continue
+        got = "sha256:" + hashlib.sha256(data).hexdigest()
+        if got != s["contentHash"]:
+            yield f"{sid}: {s['revision'][:7]} 의 실제 해시 {got} ≠ 고정값 {s['contentHash']}"
+        real = len(data.decode().splitlines())
+        if s["lines"] != real:
+            yield f"{sid}: lines 선언 {s['lines']} ≠ 실제 {real}"
+        # 두 축의 관계는 **재계산**한다. 손으로 적은 true 는 "입력이 정답과 같다" 는
+        # 거짓 안심을 만들고, 그 위에서 재고정의 영향 범위가 보이지 않게 된다.
+        if answer is not None and s["sameAsAnswerAxis"] != (got == answer["contentHash"]):
+            yield (f"{sid}: sameAsAnswerAxis 선언 {s['sameAsAnswerAxis']} ≠ 재계산 "
+                   f"{got == answer['contentHash']}")
         touched("G5", 1)
 
 
@@ -1011,6 +1074,10 @@ def main():
           f"L3 시나리오 {n_s} · 실패 픽스처 {n_f}")
     print(f"     고정 revision {MANIFEST['sourceRevision'][:7]} · "
           f"픽스처 {len(MANIFEST['fixtures'])}개 해시 고정")
+    # 입력 축은 승인 상태와 함께 찍는다 — 값만 보이면 미승인 축이 승인된 것처럼 인용된다(#125).
+    pa = MANIFEST["probeAxis"]
+    print(f"     probe 축(L0 입력) {pa['revision'][:7]} [{pa['status']['state']}] · "
+          f"소스 {len(pa['sources'])}건")
     # Run Quality Report(#100) 작성자가 그대로 인용할 값이다.
     print(f"     run.fixtureHash = {MANIFEST['fixtureHash']}")
     print(f"     goldSetId       = {MANIFEST['goldSetId']}")

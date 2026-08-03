@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "run-quality-report/v0",
+  "schemaVersion": "run-quality-report/v1",
   "run": {
     "runId": "run-l3-db-example-0002",
     "projectId": "lodestar",

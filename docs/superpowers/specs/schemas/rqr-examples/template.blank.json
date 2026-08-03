@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "run-quality-report/v0",
+  "schemaVersion": "run-quality-report/v1",
   "run": {
     "runId": "<run-...>",
     "projectId": "<프로젝트 식별자>",

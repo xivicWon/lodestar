@@ -60,11 +60,11 @@ def load_ctx() -> dict:
 
 def v1_schema_and_i3_rules(ctx):
     """V1 두 보고서가 스키마와 I3 R1~R20 을 통과한다."""
-    schema = json.loads((SCHEMAS / "run-quality-report.v0.schema.json").read_text())
     errs, seen = [], 0
     for t, rep in ctx["reports"].items():
         seen += 1
-        for e in Draft202012Validator(schema).iter_errors(rep):
+        # 보고서가 **선언한 계약 버전**의 스키마로 잰다(I3 §7.3).
+        for e in Draft202012Validator(validate_rqr.schema_for(rep)).iter_errors(rep):
             errs.append(f"{t}: [schema] {e.json_path}: {e.message}")
         for e in validate_rqr.cross_field_errors(rep):
             errs.append(f"{t}: [I3] {e}")
@@ -114,9 +114,15 @@ def v3_input_identity(ctx):
 
 
 def v4_gold_pinning(ctx):
-    """V4 fixtureHash·goldSetId 가 gold manifest 의 파생값과 같다(I2 §6.1)."""
+    """V4 fixtureHash·goldSetId 가 gold manifest 의 파생값과 같다(I2 §6.1).
+
+    L0 실행이 **무엇을 입력으로 쟀는가**는 gold 의 입력 축(`probeAxis`)이 고정한다(#125). 정답 축
+    (`sourceRevision`)은 L1/L2 정답의 축이라 L0 보고서의 `run.sourceRevision` 과 대조할 대상이
+    아니다 — 두 축을 섞으면 입력을 다시 고정하는 순간 닫힌 범위의 L1 정답까지 함께 끌려간다.
+    """
     errs, seen = [], 0
     g = ctx["gold"]
+    axis = g["probeAxis"]
     for t in TRACKS:
         rep, p = ctx["reports"][t], ctx["probes"][t]
         seen += 1
@@ -124,19 +130,39 @@ def v4_gold_pinning(ctx):
             errs.append(f"{t}: run.fixtureHash 가 gold 고정값과 다르다")
         if rep["evl"]["conflictDetection"]["goldSetId"] != g["goldSetId"]:
             errs.append(f"{t}: goldSetId 가 gold 신원과 다르다")
-        if not g["sourceRevision"].startswith(rep["run"]["sourceRevision"]):
-            errs.append(f"{t}: sourceRevision 이 gold 고정 revision 과 다르다")
+        if not axis["revision"].startswith(rep["run"]["sourceRevision"]):
+            errs.append(f"{t}: run.sourceRevision 이 gold 입력 축(probeAxis.revision "
+                        f"{axis['revision'][:7]})과 다르다 — 무엇을 쟀는지가 증명되지 않는다")
+        if p["sourceRevision"] != axis["revision"]:
+            errs.append(f"{t}: 프로브가 잰 입력 축이 gold 입력 축과 다르다")
         if p["fixtureHash"] != g["fixtureHash"]:
             errs.append(f"{t}: 프로브의 fixtureHash 가 gold 고정값과 다르다")
         if g["status"]["state"] != "APPROVED":
             errs.append(f"{t}: gold 가 승인 상태가 아니다 — 이 수치는 baseline 이 될 수 없다(I1 G2)")
+        # 입력 축은 따로 승인된다. 미승인 축 위의 수치는 남길 수 있지만 **기준선일 수는 없다** —
+        # 승인되지 않은 입력 신원 위에 판정을 얹는 것이 gold 개정 절차를 우회하는 경로다(I1 §7).
+        approved = (axis["status"]["state"] == "APPROVED"
+                    and g["status"]["state"] == "APPROVED")
+        if not approved and rep["baseline"]["eligibleAsBaseline"]:
+            errs.append(f"{t}: 승인되지 않은 입력 축({axis['status']['state']}) 위에서 "
+                        "baseline 자격을 주장한다(I1 §7 · I2 §6)")
+        # 보고서의 GOLD_UNAPPROVED 경고는 **실제 승인 상태**와 양방향으로 맞아야 한다. 한쪽만
+        # 보면 경고를 지워 R12 를 우회하거나(미승인인데 무경고), 승인된 gold 를 미승인으로 적어
+        # 기준선 자격을 임의로 낮출 수 있다.
+        warned = any(w["code"] == "GOLD_UNAPPROVED" for w in rep["warnings"])
+        if warned != (not approved):
+            errs.append(f"{t}: GOLD_UNAPPROVED 경고({warned})가 gold 승인 상태"
+                        f"(정답 축 {g['status']['state']} · 입력 축 {axis['status']['state']})와 "
+                        "어긋난다(I3 R12)")
     return errs, seen
 
 
 def v5_exclusion_locators_resolve(ctx):
     """V5 제외 좌표가 고정 revision 의 원본에서 실제로 조회된다 — 그럴듯한 경로 문자열을 막는다."""
     errs, seen = [], 0
-    rev = ctx["gold"]["sourceRevision"]
+    # 좌표의 기준은 **그 실행이 입력으로 삼은 revision** 이다 — 정답 축에서 찾으면 입력 축이
+    # 재고정된 뒤 실재하는 좌표가 '유령 좌표' 로, 사라진 좌표가 정상으로 뒤집힌다(#125).
+    rev = ctx["gold"]["probeAxis"]["revision"]
     cache: dict[str, list[str]] = {}
     for t, rep in ctx["reports"].items():
         for ex in rep["exclusions"]:
@@ -268,7 +294,10 @@ def v10_baseline_eligibility(ctx):
         is_baseline = rep["run"]["reportKind"] == "BASELINE"
         versions_ok = all(v["status"] == "PINNED"
                           for v in rep["versions"].values() if v["status"] != "NOT_APPLICABLE")
-        expect = pinned_fix and is_baseline and versions_ok
+        # 재현 가능성 위에 **승인**이 하나 더 있다(I3 R12 의 네 번째 항 · #125). 보고서는 그 사실을
+        # GOLD_UNAPPROVED 경고로 싣고, 경고가 실제 gold 상태와 맞는지는 V4 가 본다.
+        unapproved = any(w["code"] == "GOLD_UNAPPROVED" for w in rep["warnings"])
+        expect = pinned_fix and is_baseline and versions_ok and not unapproved
         if rep["baseline"]["eligibleAsBaseline"] != expect:
             errs.append(f"{t}: eligibleAsBaseline={rep['baseline']['eligibleAsBaseline']} "
                         f"이지만 조건 계산은 {expect} 다")
@@ -338,7 +367,6 @@ def v13_cited_baseline_resolves(ctx):
     현재 실행만 검사하는 V1 은 인용된 실행을 보지 않는다.
     """
     errs, seen = [], 0
-    schema = json.loads((SCHEMAS / "run-quality-report.v0.schema.json").read_text())
     for t, rep in ctx["reports"].items():
         prev = rep["baseline"]["previous"]
         if prev is None:
@@ -362,7 +390,9 @@ def v13_cited_baseline_resolves(ctx):
         if cited["schemaVersion"] != prev["schemaVersion"]:
             errs.append(f"{t}: baseline.previous.schemaVersion 이 인용한 실행과 다르다")
         # 인용된 증거가 그 자체로 계약을 통과하지 못하면 비교의 기준이 될 수 없다.
-        for e in Draft202012Validator(schema).iter_errors(cited):
+        # 인용된 실행은 그 시점의 계약 버전으로 쓰였다 — 현재 스키마로 재면 옛 증거가 형식
+        # 위반으로 뒤집힌다(#125 로 v0 → v1 이 됐다).
+        for e in Draft202012Validator(validate_rqr.schema_for(cited)).iter_errors(cited):
             errs.append(f"{t}: 인용한 {prev['runId']} 가 스키마를 어긴다 — {e.json_path}: {e.message}")
         for e in validate_rqr.cross_field_errors(cited):
             errs.append(f"{t}: 인용한 {prev['runId']} 가 I3 규칙을 어긴다 — {e}")
@@ -493,6 +523,26 @@ def injections() -> list[tuple[str, str, callable]]:
     def gold_not_approved(c):
         c["gold"]["status"]["state"] = "DRAFT"
 
+    def unapproved_axis_baseline(c):
+        # 승인되지 않은 입력 축 위에서 기준선 자격을 주장하는 보고서(#125).
+        c["gold"]["probeAxis"]["status"]["state"] = "PROPOSED"
+        c["reports"]["code"]["baseline"]["eligibleAsBaseline"] = True
+
+    def axis_revision_drift(c):
+        # 프로브가 잰 입력과 gold 가 고정한 입력이 다른 실행.
+        c["gold"]["probeAxis"]["revision"] = "deadbeef" + "0" * 32
+
+    def unapproved_warning_dropped(c):
+        # 미승인 축인데 경고만 지운 보고서. 경고가 R12 의 자격 산식에 들어가므로(V10), 경고를
+        # 지우면 eligibleAsBaseline=false 의 **근거가 사라진 채** 형식은 멀쩡해진다.
+        for t in TRACKS:
+            c["reports"][t]["warnings"] = [w for w in c["reports"][t]["warnings"]
+                                           if w["code"] != "GOLD_UNAPPROVED"]
+
+    def approved_but_warned(c):
+        # 반대 방향: 승인된 축인데 경고가 남은 보고서. 승인된 실행의 기준선 자격을 임의로 낮춘다.
+        c["gold"]["probeAxis"]["status"]["state"] = "APPROVED"
+
     def phantom_locator(c):
         c["reports"]["db"]["exclusions"][0]["examples"][0] = \
             "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L9999 (VW_ORD_SUMMARY)"
@@ -573,9 +623,10 @@ def injections() -> list[tuple[str, str, callable]]:
         c["reports"]["code"]["baseline"]["previous"]["runId"] = "run-l0-code-3c27259-999"
 
     def forged_delta_baseline(c):
-        for d in c["reports"]["code"]["baseline"]["deltas"]:
-            if d["metric"] == "determinism":
-                d["previous"] = 0.9  # 개선폭을 작게 보이도록 기준선을 손봄
+        # 인용한 실행의 값과 다른 기준선을 적은 delta. **덧붙여서** 주입한다 — 현재 실행이 비교
+        # 불가(gold 개정)라 deltas 가 비어 있고, 있는 항목만 고치는 주입은 아무것도 바꾸지 못한다.
+        c["reports"]["code"]["baseline"]["deltas"].append(
+            {"metric": "determinism", "previous": 0.9, "current": 1.0, "delta": 0.1})
 
     def baseline_identity_lie(c):
         c["reports"]["code"]["baseline"]["previous"]["sourceRevision"] = "deadbee"
@@ -593,6 +644,10 @@ def injections() -> list[tuple[str, str, callable]]:
         ("V3", "수집이 원본을 변경", wrote_source),
         ("V4", "fixtureHash 가 gold 와 다름", fixture_hash_drift),
         ("V4", "미승인 gold 로 baseline 주장", gold_not_approved),
+        ("V4", "미승인 입력 축 위에서 baseline 자격 주장", unapproved_axis_baseline),
+        ("V4", "프로브가 잰 입력이 gold 입력 축과 다름", axis_revision_drift),
+        ("V4", "미승인 축인데 GOLD_UNAPPROVED 경고를 지움", unapproved_warning_dropped),
+        ("V4", "승인된 축인데 GOLD_UNAPPROVED 경고가 남음", approved_but_warned),
         ("V5", "좌표가 파일 범위를 벗어남", phantom_locator),
         ("V5", "좌표가 다른 행을 가리킴", wrong_line),
         ("V6", "미등록 픽스처", unregistered_fixture),

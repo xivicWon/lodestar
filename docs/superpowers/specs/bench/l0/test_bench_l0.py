@@ -223,23 +223,23 @@ def test_코드_트랙_분모는_수집기가_읽지_않은_파일이다():
     assert f["reported"] == 1 + sum(fx["actualReported"] for fx in p["failureFixtures"])
 
 
-@pytest.mark.parametrize("patch,expected", [
-    ({"parsed": 59, "producedFacts": 58, "failedFiles": ["a/Broken.kt"]},
-     {"output": 58, "failed": 1, "excluded": 0}),
-    ({"parsed": 57, "producedFacts": 57, "notCollectedCount": 2, "reportedNotCollected": 2},
-     {"output": 57, "failed": 0, "excluded": 2}),
-    ({"parsed": 55, "producedFacts": 54, "failedFiles": ["a/Broken.kt"],
-      "notCollectedCount": 4, "reportedNotCollected": 4},
-     {"output": 54, "failed": 1, "excluded": 4}),
-])
-def test_counts_는_인벤토리에서_항등으로_나온다(patch, expected):
+# 분해는 **범위 파일 수에 대한 상대값**으로 준다. 절대값(59)을 박아두면 입력 축을 재고정해
+# 범위 크기가 달라지는 순간(#125: 59 → 62) 산식과 무관한 이유로 실패한다.
+@pytest.mark.parametrize("failed_n,excluded_n", [(1, 0), (0, 2), (1, 4)])
+def test_counts_는_인벤토리에서_항등으로_나온다(failed_n, excluded_n):
     """input = output + failed + excluded (I3 R2).
 
     실패를 0 으로 박아두면 수집기가 **정직하게** 실패를 보고하는 순간 R2 가 깨져 보고서 생성이
     거부된다 — 정직한 수집이 형식 위반이 되는 자리는 계약이 아니라 산식의 결함이다.
     """
     p = copy.deepcopy(_probe("code"))
-    p["inventory"].update(patch)
+    n = p["inventory"]["input"]
+    failed = [f"a/Broken{i}.kt" for i in range(failed_n)]
+    expected = {"output": n - failed_n - excluded_n, "failed": failed_n, "excluded": excluded_n}
+    p["inventory"].update({"parsed": n - excluded_n, "producedFacts": n - failed_n - excluded_n,
+                           "failedFiles": failed, "failedFilesReported": failed,
+                           "notCollectedCount": excluded_n,
+                           "reportedNotCollected": excluded_n})
     f = build_report._code_facts(p)
     assert {k: f[k] for k in expected} == expected
     assert f["input"] == f["output"] + f["failed"] + f["excluded"]
@@ -247,10 +247,11 @@ def test_counts_는_인벤토리에서_항등으로_나온다(patch, expected):
 
 def test_사실을_못_낸_파일은_산출로_세지_않는다():
     p = copy.deepcopy(_probe("code"))
-    p["inventory"].update({"parsed": 59, "producedFacts": 58, "failedFiles": ["a/Broken.kt"],
+    n = p["inventory"]["input"]
+    p["inventory"].update({"parsed": n, "producedFacts": n - 1, "failedFiles": ["a/Broken.kt"],
                            "failedFilesReported": ["a/Broken.kt"]})
     f = build_report._code_facts(p)
-    assert f["output"] == 58 and f["failed"] == 1
+    assert f["output"] == n - 1 and f["failed"] == 1
     assert f["input"] == f["output"] + f["failed"] + f["excluded"]
 
 
@@ -258,7 +259,8 @@ def test_실패도_보고돼야_하는_대상이라_분모에_들어간다():
     """읽었는데 사실을 못 낸 파일은 사유와 함께 보고돼야 한다 — 분모에서 빠지면 침묵이 통과가 된다."""
     p = copy.deepcopy(_probe("code"))
     base = build_report._code_facts(p)["shouldReport"]
-    p["inventory"].update({"parsed": 59, "producedFacts": 58,
+    p["inventory"].update({"parsed": p["inventory"]["input"],
+                           "producedFacts": p["inventory"]["input"] - 1,
                            "failedFiles": ["a/Silent.kt"], "failedFilesReported": []})
     f = build_report._code_facts(p)
     assert f["shouldReport"] == base + 1
@@ -269,17 +271,19 @@ def test_실패도_보고돼야_하는_대상이라_분모에_들어간다():
 def test_파싱_실패가_있어도_보고서가_계약을_통과한다():
     """건수와 사례를 같은 집합에서 만들어야 R2·R4 가 서로를 확인한다."""
     p = copy.deepcopy(_probe("code"))
-    p["inventory"].update({"parsed": 59, "producedFacts": 58, "failedFiles": ["a/Broken.kt"],
+    n = p["inventory"]["input"]
+    p["inventory"].update({"parsed": n, "producedFacts": n - 1, "failedFiles": ["a/Broken.kt"],
                            "failedFilesReported": ["a/Broken.kt"]})
     rep = build_report.build_from("code", p)
-    assert rep["counts"] == {"input": 59, "output": 58, "failed": 1, "excluded": 0}
+    assert rep["counts"] == {"input": n, "output": n - 1, "failed": 1, "excluded": 0}
     assert len(rep["failures"]) == 1 and rep["failures"][0]["fixture"].endswith("a/Broken.kt")
     assert validate_rqr.cross_field_errors(rep) == []
 
 
 def test_사유_없는_실패는_사례에_그_사실로_적힌다():
     p = copy.deepcopy(_probe("code"))
-    p["inventory"].update({"parsed": 59, "producedFacts": 58, "failedFiles": ["a/Silent.kt"],
+    n = p["inventory"]["input"]
+    p["inventory"].update({"parsed": n, "producedFacts": n - 1, "failedFiles": ["a/Silent.kt"],
                            "failedFilesReported": []})
     rep = build_report.build_from("code", p)
     assert "사유를 남기지 않았다" in rep["failures"][0]["summary"]
@@ -434,3 +438,52 @@ def test_확인기_규칙과_케이스_총계가_manifest_와_같다():
     assert manifest["caseCount"] == len(verify_l0.injections())
     assert {c[0] for c in verify_l0.injections()} == set(verify_l0.RULES), \
         "결함 주입 케이스가 없는 규칙은 '적기만 하고 검사하지 않는' 규칙이다"
+
+
+# ---- 입력 축(probeAxis)의 승인 상태 ----------------------------------------------------
+# #125 로 gold 에 L0 **수집 입력 축**이 생겼다. 정답 축과 달리 이 축은 아직 승인되지 않았고,
+# 미승인 축 위에서 잰 수치는 다음 실행의 비교 기준선이 될 수 없다(I1 §7 · I2 §6). 그 규칙이
+# 실제로 강제되는지를 여기서 고정한다 — 문장으로만 있는 규칙은 규칙이 아니다.
+
+def test_미승인_입력축이면_기준선_자격이_없다():
+    """승인 여부는 gold 에서 읽는다 — 보고서에 손으로 적으면 승인 없이 기준선이 만들어진다."""
+    assert build_report.probe_axis()["status"]["state"] == "PROPOSED", \
+        "이 시점의 gold 는 재고정 제안 상태다(#125)"
+    assert build_report.axis_approved() is False
+    rep = build_report.build("code")
+    assert rep["baseline"]["eligibleAsBaseline"] is False
+    assert any(w["code"] == "BASELINE_NOT_COMPARABLE" for w in rep["warnings"])
+    # 자격을 false 로 두는 것만으로는 부족하다 — **그 이유가 보고서 안에** 있어야 한다(I3 R12).
+    # 경고 생성이 사라져도 통과하는 테스트는 그 불변식을 지키지 못한다.
+    unapproved = [w for w in rep["warnings"] if w["code"] == "GOLD_UNAPPROVED"]
+    assert len(unapproved) == 1, "미승인 축 위의 실행은 GOLD_UNAPPROVED 를 정확히 1건 실어야 한다"
+    assert unapproved[0]["trigger"] == "evl.conflictDetection.goldSetId"
+    assert validate_rqr.cross_field_errors(rep) == []
+
+
+def test_입력축이_승인되면_기준선_자격이_돌아온다(monkeypatch):
+    """자격을 막는 것은 '미승인' 이라는 사실 하나여야 한다 — 다른 이유로 영원히 false 면 규칙이 아니다."""
+    monkeypatch.setattr(build_report, "axis_approved", lambda: True)
+    rep = build_report.build("code")
+    assert rep["baseline"]["eligibleAsBaseline"] is True
+    # 반대 방향도 본다: 승인된 축에서 경고가 남아 있으면 R12 가 자격을 다시 false 로 요구해
+    # 보고서가 자기모순에 빠진다. 경고는 **승인 상태의 함수**여야 한다.
+    assert not [w for w in rep["warnings"] if w["code"] == "GOLD_UNAPPROVED"]
+    assert validate_rqr.cross_field_errors(rep) == []
+
+
+def test_확인기는_미승인_축의_기준선_주장을_문다(ctx):
+    bad = copy.deepcopy(ctx)
+    bad["gold"]["probeAxis"]["status"]["state"] = "PROPOSED"
+    for t in verify_l0.TRACKS:
+        bad["reports"][t]["baseline"]["eligibleAsBaseline"] = True
+    errs, seen = verify_l0.v4_gold_pinning(bad)
+    assert seen > 0 and any("승인되지 않은 입력 축" in e for e in errs), errs
+
+
+def test_확인기는_프로브가_잰_입력축을_gold_와_대조한다(ctx):
+    """보고서의 sourceRevision 이 gold 입력 축과 다르면 '무엇을 쟀는지' 가 증명되지 않는다."""
+    bad = copy.deepcopy(ctx)
+    bad["gold"]["probeAxis"]["revision"] = "deadbeef" + "0" * 32
+    errs, _ = verify_l0.v4_gold_pinning(bad)
+    assert any("입력 축" in e for e in errs), errs

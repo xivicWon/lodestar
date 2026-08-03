@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import pathlib
 import re
@@ -23,24 +24,24 @@ GOLD = REPO / "docs/superpowers/specs/gold"
 SCHEMAS = REPO / "docs/superpowers/specs/schemas"
 
 RUNS = {
-    "db": HERE / "runs/run-l0-db-3c27259-004",
-    "code": HERE / "runs/run-l0-code-3c27259-003",
+    "db": HERE / "runs/run-l0-db-aad4382-001",
+    "code": HERE / "runs/run-l0-code-aad4382-001",
 }
 PROBE_NAME = {"db": "probe-db.json", "code": "probe-code.json"}
-RUN_ID = {"db": "run-l0-db-3c27259-004", "code": "run-l0-code-3c27259-003"}
+RUN_ID = {"db": "run-l0-db-aad4382-001", "code": "run-l0-code-aad4382-001"}
 # 이전 실행 — 있으면 그 보고서를 읽어 비교한다. 수치를 여기 적지 않는다: 손으로 옮긴 기준선은
 # 원본과 어긋나도 아무도 모른다(V2 가 보고서를 프로브+이 상수들에서 다시 만들어 대조한다).
 PREVIOUS = {
-    "db": HERE / "runs/run-l0-db-3c27259-003",
-    "code": HERE / "runs/run-l0-code-3c27259-002",
+    "db": HERE / "runs/run-l0-db-3c27259-004",
+    "code": HERE / "runs/run-l0-code-3c27259-003",
 }
 # 실측 세션의 시각 (RFC 3339 축소 프로파일). 보고서를 다시 만들어도 흔들리지 않도록 못박는다 —
 # 사후 수정은 새 runId 로 남긴다(I3 §5.5).
 TIMES = {
     # 실측이 끝난 시각과 그 실행의 소요다 — 프로브가 시각을 산출물에 넣으면 매 실행이 표류하므로
     # 여기 못박되, 지어내지 않는다.
-    "db": ("2026-07-31T08:05:00Z", "2026-07-31T08:05:12Z"),
-    "code": ("2026-07-30T13:40:00Z", "2026-07-30T13:40:06Z"),
+    "db": ("2026-07-31T08:46:00Z", "2026-07-31T08:46:11Z"),
+    "code": ("2026-07-31T08:41:00Z", "2026-07-31T08:41:07Z"),
 }
 # 이번 실행에서 **수집기의 무엇이** 달라졌는가. 트랙마다 다르므로 한 문장을 공유하지 않는다 —
 # 공유하면 db 재측정에 code 트랙의 사유가 붙어 보고서가 근거를 잘못 가리킨다.
@@ -48,6 +49,13 @@ COLLECTOR_CHANGE = {
     "db": "#115 마스킹 경계 문자 처리 통합 수정(\\s·CRLF·백슬래시)",
     "code": "#112 결정성 수정",
 }
+# 이번 실행이 **왜 새 runId 인가**. 수집기가 아니라 gold 쪽이 움직인 재측정도 있다 —
+# 사유를 트랙 문장에 섞으면 "수집기가 바뀌어서 다시 쟀다" 는 거짓 서술이 남는다(#125).
+REPIN_REASON = (
+    "gold 입력 축 재고정(#125) — L0 프로브의 입력 revision 을 정답 축에서 분리해 새로 고정했고, "
+    "그 개정으로 goldSetId 가 바뀌어 이전 gold 로 채점된 실행은 비교 기준선에서 제외된다"
+    "(I1 §7.4 · I2 §10.4)"
+)
 # 비교 가능성은 신원이 같을 때만 성립한다(I3 R17).
 IDENTITY = ("projectId", "layer", "track", "sourceRevision", "fixtureHash")
 COMPARED_METRICS = ("determinism", "provenanceCompleteness", "scopeCoverage")
@@ -67,6 +75,32 @@ def measurement(status: str, value, note: str) -> dict:
 
 def probe(track: str) -> dict:
     return json.loads((RUNS[track] / PROBE_NAME[track]).read_text())
+
+
+@functools.lru_cache(maxsize=1)
+def gold_manifest() -> dict:
+    """gold 정본을 읽는 **단 하나의 지점**. 보고서 한 건을 만드는 동안 승인 상태가 바뀌면
+    같은 보고서 안에서 경고와 기준선 자격이 갈릴 수 있으므로, 한 프로세스 안에서는 한 번만 읽는다."""
+    return json.loads((GOLD / "manifest.json").read_text())
+
+
+def probe_axis() -> dict:
+    """gold 의 L0 **수집 입력 축**(#125). 정답 축(sourceRevision)과 승인이 따로 간다."""
+    return gold_manifest()["probeAxis"]
+
+
+def axis_approved() -> bool:
+    """이 실행을 채점한 gold 가 **양쪽 축 모두** 승인됐는가 — gold 에서 읽는다.
+
+    정답 축(`status`)만 보면 입력 축 재고정이 승인 없이 기준선을 만들고, 입력 축만 보면 그 반대다.
+
+    보고서에 손으로 적으면 승인 없이 기준선이 만들어지고, 그 뒤의 모든 비교가 승인되지 않은
+    입력 신원 위에 얹힌다(I1 §7). 승인이 나면 이 값이 바뀌면서 보고서가 프로브에서 다시
+    만들어지지 않게 되므로(V2), 승인된 수치는 **새 runId** 로 남게 된다(I3 §5.5).
+    """
+    gold = gold_manifest()
+    return (gold["status"]["state"] == "APPROVED"
+            and gold["probeAxis"]["status"]["state"] == "APPROVED")
 
 
 def _db_facts(p: dict) -> dict:
@@ -259,11 +293,19 @@ def baseline_block(track: str, run: dict, schema_version: str, metrics: dict,
         prev["run"]["reportKind"] == "BASELINE" and \
         prev["baseline"]["eligibleAsBaseline"]
     if not same:
+        # 어느 필드가 갈렸는지 **계산해서** 적는다. "신원이 다르다" 만 적으면 gold 개정으로
+        # 비교가 끊긴 것과 트랙을 잘못 인용한 것이 같은 문장이 된다.
+        differing = [k for k in IDENTITY if prev["run"][k] != run[k]]
+        axis = probe_axis()
         return {
             "previous": ident,
             "comparable": False,
-            "reason": f"{ident['runId']} 과 신원(project·layer·track·revision·fixture·schema) 또는 "
-                      "기준선 자격이 달라 직접 비교하지 않는다(I1 §7.4 · I3 R12).",
+            "reason": (
+                f"{ident['runId']} 과 신원이 다르다(다른 필드: {', '.join(differing) or '없음'}) — "
+                f"gold 입력 축 재고정(#125: probeAxis {axis['revision'][:7]}, "
+                f"{axis['status']['state']})으로 이전 gold 로 채점된 실행은 비교 기준선에서 제외된다"
+                "(I1 §7.4 · I2 §10.4). 이전 실행은 덮어쓰지 않고 여기서 인용만 한다(I3 §5.5)."
+            ),
             "eligibleAsBaseline": eligible,
             "deltas": [],
         }
@@ -426,6 +468,16 @@ def build_from(track: str, p: dict) -> dict:
         }
         for g in gs if g["status"] == "NOT_MEASURED"
     ]
+    # 승인 전 gold 위의 실행이라는 사실을 보고서 안에 남긴다(I3 R12 · #125). 남기지 않으면 읽는
+    # 쪽이 gold 를 따로 조회해야 하고, 조회하지 않은 인용이 곧 승인 우회다.
+    if not axis_approved():
+        axis = probe_axis()
+        warnings.append({
+            "code": "GOLD_UNAPPROVED",
+            "message": f"gold 입력 축({axis['revision'][:7]})이 {axis['status']['state']} 상태다 — "
+                       "이 수치는 다음 실행의 비교 기준선이 될 수 없다(I1 §7 · I2 §6)",
+            "trigger": "evl.conflictDetection.goldSetId",
+        })
 
     if track == "db":
         collector_version = p["collector"]["citedVersion"]
@@ -443,29 +495,43 @@ def build_from(track: str, p: dict) -> dict:
             f"{f['reported']}/{f['shouldReport']} 이며, 실패 픽스처의 기대 보고 항목은 사유코드 일치와 좌표 "
             "겹침으로 귀속해 셌다 — 건수만 맞추거나 그럴듯한 좌표를 적어 통과하는 경로를 막는다. 조용한 부분 "
             f"복구는 {f['silentPartialRecovery']}건이다(TB_BAD_MIDDLE 은 부분 복구를 버리고 실패로 보고한다). "
-            f"입력·fixture 는 {PREVIOUS['db'].name} 과 같은 고정값이고 달라진 것은 수집기뿐이라 두 실행은 직접 "
-            f"비교된다. {remaining}. 보안 게이트는 수집 경로에 마스킹 단계가 생긴 뒤에도 FAIL 로 읽는다 — "
+            f"새 runId 인 이유는 {REPIN_REASON} 이다 — 수집기는 {PREVIOUS['db'].name} 과 같고, 입력 "
+            f"파일(legacy-sample.sql)도 두 축에서 바이트가 같다(gold probeAxis.sameAsAnswerAxis=true). "
+            "그래서 수치는 그대로지만 채점 신원이 달라 비교 기준선으로는 인용만 한다(I1 §7.4). "
+            f"{remaining}. 보안 게이트는 수집 경로에 마스킹 단계가 생긴 뒤에도 FAIL 로 읽는다 — "
             "이 프로브가 재는 것은 샘플 적재 경로를 **마스킹 없이**(IngestPolicy(maskRowData=false)) 돌린 "
             "기준선이기 때문이다. 마스킹 적용 상태의 게이트 회복은 I2 Gold Set 재고정(승인 사항) 뒤에 "
             "새 runId 로 남긴다 — 승인 없이 판정을 올리지 않는다(I1 §3.2)."
         )
     else:
         collector_version = p["collector"]["citedVersion"]
+        # db 트랙과 같은 규칙 — 남은 실패를 손으로 적지 않는다. #113(메타데이터 5/5)으로 닫힌 게이트를
+        # "아직 실패" 라고 말하던 자리가 여기였다.
+        failed_gates = [GATE_FOLLOWUP.get(g["id"], g["id"]) for g in (gs or []) if g["status"] == "FAIL"]
+        remaining = f"남은 실패는 {' · '.join(failed_gates)} 다" if failed_gates \
+            else "무조건 게이트에 남은 실패는 없다"
+        axis = probe_axis()
         notes = (
-            "L0 코드 트랙 재실측(#114 — 오류 가시성 수정 후. 결정성은 #112 에서 이미 해소됐다). 프로브 산출물: "
-            "probe-code.json (probe_code.py --check 로 표류 검사 + 결정성 1.0·시드 무관 확인). determinism 은 "
-            "기본 인터프리터 설정 3회 실행의 최대 동일 그룹/3 이며, PYTHONHASHSEED 를 바꾼 실행까지 산출물이 "
-            "같다는 통제 실험이 프로브에 함께 남아 있다(determinismControl.seedIndependent). 수집 범위는 고정 "
-            "revision 의 blob 에서 재구성해 측정한다 — 이 수정이 backend/src/main/kotlin 을 함께 고치므로, 작업 "
-            "트리를 입력으로 삼는 동안에는 '고정 revision 을 쟀다' 가 성립하지 않는다. 보고율 "
+            f"L0 코드 트랙 재실측 — {REPIN_REASON}. 이 실행이 처음으로 **현재 수집기**"
+            f"(#112 결정성 · #114 오류 가시성 · #115 마스킹이 모두 들어간 판)를 고정 입력 위에서 잰다. "
+            f"입력은 gold 입력 축 {axis['revision'][:7]}({axis['status']['state']})의 blob 에서 재구성한 "
+            f"{f['input']}개 파일이며, 정답 축(3c27259)은 승인된 채로 남는다 — 두 축을 함께 옮기면 "
+            "l1/code.json 의 닫힌 범위가 무너진다(I2 §6). 프로브 산출물: probe-code.json "
+            "(probe_code.py --check 로 표류 검사 + 결정성 1.0·시드 무관 확인). determinism 은 기본 "
+            "인터프리터 설정 3회 실행의 최대 동일 그룹/3 이며, PYTHONHASHSEED 를 바꾼 실행까지 산출물이 "
+            "같다는 통제 실험이 프로브에 함께 남아 있다(determinismControl.seedIndependent). 보고율 "
             f"{f['reported']}/{f['shouldReport']} 의 분모는 확장자 제외 {f['excluded']}건과 실패 픽스처 3건의 "
             "기대 보고 항목이고, 산출물은 파일마다 status(parsed|partial|failed)를 실어 파싱 오류 구간과 겹치는 "
-            f"선언을 사실로 내지 않는다(완전 성공으로 표시된 실패 픽스처 {f['markedFullySucceeded']}건). 남은 "
-            "실패는 메타데이터(L0-fix-2)와 보안(L0-fix-5)이라 판정은 여전히 BLOCKED(H2)다. precision/recall 은 "
-            "L1(#89)의 몫이라 NOT_APPLICABLE 이다."
+            f"선언을 사실로 내지 않는다(완전 성공으로 표시된 실패 픽스처 {f['markedFullySucceeded']}건). "
+            f"{remaining}. 보안 게이트는 수집 경로에 마스킹 단계가 생긴 뒤에도(#115 — 프로브의 "
+            "maskingCapability.exists=true) FAIL 로 읽는다: 코퍼스 양성 28건이 전부 .sql/.properties/.log 라 "
+            "코드 수집기가 읽는 확장자 안에 없고(walked=0), 마스킹 동작 자체를 이 gold 로는 잴 수 없다 — "
+            "미측정을 통과로 적지 않는다. precision/recall 은 L1(#89)의 몫이라 NOT_APPLICABLE 이다."
         )
 
-    schema_version = "run-quality-report/v0"
+    # I3 §7.3 — 통제어휘 변경·R규칙 의미 변경은 버전을 올린다. #125 가 GOLD_UNAPPROVED 와
+    # R12 의 승인 항을 더했으므로 이 실행부터 v1 이다. 이전 실행(v0)과는 직접 비교하지 않는다.
+    schema_version = "run-quality-report/v1"
     versions = {
         "collector": {"status": "PINNED", "value": collector_version},
         "extractor": {"status": "NOT_APPLICABLE", "value": None},
@@ -501,8 +567,11 @@ def build_from(track: str, p: dict) -> dict:
             "산출물에서 소스 단위로 조회 가능한 비율"),
     }
     # R12 — 재현할 수 없는 실행은 기준선이 아니다.
+    # 여기에 **입력 축의 승인**이 하나 더 붙는다(#125): 재현할 수 있어도 그 입력 신원이
+    # 승인되지 않았으면 기준선이 아니다(I1 §7 · I2 §6). 승인 상태는 gold 에서 읽는다.
     eligible = (run_obj["fixtureHash"] != "UNPINNED" and run_obj["reportKind"] == "BASELINE"
-                and not [v for v in versions.values() if v["status"] == "UNPINNED"])
+                and not [v for v in versions.values() if v["status"] == "UNPINNED"]
+                and axis_approved())
     bl = baseline_block(track, run_obj, schema_version, metrics, eligible, gs)
     if not bl["comparable"]:
         # 경고 문구는 실제 사유에서 나와야 한다 — '비교 대상이 없다' 와 '비교 대상은 있으나 신원이
@@ -559,7 +628,7 @@ def validate(report: dict) -> list[str]:
     from jsonschema import Draft202012Validator  # noqa: E402
     import validate_rqr  # noqa: E402
 
-    schema = json.loads((SCHEMAS / "run-quality-report.v0.schema.json").read_text())
+    schema = validate_rqr.schema_for(report)
     errs = [f"[schema] {e.json_path}: {e.message}"
             for e in Draft202012Validator(schema).iter_errors(report)]
     errs += [f"[R] {e}" for e in validate_rqr.cross_field_errors(report)]

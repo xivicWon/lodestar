@@ -1,0 +1,278 @@
+{
+  "probeVersion" : "l0-db-probe/v3",
+  "layer" : "L0",
+  "track" : "db",
+  "projectId" : "lodestar",
+  "sourceRevision" : "aad4382cd3cbbf6ddc24e2a8587eae1a8c9289f0",
+  "goldSetId" : "gold-set/v0+9fc75363c803",
+  "fixtureHash" : "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
+  "collector" : {
+    "impl" : "DdlParser + DdlSource (DDL 텍스트 경로) · SampleLegacyDb + MetadataService (샘플 적재 경로)",
+    "declaredVersion" : "none",
+    "citedVersion" : "DdlParser+SampleLegacyDb@sha256:d63d69431bc30f73b35aca959b261c4768decc38ba74e698c4eac29da0404c20",
+    "sourceHash" : "sha256:d63d69431bc30f73b35aca959b261c4768decc38ba74e698c4eac29da0404c20",
+    "sourceFiles" : [ "backend/src/main/kotlin/com/ontostudio/rdb/DdlParser.kt", "backend/src/main/kotlin/com/ontostudio/rdb/SchemaModel.kt", "backend/src/main/kotlin/com/ontostudio/rdb/MetadataService.kt", "backend/src/main/kotlin/com/ontostudio/rdb/SampleLegacyDb.kt" ],
+    "note" : "수집기 자체는 여전히 버전을 선언하지 않는다(L0-fix-2 — #114 범위 밖). 재측정 시점의 커밋이 아직 없으므로 수집기 신원은 구성 파일 해시로 고정한다 — 값은 재계산으로 검증된다"
+  },
+  "input" : {
+    "sourceId" : "db:legacy-sample",
+    "axis" : "probeAxis",
+    "axisRevision" : "aad4382cd3cbbf6ddc24e2a8587eae1a8c9289f0",
+    "path" : "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql",
+    "contentHash" : "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+    "pinnedContentHash" : "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+    "hashMatchesPinned" : true,
+    "lines" : 262,
+    "pinnedLines" : 262
+  },
+  "statementInventory" : {
+    "rule" : "M-DB-1",
+    "total" : 36,
+    "byKind" : {
+      "CREATE_TABLE" : 27,
+      "CREATE_VIEW" : 1,
+      "INSERT" : 8
+    },
+    "collectorAccountedTotal" : 36,
+    "accountingMatchesInventory" : true
+  },
+  "acquisition" : {
+    "acquired" : 27,
+    "failed" : 0,
+    "excluded" : 9,
+    "reported" : 9,
+    "reportableByInventory" : 9,
+    "reportedByInventory" : 9,
+    "unreportedByInventory" : [ ],
+    "partial" : 0,
+    "missing" : [ ],
+    "exclusions" : [ {
+      "reason" : "UNSUPPORTED_STATEMENT: 수집기가 처리하지 않는 구문이다 — DdlParser 는 CREATE TABLE 만 사실로 산출한다",
+      "count" : 1,
+      "examples" : [ "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L223 (CREATE VIEW VW_ORD_SUMMARY)" ]
+    }, {
+      "reason" : "OUT_OF_SCOPE_BY_DESIGN: 행 데이터는 L0 최소저장 범위 밖이다(구조·메타데이터만 보관) — 정당한 제외이지만 분모에 남긴다",
+      "count" : 8,
+      "examples" : [ "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L229 (INSERT INTO TB_CUST_MST)", "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L234 (INSERT INTO TB_VNDR_MST)", "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L238 (INSERT INTO TB_ITEM_MST)", "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L243 (INSERT INTO TB_ORD_HD)", "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L247 (INSERT INTO TB_ORD_DTL)", "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L252 (INSERT INTO TB_EMP_MST)", "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L256 (INSERT INTO TB_DEPT_MST)", "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L260 (INSERT INTO TB_ACCT_CD)" ]
+    } ],
+    "failures" : [ ]
+  },
+  "determinism" : {
+    "runs" : 3,
+    "artifactHashes" : [ "sha256:b19e15f98eef00898af40ecb5cf6763e8913da324e13353b4c4baf2219b85c3a", "sha256:b19e15f98eef00898af40ecb5cf6763e8913da324e13353b4c4baf2219b85c3a", "sha256:b19e15f98eef00898af40ecb5cf6763e8913da324e13353b4c4baf2219b85c3a" ],
+    "largestIdenticalGroup" : 3,
+    "rate" : 1.0
+  },
+  "provenance" : {
+    "probe" : "#113 전용 측정(metadata/completeness-db.json)의 completeness 를 인용한다 — 타입 그래프의 자리와 수집 경로별 실제 값 중 **최소값**이라 자리만 있고 값이 없는 통과를 막는다",
+    "citedEvidence" : "docs/superpowers/specs/bench/l0/metadata/completeness-db.json",
+    "citedMeasurementVersion" : "l0-metadata-completeness/v1",
+    "required" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
+    "present" : 5,
+    "rate" : 1.0,
+    "typeGraphPresent" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ]
+  },
+  "reporting" : {
+    "probe" : "산출물 타입에 실패·제외를 사유·좌표와 함께 실을 자리가 있는가",
+    "channelsFound" : [ "issue", "partial" ],
+    "channelExists" : true,
+    "perItemReasons" : true,
+    "channelMembers" : "SchemaModel.issues · SchemaModel.partials (CollectionIssue: kind · reasonCode · reason · locator · target)",
+    "note" : "#114 로 DdlParser.parse 의 반환형에 제외·실패·부분수집 채널이 생겼다 — 보고율은 구조가 아니라 실제 귀속으로 측정된다(M-DB-5)"
+  },
+  "failureFixtures" : [ {
+    "id" : "F.DB.BROKEN_SYNTAX",
+    "kind" : "파싱 실패",
+    "path" : "docs/superpowers/specs/gold/fixtures/failure/db-broken-syntax.sql",
+    "contentHash" : "sha256:02d70b3b484efa646d87ee5d21241d65c04710ad4ad60e012bdb83e5cd3c6141",
+    "hashMatchesPinned" : true,
+    "expectedExtracted" : [ ],
+    "actualExtracted" : [ ],
+    "unexpectedExtracted" : [ ],
+    "missingExtracted" : [ ],
+    "expectedReported" : 1,
+    "actualReported" : 1,
+    "reportAttribution" : {
+      "expected" : [ {
+        "kind" : "PARSE_ERROR",
+        "target" : "CREATE TABLE TB_BROKEN",
+        "locator" : "#L3-L7",
+        "reported" : true,
+        "observedKind" : "FAILED",
+        "observedLocator" : "#L3-L7",
+        "observedTarget" : "CREATE TABLE TB_BROKEN",
+        "reasonPresent" : true,
+        "targetMatches" : true
+      } ],
+      "expectedReported" : 1,
+      "actualReported" : 1,
+      "unattributedReports" : [ ]
+    },
+    "markedAsPartial" : false,
+    "silentSkipIsFailure" : true,
+    "verdict" : "OK"
+  }, {
+    "id" : "F.DB.UNSUPPORTED_TRIGGER",
+    "kind" : "미지원 문법",
+    "path" : "docs/superpowers/specs/gold/fixtures/failure/db-unsupported-trigger.sql",
+    "contentHash" : "sha256:3af6b2868f273f88ecc024aacd58fc3b653c9f133e11aee8b60e5846317e9b38",
+    "hashMatchesPinned" : true,
+    "expectedExtracted" : [ ],
+    "actualExtracted" : [ ],
+    "unexpectedExtracted" : [ ],
+    "missingExtracted" : [ ],
+    "expectedReported" : 2,
+    "actualReported" : 2,
+    "reportAttribution" : {
+      "expected" : [ {
+        "kind" : "UNSUPPORTED_STATEMENT",
+        "target" : "CREATE TRIGGER TRG_ORD_AUDIT",
+        "locator" : "#L6-L9",
+        "reported" : true,
+        "observedKind" : "SKIPPED",
+        "observedLocator" : "#L6-L9",
+        "observedTarget" : "CREATE TRIGGER TRG_ORD_AUDIT",
+        "reasonPresent" : true,
+        "targetMatches" : true
+      }, {
+        "kind" : "UNSUPPORTED_STATEMENT",
+        "target" : "CREATE OR REPLACE FUNCTION FN_ORD_AUDIT",
+        "locator" : "#L11-L17",
+        "reported" : true,
+        "observedKind" : "SKIPPED",
+        "observedLocator" : "#L11-L17",
+        "observedTarget" : "CREATE OR REPLACE FUNCTION FN_ORD_AUDIT",
+        "reasonPresent" : true,
+        "targetMatches" : true
+      } ],
+      "expectedReported" : 2,
+      "actualReported" : 2,
+      "unattributedReports" : [ ]
+    },
+    "markedAsPartial" : false,
+    "silentSkipIsFailure" : true,
+    "verdict" : "OK"
+  }, {
+    "id" : "F.DB.PARTIAL_EXTRACT",
+    "kind" : "부분 추출",
+    "path" : "docs/superpowers/specs/gold/fixtures/failure/db-partial-extract.sql",
+    "contentHash" : "sha256:e5847ac537d55cd16e1dacce8503f31f1ade7a505fea26cad243d3926a229d80",
+    "hashMatchesPinned" : true,
+    "expectedExtracted" : [ "TB_OK_ONE", "TB_OK_TWO" ],
+    "actualExtracted" : [ "TB_OK_ONE", "TB_OK_TWO" ],
+    "unexpectedExtracted" : [ ],
+    "missingExtracted" : [ ],
+    "expectedReported" : 2,
+    "actualReported" : 2,
+    "reportAttribution" : {
+      "expected" : [ {
+        "kind" : "PARSE_ERROR",
+        "target" : "CREATE TABLE TB_BAD_MIDDLE",
+        "locator" : "#L11-L14",
+        "reported" : true,
+        "observedKind" : "FAILED",
+        "observedLocator" : "#L11-L14",
+        "observedTarget" : "CREATE TABLE TB_BAD_MIDDLE",
+        "reasonPresent" : true,
+        "targetMatches" : true
+      }, {
+        "kind" : "UNSUPPORTED_STATEMENT",
+        "target" : "CREATE INDEX IX_OK_ONE_NM",
+        "locator" : "#L16",
+        "reported" : true,
+        "observedKind" : "SKIPPED",
+        "observedLocator" : "#L16",
+        "observedTarget" : "CREATE INDEX IX_OK_ONE_NM",
+        "reasonPresent" : true,
+        "targetMatches" : true
+      } ],
+      "expectedReported" : 2,
+      "actualReported" : 2,
+      "unattributedReports" : [ ]
+    },
+    "markedAsPartial" : true,
+    "silentSkipIsFailure" : true,
+    "verdict" : "OK"
+  } ],
+  "pii" : {
+    "corpus" : "pii:corpus.sql",
+    "corpusPath" : "docs/superpowers/specs/gold/fixtures/pii/corpus.sql",
+    "positives" : 14,
+    "masked" : 0,
+    "unmaskedInArtifact" : [ ],
+    "notCollected" : [ "PII.POS.SQL.L18.0", "PII.POS.SQL.L18.1", "PII.POS.SQL.L18.2", "PII.POS.SQL.L18.3", "PII.POS.SQL.L18.4", "PII.POS.SQL.L18.5", "PII.POS.SQL.L18.6", "PII.POS.SQL.L20.7", "PII.POS.SQL.L20.8", "PII.POS.SQL.L20.9", "PII.POS.SQL.L20.10", "PII.POS.SQL.L20.11", "PII.POS.SQL.L20.12", "PII.POS.SQL.L20.13" ],
+    "note" : "'미마스킹 0건' 이 곧 마스킹 성공이 아니다 — 양성이 산출물 표면에 도달하지 못한 (not_collected) 결과이며 마스킹 단계는 존재하지 않는다(L0-fix-5 — #114 범위 밖)"
+  },
+  "ingestStore" : {
+    "probe" : "SampleLegacyDb.open(IngestPolicy(maskRowData = false)) → MetadataService.extract(conn) + 저장소 질의",
+    "ingestPolicy" : "IngestPolicy(maskRowData = false) — 마스킹 opt-out 기준선. 기본값(마스킹 켜짐)의 관측은 DbIngestMaskingTest 와 bench/masking 증거가 담당한다",
+    "statementsExecuted" : 36,
+    "metadataService" : {
+      "probe" : "MetadataService.extract(conn) — DatabaseMetaData 경로를 3회 실행",
+      "acquiredTables" : 27,
+      "sameTableSetAsDdlPath" : true,
+      "viewAcquired" : false,
+      "viewReported" : true,
+      "reportedIssues" : [ {
+        "kind" : "SKIPPED",
+        "reasonCode" : "UNSUPPORTED_OBJECT_TYPE",
+        "locator" : "jdbc://LEGACY_<nanoTime>/PUBLIC/VW_ORD_SUMMARY",
+        "target" : "VW_ORD_SUMMARY",
+        "reason" : "getTables 의 타입 필터가 TABLE 만 수집한다 — VIEW 은 수집기가 다루지 않는 객체 타입이다"
+      } ],
+      "viewExclusionNote" : "getTables(..., arrayOf(\"TABLE\")) 가 뷰를 타입 필터로 걸러낸다 — #114 이후 그 제외는 UNSUPPORTED_OBJECT_TYPE 사유로 반환형에 남는다",
+      "foreignKeys" : 1,
+      "runs" : 3,
+      "artifactHashes" : [ "sha256:4d97295c02f95118ee3ca9147ac67b19018cbb02d124c64dae11c6ea97a68641", "sha256:4d97295c02f95118ee3ca9147ac67b19018cbb02d124c64dae11c6ea97a68641", "sha256:4d97295c02f95118ee3ca9147ac67b19018cbb02d124c64dae11c6ea97a68641" ],
+      "largestIdenticalGroup" : 3,
+      "determinismRate" : 1.0,
+      "provenanceRate" : 1.0,
+      "note" : "DDL 텍스트 경로와 같은 SchemaModel 로 수렴하므로 provenance·보고 채널 결과도 같다 — 두 경로의 결함도, 이번 수정도 산출물 타입에서 공유된다",
+      "storedRowValuesLeakedIntoArtifact" : 0
+    },
+    "piiShapedColumns" : [ {
+      "table" : "TB_CUST_MST",
+      "column" : "CUST_NM",
+      "class" : "ORG_NAME",
+      "retrievableValues" : 3,
+      "masked" : false,
+      "locator" : "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L229-L262"
+    }, {
+      "table" : "TB_CUST_MST",
+      "column" : "RPRS_NM",
+      "class" : "NAME",
+      "retrievableValues" : 3,
+      "masked" : false,
+      "locator" : "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L229-L262"
+    }, {
+      "table" : "TB_CUST_MST",
+      "column" : "TEL_NO",
+      "class" : "TEL",
+      "retrievableValues" : 3,
+      "masked" : false,
+      "locator" : "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L229-L262"
+    }, {
+      "table" : "TB_CUST_MST",
+      "column" : "BIZ_NO",
+      "class" : "BIZ_NO",
+      "retrievableValues" : 3,
+      "masked" : false,
+      "locator" : "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L229-L262"
+    }, {
+      "table" : "TB_EMP_MST",
+      "column" : "EMP_NM",
+      "class" : "NAME",
+      "retrievableValues" : 2,
+      "masked" : false,
+      "locator" : "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql#L229-L262"
+    } ],
+    "retrievableUnmaskedValues" : 14,
+    "note" : "적재는 CREATE 뿐 아니라 INSERT 까지 전 문장을 실행한다(SampleLegacyDb.kt#L20-L28). 행 데이터가 마스킹 없이 저장소에 남으므로, 값에 PII 가 있는 소스는 그대로 노출된다. 값은 여기 적지 않고 좌표만 남긴다."
+  },
+  "readOnly" : {
+    "contentHashBefore" : "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+    "contentHashAfter" : "sha256:b8f59918543f335333f66546e137c777901aeac8141e41fd89ded1e3fe390e94",
+    "lastModifiedUnchanged" : true,
+    "unchanged" : true
+  }
+}

@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
-"""#114 L0 Source — 코드 트랙 프로브 **v2** (오류 가시성 수정 후 재측정).
+"""#125 L0 Source — 코드 트랙 프로브 **v3** (gold 입력 축 재고정 후 재측정).
 
-기능이 아니라 **계측기**다. 고정 revision(3c27259)의 `backend/src/main/kotlin` 을 입력으로 실제
+기능이 아니라 **계측기**다. gold 가 고정한 **입력 축**(`probeAxis.revision`)의 `backend/src/main/kotlin` 을 입력으로 실제
 수집기(`lodestar_codegraph`)를 돌려 I1 §4.1 의 L0 무조건 게이트 4종을 측정하고, 결과를 결정적
 JSON 프로브 산출물로 남긴다. 보고서(Run Quality Report v0)는 이 산출물에서만 만든다.
 
     python3 docs/superpowers/specs/bench/l0/probe_code.py            # 측정 + build/l0/probe-code.json
     python3 docs/superpowers/specs/bench/l0/probe_code.py --check    # 커밋된 산출물과 대조
 
-**이전 실행과의 차이**: run-002(#112)까지는 제외·실패를 사유와 함께 실을 자리가 없던 수집기를 쟀고,
-입력을 **작업 트리**에서 읽었다. #114 로 산출물에 `meta.issues` 채널이 생겼으므로 "보고율은 구조적으로 0"
-이라는 산식이 더 이상 성립하지 않는다. 지난 실행은 비교 기준선으로 그대로 두고(I3 §5.5) 새 runId 로
-재측정한다. 또한 수집 범위를 **고정 revision 의 blob 에서 재구성**해 측정한다 — 이 수정이
-`backend/src/main/kotlin` 을 함께 고치므로, 작업 트리를 입력으로 삼는 동안에는 "고정 revision 을 쟀다" 가
-성립하지 않는다.
+**이전 실행과의 차이**: run-003(#114)까지는 입력을 gold 의 **정답 축**(3c27259)에서 재구성했다. 그런데
+L0-fix(#113·#114·#115)가 그 입력 디렉토리 자체를 고치므로, 정답 축에 머무는 한 이 프로브는 **현재
+수집기의 측정을 남길 자리가 없었다**(`--check` 가 상시 실패). #125 로 gold 에 L0 수집 입력 축이 생겨
+입력을 aad4382 로 다시 고정했고, 이 실행은 그 축의 첫 측정이다. 정답 축은 3c27259 에 승인된 채로
+남는다 — 두 축을 함께 옮기면 `l1/code.json` 의 닫힌 범위가 무너진다(I2 §6).
+
+입력 축은 아직 **승인되지 않았다**(PROPOSED). 그래서 이 실행의 보고서는 `eligibleAsBaseline=false`
+로 남고, 지난 실행은 덮어쓰지 않고 `baseline.previous` 로 인용만 한다(I3 §5.5).
 
 측정 규칙과 판정: docs/superpowers/specs/2026-07-30-m0-l0-source-validation.md
 """
@@ -34,11 +36,10 @@ import tomllib
 HERE = pathlib.Path(__file__).resolve().parent
 REPO = HERE.parents[4]
 GOLD = REPO / "docs/superpowers/specs/gold"
-RUN_DIR = HERE / "runs/run-l0-code-3c27259-003"
+RUN_DIR = HERE / "runs/run-l0-code-aad4382-001"
 COMMITTED = RUN_DIR / "probe-code.json"
 OUT = REPO / "build/l0/probe-code.json"
 
-SCOPE_ROOT = "backend/src/main/kotlin"
 CG_ROOT = REPO / "codegraph"
 
 
@@ -77,6 +78,23 @@ def sha256_file(p: pathlib.Path) -> str:
 
 def gold(name: str) -> dict:
     return json.loads((GOLD / name).read_text())
+
+
+def scope_root(manifest: dict | None = None, track: str = "code") -> str:
+    """수집 범위 루트는 **gold 가 정한다**(`probeAxis.scopeRoots`).
+
+    여기 상수로 두면 gold 의 범위 선언과 프로브가 실제로 읽는 범위가 갈릴 수 있고, 그때 G5.10 은
+    gold 안에서만 정합해 통과한다 — 두 곳이 같은 값을 우연히 들고 있는 동안에는 아무도 모른다.
+    범위는 입력 신원의 일부이므로 고정된 쪽에서 읽어 오는 것이 맞다.
+    """
+    m = manifest if manifest is not None else gold("manifest.json")
+    for r in m["probeAxis"]["scopeRoots"]:
+        if r["track"] == track:
+            return r["root"]
+    raise KeyError(f"gold probeAxis.scopeRoots 에 track={track} 이 없다")
+
+
+SCOPE_ROOT = scope_root()
 
 
 def run_collector(source_root: pathlib.Path, out_path: pathlib.Path, seed: str | None = None) -> dict:
@@ -242,15 +260,25 @@ def measure() -> dict:
 
 
 def _measure(manifest: dict, work: pathlib.Path) -> dict:
-    rev = manifest["sourceRevision"]
+    # 입력 축이다 — 정답 축(sourceRevision)이 아니다(#125 · I2 §6).
+    axis = manifest["probeAxis"]
+    rev = axis["revision"]
     scope = work / "scope"
     rev_files = materialize(rev, SCOPE_ROOT, scope)
     probe: dict = {
-        "probeVersion": "l0-code-probe/v2",
+        "probeVersion": "l0-code-probe/v3",
         "layer": "L0",
         "track": "code",
         "projectId": "lodestar",
-        "sourceRevision": manifest["sourceRevision"],
+        "sourceRevision": rev,
+        "inputAxis": {
+            "axis": "probeAxis",
+            "revision": rev,
+            "pinnedSourceCount": sum(1 for s in axis["sources"] if s["track"] == "code"),
+            "note": "L0 수집 입력 축(#125). gold 정답 축은 3c27259 에 그대로 있고, 이 실행이 잰 것은 "
+                    "이 축의 입력이다. 축의 승인 상태는 gold 에 있으며 여기 복사하지 않는다 — 복사하면 "
+                    "승인이 바뀔 때 프로브 산출물이 표류하고, 승인은 측정이 아니다.",
+        },
         "goldSetId": manifest["goldSetId"],
         "fixtureHash": manifest["fixtureHash"],
         "collector": {
@@ -258,21 +286,24 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
             "declaredVersion": f"lodestar-codegraph v1 (meta.generated_by) · pyproject {collector_version()}",
             "citedVersion": f"lodestar-codegraph@{collector_version()}",
             "note": "산출물이 선언하는 것은 이름과 세대뿐이다 — 커밋·semver 가 없어 산출물만으로는 재현 대상을 "
-                    "특정할 수 없다(L0-fix-2). 입력 revision(3c27259)과 수집기 버전은 다른 축이며, 이 실행의 "
-                    "수집기는 #112 의 결정성 수정과 #114 의 제외·실패 채널이 모두 들어간 판이다.",
+                    f"특정할 수 없다(L0-fix-2). 입력 revision({rev[:7]})과 수집기 버전은 다른 축이며, 이 "
+                    "실행의 수집기는 #112 의 결정성 수정 · #114 의 제외·실패 채널 · #115 의 마스킹 단계가 "
+                    "모두 들어간 판이다.",
         },
     }
 
     # 1) 입력 신원 — 고정 revision blob 에서 재구성한 범위를 gold 고정 해시와 대조한다.
-    #    gold 가 고정한 것은 범위 59파일 중 7건뿐이므로 나머지도 blob 해시와 전수 대조한다
+    #    gold 입력 축이 고정한 것은 범위 파일 중 7건뿐이므로 나머지도 blob 해시와 전수 대조한다
     #    (재구성 자체가 blob 이라 항등이지만, 경로 집합·건수의 어긋남은 여전히 잡힌다).
     ignore = ["build", ".gradle", ".git", "node_modules"]
     all_files = walk_all_files(scope, ignore)
     rel_of = {str(p): str(pathlib.PurePosixPath(SCOPE_ROOT) / p.relative_to(scope))
               for p in all_files}
     hashes = {rel_of[str(p)]: sha256_file(p) for p in all_files}
-    pinned = {s["path"]: s for s in manifest["pinnedSources"]
-              if s.get("origin") == "repo" and s["path"].startswith(SCOPE_ROOT)}
+    # 대조 대상은 **입력 축의 고정값**이다. 정답 축의 해시로 대조하면 입력을 재고정한 뒤에도
+    # 옛 정답 축의 내용을 요구하게 되어, 정상 실행이 영원히 불일치로 읽힌다.
+    pinned = {s["path"]: s for s in axis["sources"]
+              if s["track"] == "code" and s["path"].startswith(SCOPE_ROOT)}
     mismatched = sorted(p for p, s in pinned.items()
                         if hashes.get(p) != s["contentHash"])
     rev_mismatched = sorted(p for p in set(hashes) | set(rev_files)

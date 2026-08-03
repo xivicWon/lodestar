@@ -20,7 +20,25 @@ from jsonschema import Draft202012Validator
 HERE = pathlib.Path(__file__).parent
 EX = HERE / "rqr-examples"
 REPO = HERE.parents[3]  # docs/superpowers/specs/schemas -> 리포 루트
-SCHEMA = json.loads((HERE / "run-quality-report.v0.schema.json").read_text())
+# 계약 버전마다 스키마가 하나다. 한 파일을 고쳐 여러 버전을 겸하게 하면 §7.3(통제어휘·규칙 변경 시
+# 버전 상승)이 형식만 남고, 옛 버전으로 쓰인 보고서가 새 어휘를 쓸 수 있게 되어 버전이 뜻을 잃는다.
+SCHEMAS = {v: json.loads((HERE / f"run-quality-report.{v}.schema.json").read_text())
+           for v in ("v0", "v1")}
+CURRENT = "v1"
+SCHEMA = SCHEMAS[CURRENT]
+
+
+def schema_for(report):
+    """보고서가 **선언한** 버전의 스키마를 돌려준다.
+
+    선언과 다른 스키마로 재면 두 방향 모두 거짓이 된다: 옛 보고서가 새 어휘를 안 썼다는 이유로
+    통과하거나(느슨), 새 어휘를 쓴 보고서가 옛 스키마에서 위반으로 잡힌다(엄격). 선언이 이상하면
+    그 자체를 위반으로 보고해야 하므로 모르는 버전은 현재 스키마로 재서 const 위반을 내게 한다.
+    """
+    v = report.get("schemaVersion", "") if isinstance(report, dict) else ""
+    return SCHEMAS.get(str(v).rsplit("/", 1)[-1], SCHEMA)
+
+
 MANIFEST = json.loads((EX / "manifest.json").read_text())
 # 계약 §4 가 정의한 불변식 개수 — 규칙이 늘면 여기도 올린다(커버리지 검사에 쓰인다).
 MAX_RULE = 20
@@ -46,6 +64,9 @@ TRIGGER_KIND = {
     "GATE_FAILED": "gate",
     "BASELINE_NOT_COMPARABLE": "baseline",
     "PATH_RESTRICTED": "verdict",
+    # 승인되지 않은 정답셋·입력 축으로 잰 실행(I1 §7 · I2 §6). 재현할 수 있어도 기준선이 아니다 —
+    # 그 사실이 보고서 안에 남아야 읽는 쪽이 승인 상태를 따로 조회하지 않고도 안다.
+    "GOLD_UNAPPROVED": "gold",
 }
 TIME_RE = re.compile(r"(T\d{2}:\d{2}:)60")
 
@@ -243,14 +264,20 @@ def cross_field_errors(d):
         # 실행은 기준선이 아니다. NOT_APPLICABLE(그 레이어가 안 쓰는 요소)은 대상이 아니다.
         unpinned_versions = sorted(k for k, v in versions.items()
                                    if isinstance(v, dict) and v.get("status") == "UNPINNED")
+        # 재현 가능성만으로는 부족하다: 정답셋(또는 그 입력 축)이 승인되지 않았으면 그 위에서 잰
+        # 수치는 기준선이 아니다(I1 §7). 승인 상태는 보고서 밖에 있으므로 GOLD_UNAPPROVED 경고를
+        # 그 사실의 자리로 쓴다 — 경고가 실제 gold 상태와 맞는지는 각 레이어의 확인기가 본다
+        # (L0 은 verify_l0.py V4).
+        unapproved_gold = ("GOLD_UNAPPROVED", "evl.conflictDetection.goldSetId") in warns
         eligible = ((not unpinned) and run["reportKind"] == "BASELINE"
-                    and not unpinned_versions)
+                    and not unpinned_versions and not unapproved_gold)
         if baseline["eligibleAsBaseline"] != eligible:
             errs.append(
                 f"R12: eligibleAsBaseline={baseline['eligibleAsBaseline']} 인데 "
                 f"fixtureHash={'UNPINNED' if unpinned else 'pinned'} · "
                 f"reportKind={run['reportKind']} · "
-                f"미고정 버전={unpinned_versions or '없음'} (기대 {eligible})")
+                f"미고정 버전={unpinned_versions or '없음'} · "
+                f"gold 미승인={unapproved_gold} (기대 {eligible})")
     rule(_r12)
 
     # R13 — calibration 은 원자료가 완전할 때만 수치를 인용한다(EVL §3.3).
@@ -363,6 +390,8 @@ def cross_field_errors(d):
                 ok = trg == "evl.confidenceCalibration"
             elif kind == "gate":
                 ok = trg.startswith("gates.") and trg.split(".", 1)[1] in gate_ids
+            elif kind == "gold":
+                ok = trg == "evl.conflictDetection.goldSetId"
             elif kind == "baseline":
                 ok = trg == "baseline"
             else:
@@ -564,8 +593,8 @@ def manifest_errors():
 
 
 def main():
-    Draft202012Validator.check_schema(SCHEMA)
-    validator = Draft202012Validator(SCHEMA)
+    for v, s in SCHEMAS.items():
+        Draft202012Validator.check_schema(s)
     mismatches = 0
     verified_rules = set()  # 라벨·계층·위치·메시지 대조까지 통과한 규칙만 집계한다
 
@@ -587,7 +616,10 @@ def main():
                   f"{'' if ok else sub[0]}")
             continue
 
-        schema_errs = sorted(validator.iter_errors(doc), key=lambda e: list(e.path))
+        # 픽스처가 **선언한 버전**의 스키마로 잰다 — 옛 버전 보고서를 새 스키마로 재면 그 자체가
+        # 버전 정책(§7.3)을 무의미하게 만든다.
+        schema_errs = sorted(Draft202012Validator(schema_for(doc)).iter_errors(doc),
+                             key=lambda e: list(e.path))
         cross_errs = cross_field_errors(doc)
         accepted = not schema_errs and not cross_errs
         expected = case["expect"] == "valid"

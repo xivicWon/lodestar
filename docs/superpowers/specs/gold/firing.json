@@ -1016,6 +1016,104 @@
         "rule": "G14",
         "contains": "extracted 가 있다"
       }
+    },
+    {
+      "subcheck": "G5.6",
+      "why": "probe 축 원본 해시가 probeRevision 의 blob 과 다름",
+      "mutations": [
+        {
+          "op": "set",
+          "file": "manifest.json",
+          "path": "probeAxis.sources[1].contentHash",
+          "value": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+        }
+      ],
+      "expect": {
+        "rule": "G5",
+        "contains": [
+          "probe:code:rdb/DdlParser.kt",
+          "실제 해시"
+        ]
+      }
+    },
+    {
+      "subcheck": "G5.6",
+      "why": "probe 축 원본의 행수 선언이 blob 실제와 다름 — 해시만 변형하면 행수 재계산이 사라져도 잡히지 않는다",
+      "mutations": [
+        {
+          "op": "set",
+          "file": "manifest.json",
+          "path": "probeAxis.sources[1].lines",
+          "value": 9999
+        }
+      ],
+      "expect": {
+        "rule": "G5",
+        "contains": "lines 선언 9999"
+      }
+    },
+    {
+      "subcheck": "G5.7",
+      "why": "probe 축 소스가 다른 revision 을 가리킴",
+      "mutations": [
+        {
+          "op": "set",
+          "file": "manifest.json",
+          "path": "probeAxis.sources[0].revision",
+          "value": "3c27259fe6c979e00912c5e3686c611a28cb977e"
+        }
+      ],
+      "expect": {
+        "rule": "G5",
+        "contains": "probe 축 소스인데 revision 이"
+      }
+    },
+    {
+      "subcheck": "G5.8",
+      "why": "두 축의 내용이 다른데 같다고 선언 — 재고정의 영향 범위를 숨긴다",
+      "mutations": [
+        {
+          "op": "set",
+          "file": "manifest.json",
+          "path": "probeAxis.sources[1].sameAsAnswerAxis",
+          "value": true
+        }
+      ],
+      "expect": {
+        "rule": "G5",
+        "contains": "sameAsAnswerAxis 선언"
+      }
+    },
+    {
+      "subcheck": "G5.9",
+      "why": "같은 정답 소스를 두 입력 항목이 주장 — 어느 쪽이 정본인지 알 수 없다",
+      "mutations": [
+        {
+          "op": "set",
+          "file": "manifest.json",
+          "path": "probeAxis.sources[1].answerAxisSourceId",
+          "value": "code:provenance/ProvenanceVocab.kt"
+        }
+      ],
+      "expect": {
+        "rule": "G5",
+        "contains": "answerAxisSourceId 가 중복된다"
+      }
+    },
+    {
+      "subcheck": "G5.10",
+      "why": "범위 안의 파일을 고정 목록에서 빼면 프로브가 그만큼 입력 신원을 대조하지 않게 된다",
+      "mutations": [
+        {
+          "op": "del",
+          "file": "manifest.json",
+          "path": "probeAxis.sources[0]"
+        }
+      ],
+      "expect": {
+        "rule": "G5",
+        "contains": "sources 에 고정되지 않았다"
+      }
     }
   ]
 }

@@ -55,7 +55,7 @@
 
 | 필드 | 필수 | 계약 |
 |---|---|---|
-| `schemaVersion` | ✅ | `"run-quality-report/v0"` 고정. 버전이 다른 보고서의 수치는 직접 비교하지 않는다(§7) |
+| `schemaVersion` | ✅ | `"run-quality-report/v1"` 고정(#125 로 v0 → v1). 버전이 다른 보고서의 수치는 직접 비교하지 않는다(§7) |
 | `run` | ✅ | 실행 식별 — runId·projectId·layer·track·reportKind·sourceRevision·fixtureHash·시각·실행자 |
 | `versions` | ✅ | collector / extractor / model / prompt — 각각 `{status, value}` |
 | `counts` | ✅ | 입력·출력·실패·제외 건수 |
@@ -159,7 +159,7 @@ collector·extractor·model·prompt **4개 전부 필수 키**이며 각각 `{st
 - `gates[]` 는 I1 §4.1 무조건 게이트의 실행별 결과다. **잠정 수치(I1 §4.2)는 게이트가 아니므로 여기에 적지 않는다.**
 - `status=FAIL` 이 하나라도 있으면 `GATE_FAILED` 경고가 필요하고 **판정 PASS 가 불가능**하다(R9 — I1 G4).
 - `status=NOT_MEASURED` 인 게이트도 **`METRIC_UNMEASURED` 경고를 낸다**(R10, `trigger: gates.<gateId>`). 지표의 미측정과 같은 원칙이다 — 측정하지 않은 게이트가 조용히 지나가면 보고서를 읽는 쪽에서 **통과한 게이트와 구분되지 않는다.**
-- 경고 `code` 는 **통제어휘 7종**이며 `trigger` 로 대상을 못박는다. 자유 문장은 "경고했는가"를 측정할 수 없다(EVL §2.6과 같은 원칙).
+- 경고 `code` 는 **통제어휘 8종**이며 `trigger` 로 대상을 못박는다. 자유 문장은 "경고했는가"를 측정할 수 없다(EVL §2.6과 같은 원칙).
 
 | code | 발동 조건 | `trigger` |
 |---|---|---|
@@ -170,6 +170,7 @@ collector·extractor·model·prompt **4개 전부 필수 키**이며 각각 `{st
 | `GATE_FAILED` | 게이트 `FAIL` — 게이트마다 한 건 | `gates.<gateId>` |
 | `BASELINE_NOT_COMPARABLE` | `baseline.comparable = false` | `baseline` |
 | `PATH_RESTRICTED` | 판정이 `PASS_RESTRICTED` | `verdict` |
+| `GOLD_UNAPPROVED` | 이 실행을 채점한 정답셋(또는 그 **입력 축**)이 승인 전 — I1 §7 · I2 §6 | `evl.conflictDetection.goldSetId` |
 
 형식은 스키마가, **대상 실재**는 검증기가 본다(R18).
 
@@ -198,8 +199,9 @@ runId 만 적으면 "같은 것을 잰 실행인가"를 보고서만으로 판�
 
 **`comparable=false`** → `deltas` 는 **비어 있고**, `reason` 이 필수이며, `BASELINE_NOT_COMPARABLE` 경고를 낸다. **비교 불가를 "변화 없음"으로 표기하지 않는다.**
 
-**`eligibleAsBaseline` = (`fixtureHash` 고정) ∧ (`reportKind = BASELINE`) ∧ (적용 대상 버전이 전부 `PINNED`)**(R12).
+**`eligibleAsBaseline` = (`fixtureHash` 고정) ∧ (`reportKind = BASELINE`) ∧ (적용 대상 버전이 전부 `PINNED`) ∧ (`GOLD_UNAPPROVED` 경고 없음)**(R12).
 세 번째 조건이 있는 이유: fixture 만 고정하고 모델·추출기 버전을 모르면 **같은 입력을 재현할 수 없고**, 재현할 수 없는 실행은 기준선이 아니다. `NOT_APPLICABLE`(그 레이어가 쓰지 않는 요소)은 조건에서 제외된다 — 안 쓰는 것의 버전은 재현에 영향이 없다.
+네 번째 조건(#125 · **v1**): **재현할 수 있어도 승인되지 않은 정답셋 위에서 잰 수치는 기준선이 아니다**(I1 §7 · I2 §6). 승인 상태는 보고서 밖(gold manifest)에 있으므로, 그 사실을 `GOLD_UNAPPROVED` 경고로 보고서 안에 남긴다 — 남기지 않으면 읽는 쪽이 승인 여부를 따로 조회해야 하고, 조회하지 않은 인용이 곧 승인 우회가 된다. 경고가 **실제 gold 상태와 맞는지**는 각 레이어의 확인기가 본다(L0 은 `verify_l0.py` V4).
 이 값이 `false` 인 보고서는 **다음 실행의 비교 대상이 되지 않는다**(I1 §1.3·§7.4).
 
 > **현재 상태:** #99(I2)가 fixture hash 를 고정하기 전이므로 **모든 실행이 `fixtureHash: UNPINNED`** 이고, 따라서 `comparable=true` 인 정상 예시는 아직 만들 수 없다(가공 해시로 만들면 그 자체가 이 계약이 막으려는 것이다). 커밋된 정상 예시 2건은 모두 비교 불가 상태이며, `comparable=true` 경로는 **음성 픽스처 3건**(deltas 누락 · revision 불일치 · fixture 미고정)으로 검사한다. 정상 예시는 #99 이후 실 해시로 추가한다.
@@ -232,7 +234,7 @@ runId 만 적으면 "같은 것을 잰 실행인가"를 보고서만으로 판�
 | **R9** | 게이트 `FAIL` ⟺ `GATE_FAILED` 경고, 그리고 `FAIL` 이 있으면 판정 ≠ `PASS` | validator | 게이트 무력화(I1 G4) |
 | **R10** | 지표·**게이트** `NOT_MEASURED` ⟺ `METRIC_UNMEASURED` 경고 (양방향) | validator | 미측정을 0과 섞음 · 미측정 게이트가 통과처럼 읽힘 |
 | **R11** | 버전 `UNPINNED` ⟺ `VERSION_UNPINNED` 경고 (양방향). `NOT_APPLICABLE` 은 경고 대상 아님 | validator | 버전 추적 거짓 · '안 씀' 과 '모름' 을 섞음 |
-| **R12** | `fixtureHash=UNPINNED` ⟺ `UNPINNED_FIXTURE` 경고 · `eligibleAsBaseline` = (fixture 고정 ∧ `BASELINE` ∧ **적용 대상 버전 전부 PINNED**) | validator | **재현 불가한 실행이 기준선이 됨**(I1 §1.3) |
+| **R12** | `fixtureHash=UNPINNED` ⟺ `UNPINNED_FIXTURE` 경고 · `eligibleAsBaseline` = (fixture 고정 ∧ `BASELINE` ∧ **적용 대상 버전 전부 PINNED** ∧ **`GOLD_UNAPPROVED` 경고 없음**) | validator | **재현 불가한 실행이 기준선이 됨**(I1 §1.3) · **미승인 gold 위의 수치가 기준선이 됨**(I1 §7) |
 | **R13** | calibration `MEASURED` → 모집단·ece·bins 존재 + bins 표본합 일치 · `missingRawCount>0` → `MEASURED` 불가 + 경고 (양방향) | validator | **미보정 수치 인용**(EVL §3.3) |
 | **R14** | conflict precision/recall `MEASURED` → `goldSetId` 존재 | validator | 대조 대상 없는 성능 주장 |
 | **R15** | `evl.coverageClasses` 의 소스 클래스 5종이 정확히 한 번씩 · `state≠present` ⟺ `warned` | validator | 안 본 클래스가 사라짐 |
@@ -308,3 +310,36 @@ I1 §7·EVL §10과 동일하며, 추가로:
 - [x] 구조 불변식 R1~R20 + 규칙별 음성 픽스처 + 확인기 커밋 (34 cases, 0 mismatches — `manifest.caseCount`·`manifest.ruleRange` 와 일치) → §4, `schemas/validate_rqr.py`
 
 **다음 착수: #99(I2) Gold Set & 실패 fixture — 그 뒤 G2가 열려 L0(#88)이 착수 가능해진다(I1 §2.1).**
+
+---
+
+## 9. 개정 이력
+
+### R1 — 2026-07-31 · `GOLD_UNAPPROVED` 통제어휘 추가 · R12 승인 항 (#125 · **제안 · 미승인**)
+
+**사유.** gold 개정(I2 §14 R1)으로 L0 수집 입력 축이 신설됐고, 그 축은 승인 전이다. "재현할 수 있으면
+기준선" 이라는 R12 만으로는 **승인되지 않은 정답셋 위에서 잰 수치가 기준선 자격을 얻는다** — I1 §7 이
+문장으로 금지하는 것을 계약이 기계로 막지 못하고 있었다.
+
+**무엇을 바꿨나.**
+
+| 항목 | v0 | v1 |
+|---|---|---|
+| `warnings[].code` | 통제어휘 7종 | **8종** — `GOLD_UNAPPROVED` 추가 |
+| `warnings[].trigger` | 7종 대상 | **+ `evl.conflictDetection.goldSetId`** |
+| **R12** | fixture 고정 ∧ `BASELINE` ∧ 버전 PINNED | **+ `GOLD_UNAPPROVED` 경고 없음** |
+
+**왜 버전을 올렸나.** §7.3 이 통제어휘 변경·R규칙 의미 재정의를 버전 상승 사유로 못박는다. 어휘 추가가
+기존 보고서를 무효화하지는 않지만(그 보고서들에는 새 경고가 없으므로 R12 결과가 그대로다), **v0 소비자가
+모르는 경고 코드를 만나게 되는 것**은 §7.4 가 막으려는 상황 그 자체다. 규칙이 자기에게 적용되지 않으면
+그 규칙은 규칙이 아니다.
+
+**호환성.** `run-quality-report.v0.schema.json` 은 **그대로 둔다** — 이전 실행 7건은 v0 로 쓰였고 그
+시점의 계약으로 계속 검증돼야 한다. 확인기는 보고서가 **선언한 버전**의 스키마를 골라 잰다
+(`validate_rqr.schema_for` · `verify_l0` V1·V13). 한 파일을 고쳐 두 버전을 겸하게 하면 옛 보고서가 새
+어휘를 써도 통과하게 되어 버전이 뜻을 잃는다.
+
+**비교 가능성.** v0 실행과 v1 실행은 §3.8 의 조건 1(`schemaVersion` 일치)을 만족하지 않으므로 직접
+비교하지 않는다. 이번 gold 개정으로 어차피 기준선에서 제외되는 실행들이라 실질 영향은 없다.
+
+**승인 사항.** 이 개정은 @xivicWon 승인 전이다(§7.2). I2 §14 R1 의 승인 요청 3번과 같은 건이다.

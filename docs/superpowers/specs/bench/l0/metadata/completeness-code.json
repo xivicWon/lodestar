@@ -27,6 +27,7 @@
       "generated_by",
       "issues",
       "languages",
+      "masking",
       "node_count",
       "parsed",
       "partial",
@@ -88,8 +89,8 @@
     "nodesWithWrongContentHash": [],
     "scope": {
       "probe": "범위 안의 수집 가능한 파일을 다 봤는가 — 노드 수 고정 대신 범위 회귀를 잡는다",
-      "collectableFiles": 60,
-      "walked": 60,
+      "collectableFiles": 62,
+      "walked": 62,
       "allCollected": true,
       "missed": []
     },
@@ -113,9 +114,9 @@
   },
   "volatile": {
     "note": "값은 수집 범위의 내용·리비전에 따라 달라진다 — 표류 검사 대상이 아니다",
-    "revision": "dirty:6589e65ecdc1",
-    "contentHash": "sha256:6589e65ecdc17c423b7440b8668a0dba5b6715d10b2cba21375e30eebe05d688",
-    "nodeCount": 384,
-    "walked": 60
+    "revision": "aad4382cd3cbbf6ddc24e2a8587eae1a8c9289f0",
+    "contentHash": "sha256:85952122f317c1c65941f7b1e41c7c8b4dc39cdcb1ba026772970a13e2be8e07",
+    "nodeCount": 410,
+    "walked": 62
   }
 }
