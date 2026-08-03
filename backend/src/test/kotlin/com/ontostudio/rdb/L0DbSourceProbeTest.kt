@@ -57,7 +57,7 @@ class L0DbSourceProbeTest {
         RepoRoot.path
     }
     private val goldDir get() = File(repoRoot, "docs/superpowers/specs/gold")
-    private val runDir get() = File(repoRoot, "docs/superpowers/specs/bench/l0/runs/run-l0-db-aad4382-001")
+    private val runDir get() = File(repoRoot, "docs/superpowers/specs/bench/l0/runs/run-l0-db-aad4382-002")
     private val pinnedSqlPath = "backend/src/main/resources/com/ontostudio/rdb/legacy-sample.sql"
 
     /** 수집기 신원 — 커밋이 아직 없는 재측정에서도 재현 대상을 특정할 수 있는 값이다. */

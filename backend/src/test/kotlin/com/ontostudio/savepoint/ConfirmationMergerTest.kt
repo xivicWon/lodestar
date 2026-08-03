@@ -26,7 +26,7 @@ class ConfirmationMergerTest {
         Files.deleteIfExists(java.nio.file.Paths.get("$tmp.corrupt"))
     }
 
-    private val custIri = "http://lodestar/rdb/legacy#TB_CUST_MST"
+    private val custIri = "http://lodestar/rdb/legacy#PUBLIC/TB_CUST_MST"
 
     /** 샘플 레거시를 SchemaToOwlMapper로 빌드해 holder에 주입(임포트 경로와 동일한 IRI). */
     private fun buildSampleInto(holder: OntologyHolder) {
@@ -70,5 +70,31 @@ class ConfirmationMergerTest {
         assertTrue(summary.staleIris.contains(bogus))
         // 미매칭 확정은 저장소에 그대로 보존(자동 삭제 안 함)
         assertTrue(store.isConfirmed(bogus))
+    }
+
+    /**
+     * #126 의 파급을 사실로 고정한다. 소속을 IRI 에 넣으면서 **#126 이전에 저장된 확정의 IRI**
+     * (소속 없는 `…#TB_CUST_MST`)는 더 이상 어떤 클래스도 가리키지 않는다.
+     *
+     * 요점은 그 확정이 **조용히 사라지거나 엉뚱한 클래스에 붙지 않는다**는 것이다 — E9 는 미매칭을
+     * stale 로 보고하고 저장소에 그대로 둔다(D2). 사용자는 목록에서 그것을 보고 다시 확정할 수 있다.
+     */
+    @Test fun `소속 없이 저장된 예전 확정은 조용히 사라지지 않고 stale 로 보고된다`() {
+        val holder = OntologyHolder()
+        buildSampleInto(holder)
+        val mapper = OntologyMapper(holder)
+        val store = ConfirmationStore(tmp.toString())
+        val merger = ConfirmationMerger(store, ClassService(holder, mapper), holder)
+
+        val preIssue126 = "http://lodestar/rdb/legacy#TB_CUST_MST"   // 소속 없는 예전 IRI
+        store.confirm(ConfirmedFact(preIssue126, "거래처 마스터", "class"))
+
+        val summary = merger.merge()
+
+        assertEquals(0, summary.reapplied)
+        assertTrue(summary.staleIris.contains(preIssue126), "예전 확정이 stale 로 보고되지 않았다")
+        assertTrue(store.isConfirmed(preIssue126), "미매칭 확정을 자동 삭제하면 안 된다(D2)")
+        // 엉뚱한 클래스에 붙지 않았는가 — 같은 이름의 새 IRI 는 원래 라벨 그대로여야 한다.
+        assertEquals("TB_CUST_MST", mapper.labelOf(IRI.create(custIri)))
     }
 }

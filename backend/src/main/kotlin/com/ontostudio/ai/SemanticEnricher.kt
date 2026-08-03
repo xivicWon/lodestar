@@ -10,6 +10,7 @@ import com.ontostudio.security.MaskingEngine
 import com.ontostudio.rdb.SampleLegacyDb
 import com.ontostudio.rdb.SampleSource
 import com.ontostudio.rdb.SchemaToOwlMapper
+import com.ontostudio.rdb.TableInfo
 import com.ontostudio.savepoint.ConfirmationStore
 import org.semanticweb.owlapi.model.IRI
 import org.springframework.beans.factory.annotation.Value
@@ -45,33 +46,40 @@ class SemanticEnricher(
     private val baseIri = "http://lodestar/rdb/legacy#"
     private val json = ObjectMapper()
 
-    private fun classIri(tableName: String) = baseIri + mapper.slug(tableName)
+    /**
+     * 후보의 대상 IRI 는 **임포트가 만든 IRI 와 같아야** 한다 — 다르면 확정을 붙일 자리가 없다.
+     * 그래서 이름으로 조립하지 않고 매퍼의 IRI 생성을 그대로 쓴다(소속 한정 포함 · #126).
+     */
+    private fun classIri(table: TableInfo) = mapper.classIri(baseIri, table).toString()
 
     fun enrichSample(): List<EnrichmentCandidate> {
-        val (prompt, tableNames) = sampleDb.open().use { conn -> buildPrompt(conn) }
+        val (prompt, iriByTable) = sampleDb.open().use { conn -> buildPrompt(conn) }
         // 미확정(추정 대상) 테이블이 하나도 없으면 AI를 호출하지 않고 빈 결과(E8 그라운딩).
-        if (tableNames.isEmpty()) return emptyList()
+        if (iriByTable.isEmpty()) return emptyList()
         val response = advisor.ask(prompt)
-        return parse(response, tableNames)
+        return parse(response, iriByTable)
     }
 
     /**
-     * 프롬프트와 (추정 대상 테이블명 집합)을 만든다.
+     * 프롬프트와 (추정 대상 테이블명 → 대상 IRI)를 만든다. AI 응답은 이름만 돌려주므로, 그 이름을
+     * 임포트가 만든 IRI 로 되돌리는 표가 함께 있어야 한다 — 이름으로 IRI 를 다시 조립하면 소속이
+     * 있는 테이블에서 임포트 IRI 와 어긋난다(#126).
+     *
      * 확정된 테이블은 추정 대상에서 제외하고, 확정 라벨을 "이미 확정된 사실" 앵커로 주입한다(E8 그라운딩).
      */
-    internal fun buildPrompt(conn: Connection): Pair<String, Set<String>> {
+    internal fun buildPrompt(conn: Connection): Pair<String, Map<String, String>> {
         // 번들 샘플을 적재한 커넥션이다(enrichSample → sampleDb.open) — gold 가 고정한 신원을 쓴다.
         val schema = metadata.extract(
             conn, sourceId = SampleSource.SOURCE_ID, revisionScheme = SampleSource.REVISION_SCHEME)
-        val confirmedHere = schema.tables.filter { confirmations.isConfirmed(classIri(it.name)) }
-        val targets = schema.tables.filter { !confirmations.isConfirmed(classIri(it.name)) }
+        val confirmedHere = schema.tables.filter { confirmations.isConfirmed(classIri(it)) }
+        val targets = schema.tables.filter { !confirmations.isConfirmed(classIri(it)) }
         val labelByIri = confirmations.all().associate { it.iri to it.label }
 
         val sb = StringBuilder()
         if (confirmedHere.isNotEmpty()) {
             sb.appendLine("## 이미 확정된 사실 (변경 금지, 이 의미에 일관되게 추론하라)")
             for (t in confirmedHere) {
-                sb.appendLine("- ${t.name} = ${labelByIri[classIri(t.name)].orEmpty()}")
+                sb.appendLine("- ${t.name} = ${labelByIri[classIri(t)].orEmpty()}")
             }
             sb.appendLine()
         }
@@ -93,7 +101,11 @@ class SemanticEnricher(
             }
             sb.appendLine()
         }
-        return sb.toString() to targets.map { it.name }.toSet()
+        // 소속이 달라 이름만 같은 테이블이 둘이면 AI 응답의 이름으로는 어느 쪽인지 정할 수 없다 —
+        // 아무 쪽이나 고르면 다른 테이블의 라벨을 제안하게 되므로, 그런 이름은 후보에서 뺀다.
+        return sb.toString() to targets.groupBy { it.name }
+            .filterValues { it.size == 1 }
+            .mapValues { (_, v) -> classIri(v.single()) }
     }
 
     private fun sampleRows(conn: Connection, table: String, limit: Int): List<Map<String, String>> {
@@ -112,7 +124,7 @@ class SemanticEnricher(
     }
 
     /** AI 응답에서 JSON 배열을 관대하게 추출·파싱하고, 알려진 테이블만 후보로 만든다. */
-    internal fun parse(response: String, tableNames: Set<String>): List<EnrichmentCandidate> {
+    internal fun parse(response: String, iriByTable: Map<String, String>): List<EnrichmentCandidate> {
         val start = response.indexOf('[')
         val end = response.lastIndexOf(']')
         if (start < 0 || end <= start)
@@ -124,11 +136,11 @@ class SemanticEnricher(
         }
         return arr.mapNotNull { item ->
             val table = item["table"]?.trim() ?: return@mapNotNull null
-            if (table !in tableNames) return@mapNotNull null
+            val iri = iriByTable[table] ?: return@mapNotNull null
             val label = item["label"]?.trim().orEmpty()
             if (label.isEmpty()) return@mapNotNull null
             EnrichmentCandidate(
-                targetIri = baseIri + mapper.slug(table),
+                targetIri = iri,
                 currentName = table,
                 suggestedLabel = label,
                 description = item["description"]?.trim().orEmpty(),

@@ -23,16 +23,67 @@ class SchemaToOwlMapper {
     internal fun fkPropIri(base: String, table: String, fkColumns: List<String>): IRI =
         IRI.create(base + slug(table) + "_" + fkColumns.joinToString("_") { slug(it) } + "_ref")
 
+    /**
+     * 소속(schema)을 IRI 앞에 붙이는 경로 조각 — `sales/` (#126). 소속을 모르면 빈 문자열이므로
+     * 비한정 DDL 로 만든 IRI 는 이 변경 전과 같다.
+     *
+     * 구분자로 `/` 를 쓰는 이유: [slug] 가 문자·숫자·`_` 만 남기므로 `/` 는 조각 **안에** 나타날 수
+     * 없다 — 소속과 이름의 경계가 밀리지 않는다. `.` 을 쓰면 데이터 프로퍼티의 `<테이블>.<컬럼>` 과
+     * 겹쳐, 스키마 `a` 의 테이블 `b` 와 테이블 `a` 의 컬럼 `b` 가 같은 IRI 가 된다.
+     *
+     * 소속이 있으면 **항상** 붙인다. "동명 테이블이 있을 때만" 으로 하면 다른 스키마에 동명
+     * 테이블이 하나 생기는 것만으로 기존 테이블의 IRI 가 전부 바뀌어, 재임포트마다 확정(세이브포인트)
+     * 매칭이 무너진다(E9).
+     */
+    internal fun qualifier(schema: String?): String = if (schema == null) "" else slug(schema) + "/"
+
+    internal fun classIri(base: String, table: TableInfo): IRI =
+        IRI.create(base + qualifier(table.schema) + slug(table.name))
+
+    private fun dataPropIri(base: String, table: TableInfo, column: String): IRI =
+        IRI.create(base + qualifier(table.schema) + slug(table.name) + "." + slug(column))
+
+    private fun fkPropIri(base: String, table: TableInfo, fkColumns: List<String>): IRI =
+        IRI.create(base + qualifier(table.schema) + slug(table.name) + "_" +
+            fkColumns.joinToString("_") { slug(it) } + "_ref")
+
+    /**
+     * FK 대상 테이블을 이 스냅샷 안에서 찾는다. 못 찾으면 `null` — 그때는 이름만으로 IRI 를 만든다
+     * (수집 범위 밖의 테이블을 가리키는 FK 는 실제로 있다).
+     *
+     * 우선순위는 SQL 의 이름 해석과 같은 방향이다: 원본이 대상 소속을 적었으면 그대로 따르고,
+     * 적지 않았으면 **참조하는 쪽의 스키마 안**을 먼저 본다. 그래도 없으면 이름이 유일할 때만
+     * 그 테이블로 간다 — 후보가 여럿인데 아무거나 고르면 잘못된 관계를 사실로 산출하게 된다.
+     */
+    private fun resolveRef(from: TableInfo, fk: ForeignKeyInfo, byQualified: Map<Pair<String?, String>, TableInfo>,
+                           byName: Map<String, List<TableInfo>>): TableInfo? {
+        fk.refSchema?.let { return byQualified[it to fk.refTable] }
+        byQualified[from.schema to fk.refTable]?.let { return it }
+        return byName[fk.refTable]?.singleOrNull()
+    }
+
     fun build(schema: SchemaModel, baseIri: String): OWLOntology {
         val mgr = OWLManager.createOWLOntologyManager()
         val df = mgr.owlDataFactory
         val ont = mgr.createOntology()
 
+        // FK 대상 해석용 색인. 이름만으로 찾으면 동명 테이블 중 아무 쪽이나 걸린다(#126).
+        val byQualified = schema.tables.associateBy { it.schema to it.name }
+        val byName = schema.tables.groupBy { it.name }
+
         for (table in schema.tables) {
-            val cls = df.getOWLClass(classIri(baseIri, table.name))
+            val cls = df.getOWLClass(classIri(baseIri, table))
             mgr.addAxiom(ont, df.getOWLDeclarationAxiom(cls))
+            // 라벨은 **원본 테이블 이름 그대로** 둔다. 여기에 소속을 섞으면 라벨이 더 이상 "수집기가
+            // 본 이름" 이 아니게 되고, 라벨을 이름으로 쓰는 경로(UI 표시·AI 그라운딩 앵커)가 함께
+            // 흔들린다. 동명 테이블을 가르는 일은 신원(IRI)의 몫이다 — 소속은 주석으로 드러낸다.
             mgr.addAxiom(ont, df.getOWLAnnotationAssertionAxiom(
                 cls.iri, df.getOWLAnnotation(df.rdfsLabel, df.getOWLLiteral(table.name))))
+            if (table.schema != null) {
+                mgr.addAxiom(ont, df.getOWLAnnotationAssertionAxiom(
+                    cls.iri, df.getOWLAnnotation(df.rdfsComment,
+                        df.getOWLLiteral("schema: ${table.schema}"))))
+            }
             if (table.primaryKey.isNotEmpty()) {
                 mgr.addAxiom(ont, df.getOWLAnnotationAssertionAxiom(
                     cls.iri, df.getOWLAnnotation(df.rdfsComment,
@@ -43,7 +94,7 @@ class SchemaToOwlMapper {
             val fkColumns = table.foreignKeys.flatMap { it.fkColumns }.toHashSet()
             for (col in table.columns) {
                 if (col.name in fkColumns) continue
-                val dp = df.getOWLDataProperty(dataPropIri(baseIri, table.name, col.name))
+                val dp = df.getOWLDataProperty(dataPropIri(baseIri, table, col.name))
                 mgr.addAxiom(ont, df.getOWLDeclarationAxiom(dp))
                 mgr.addAxiom(ont, df.getOWLAnnotationAssertionAxiom(
                     dp.iri, df.getOWLAnnotation(df.rdfsLabel, df.getOWLLiteral(col.name))))
@@ -53,12 +104,16 @@ class SchemaToOwlMapper {
             }
 
             for (fk in table.foreignKeys) {
-                val op = df.getOWLObjectProperty(fkPropIri(baseIri, table.name, fk.fkColumns))
-                val target = df.getOWLClass(classIri(baseIri, fk.refTable))
+                val op = df.getOWLObjectProperty(fkPropIri(baseIri, table, fk.fkColumns))
+                val resolved = resolveRef(table, fk, byQualified, byName)
+                val target = df.getOWLClass(
+                    resolved?.let { classIri(baseIri, it) } ?: classIri(baseIri, fk.refTable))
+                val refLabel = resolved?.qualifiedName
+                    ?: fk.refSchema?.let { "$it.${fk.refTable}" } ?: fk.refTable
                 mgr.addAxiom(ont, df.getOWLDeclarationAxiom(op))
                 mgr.addAxiom(ont, df.getOWLAnnotationAssertionAxiom(
                     op.iri, df.getOWLAnnotation(df.rdfsLabel, df.getOWLLiteral(
-                        "${table.name} → ${fk.refTable} (${fk.fkColumns.joinToString(", ")})"))))
+                        "${table.qualifiedName} → $refLabel (${fk.fkColumns.joinToString(", ")})"))))
                 mgr.addAxiom(ont, df.getOWLObjectPropertyDomainAxiom(op, cls))
                 mgr.addAxiom(ont, df.getOWLObjectPropertyRangeAxiom(op, target))
                 // FK 유래 관계: 최고 신뢰도 EXTRACTED로 provenance 부착

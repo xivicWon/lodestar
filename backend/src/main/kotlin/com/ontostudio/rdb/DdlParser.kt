@@ -302,8 +302,17 @@ class DdlParser(private val masker: SqlTextMasker = SqlTextMasker()) {
 
     private fun unquote(s: String): String = s.trim().trim('"', '`', '[', ']')
 
+    /**
+     * `schema.table` · `catalog.schema.table` 에서 **소속**(마지막 이름 바로 앞 부분)만 취한다(#126).
+     * 카탈로그는 모델이 담지 않는다([TableInfo] 참조) — JDBC 경로와 같은 축만 남겨야 두 경로의
+     * 산출물이 같은 것을 뜻한다.
+     */
+    private fun schemaOf(qualified: String): String? =
+        qualified.split('.').dropLast(1).lastOrNull()?.let { unquote(it) }?.takeIf { it.isNotEmpty() }
+
     private fun toTableInfo(ct: CreateTable): TableInfo {
         val tableName = unquote(ct.table.name)
+        val tableSchema = ct.table.schemaName?.let { unquote(it) }?.takeIf { it.isNotEmpty() }
         val columns = (ct.columnDefinitions ?: emptyList()).map { cd ->
             val specs = (cd.columnSpecs ?: emptyList()).joinToString(" ").uppercase()
             ColumnInfo(unquote(cd.columnName), cd.colDataType.dataType, nullable = !specs.contains("NOT NULL"))
@@ -322,7 +331,8 @@ class DdlParser(private val masker: SqlTextMasker = SqlTextMasker()) {
                 fks.add(ForeignKeyInfo(
                     listOf(unquote(cd.columnName)),
                     unquote(m.groupValues[1].substringAfterLast('.')),
-                    listOf(unquote(m.groupValues[2]))))
+                    listOf(unquote(m.groupValues[2])),
+                    refSchema = schemaOf(m.groupValues[1])))
             }
         }
 
@@ -332,12 +342,13 @@ class DdlParser(private val masker: SqlTextMasker = SqlTextMasker()) {
                 fks.add(ForeignKeyInfo(
                     idx.columnsNames.map { unquote(it) },
                     unquote(idx.table.name),
-                    (idx.referencedColumnNames ?: emptyList()).map { unquote(it) }))
+                    (idx.referencedColumnNames ?: emptyList()).map { unquote(it) },
+                    refSchema = idx.table.schemaName?.let { unquote(it) }?.takeIf { it.isNotEmpty() }))
             } else if (idx.type?.uppercase()?.contains("PRIMARY KEY") == true) {
                 idx.columnsNames.forEach { pk.add(unquote(it)) }
             }
         }
 
-        return TableInfo(tableName, columns, pk.distinct(), fks)
+        return TableInfo(tableName, columns, pk.distinct(), fks, schema = tableSchema)
     }
 }

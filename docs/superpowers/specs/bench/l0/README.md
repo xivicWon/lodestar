@@ -20,7 +20,9 @@ runs/run-l0-db-3c27259-001/     probe-db.json · report.json    (#88 실측 — 
 runs/run-l0-db-3c27259-002/     probe-db.json · report.json    (#114 재측정 — 보고율 1.0)
 runs/run-l0-db-3c27259-003/     probe-db.json · report.json    (#115 재측정 — 수집기에 마스킹 단계 · 수치 변화 없음)
 runs/run-l0-db-3c27259-004/     probe-db.json · report.json    (#115 경계 문자 통합 수정 — 수치 변화 없음)
-runs/run-l0-db-aad4382-001/     probe-db.json · report.json    (#125 입력 축 재고정 후 재측정 · 현행)
+runs/run-l0-db-aad4382-001/     probe-db.json · report.json    (#125 입력 축 재고정 후 재측정)
+runs/run-l0-db-aad4382-002/     probe-db.json · report.json    (#126 수집 모델에 소속(schema) 신설 —
+                                                               수치 변화 없음 · 현행)
 runs/run-l0-code-3c27259-001/   probe-code.json · report.json  (#88 실측 — 결정성 0.3333 · H1)
 runs/run-l0-code-3c27259-002/   probe-code.json · report.json  (#112 재측정 — 결정성 1.0)
 runs/run-l0-code-3c27259-003/   probe-code.json · report.json  (#114 재측정 — 보고율 1.0)
@@ -31,7 +33,9 @@ test_bench_l0.py                계측기 자체의 단위 테스트 (합성 입
 metadata_completeness.py        #113 게이트 재측정 (코드 트랙 실측 + DB 트랙 결과 확인)
 metadata/completeness-{db,code}.json   그 결과```
 
-**현행 실행**은 db·code 모두 `aad4382-001` 이다(`build_report.RUNS` · `probe_code.RUN_DIR`). 각 트랙의
+**현행 실행**은 db 가 `aad4382-002`, code 가 `aad4382-001` 이다
+(`build_report.RUNS` · `probe_code.RUN_DIR`). 두 트랙의 runId 가 갈린 것은 #126 이 DB 수집기만
+고쳤기 때문이다 — 입력 축은 둘 다 `aad4382` 로 같다. 각 트랙의
 직전 실행이 `PREVIOUS` 이며 새 보고서가 그것을 `baseline.previous` 로 인용한다 — 덮어쓰지 않는다(I3 §5.5).
 현행 두 실행은 gold 입력 축이 아직 **미승인**(PROPOSED)이라 `eligibleAsBaseline: false` 이고
 `GOLD_UNAPPROVED` 경고를 싣는다 — 승인 전에는 다음 실행의 비교 기준선이 아니다(I3 R12 · I1 §7).
