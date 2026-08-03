@@ -53,10 +53,26 @@ class SchemaOwnershipTest {
         assertNotEquals(h(listOf(t("orders", null))), h(listOf(t("orders", ""))))
     }
 
-    @Test fun `스키마 이름에 넣은 구분자로 레코드를 위조하지 못한다`() {
-        assertNotEquals(
-            h(listOf(t("orders", "s\torders\nT\tfake"))),
-            h(listOf(t("orders", "s"), t("fake", null))))
+    @Test fun `소속 필드를 이름에 심어 위조하지 못한다`() {
+        // T 레코드는 `T\t<이름>[\t<소속>]` 이다. 그래서 **이름에 탭을 심은 무소속 테이블**과
+        // **소속을 가진 테이블**이 진짜 충돌 쌍이다 — 이스케이프가 없으면 둘의 바이트가 같아진다.
+        //
+        // 위조 입력과 비교 대상의 **레코드 구조가 같아야** 이 테스트에 검증력이 있다. 테이블 수가
+        // 다른 쌍을 비교하면 블록 개수만으로 바이트가 갈려, 이스케이프를 지워도 통과한다(리뷰 LOD-174).
+        val withSchema = t("orders", "s")
+        val tabInName = TableInfo("orders\ts", withSchema.columns, withSchema.primaryKey, emptyList())
+        assertEquals(withSchema.columns, tabInName.columns, "두 입력의 나머지 레코드는 같아야 한다")
+        assertNotEquals(h(listOf(withSchema)), h(listOf(tabInName)),
+            "이름에 심은 탭이 소속 필드로 읽혀 두 스키마가 같은 신원이 된다")
+    }
+
+    @Test fun `소속의 구분자는 리터럴로 이스케이프된다`() {
+        // 위 테스트는 '두 입력이 갈린다' 만 본다. 무엇으로 갈렸는지는 바이트가 말해야 한다 —
+        // 그래야 esc() 가 치환을 멈추는 회귀를 이 자리에서 바로 읽을 수 있다.
+        val bytes = SchemaCanonical.bytes(listOf(TableInfo(
+            "orders", listOf(ColumnInfo("id", "int", false)), emptyList(), emptyList(),
+            schema = "a\tb\nc"))).decodeToString()
+        assertEquals("T\torders\ta\\tb\\nc\nC\tid\tint\tfalse\nP\t0:\n", bytes)
     }
 
     @Test fun `FK 의 대상 스키마도 신원의 일부다`() {
@@ -112,6 +128,20 @@ class SchemaOwnershipTest {
             assertEquals("SALES", lines.foreignKeys.single().refSchema,
                 "FK 대상의 소속을 담지 않으면 동명 테이블 중 어느 쪽을 가리키는지 알 수 없다")
         }
+    }
+
+    @Test fun `드라이버가 빈 소속을 주면 모름으로 접는다`() {
+        // JDBC 명세는 해당 없을 때 TABLE_SCHEM 을 null 로 주라고 하지만 **빈 문자열을 주는 드라이버가
+        // 있다.** 그대로 담으면 같은 카탈로그가 드라이버에 따라 다른 신원을 갖고(null vs ""),
+        // IRI 는 slug 의 빈 문자열 대체(`x`)로 접혀 `x` 라는 이름의 스키마와 충돌한다(리뷰 Q3).
+        // 빈 이름은 이름이 아니므로 '모름' 으로 접는다.
+        val blank = t("orders", MetadataService.ownerOf(""))
+        assertNull(blank.schema)
+        assertNull(MetadataService.ownerOf("   "))
+        assertNull(MetadataService.ownerOf(null))
+        assertEquals("sales", MetadataService.ownerOf("sales"))
+        // 정규화가 소속을 뭉개지는 않는다.
+        assertEquals(h(listOf(t("orders", null))), h(listOf(blank)))
     }
 
     @Test fun `DDL 의 스키마 한정 이름이 소속으로 들어간다`() {
@@ -186,6 +216,23 @@ class SchemaOwnershipTest {
         assertTrue(s.tables.isEmpty(), "부분 복구를 사실로 산출하면 안 된다: ${s.tables}")
         assertEquals(listOf(CollectionReason.PARSE_ERROR), s.issues.map { it.reasonCode })
         assertEquals(IssueKind.FAILED, s.issues.single().kind)
+    }
+
+    @Test fun `인용 안의 겹인용은 이름의 한 문자다`() {
+        // `"sch""ema"` 는 이름이 `sch"ema` 인 스키마다. 겹침을 접지 않고 그대로 두면 신원이
+        // 원본을 가리키지 않는다 — contentHash 가 있지도 않은 이름을 지목하게 된다(리뷰 Q1).
+        val t = DdlParser().parse("""CREATE TABLE "sch""ema"."ta""b" (id INTEGER)""").tables.single()
+        assertEquals("sch\"ema", t.schema)
+        assertEquals("ta\"b", t.name)
+    }
+
+    @Test fun `인용하지 않은 식별자의 따옴표는 건드리지 않는다`() {
+        // 겹침을 접는 규칙은 **인용된 조각**에만 선다. 비인용 식별자까지 손대면 파서가 원본에 없는
+        // 이름을 만든다.
+        val fk = DdlParser().parse("""CREATE TABLE t (cid INTEGER REFERENCES sales.customers(id))""")
+            .tables.single().foreignKeys.single()
+        assertEquals("sales", fk.refSchema)
+        assertEquals("customers", fk.refTable)
     }
 
     @Test fun `백틱 한정 이름도 소속을 담는다`() {

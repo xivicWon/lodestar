@@ -300,7 +300,25 @@ class DdlParser(private val masker: SqlTextMasker = SqlTextMasker()) {
         return out
     }
 
-    private fun unquote(s: String): String = s.trim().trim('"', '`', '[', ']')
+    /**
+     * 식별자에서 인용을 벗긴다.
+     *
+     * **인용된 조각이면 안쪽의 겹인용을 한 문자로 접는다** — `"sch""ema"` 는 이름이 `sch"ema` 인
+     * 스키마다. 접지 않으면 신원(`contentHash`)이 있지도 않은 이름(`sch""ema`)을 지목한다.
+     * 겹침을 접는 규칙은 **인용된 조각에만** 선다: 비인용 식별자까지 손대면 원본에 없는 이름을
+     * 만들게 된다.
+     */
+    private fun unquote(s: String): String {
+        val t = s.trim()
+        val q = when {
+            t.length >= 2 && t.first() == '"' && t.last() == '"' -> "\""
+            t.length >= 2 && t.first() == '`' && t.last() == '`' -> "`"
+            t.length >= 2 && t.first() == '[' && t.last() == ']' -> null   // 대괄호는 겹침 규칙이 없다
+            else -> return t
+        }
+        val body = t.substring(1, t.length - 1)
+        return if (q == null) body else body.replace(q + q, q)
+    }
 
     /**
      * 한정 이름을 **인용부호를 존중해** 조각으로 나눈다: `catalog.schema.table`.
@@ -342,6 +360,11 @@ class DdlParser(private val masker: SqlTextMasker = SqlTextMasker()) {
      * `schema.table` · `catalog.schema.table` 에서 **소속**(마지막 이름 바로 앞 부분)만 취한다(#126).
      * 카탈로그는 모델이 담지 않는다([TableInfo] 참조) — JDBC 경로와 같은 축만 남겨야 두 경로의
      * 산출물이 같은 것을 뜻한다.
+     *
+     * **빈 이름은 '모름'(`null`)으로 접는다**(`""."t"`). 정규화 계층은 `null` 과 `""` 를 다른 신원으로
+     * 구분하지만(그건 직렬화가 단사이기 위한 조건이다), **빈 식별자는 어느 방언에서도 유효한 스키마
+     * 이름이 아니므로** 수집기는 그것을 이름으로 받지 않는다 — 라이브 경로가 드라이버의 빈 문자열을
+     * 접는 것과 같은 규칙이다([MetadataService.ownerOf]).
      */
     private fun schemaOf(qualified: String): String? =
         splitQualified(qualified).dropLast(1).lastOrNull()?.let { unquote(it) }?.takeIf { it.isNotEmpty() }

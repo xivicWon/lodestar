@@ -120,6 +120,12 @@ class SchemaToOwlMapper {
             }
 
             for (fk in table.foreignKeys) {
+                // FK 프로퍼티의 라벨은 **관계를 설명하는 문장**이지 신원 표시가 아니다. 그래서 여기서는
+                // 소속을 포함한 정규명을 쓴다 — 클래스 라벨을 원본 이름으로 두는 규칙(위)과 어긋나
+                // 보이지만, 그 규칙의 이유(라벨이 '수집기가 본 이름' 이어야 하고, 라벨을 이름으로 쓰는
+                // UI·AI 그라운딩 경로가 흔들리면 안 된다)가 여기엔 걸리지 않는다. AI 그라운딩은 클래스
+                // 라벨만 읽고(SemanticEnricher.collectContext), 이 문장에서 대상을 소속 없이 적으면
+                // 동명 테이블 중 어느 쪽인지 문장이 말해주지 못한다.
                 val op = df.getOWLObjectProperty(fkPropIri(baseIri, table, fk.fkColumns))
                 val (targetIri, refLabel) = refTarget(baseIri, table, fk, byQualified, byName)
                 val target = df.getOWLClass(targetIri)

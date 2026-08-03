@@ -7,6 +7,21 @@ import java.sql.Connection
 @Service
 class MetadataService {
 
+    companion object {
+        /**
+         * 드라이버가 준 소속 문자열을 신원에 담을 값으로 정규화한다(#126).
+         *
+         * JDBC 명세는 해당 없을 때 `TABLE_SCHEM`·`PKTABLE_SCHEM` 을 `null` 로 주라고 하지만
+         * **빈 문자열을 주는 드라이버가 있다.** 그대로 담으면 같은 카탈로그가 드라이버에 따라 다른
+         * 신원을 갖고(`null` vs `""`), IRI 쪽에서는 빈 이름이 [SchemaToOwlMapper] 의 슬러그 대체값과
+         * 겹쳐 `x` 라는 이름의 스키마와 충돌한다. **빈 이름은 이름이 아니므로 '모름'(`null`)으로 접는다.**
+         *
+         * 정규화 계층([SchemaCanonical])은 `null` 과 `""` 를 계속 구분한다 — 수집기가 접는 것과
+         * 직렬화가 구분하는 것은 다른 층이고, 뒤쪽은 다중 방어로 남긴다.
+         */
+        internal fun ownerOf(raw: String?): String? = raw?.takeIf { it.isNotBlank() }
+    }
+
     /** FK 한 건을 KEY_SEQ 순서로 모으는 자리. 대상의 소속(refSchema)까지 함께 든다(#126). */
     private class FkBuild(
         val refTable: String,
@@ -99,7 +114,7 @@ class MetadataService {
                 while (rs.next()) {
                     val fkName = rs.getString("FK_NAME") ?: "${name}_${rs.getString("FKCOLUMN_NAME")}"
                     val entry = fkBuild.getOrPut(fkName) {
-                        FkBuild(rs.getString("PKTABLE_NAME"), rs.getString("PKTABLE_SCHEM"))
+                        FkBuild(rs.getString("PKTABLE_NAME"), ownerOf(rs.getString("PKTABLE_SCHEM")))
                     }
                     val seq = rs.getInt("KEY_SEQ")
                     entry.fkColumns[seq] = rs.getString("FKCOLUMN_NAME")
@@ -114,7 +129,7 @@ class MetadataService {
 
             // schem 이 이 테이블의 소속이다(#126). 카탈로그는 담지 않는다 — 이 수집은 conn.catalog
             // 하나로 한정되므로 스냅샷 안에서 상수이고, 그 신원은 sourceId 가 이미 담는다.
-            tables.add(TableInfo(name, columns, pk.values.toList(), foreignKeys, schema = schem))
+            tables.add(TableInfo(name, columns, pk.values.toList(), foreignKeys, schema = ownerOf(schem)))
         }
         // JDBC 경로에는 '읽은 원본 바이트' 가 없다 — 수집기가 실제로 본 카탈로그의 정규화 표현을 해싱한다.
         return SchemaModel(

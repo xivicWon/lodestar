@@ -33,8 +33,8 @@ describe('ConsistencyBadge', () => {
       unsatisfiableClasses: ['http://lodestar/rdb/legacy#PUBLIC/TB_CUST_MST'],
       inferredSubClassOf: [],
     }
-    const t = mount(ConsistencyBadge).text()
-    expect(t).toContain('TB_CUST_MST')
-    expect(t).not.toContain('PUBLIC/TB_CUST_MST')
+    // 부분 문자열 하나만 배제하면 구분자가 바뀌거나 'PUBLIC' 이 다른 형태로 남아도 통과한다.
+    // 표시 텍스트 전체를 고정해 소속 잔존과 접두 문구 회귀를 함께 잡는다(리뷰 LOD-177).
+    expect(mount(ConsistencyBadge).text()).toBe('🔴 모순: TB_CUST_MST')
   })
 })

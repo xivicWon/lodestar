@@ -40,7 +40,7 @@ PREVIOUS = {
 TIMES = {
     # 실측이 끝난 시각과 그 실행의 소요다 — 프로브가 시각을 산출물에 넣으면 매 실행이 표류하므로
     # 여기 못박되, 지어내지 않는다.
-    "db": ("2026-08-03T06:27:45Z", "2026-08-03T06:27:46Z"),
+    "db": ("2026-08-03T08:38:44Z", "2026-08-03T08:38:45Z"),
     "code": ("2026-07-31T08:41:00Z", "2026-07-31T08:41:07Z"),
 }
 # 이번 실행에서 **수집기의 무엇이** 달라졌는가. 트랙마다 다르므로 한 문장을 공유하지 않는다 —
@@ -308,12 +308,26 @@ def baseline_block(track: str, run: dict, schema_version: str, metrics: dict,
         # 어느 필드가 갈렸는지 **계산해서** 적는다. "신원이 다르다" 만 적으면 gold 개정으로
         # 비교가 끊긴 것과 트랙을 잘못 인용한 것이 같은 문장이 된다.
         differing = [k for k in IDENTITY if prev["run"][k] != run[k]]
+        # 신원 필드가 **같은데도** 비교할 수 없는 경우가 있다 — 이전 실행이 기준선 자격을 갖지
+        # 못했거나(미승인 gold 축 위의 실행) 보고서 스키마·종류가 다를 때다. 그때 "신원이 다르다
+        # (다른 필드: 없음)" 이라고 적으면 보고서가 자기 자신과 모순된다. 사유를 실제로 계산해 적는다.
+        if differing:
+            detail = f"신원이 다르다(다른 필드: {', '.join(differing)})"
+        else:
+            causes = []
+            if not prev["baseline"]["eligibleAsBaseline"]:
+                causes.append("이전 실행이 기준선 자격을 갖지 못한다(eligibleAsBaseline=false)")
+            if prev["run"]["reportKind"] != "BASELINE":
+                causes.append(f"이전 실행의 reportKind 가 {prev['run']['reportKind']} 다")
+            if prev["schemaVersion"] != schema_version:
+                causes.append(f"보고서 스키마가 다르다({prev['schemaVersion']} → {schema_version})")
+            detail = "신원 필드는 같으나 비교 기준선이 아니다(" + " · ".join(causes) + ")"
         axis = probe_axis()
         return {
             "previous": ident,
             "comparable": False,
             "reason": (
-                f"{ident['runId']} 과 신원이 다르다(다른 필드: {', '.join(differing) or '없음'}) — "
+                f"{ident['runId']} 과 {detail} — "
                 f"gold 입력 축 재고정(#125: probeAxis {axis['revision'][:7]}, "
                 f"{axis['status']['state']})으로 이전 gold 로 채점된 실행은 비교 기준선에서 제외된다"
                 "(I1 §7.4 · I2 §10.4). 이전 실행은 덮어쓰지 않고 여기서 인용만 한다(I3 §5.5)."
