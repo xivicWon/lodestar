@@ -37,6 +37,8 @@ def schema_for(report):
     """
     v = report.get("schemaVersion", "") if isinstance(report, dict) else ""
     return SCHEMAS.get(str(v).rsplit("/", 1)[-1], SCHEMA)
+
+
 MANIFEST = json.loads((EX / "manifest.json").read_text())
 # 계약 §4 가 정의한 불변식 개수 — 규칙이 늘면 여기도 올린다(커버리지 검사에 쓰인다).
 MAX_RULE = 20

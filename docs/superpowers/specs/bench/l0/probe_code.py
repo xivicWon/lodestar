@@ -40,7 +40,6 @@ RUN_DIR = HERE / "runs/run-l0-code-aad4382-001"
 COMMITTED = RUN_DIR / "probe-code.json"
 OUT = REPO / "build/l0/probe-code.json"
 
-SCOPE_ROOT = "backend/src/main/kotlin"
 CG_ROOT = REPO / "codegraph"
 
 
@@ -79,6 +78,23 @@ def sha256_file(p: pathlib.Path) -> str:
 
 def gold(name: str) -> dict:
     return json.loads((GOLD / name).read_text())
+
+
+def scope_root(manifest: dict | None = None, track: str = "code") -> str:
+    """수집 범위 루트는 **gold 가 정한다**(`probeAxis.scopeRoots`).
+
+    여기 상수로 두면 gold 의 범위 선언과 프로브가 실제로 읽는 범위가 갈릴 수 있고, 그때 G5.10 은
+    gold 안에서만 정합해 통과한다 — 두 곳이 같은 값을 우연히 들고 있는 동안에는 아무도 모른다.
+    범위는 입력 신원의 일부이므로 고정된 쪽에서 읽어 오는 것이 맞다.
+    """
+    m = manifest if manifest is not None else gold("manifest.json")
+    for r in m["probeAxis"]["scopeRoots"]:
+        if r["track"] == track:
+            return r["root"]
+    raise KeyError(f"gold probeAxis.scopeRoots 에 track={track} 이 없다")
+
+
+SCOPE_ROOT = scope_root()
 
 
 def run_collector(source_root: pathlib.Path, out_path: pathlib.Path, seed: str | None = None) -> dict:

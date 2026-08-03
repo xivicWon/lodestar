@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import pathlib
 import re
@@ -76,9 +77,16 @@ def probe(track: str) -> dict:
     return json.loads((RUNS[track] / PROBE_NAME[track]).read_text())
 
 
+@functools.lru_cache(maxsize=1)
+def gold_manifest() -> dict:
+    """gold 정본을 읽는 **단 하나의 지점**. 보고서 한 건을 만드는 동안 승인 상태가 바뀌면
+    같은 보고서 안에서 경고와 기준선 자격이 갈릴 수 있으므로, 한 프로세스 안에서는 한 번만 읽는다."""
+    return json.loads((GOLD / "manifest.json").read_text())
+
+
 def probe_axis() -> dict:
     """gold 의 L0 **수집 입력 축**(#125). 정답 축(sourceRevision)과 승인이 따로 간다."""
-    return json.loads((GOLD / "manifest.json").read_text())["probeAxis"]
+    return gold_manifest()["probeAxis"]
 
 
 def axis_approved() -> bool:
@@ -90,7 +98,7 @@ def axis_approved() -> bool:
     입력 신원 위에 얹힌다(I1 §7). 승인이 나면 이 값이 바뀌면서 보고서가 프로브에서 다시
     만들어지지 않게 되므로(V2), 승인된 수치는 **새 runId** 로 남게 된다(I3 §5.5).
     """
-    gold = json.loads((GOLD / "manifest.json").read_text())
+    gold = gold_manifest()
     return (gold["status"]["state"] == "APPROVED"
             and gold["probeAxis"]["status"]["state"] == "APPROVED")
 
