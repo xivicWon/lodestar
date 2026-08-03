@@ -19,12 +19,14 @@ description: Use when driving ANY review-response loop in the Lodestar pipeline 
 
 ### 1. 라운드 카운트
 - 워커 자체리뷰: 지금까지 돈 자체리뷰 횟수.
-- AI 리뷰 루프: 해당 PR의 `AI 코드 리뷰 완료` 코멘트 수.
+- AI 리뷰 루프: 해당 PR의 `AI 코드 리뷰 완료` 코멘트 수. **주의**: 이 고정 문자열에 의존하므로 리뷰어 문구가 바뀌면 카운트가 조용히 깨진다 — 문구 변경 시 이 마커를 함께 갱신하고, 가능하면 리뷰 봇이 남기는 **구조화된 마커**(라벨·헤더 ID·기계판독 필드)를 우선 사용한다.
 
 ### 2. 내용 기준 dedup (ID 무시)
 각 finding 을 **정규화 키**로 접는다:
 ```
-key = normalize(file_path) + ":" + nearest_symbol_or_line_bucket + ":" + normalized_claim
+key = normalize(file_path) + ":" + line_bucket + ":" + normalized_claim
+line_bucket      = 지적을 감싸는 **최근접 심볼**(함수/클래스/헤더) 이름을 우선 사용(라인 이동에 견딤).
+                   심볼을 못 잡으면 `floor(line/10)` 근사 창(≈±5행)으로 대체.
 normalized_claim = 소문자화 · 공백/구두점 축약 · ID(LOD-\d+, FP-\w+) 제거 · 동의어 통일
 ```
 - 같은 key 가 이전 라운드에도 있었으면 **재지적(중복)** 으로 표시.
@@ -38,7 +40,7 @@ normalized_claim = 소문자화 · 공백/구두점 축약 · ID(LOD-\d+, FP-\w+
 ### 4. 상한 집행 (하드 규칙)
 - 자체리뷰 **round > 3**, AI 리뷰 **round > 5** → **HALT**.
 - HALT 시: 자동 수정·강행 머지 **금지**. 다음을 보고: 라운드 이력, dedup 요약(뿌리 몇 개인지), 남은 쟁점, 권고.
-- 남은 IN-SCOPE 이 있으면 **후속 이슈로 이관**하고 진행(무한 금지).
+- 남은 IN-SCOPE: **minor** 는 후속 이슈로 이관하고 진행 / **blocking·major** 는 사람 에스컬레이션(강행 금지). 무한 루프 금지.
 
 ### 5. 판정은 게이트로
 리뷰 통과 ≠ 계약 준수. 종료 근거는 **게이트 그린**(evidence-gate-runner)이지 "리뷰어가 만족"이 아니다.

@@ -42,7 +42,10 @@ findings 를 두 갈래로 나눈다.
 - **재리뷰**: 바뀐 부분과 직전 findings 가 실제로 해소됐는지 + 회귀 없는지 재점검(해당 렌즈 중심).
 - `round+1`. **상한 3.**
   - 3회 안에 IN-SCOPE blocking/major 가 모두 해소되면 → §4.
-  - **3회 후에도 남으면**: 남은 것을 **OUT-OF-SCOPE 처리로 전환**(코멘트 + 후속 이슈)하고 진행한다. 무한히 돌지 않는다.
+  - **3회 후에도 남으면** 심각도로 가른다:
+    - **minor** 만 남았다 → 후속 이슈로 이관하고 진행.
+    - **blocking·major(IN-SCOPE)** 가 남았다 → **HALT · 사람 에스컬레이션**(강행 push 금지). 자동으로 OUT-OF-SCOPE 처리해 넘기지 않는다 — 알려진 major 결함을 조용히 태우는 걸 막기 위함(review-round-governor 하드 규칙과 일치).
+    - 어느 경우든 **무한 루프는 금지**.
 
 ## 4. 게이트 & push
 - 품질 게이트 그린: backend `./gradlew test` · frontend `npx vitest run && npx vue-tsc -b` · (스크립트/문서는 해당 검증기).

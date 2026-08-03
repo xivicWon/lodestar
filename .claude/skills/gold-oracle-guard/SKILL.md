@@ -16,7 +16,7 @@ description: Use before making or reviewing ANY change under docs/superpowers/sp
 - 에이전트/세션은 `manifest.json` 의 `status.state` 를 `APPROVED` 로 바꾸거나 `approvedBy`·`approvedAt` 을 **직접 채우지 않는다**.
 - 승인은 **오라클(@xivicWon)** 만 한다. 스키마가 `state`·`approvedBy`·`approvedAt` 셋을 함께 요구하는 이유가 이것 — 승인 사실이 파일에 없으면 승인이 아니다.
 - 재고정안은 `PROPOSED`(미승인) 상태로 만들어 메인 세션·오라클에 넘긴다.
-- **검사**: diff 가 `state: PROPOSED→APPROVED` 또는 `approvedBy/approvedAt` 신규 기입을 포함하면 → 차단·에스컬레이션.
+- **검사**(전이만 보지 말고 **결과 상태·값 변화**를 본다): diff 에 `state=APPROVED` 가 **어떤 형태로든** — PROPOSED→APPROVED 전이든, **처음부터 `APPROVED` 로 작성된 신규 manifest** 든 — 나타나거나, `approvedBy`/`approvedAt` 이 **신규 기입이든 기존 값 교체든** 발생하면 → 차단·에스컬레이션.
 
 ## 불변식 2 — gold 독립성 (순환 금지)
 - 정답(L1/L2/L3)을 **피검사 도구(codegraph 등 수집기)로 생성하지 않는다**. 도구가 정답을 만들면 "도구가 자기 채점표를 쓴다" → 검증이 무의미.
@@ -29,7 +29,7 @@ description: Use before making or reviewing ANY change under docs/superpowers/sp
 - **검사**: 수집기 입력 파일이 바뀌었는데 `sourceRevision` 을 그대로 올리려 하면(정답셋 자동 오염) → 축 분리로 처리.
 
 ## 승인 유효성 (오라클이 승인할 때)
-승인 커밋은 반드시: `state=APPROVED` + `approvedBy` + `approvedAt` **셋 동시** + 커밋 작성자가 오라클 본인. 문장·주석이 아니라 **구조적 게이트**로만 표현.
+승인의 신원 근거는 **위조 불가능한 것**이어야 한다 — git commit author 는 `git commit --author` 로 누구나 위장할 수 있어 신원 근거가 **못 된다**. 유효한 승인 = (a) `state=APPROVED` + `approvedBy` + `approvedAt` **셋 동시** 기입, **그리고** (b) 그 변경이 **오라클 계정만 보유한 GitHub 승인/머지 권한**으로 main 에 반영됨(가능하면 GPG/SSH **서명된 Verified 커밋** 병행). 문장·주석이 아니라 이 **구조적 게이트**로만 승인을 표현한다.
 
 ## 출력
 ```
