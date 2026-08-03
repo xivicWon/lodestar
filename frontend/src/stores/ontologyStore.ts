@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload, apiDownload, ApiError } from '../api/client'
-import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, ScoredCandidate, ConfirmedFact, RelationCandidate, JudgedCandidate, ImpactResult, ChatAnswer, ImportResult, MergeSummary, TrashEntry, ReferenceMetaDto, AlignmentDto, MatchType, RelationProvenance } from '../api/types'
+import type { ClassDto, OntologyMetaDto, ReasonResult, ObjectPropertyDto, ConnectionInfo, EnrichmentCandidate, ScoredCandidate, ConfirmedFact, RelationCandidate, JudgedCandidate, ImpactResult, ChatAnswer, ImportResult, MergeSummary, CollectionReport, TrashEntry, ReferenceMetaDto, AlignmentDto, MatchType, RelationProvenance } from '../api/types'
 import { buildTree } from '../lib/buildTree'
 
 export const useOntologyStore = defineStore('ontology', () => {
@@ -25,6 +25,8 @@ export const useOntologyStore = defineStore('ontology', () => {
   const chatMessages = ref<{ role: 'user' | 'assistant'; text: string }[]>([])
   const asking = ref(false)
   const lastMerge = ref<MergeSummary | null>(null)
+  /** 마지막 임포트가 **하지 못한 것**(#129). 세 입력 경로가 모두 여기에 싣는다. */
+  const lastCollection = ref<CollectionReport | null>(null)
   const trash = ref<TrashEntry[]>([])
   const referenceClasses = ref<ClassDto[]>([])
   const referenceMeta = ref<ReferenceMetaDto | null>(null)
@@ -83,6 +85,7 @@ export const useOntologyStore = defineStore('ontology', () => {
     try {
       const res = await apiPost<ImportResult>('/rdb/import/ddl', { sql, schemaName })
       lastMerge.value = res.merge
+      lastCollection.value = res.collection ?? null
       selectedIri.value = null
       await refresh()
     } catch (e) { setError(e) }
@@ -93,6 +96,7 @@ export const useOntologyStore = defineStore('ontology', () => {
     try {
       const res = await apiPost<ImportResult>('/rdb/import/sample', {})
       lastMerge.value = res.merge
+      lastCollection.value = res.collection ?? null
       selectedIri.value = null
       await refresh()
     } catch (e) { setError(e) }
@@ -190,6 +194,7 @@ export const useOntologyStore = defineStore('ontology', () => {
     try {
       const res = await apiPost<ImportResult>('/rdb/import/connection', info)
       lastMerge.value = res.merge
+      lastCollection.value = res.collection ?? null
       selectedIri.value = null
       await refresh()
     } catch (e) { setError(e) }
@@ -384,7 +389,7 @@ export const useOntologyStore = defineStore('ontology', () => {
   return { classes, selectedIri, meta, error, selected, tree,
            reasonResult, reasoning, runReasoner, inferredChildrenOf,
            objectProperties, importDdl, importConnection, importSample, renameRelation,
-           lastMerge,
+           lastMerge, lastCollection,
            enrichCandidates, enriching, enrichSample, enrichCurrent, applyEnrichment, dismissEnrichment,
            scoredCandidates, scoredEnrichSample, scoredEnrichCurrent,
            confirmations, fetchConfirmations, confirm, deleteConfirmation,

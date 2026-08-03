@@ -14,6 +14,7 @@ import NodeSidePanel from './components/NodeSidePanel.vue'
 import RelationLinkModal from './components/RelationLinkModal.vue'
 import AlignmentModal from './components/AlignmentModal.vue'
 import MergeNotice from './components/MergeNotice.vue'
+import CollectionNotice from './components/CollectionNotice.vue'
 import { useOntologyStore } from './stores/ontologyStore'
 
 const store = useOntologyStore()
@@ -146,6 +147,7 @@ function resultText(key: string, result: string): string {
       </button>
     </div>
     <MergeNotice />
+    <CollectionNotice />
     <ImportPanel v-if="showImport" />
     <EnrichPanel v-if="showEnrich" />
     <RelationSuggestPanel v-if="showRel" />

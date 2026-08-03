@@ -9,7 +9,21 @@ import java.sql.Connection
 interface SchemaSource {
     /** baseIri·표시에 쓰는 논리 이름 */
     val name: String
+
+    /**
+     * 입력 경로의 종류(#129). 임포트 응답의 수집 보고에 실려 **좌표 규약을 결정**한다 —
+     * DDL 은 행 번호 좌표, JDBC 계열은 `jdbc://catalog/schema/object` 다. 기본값을 두지 않는 이유는
+     * 새 소스를 추가하면서 종류를 적지 않으면 그 경로의 좌표가 소비자에게 잘못 해석되기 때문이다.
+     */
+    val kind: String
+
     fun extract(): SchemaModel
+
+    companion object {
+        const val KIND_DDL = "ddl"
+        const val KIND_JDBC = "jdbc"
+        const val KIND_SAMPLE = "sample"
+    }
 }
 
 /** DDL 텍스트 소스 */
@@ -19,6 +33,7 @@ class DdlSource(
     private val parser: DdlParser,
 ) : SchemaSource {
     override val name: String = schemaName?.takeIf { it.isNotBlank() } ?: "schema"
+    override val kind: String = SchemaSource.KIND_DDL
     override fun extract(): SchemaModel = parser.parse(sql, sourceId = "db:ddl:$name")
 }
 
@@ -29,6 +44,7 @@ class LiveJdbcSource(
     private val metadata: MetadataService,
 ) : SchemaSource {
     override val name: String = info.database
+    override val kind: String = SchemaSource.KIND_JDBC
 
     /**
      * sourceId 에 host·port 가 들어간다 — 빼면 서로 다른 서버의 같은 이름 DB(운영/스테이징)가
@@ -60,6 +76,7 @@ class SampleSource(
     private val metadata: MetadataService,
 ) : SchemaSource {
     override val name: String = "legacy"
+    override val kind: String = SchemaSource.KIND_SAMPLE
 
     override fun extract(): SchemaModel =
         sampleDb.open().use { conn: Connection ->
