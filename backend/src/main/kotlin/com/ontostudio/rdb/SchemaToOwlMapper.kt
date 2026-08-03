@@ -16,13 +16,6 @@ class SchemaToOwlMapper {
     internal fun slug(name: String): String =
         name.trim().replace(Regex("\\s+"), "_").replace(Regex("[^\\p{L}\\p{N}_]"), "").ifBlank { "x" }
 
-    internal fun classIri(base: String, table: String): IRI = IRI.create(base + slug(table))
-    internal fun dataPropIri(base: String, table: String, column: String): IRI =
-        IRI.create(base + slug(table) + "." + slug(column))
-
-    internal fun fkPropIri(base: String, table: String, fkColumns: List<String>): IRI =
-        IRI.create(base + slug(table) + "_" + fkColumns.joinToString("_") { slug(it) } + "_ref")
-
     /**
      * 소속(schema)을 IRI 앞에 붙이는 경로 조각 — `sales/` (#126). 소속을 모르면 빈 문자열이므로
      * 비한정 DDL 로 만든 IRI 는 이 변경 전과 같다.
@@ -35,16 +28,22 @@ class SchemaToOwlMapper {
      * 테이블이 하나 생기는 것만으로 기존 테이블의 IRI 가 전부 바뀌어, 재임포트마다 확정(세이브포인트)
      * 매칭이 무너진다(E9).
      */
-    internal fun qualifier(schema: String?): String = if (schema == null) "" else slug(schema) + "/"
+    private fun qualifier(schema: String?): String = if (schema == null) "" else slug(schema) + "/"
 
-    internal fun classIri(base: String, table: TableInfo): IRI =
-        IRI.create(base + qualifier(table.schema) + slug(table.name))
+    /**
+     * **클래스 IRI 를 만드는 단 하나의 자리.** 소속 표기가 여러 곳에 흩어지면 규약을 바꿀 때 한
+     * 곳이 남아, 같은 테이블이 경로에 따라 다른 IRI 를 갖게 된다. 프로퍼티 IRI 도 이 값 위에 쌓는다.
+     */
+    internal fun classIri(base: String, schema: String?, name: String): IRI =
+        IRI.create(base + qualifier(schema) + slug(name))
+
+    internal fun classIri(base: String, table: TableInfo): IRI = classIri(base, table.schema, table.name)
 
     private fun dataPropIri(base: String, table: TableInfo, column: String): IRI =
-        IRI.create(base + qualifier(table.schema) + slug(table.name) + "." + slug(column))
+        IRI.create(classIri(base, table).toString() + "." + slug(column))
 
     private fun fkPropIri(base: String, table: TableInfo, fkColumns: List<String>): IRI =
-        IRI.create(base + qualifier(table.schema) + slug(table.name) + "_" +
+        IRI.create(classIri(base, table).toString() + "_" +
             fkColumns.joinToString("_") { slug(it) } + "_ref")
 
     /**
@@ -60,6 +59,13 @@ class SchemaToOwlMapper {
      * 2. 적지 않았으면 참조하는 쪽의 스키마 안을 먼저 본다.
      * 3. 그래도 없으면 이름이 유일할 때만 그 테이블로 간다 — 후보가 여럿인데 아무거나 고르면
      *    역시 잘못된 관계가 사실이 된다.
+     *
+     * **남는 한계(기록):** 소속을 적지 않은 참조의 대상이 스냅샷에 없으면, 서로 다른 스키마에서
+     * 같은 이름을 가리키는 두 FK 가 한 클래스로 수렴한다. 그때 참조하는 쪽 스키마로 한정하는 것은
+     * **모르는 소속을 지어내는 것**이라(실제 대상은 search_path 상의 공용 스키마일 수 있다) 하지
+     * 않는다. JDBC 경로는 `PKTABLE_SCHEM` 을 항상 주므로 이 자리는 DDL 텍스트에만 해당한다.
+     * 또 해석되지 않은 대상 클래스는 range 공리로만 시그니처에 들어가 선언·라벨이 없다 — #126
+     * 이전부터의 성질이고, 이 이슈에서 바꾸지 않았다.
      */
     private fun refTarget(base: String, from: TableInfo, fk: ForeignKeyInfo,
                           byQualified: Map<Pair<String?, String>, TableInfo>,
@@ -68,8 +74,8 @@ class SchemaToOwlMapper {
         else byQualified[from.schema to fk.refTable] ?: byName[fk.refTable]?.singleOrNull()
 
         if (resolved != null) return classIri(base, resolved) to resolved.qualifiedName
-        val iri = IRI.create(base + qualifier(fk.refSchema) + slug(fk.refTable))
-        return iri to (fk.refSchema?.let { "$it.${fk.refTable}" } ?: fk.refTable)
+        return classIri(base, fk.refSchema, fk.refTable) to
+            (fk.refSchema?.let { "$it.${fk.refTable}" } ?: fk.refTable)
     }
 
     fun build(schema: SchemaModel, baseIri: String): OWLOntology {

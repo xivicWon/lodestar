@@ -153,8 +153,12 @@ class L0DbSourceProbeTest {
             }
             val pk = n.putArray("primaryKey"); t.primaryKey.forEach { pk.add(it) }
             val fks = n.putArray("foreignKeys")
+            // 정렬 키는 FK 를 **유일하게** 가른다: 소속(없음과 빈 이름을 구분한다) · 대상 · 이쪽 컬럼 ·
+            // 대상 컬럼. 하나라도 빠지면 서로 다른 FK 가 동률이 되어 순서가 입력 순서에 남고, 계측기가
+            // 그것을 '수집기가 비결정적' 으로 읽는다 — 제품의 SchemaCanonical 은 이미 막아 둔 자리다.
             for (f in t.foreignKeys.sortedBy {
-                (it.refSchema ?: "") + "\t" + it.refTable + "\t" + it.fkColumns.joinToString(",")
+                (it.refSchema?.let { s -> "=$s" } ?: "-") + "\t" + it.refTable + "\t" +
+                    it.fkColumns.joinToString(",") + "\t" + it.refColumns.joinToString(",")
             }) {
                 val fn = mapper.createObjectNode()
                 fn.put("refTable", f.refTable)

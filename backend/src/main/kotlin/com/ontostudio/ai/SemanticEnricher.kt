@@ -77,6 +77,8 @@ class SemanticEnricher(
 
         val sb = StringBuilder()
         if (confirmedHere.isNotEmpty()) {
+            // 앵커는 이름으로만 적는다 — 소속이 다른 동명 테이블이 확정돼 있으면 두 줄이 같아 보인다.
+            // 앵커는 되돌릴 대상이 아니라 **그라운딩 문장**이라 키가 필요 없고, E12 도 같은 모양이다.
             sb.appendLine("## 이미 확정된 사실 (변경 금지, 이 의미에 일관되게 추론하라)")
             for (t in confirmedHere) {
                 sb.appendLine("- ${t.name} = ${labelByIri[classIri(t)].orEmpty()}")
@@ -118,7 +120,10 @@ class SemanticEnricher(
      * 기본 스키마 밖의 테이블은 아예 조회되지 않는다(라이브 PostgreSQL 의 비-public 스키마).
      */
     private fun sampleRows(conn: Connection, table: TableInfo, limit: Int): List<Map<String, String>> {
-        val qualified = table.schema?.let { "\"$it\".\"${table.name}\"" } ?: "\"${table.name}\""
+        // 인용부호는 겹쳐서 이스케이프한다. 이름에 `"` 가 들어오면 인용이 거기서 닫혀 뒤가 SQL 로
+        // 읽힌다 — 이름은 DB 메타데이터에서 오지만 이 문자열을 그대로 실행하므로 입력으로 취급한다.
+        fun q(id: String) = "\"" + id.replace("\"", "\"\"") + "\""
+        val qualified = table.schema?.let { "${q(it)}.${q(table.name)}" } ?: q(table.name)
         val out = mutableListOf<Map<String, String>>()
         conn.createStatement().use { st ->
             st.executeQuery("SELECT * FROM $qualified FETCH FIRST $limit ROWS ONLY").use { rs ->
