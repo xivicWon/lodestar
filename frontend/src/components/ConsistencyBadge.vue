@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { useOntologyStore } from '../stores/ontologyStore'
+import { shortName } from '../lib/shortName'
 const store = useOntologyStore()
 </script>
 
 <template>
   <span v-if="store.reasonResult" class="badge" :class="store.reasonResult.consistent ? 'ok' : 'bad'">
     <template v-if="store.reasonResult.consistent">🟢 일관성 OK</template>
-    <template v-else>🔴 모순: {{ store.reasonResult.unsatisfiableClasses.map(i => i.split('#').pop()).join(', ') || '있음' }}</template>
+    <template v-else>🔴 모순: {{ store.reasonResult.unsatisfiableClasses.map(shortName).join(', ') || '있음' }}</template>
   </span>
 </template>
 
