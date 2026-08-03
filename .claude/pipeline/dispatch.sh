@@ -9,7 +9,7 @@ SLUG="${2:-}"
 # 리포 루트를 스크립트 위치(.claude/pipeline/)에서 파생 — 이식 가능
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CMUX="/Applications/cmux.app/Contents/Resources/bin/cmux"
-CLAUDE="claude --dangerously-skip-permissions"
+LAUNCH=".claude/pipeline/agent-launch.sh"   # 에이전트(ccp) 기동 런처 — 인라인 대신 스크립트
 
 command -v gh >/dev/null || { echo "❌ gh 필요"; exit 1; }
 [ -x "$CMUX" ] || { echo "❌ cmux 없음: $CMUX"; exit 1; }
@@ -70,9 +70,11 @@ fi
 RULES
 } > "${WT}/.claude-brief.md"
 
-# cmux 세션 — 초기 프롬프트는 짧은 ASCII 로 직접 전달(파일 읽으라고만)
+# cmux 세션 — 런처 스크립트를 실행(ccp 기동). worktree(.claude-brief.md 곁)에서 돈다.
+# 선행 공백: cmux --command 가 첫 키 입력을 종종 삼킨다(관측: 'claude'→'laude').
+# 맨 앞 공백을 미끼로 두면 삼켜도 뒤 명령이 온전하다(zsh 는 선행 공백 무시).
 $CMUX new-workspace --name "$WS" --cwd "$WT" \
-  --command "${CLAUDE} 'Read .claude-brief.md and follow it strictly. Korean OK in output.'" >/dev/null
+  --command " bash ${ROOT}/${LAUNCH}" >/dev/null
 
 cat <<EOF
 ✅ 이슈 #${N} 디스패치 완료
