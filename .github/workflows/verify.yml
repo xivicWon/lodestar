@@ -1,0 +1,110 @@
+# 증거 게이트 자동 실행 (#124)
+#
+# I1 은 "재현할 수 없는 측정은 측정이 아니다" 를 무조건 게이트로 두는데, 그 게이트를 지키는 검사가
+# 사람의 기억에만 달려 있으면 게이트가 아니다. 이 워크플로가 그 검사를 PR·main push 에서 돌린다.
+#
+# 여기 적힌 명령은 `docs/superpowers/specs/bench/l0/README.md` 의 수동 재현 절차와 **글자 그대로
+# 같아야** 한다. 둘이 갈라지면 CI 그린이 재현을 보장하지 않는다 — 그 동일성은
+# `docs/superpowers/specs/bench/ci/verify_ci.py` (W3) 가 이 워크플로 안에서 검사한다.
+#
+# 캐시를 쓰지 않는다. gradle 빌드 캐시를 복원하면 증거가 바뀌어도 `:test` 가 UP-TO-DATE 로 생략될 수
+# 있고, 건너뛴 그린은 그린이 아니다. (증거 디렉토리 입력 선언의 유효성은 verify_ci.py W6 이 검사한다.)
+name: verify
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evidence-gates:
+    name: 증거 게이트
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      # 얕은 클론이면 안 된다. 코드 트랙 프로브는 gold 입력 축(`probeAxis.revision`)의 blob 을
+      # `git ls-tree` 로 읽어 수집 범위를 재구성한다 — 기본 fetch-depth: 1 에서는 그 커밋이 없어
+      # exit 128 로 죽는다. 히스토리 없이 도는 그린은 그 프로브를 재현한 것이 아니다.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: 의존성 설치
+        run: |
+          pip install jsonschema pyyaml pytest
+          pip install -e codegraph
+
+      # ── L0 코드 트랙: 수집기 산출물 표류 · 결정성 회귀(#112) ─────────────────
+      - name: codegraph 수집기 테스트
+        run: ( cd codegraph && python3 -m pytest -q )
+
+      - name: L0 코드 프로브 표류 검사
+        run: python3 docs/superpowers/specs/bench/l0/probe_code.py --check
+
+      # ── 보고서가 프로브의 순수 함수인가 ────────────────────────────────────
+      - name: Run Quality Report 재생성
+        run: python3 docs/superpowers/specs/bench/l0/build_report.py
+
+      - name: 보고서 표류 검사
+        run: git diff --exit-code docs/superpowers/specs/bench/l0/runs
+
+      # ── 커밋된 증거의 적합성 ───────────────────────────────────────────────
+      - name: verify_l0 — 증거 적합성 (V1~V14)
+        run: python3 docs/superpowers/specs/bench/l0/verify_l0.py
+
+      - name: 계측기 자체의 테스트
+        run: python3 -m pytest docs/superpowers/specs/bench/l0/test_bench_l0.py -q
+
+      - name: L0 수집 메타데이터 완전성 (#113)
+        run: python3 docs/superpowers/specs/bench/l0/metadata_completeness.py
+
+      # ── 마스킹 증거 (#115) ─────────────────────────────────────────────────
+      - name: 마스킹 프로브 표류 검사
+        run: python3 docs/superpowers/specs/bench/masking/probe_masking.py --check
+
+      - name: 마스킹 보고서 표류 검사
+        run: python3 docs/superpowers/specs/bench/masking/build_masking_report.py --check
+
+      - name: verify_masking — 마스킹 증거 적합성
+        run: python3 docs/superpowers/specs/bench/masking/verify_masking.py
+
+      # ── 계약 스키마·예시·문서 수치 정합 ────────────────────────────────────
+      - name: Answer Shape 픽스처 적합성
+        run: python3 docs/superpowers/specs/schemas/validate.py
+
+      - name: Run Quality Report 픽스처 적합성
+        run: python3 docs/superpowers/specs/schemas/validate_rqr.py
+
+      - name: Answer Shape 변이 하네스
+        run: python3 docs/superpowers/specs/schemas/fuzz.py
+
+      - name: Answer Shape 조합 스윕
+        run: python3 docs/superpowers/specs/schemas/sweep.py
+
+      - name: I1 문서 수치 정합
+        run: python3 docs/superpowers/specs/verify_i1_counts.py
+
+      # ── CI 계약 자신 — 게이트가 CI 에 있고 재현 절차와 갈라지지 않는가 ──────
+      - name: verify_ci — 증거 게이트 자동 실행 계약 (W1~W8)
+        run: python3 docs/superpowers/specs/bench/ci/verify_ci.py
+
+      # ── DB 트랙: L0 DB 프로브를 겸하는 백엔드 스위트 ────────────────────────
+      - name: 백엔드 테스트 (L0 DB 프로브 겸함)
+        run: ( cd backend && ./gradlew test )
