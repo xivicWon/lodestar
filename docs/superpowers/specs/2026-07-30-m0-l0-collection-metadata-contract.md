@@ -81,9 +81,12 @@ SchemaModel(tables: List<TableInfo>, metadata: CollectionMetadata)
     다른 신원을 갖는다 — 소속을 담으려다 결정성을 잃는 교환이다. 수집 범위가 여러 카탈로그로
     넓어지면 이 전제가 깨지므로, 그때 이 항을 다시 연다.
   - `schema = null` 은 **소속을 모른다**는 뜻이다(비한정 DDL). 그 경우 정규화 바이트는 이 변경 전과
-    같아 기존 DDL 입력의 `revision` 은 흔들리지 않는다. 반면 라이브·번들 경로는 소속이 항상 있으므로
-    두 경로의 `contentHash`·`revision` 이 #126 에서 한 번 바뀌었다
-    (`bench/l0/metadata/completeness-db.json` 의 `volatile` 블록이 그 값을 싣는다).
+    같아 기존 DDL 입력의 `revision` 은 흔들리지 않는다. 반면 **소속을 보고하는 벤더**(PostgreSQL ·
+    H2 등, `TABLE_SCHEM` 이 채워지는 드라이버)의 라이브·번들 경로는 `contentHash`·`revision` 이
+    #126 에서 한 번 바뀌었다(`bench/l0/metadata/completeness-db.json` 의 `volatile` 블록이 그 값을
+    싣는다). MySQL 처럼 `TABLE_SCHEM` 이 비고 DB 가 `TABLE_CAT` 으로 오는 드라이버에서는 소속이
+    `null` 로 남아 신원이 그대로다 — 그쪽은 한 스냅샷이 카탈로그 하나로 닫히므로 애초에 소속이
+    다른 동명 테이블이 생기지 않는다(위의 catalog 항과 같은 이유).
   - **하류 파급 — 클래스 IRI 에 소속이 붙는다.** `SchemaToOwlMapper` 는 소속이 있으면
     `<base><schema>/<table>` 로 IRI 를 만든다(없으면 예전 그대로). 동명 테이블의 IRI 충돌을 없애기
     위한 것이며, 그 대가로 **#126 이전에 저장된 확정(세이브포인트)의 IRI 는 라이브·번들 경로에서

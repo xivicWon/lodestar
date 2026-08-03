@@ -46,7 +46,8 @@ TIMES = {
 # 이번 실행에서 **수집기의 무엇이** 달라졌는가. 트랙마다 다르므로 한 문장을 공유하지 않는다 —
 # 공유하면 db 재측정에 code 트랙의 사유가 붙어 보고서가 근거를 잘못 가리킨다.
 COLLECTOR_CHANGE = {
-    "db": "#126 수집 모델에 테이블 소속(schema) 신설 — TableInfo.schema · ForeignKeyInfo.refSchema",
+    "db": "#126 수집 모델에 테이블 소속(schema) 신설 — TableInfo.schema · ForeignKeyInfo.refSchema, "
+          "그리고 DDL 한정 이름을 인용부호를 존중해 분해",
     "code": "#112 결정성 수정",
 }
 # 이번 실행이 **왜 새 runId 인가**. 수집기가 아니라 gold 쪽이 움직인 재측정도 있다 —
@@ -55,9 +56,10 @@ COLLECTOR_CHANGE = {
 REPIN_REASON = {
     "db": (
         "수집기 변경(#126) — 라이브 스냅샷에 테이블 소속(schema)이 없어 동명 테이블이 한 신원으로 "
-        "접히던 것을 고쳤다. 입력·gold 축은 그대로이고 측정된 수치도 그대로다(달라진 것은 "
-        "collector.sourceHash 뿐이다) — 그래도 수집기가 다른 실행이므로 덮어쓰지 않고 새 runId 로 "
-        "남긴다(I3 §5.5)"
+        "접히던 것을 고쳤다. 입력·gold 축은 그대로이고 게이트 수치도 그대로지만, 프로브 산출물은 "
+        "네 자리가 다르다: probeVersion(v3→v4 — 정규화가 schema·refSchema 를 포함하게 됐다), "
+        "그에 따른 determinism·jdbc 의 artifactHashes(비율은 3/3·1.0 그대로), 그리고 수집기 구성 "
+        "파일이 바뀌며 달라진 collector.sourceHash — 그래서 덮어쓰지 않고 새 runId 로 남긴다(I3 §5.5)"
     ),
     "code": (
         "gold 입력 축 재고정(#125) — L0 프로브의 입력 revision 을 정답 축에서 분리해 새로 고정했고, "
@@ -504,10 +506,10 @@ def build_from(track: str, p: dict) -> dict:
             f"{f['reported']}/{f['shouldReport']} 이며, 실패 픽스처의 기대 보고 항목은 사유코드 일치와 좌표 "
             "겹침으로 귀속해 셌다 — 건수만 맞추거나 그럴듯한 좌표를 적어 통과하는 경로를 막는다. 조용한 부분 "
             f"복구는 {f['silentPartialRecovery']}건이다(TB_BAD_MIDDLE 은 부분 복구를 버리고 실패로 보고한다). "
-            f"새 runId 인 이유는 {REPIN_REASON['db']} 이다 — 입력 파일(legacy-sample.sql)과 gold 축은 "
-            f"{PREVIOUS['db'].name} 과 같고 측정된 수치도 같다. 소속(schema)은 라이브·번들 스냅샷의 "
+            f"새 runId 인 이유는 {REPIN_REASON['db']} 이다. 비교 대상인 {PREVIOUS['db'].name} 과는 "
+            "입력 파일(legacy-sample.sql)도 gold 축도 같다. 소속(schema)은 라이브·번들 스냅샷의 "
             "contentHash 산식에 들어가므로 그 두 경로의 revision 접미사가 바뀌지만, 이 프로브가 재는 "
-            "수집률·보고율·결정성은 그 축과 무관하다. 채점 신원(gold 입력 축)이 아직 미승인이라 "
+            "수집률·보고율·결정성 비율은 그 축과 무관하다. 채점 신원(gold 입력 축)이 아직 미승인이라 "
             "비교 기준선으로는 인용만 한다(I1 §7.4). "
             f"{remaining}. 보안 게이트는 수집 경로에 마스킹 단계가 생긴 뒤에도 FAIL 로 읽는다 — "
             "이 프로브가 재는 것은 샘플 적재 경로를 **마스킹 없이**(IngestPolicy(maskRowData=false)) 돌린 "

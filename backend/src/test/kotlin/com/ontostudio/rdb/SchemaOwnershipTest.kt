@@ -65,6 +65,14 @@ class SchemaOwnershipTest {
         assertNotEquals(h(listOf(t("lines", "sales", toSales))), h(listOf(t("lines", "sales", toArchive))))
     }
 
+    @Test fun `FK 대상 소속도 모르는 것과 빈 이름을 구분한다`() {
+        // 테이블 소속과 같은 규칙이 FK 쪽에도 서야 한다 — 한쪽만 구분하면 같은 이유의 충돌이
+        // 반대쪽에 남는다.
+        fun withRef(rs: String?) = h(listOf(t("lines", "sales",
+            ForeignKeyInfo(listOf("oid"), "orders", listOf("id"), refSchema = rs))))
+        assertNotEquals(withRef(null), withRef(""))
+    }
+
     @Test fun `정렬은 스키마까지 보되 입력 순서에는 흔들리지 않는다`() {
         val a = t("orders", "sales")
         val b = t("orders", "archive")
@@ -157,6 +165,27 @@ class SchemaOwnershipTest {
             .tables.single().foreignKeys.single()
         assertNull(fk.refSchema)
         assertEquals("a.b", fk.refTable)
+    }
+
+    @Test fun `테이블-레벨 3단 참조는 카탈로그를 버리고 소속만 담는다`() {
+        // 모델이 담는 축은 소속 하나다([TableInfo]) — 카탈로그가 섞이면 JDBC 경로와 축이 어긋난다.
+        val fk = DdlParser().parse(
+            """CREATE TABLE t (cid INTEGER,
+               CONSTRAINT fk FOREIGN KEY (cid) REFERENCES prodcat.sales.customers(id))""")
+            .tables.single().foreignKeys.single()
+        assertEquals("sales", fk.refSchema)
+        assertEquals("customers", fk.refTable)
+    }
+
+    @Test fun `인라인 3단 참조는 파서가 못 읽지만 조용히 사라지지 않는다`() {
+        // JSqlParser 4.9 는 컬럼 인라인 REFERENCES 의 3단 이름(`catalog.schema.table`)에서 두 번째
+        // 점을 만나 파싱을 포기한다. 수집기의 한계이지만, 그 문장이 **사유·좌표와 함께 보고되는
+        // 한**(#114) 유실이 아니다. 이 경계를 고정해 두지 않으면 나중에 "FK 가 안 나온다" 를
+        // 조용한 누락과 구별할 수 없다.
+        val s = DdlParser().parse("CREATE TABLE t (cid INTEGER REFERENCES prodcat.sales.customers(id))")
+        assertTrue(s.tables.isEmpty(), "부분 복구를 사실로 산출하면 안 된다: ${s.tables}")
+        assertEquals(listOf(CollectionReason.PARSE_ERROR), s.issues.map { it.reasonCode })
+        assertEquals(IssueKind.FAILED, s.issues.single().kind)
     }
 
     @Test fun `백틱 한정 이름도 소속을 담는다`() {
