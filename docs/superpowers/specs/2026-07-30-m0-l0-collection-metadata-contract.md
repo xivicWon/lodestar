@@ -69,10 +69,29 @@ git 커밋이 정본인 소스는 커밋 sha 를 그대로 쓴다. 아니면 접
 SchemaModel(tables: List<TableInfo>, metadata: CollectionMetadata)
 ```
 
-- **알려진 한계 — 라이브 스냅샷에 catalog/schema 소속이 없다.** `TableInfo` 가 테이블 이름만
-  담으므로(이 이슈 이전부터), 스키마가 다른 동명 테이블은 모델 단계에서 이미 구별되지 않는다.
-  따라서 테이블이 스키마 사이를 옮겨도 `contentHash` 는 바뀌지 않는다. 신원 계약의 결함이 아니라
-  **수집 모델의 한계**이며, 고치려면 `TableInfo` 에 소속을 넣어야 한다 — L0-fix 후속 안건으로 남긴다.
+- **테이블의 소속(schema)이 스냅샷 신원에 들어간다(#126).** `TableInfo.schema` ·
+  `ForeignKeyInfo.refSchema` 가 소속을 담고, `SchemaCanonical.bytes` 가 그것을 직렬화한다.
+  그래서 `sales.orders` 와 `archive.orders` 는 다른 신원이고, 테이블이 스키마 사이를 옮기면
+  `contentHash` 가 바뀐다 — "수집기가 실제로 본 것을 가리킨다" 가 이 축에서도 성립한다.
+  (#113 시점에는 `TableInfo` 가 이름만 담아 둘이 한 신원으로 접혔고, 이 문단은 그 **알려진 한계**를
+  적던 자리였다.)
+  - **catalog 는 모델에 담지 않는다.** `MetadataService` 의 수집은 `conn.catalog` 하나로 한정되므로
+    카탈로그는 한 스냅샷 안에서 상수이고, 그 신원은 이미 `sourceId`(vendor·host·port·database)가
+    담는다. 담으면 번들 샘플의 H2 카탈로그(`LEGACY_<nanoTime>`)가 해시에 섞여 같은 스냅샷이 매 실행
+    다른 신원을 갖는다 — 소속을 담으려다 결정성을 잃는 교환이다. 수집 범위가 여러 카탈로그로
+    넓어지면 이 전제가 깨지므로, 그때 이 항을 다시 연다.
+  - `schema = null` 은 **소속을 모른다**는 뜻이다(비한정 DDL). 그 경우 정규화 바이트는 이 변경 전과
+    같아 기존 DDL 입력의 `revision` 은 흔들리지 않는다. 반면 **소속을 보고하는 벤더**(PostgreSQL ·
+    H2 등, `TABLE_SCHEM` 이 채워지는 드라이버)의 라이브·번들 경로는 `contentHash`·`revision` 이
+    #126 에서 한 번 바뀌었다(`bench/l0/metadata/completeness-db.json` 의 `volatile` 블록이 그 값을
+    싣는다). MySQL 처럼 `TABLE_SCHEM` 이 비고 DB 가 `TABLE_CAT` 으로 오는 드라이버에서는 소속이
+    `null` 로 남아 신원이 그대로다 — 그쪽은 한 스냅샷이 카탈로그 하나로 닫히므로 애초에 소속이
+    다른 동명 테이블이 생기지 않는다(위의 catalog 항과 같은 이유).
+  - **하류 파급 — 클래스 IRI 에 소속이 붙는다.** `SchemaToOwlMapper` 는 소속이 있으면
+    `<base><schema>/<table>` 로 IRI 를 만든다(없으면 예전 그대로). 동명 테이블의 IRI 충돌을 없애기
+    위한 것이며, 그 대가로 **#126 이전에 저장된 확정(세이브포인트)의 IRI 는 라이브·번들 경로에서
+    더 이상 매칭되지 않는다**. E9 `ConfirmationMerger` 는 그것을 자동 삭제하지 않고 `stale` 로
+    보고하며 저장소에 그대로 둔다(D2) — 사용자는 목록에서 보고 다시 확정한다.
 - `contentHash` — DDL 경로는 **입력 SQL 바이트**, JDBC 경로는 **정규화 스냅샷 바이트**
   (`SchemaCanonical.bytes`, 테이블/컬럼/키를 결정적으로 직렬화한 것). JDBC 에는 읽은 원본 바이트라는
   것이 없으므로 "수집기가 실제로 본 것" 의 정규화 표현을 해싱하고, `revision` 의 `live:` 접두어가

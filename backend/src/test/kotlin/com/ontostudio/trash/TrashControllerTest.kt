@@ -33,7 +33,7 @@ class TrashControllerTest {
         }
     }
 
-    private val iri = "http://lodestar/rdb/legacy#TB_CUST_MST"
+    private val iri = "http://lodestar/rdb/legacy#PUBLIC/TB_CUST_MST"
 
     @Test fun `trash then restore a class round-trips via api`() {
         mvc.perform(post("/api/rdb/import/sample")).andExpect(status().isOk)

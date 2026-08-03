@@ -33,7 +33,7 @@ class ReimportMergeIntegrationTest {
     }
 
     @Test fun `reimport restores confirmed label automatically`() {
-        val iri = "http://lodestar/rdb/legacy#TB_CUST_MST"
+        val iri = "http://lodestar/rdb/legacy#PUBLIC/TB_CUST_MST"
 
         // 1. 최초 임포트
         mvc.perform(post("/api/rdb/import/sample")).andExpect(status().isOk)
