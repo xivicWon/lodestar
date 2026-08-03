@@ -60,8 +60,22 @@ fi
   Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
 - main 직접 push 금지. 이 브랜치에서만.
 
+## push 전 자체 코드리뷰·검증 (필수 — 상세: .claude/pipeline/pre-push-review.md)
+커밋을 push 하기 전에 변경 diff(git diff origin/main...HEAD)를 스스로 리뷰한다.
+1. 6개 렌즈로 점검: 버그 · 보안 · 성능 · 유지보수 · SOLID · 호환성.
+   (가능하면 렌즈별 서브에이전트 병렬로 넓게 — 각자 근거 수집 후 판정.)
+2. findings 분류:
+   - 이 이슈 수정범주 안(이번 변경이 도입/직접 건드림) → 고친다.
+   - 범주 밖(기존 결함·타 서브시스템·대규모 리팩터·정책) → 고치지 말고
+     PR 코멘트 + 후속 GitHub 이슈로 등록(gh issue create, 라벨·근거·이 PR 참조).
+   판단: "이 변경을 되돌리면 그 결함도 사라지나?" → 그렇다=범주 안.
+3. 범주 안 수정 후 재리뷰. **최대 3회.** 3회 후 남으면 남은 건 후속 이슈로 넘기고 진행(무한 금지).
+4. 게이트 그린 + 자체리뷰 통과(범주 안 blocking/major 0)라야 push.
+- 이 이슈가 이 범주에 부적합(문서 단독·정책)이면 해당 없는 렌즈는 건너뛰고 발견은 전부 코멘트+후속이슈.
+- gold/정답/정책 성격은 자체리뷰가 판단 말고 메인 세션·오라클에 넘긴다(자기승인 금지).
+
 ## 마무리 (필수)
-1. 커밋 후: git push -u origin (현재 브랜치)
+1. 커밋 후: git push -u origin (현재 브랜치)   ※ 위 '자체 코드리뷰·검증' 통과가 선행
 2. gh pr create --fill --base main   (본문 첫 줄 Closes #<이슈>, 말미:
    🤖 Generated with [Claude Code](https://claude.com/claude-code))
 3. 생성된 PR URL 을 화면에 출력.
