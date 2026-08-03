@@ -2,7 +2,13 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useOntologyStore } from './ontologyStore'
 import * as client from '../api/client'
-import type { ObjectPropertyDto } from '../api/types'
+import type { ObjectPropertyDto, CollectionReport } from '../api/types'
+
+/** 백엔드는 `collection` 없는 임포트 응답을 만들 수 없다(기본값 없음) — 목도 그 계약을 따른다. */
+const clean: CollectionReport = {
+  sourceKind: 'ddl', locatorScheme: 'line',
+  collected: 1, skipped: 0, failed: 0, partial: 0, complete: true, issues: [], partials: [],
+}
 
 const rel: ObjectPropertyDto = {
   iri: 'e#orders_customer_id_ref', label: 'orders → customers (customer_id)',
@@ -51,7 +57,7 @@ describe('ontologyStore rdb', () => {
   })
 
   it('importSample posts to sample endpoint and refreshes', async () => {
-    const post = vi.spyOn(client, 'apiPost').mockResolvedValue({} as any)
+    const post = vi.spyOn(client, 'apiPost').mockResolvedValue({ collection: clean } as any)
     vi.spyOn(client, 'apiGet').mockResolvedValue([] as any)
     const s = useOntologyStore()
     await s.importSample()
@@ -59,7 +65,7 @@ describe('ontologyStore rdb', () => {
   })
 
   it('importDdl posts sql and refreshes', async () => {
-    const post = vi.spyOn(client, 'apiPost').mockResolvedValue({} as any)
+    const post = vi.spyOn(client, 'apiPost').mockResolvedValue({ collection: clean } as any)
     vi.spyOn(client, 'apiGet').mockResolvedValue([] as any)
     const s = useOntologyStore()
     await s.importDdl('CREATE TABLE t (id INT);', 'shop')
@@ -67,7 +73,7 @@ describe('ontologyStore rdb', () => {
   })
 
   it('importSample captures merge summary into lastMerge', async () => {
-    const result = { meta: {}, merge: { reapplied: 2, stale: 1, staleIris: ['e#X'] } }
+    const result = { meta: {}, merge: { reapplied: 2, stale: 1, staleIris: ['e#X'] }, collection: clean }
     vi.spyOn(client, 'apiPost').mockResolvedValue(result as any)
     vi.spyOn(client, 'apiGet').mockResolvedValue([] as any)
     const s = useOntologyStore()
@@ -76,7 +82,7 @@ describe('ontologyStore rdb', () => {
   })
 
   it('importDdl captures merge summary into lastMerge', async () => {
-    const result = { meta: {}, merge: { reapplied: 1, stale: 0, staleIris: [] } }
+    const result = { meta: {}, merge: { reapplied: 1, stale: 0, staleIris: [] }, collection: clean }
     vi.spyOn(client, 'apiPost').mockResolvedValue(result as any)
     vi.spyOn(client, 'apiGet').mockResolvedValue([] as any)
     const s = useOntologyStore()

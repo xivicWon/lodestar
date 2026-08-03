@@ -3,7 +3,6 @@ package com.ontostudio.rdb
 import com.ontostudio.core.OntologyHolder
 import com.ontostudio.core.OntologyMapper
 import com.ontostudio.savepoint.ConfirmationMerger
-import com.ontostudio.savepoint.ImportResult
 import org.springframework.web.bind.annotation.*
 
 data class DdlImportRequest(val sql: String, val schemaName: String? = null)

@@ -3,9 +3,11 @@ package com.ontostudio.api
 import com.ontostudio.rdb.ConnectionInfo
 import com.ontostudio.rdb.DbConnector
 import com.ontostudio.rdb.SampleLegacyDb
+import org.hamcrest.Matchers.containsString
+import org.hamcrest.Matchers.everyItem
 import org.hamcrest.Matchers.greaterThanOrEqualTo
+import org.hamcrest.Matchers.hasItem
 import org.hamcrest.Matchers.matchesPattern
-import org.hamcrest.Matchers.not
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.TestConfiguration
@@ -66,8 +68,14 @@ class ImportCollectionReportTest {
                 .value("INSERT INTO customers"))
             .andExpect(jsonPath("$.collection.issues[?(@.kind=='FAILED')].reasonCode")
                 .value("PARSE_ERROR"))
+            // 필터 표현식에 Matcher 를 쓰면 **리스트가** 넘어온다 — `not("")` 은 리스트가 빈 문자열이
+            // 아니라는 뜻이라 사유문이 비어도 통과한다. 항목을 실제로 보려면 hasItem 이어야 한다.
+            // 사유문은 무엇이 왜 실패했는지를 말해야 한다: 쉼표 누락으로 컬럼이 흡수된 경우이므로
+            // 파서 예외 메시지가 아니라 흡수 판정과 흡수된 이름이 실린다(#114 부분 복구 폐기).
             .andExpect(jsonPath("$.collection.issues[?(@.kind=='FAILED')].reason")
-                .value(not("")))
+                .value(hasItem<String>(containsString("흡수됐다"))))
+            .andExpect(jsonPath("$.collection.issues[?(@.kind=='FAILED')].reason")
+                .value(hasItem<String>(containsString("name"))))
             .andExpect(jsonPath("$.collection.issues[?(@.kind=='FAILED')].locator")
                 .value("#L3"))
     }
@@ -100,11 +108,13 @@ class ImportCollectionReportTest {
             .andExpect(jsonPath("$.collection.locatorScheme").value("jdbc"))
             .andExpect(jsonPath("$.collection.collected").value(greaterThanOrEqualTo(25)))
             .andExpect(jsonPath("$.collection.skipped").value(greaterThanOrEqualTo(1)))
-            .andExpect(jsonPath("$.collection.issues[0].reasonCode").value("UNSUPPORTED_OBJECT_TYPE"))
-            // 좌표 규약: jdbc://<catalog>/<schema>/<object>
-            .andExpect(jsonPath("$.collection.issues[0].locator")
-                .value(matchesPattern("^jdbc://[^/]*/[^/]*/.+$")))
-            .andExpect(jsonPath("$.collection.issues[0].target").value(not("")))
+            .andExpect(jsonPath("$.collection.issues[?(@.reasonCode=='UNSUPPORTED_OBJECT_TYPE')].kind")
+                .value(hasItem<String>("SKIPPED")))
+            // 좌표 규약: jdbc://<catalog>/<schema>/<object> — **모든** 항목이 지켜야 한다
+            .andExpect(jsonPath("$.collection.issues[*].locator")
+                .value(everyItem<String>(matchesPattern("^jdbc://[^/]*/[^/]*/.+$"))))
+            .andExpect(jsonPath("$.collection.issues[?(@.target=='VW_ORD_SUMMARY')].locator")
+                .value(hasItem<String>(containsString("/VW_ORD_SUMMARY"))))
     }
 
     @Test fun `live jdbc import response carries the same report shape`() {
@@ -114,7 +124,7 @@ class ImportCollectionReportTest {
             .andExpect(jsonPath("$.collection.sourceKind").value("jdbc"))
             .andExpect(jsonPath("$.collection.locatorScheme").value("jdbc"))
             .andExpect(jsonPath("$.collection.skipped").value(greaterThanOrEqualTo(1)))
-            .andExpect(jsonPath("$.collection.issues[0].locator")
-                .value(matchesPattern("^jdbc://[^/]*/[^/]*/.+$")))
+            .andExpect(jsonPath("$.collection.issues[*].locator")
+                .value(everyItem<String>(matchesPattern("^jdbc://[^/]*/[^/]*/.+$"))))
     }
 }

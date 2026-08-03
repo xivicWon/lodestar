@@ -15,13 +15,17 @@ export interface CollectionIssue {
   target: string
 }
 
+/** 입력 경로와 그 좌표 규약. 백엔드 `SchemaSource.KIND_*` · `CollectionReport.locatorScheme` 과 짝이다. */
+export type SourceKind = 'ddl' | 'jdbc' | 'sample'
+export type LocatorScheme = 'line' | 'jdbc'
+
 /**
  * 임포트 응답의 수집 보고(#129). `complete` 는 **실패·부분수집이 없다**는 뜻이고, 정당한 제외(SKIPPED)는
  * 완전 수집을 깨지 않는다 — 그래도 화면에는 사유와 함께 남는다.
  */
 export interface CollectionReport {
-  sourceKind: 'ddl' | 'jdbc' | 'sample' | string
-  locatorScheme: 'line' | 'jdbc' | string
+  sourceKind: SourceKind
+  locatorScheme: LocatorScheme
   collected: number
   skipped: number
   failed: number

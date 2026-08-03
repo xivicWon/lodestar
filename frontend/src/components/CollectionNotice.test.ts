@@ -79,6 +79,16 @@ describe('CollectionNotice', () => {
     expect(w.findAll('[data-test="issue"]').length).toBe(1)
   })
 
+  /** 어느 임포트의 보고인지 적지 않으면 남아 있는 보고와 방금의 보고가 구별되지 않는다. */
+  it('names the input path the report came from', () => {
+    const s = useOntologyStore()
+    s.lastCollection = {
+      ...base, sourceKind: 'sample', locatorScheme: 'jdbc', skipped: 1,
+      issues: [{ kind: 'SKIPPED', reasonCode: 'UNSUPPORTED_OBJECT_TYPE', reason: 'VIEW', locator: 'jdbc://L/P/V', target: 'V' }],
+    }
+    expect(mount(CollectionNotice).find('[data-test="source"]').text()).toBe('샘플 레거시')
+  })
+
   it('shows the jdbc locator scheme untouched for the live path', () => {
     const s = useOntologyStore()
     s.lastCollection = {

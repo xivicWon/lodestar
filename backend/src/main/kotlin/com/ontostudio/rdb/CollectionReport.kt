@@ -52,9 +52,20 @@ data class CollectionReport(
     val complete: Boolean get() = failed == 0 && partial == 0
 
     companion object {
-        /** 좌표 규약은 입력 경로가 정한다 — DDL 은 행 번호, JDBC 계열은 객체 좌표다. */
-        fun locatorScheme(sourceKind: String): String =
-            if (sourceKind == SchemaSource.KIND_DDL) "line" else "jdbc"
+        /**
+         * 좌표 규약은 입력 경로가 정한다 — DDL 은 행 번호, JDBC 계열은 객체 좌표다.
+         *
+         * **포괄 기본값을 두지 않는다.** `else -> "jdbc"` 로 적으면 새 입력 경로(CSV·스프레드시트 등)가
+         * 행 기반 좌표를 내면서도 응답에는 `jdbc` 로 광고되고, 소비자는 그 좌표를 잘못 읽는다.
+         * 종류는 컴파일 타임 상수이므로 등록을 빠뜨리면 **개발 중에** 여기서 멈추는 것이 맞다 —
+         * 이 클래스가 `kind`·`collection` 의 기본값을 거부한 것과 같은 이유다.
+         */
+        fun locatorScheme(sourceKind: String): String = when (sourceKind) {
+            SchemaSource.KIND_DDL -> "line"
+            SchemaSource.KIND_JDBC, SchemaSource.KIND_SAMPLE -> "jdbc"
+            else -> error("좌표 규약이 등록되지 않은 입력 경로다: '$sourceKind' — " +
+                "CollectionReport.locatorScheme 에 규약을 적어야 응답의 locator 를 해석할 수 있다")
+        }
 
         fun of(sourceKind: String, schema: SchemaModel): CollectionReport = CollectionReport(
             sourceKind = sourceKind,

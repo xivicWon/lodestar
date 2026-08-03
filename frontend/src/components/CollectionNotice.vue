@@ -18,6 +18,10 @@ const partial = computed(() => !!report.value && !report.value.complete)
 
 const headline = computed(() => (partial.value ? '부분 수집' : '완전 수집'))
 
+/** 어느 임포트의 보고인지 적는다 — 적지 않으면 남아 있는 보고와 방금의 보고가 구별되지 않는다. */
+const SOURCE_LABEL: Record<string, string> = { ddl: 'DDL 텍스트', jdbc: 'DB 연결', sample: '샘플 레거시' }
+const source = computed(() => SOURCE_LABEL[report.value!.sourceKind] ?? report.value!.sourceKind)
+
 const counts = computed(() => {
   const r = report.value!
   const parts = [`수집 ${r.collected}건`]
@@ -42,7 +46,7 @@ const issues = computed<CollectionIssue[]>(() =>
 <template>
   <div v-if="show" class="collection-notice" :class="{ partial }" :role="partial ? 'alert' : 'status'">
     <div class="head">
-      <strong>{{ headline }}</strong> — {{ counts }}
+      <strong>{{ headline }}</strong> · <span data-test="source">{{ source }}</span> — {{ counts }}
     </div>
 
     <!-- 부분수집은 성공 표시와 함께 '부분임' 을 명시한다 -->

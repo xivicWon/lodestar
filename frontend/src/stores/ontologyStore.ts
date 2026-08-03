@@ -35,6 +35,15 @@ export const useOntologyStore = defineStore('ontology', () => {
   const selected = computed(() => classes.value.find(c => c.iri === selectedIri.value) ?? null)
   const tree = computed(() => buildTree(classes.value))
 
+  /**
+   * 임포트를 시작할 때 직전 실행의 보고를 지운다. 성공 경로에서만 대입하고 지우지 않으면, 이번
+   * 임포트가 실패했을 때 **직전 임포트의 보고**가 에러 배너 옆에 남아 이번 결과처럼 읽힌다.
+   */
+  function beginImport() {
+    error.value = null
+    lastCollection.value = null
+  }
+
   function setError(e: unknown) {
     error.value = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : String(e))
   }
@@ -81,22 +90,22 @@ export const useOntologyStore = defineStore('ontology', () => {
   }
 
   async function importDdl(sql: string, schemaName?: string) {
-    error.value = null
+    beginImport()
     try {
       const res = await apiPost<ImportResult>('/rdb/import/ddl', { sql, schemaName })
       lastMerge.value = res.merge
-      lastCollection.value = res.collection ?? null
+      lastCollection.value = res.collection
       selectedIri.value = null
       await refresh()
     } catch (e) { setError(e) }
   }
 
   async function importSample() {
-    error.value = null
+    beginImport()
     try {
       const res = await apiPost<ImportResult>('/rdb/import/sample', {})
       lastMerge.value = res.merge
-      lastCollection.value = res.collection ?? null
+      lastCollection.value = res.collection
       selectedIri.value = null
       await refresh()
     } catch (e) { setError(e) }
@@ -190,11 +199,11 @@ export const useOntologyStore = defineStore('ontology', () => {
   }
 
   async function importConnection(info: ConnectionInfo) {
-    error.value = null
+    beginImport()
     try {
       const res = await apiPost<ImportResult>('/rdb/import/connection', info)
       lastMerge.value = res.merge
-      lastCollection.value = res.collection ?? null
+      lastCollection.value = res.collection
       selectedIri.value = null
       await refresh()
     } catch (e) { setError(e) }
