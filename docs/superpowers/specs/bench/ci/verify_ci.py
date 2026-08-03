@@ -11,6 +11,7 @@ I1 은 "재현할 수 없는 측정은 측정이 아니다" 를 무조건 게이
   W4  실패전파  검사 단계가 실패를 삼키지 않는다 (continue-on-error · `|| true` · `set +e`)
   W5  의존성    Python 3.11+ · JDK · `pip install jsonschema` · `pip install -e codegraph`
   W6  생략금지  gradle 증거 입력 선언이 유효하고, CI 가 gradle 빌드 캐시로 :test 를 건너뛰지 않는다
+  W7  히스토리  체크아웃이 얕지 않다 — 프로브가 gold 입력 축의 blob 을 읽는다
 
 규칙이 정말 무는지는 규칙별 **결함 주입**으로 확인한다 — 워크플로·gradle·README 원문을 메모리에서
 훼손한 뒤 그 규칙이 위반을 내야 한다. 무엇도 물지 않는 확인기는 그린을 만들 뿐 아무것도 막지 않는다.
@@ -119,7 +120,7 @@ def parity_commands(readme_text: str) -> list[str]:
     return cmds
 
 
-# ---------------------------------------------------------------- 규칙 W1~W6
+# ---------------------------------------------------------------- 규칙 W1~W7
 
 
 def w1_triggers(c: Ctx) -> list[str]:
@@ -206,6 +207,26 @@ def w6_no_silent_skip(c: Ctx) -> list[str]:
     return v
 
 
+def w7_full_history(c: Ctx) -> list[str]:
+    """코드 트랙 프로브는 gold 입력 축의 blob 을 읽는다 — 얕은 클론에는 그 커밋이 없다.
+
+    `actions/checkout` 의 기본 `fetch-depth: 1` 로는 `git ls-tree <axis-revision>` 이 exit 128 로
+    죽는다. 실제로 #124 의 첫 CI 실행이 이걸로 붉었다 — 로컬은 전체 히스토리라 드러나지 않았다.
+    """
+    v: list[str] = []
+    checkouts = [s for s in c.steps() if "actions/checkout" in str(s.get("uses", ""))]
+    if not checkouts:
+        return ["W7: 체크아웃 단계가 없다"]
+    for step in checkouts:
+        depth = str((step.get("with") or {}).get("fetch-depth", ""))
+        if depth != "0":
+            v.append(
+                f"W7: checkout 이 얕다 (fetch-depth={depth or '기본값 1'}) — "
+                "프로브가 gold 입력 축의 blob 을 읽지 못해 exit 128 로 죽는다"
+            )
+    return v
+
+
 RULES = {
     "W1": w1_triggers,
     "W2": w2_scope,
@@ -213,6 +234,7 @@ RULES = {
     "W4": w4_failure_propagates,
     "W5": w5_dependencies,
     "W6": w6_no_silent_skip,
+    "W7": w7_full_history,
 }
 
 
@@ -288,6 +310,7 @@ def _cases(base: Ctx) -> list[tuple[str, str, Ctx]]:
             "W6",
             replace(base, gradle_text=gr.replace("bench/l0/runs", "bench/l0/runz", 1)),
         ),
+        ("W7.shallow-checkout", "W7", replace(base, workflow_text=drop_line(wf, "fetch-depth: 0"))),
         (
             "W6.gradle-cache",
             "W6",

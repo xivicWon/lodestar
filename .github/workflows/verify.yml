@@ -30,7 +30,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      # 얕은 클론이면 안 된다. 코드 트랙 프로브는 gold 입력 축(`probeAxis.revision`)의 blob 을
+      # `git ls-tree` 로 읽어 수집 범위를 재구성한다 — 기본 fetch-depth: 1 에서는 그 커밋이 없어
+      # exit 128 로 죽는다. 히스토리 없이 도는 그린은 그 프로브를 재현한 것이 아니다.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:

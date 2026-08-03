@@ -3,6 +3,6 @@
   "issue": 124,
   "layer": "infra",
   "note": "증거 게이트의 자동 실행 계약. 확인기(verify_ci.py)가 caseCount·ruleRange 를 실제 값과 대조하므로, 규칙이나 결함 주입 케이스가 늘었는데 이 수치가 그대로면 그 자체로 실패한다(bench/l0/manifest.json 과 같은 장치).",
-  "ruleRange": "W1-W6",
-  "caseCount": 26
+  "ruleRange": "W1-W7",
+  "caseCount": 28
 }
