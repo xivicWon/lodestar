@@ -58,12 +58,26 @@ def collector_dependencies() -> dict:
     블록의 값은 선언에서만 나오므로 환경이 선언과 같은 한 실행마다 동일하다 — `--check` 의 바이트
     대조와 충돌하지 않는다. 어긋난 환경에서는 `installedMatchesDeclared` 가 뒤집혀 표류로 걸린다.
     """
+    # 기동 방식은 `run_collector()` 와 같게 둔다 — 같은 파일 안에서 서브프로세스를 두 가지로 띄우면
+    # 어느 쪽이 무엇을 상속하는지가 읽는 사람에게 보이지 않는다. 시드도 같이 지운다: 이 출력은
+    # 정렬돼 있어 시드에 무관하지만(실측), 그 사실이 앞으로도 참인지는 여기서 보장되지 않는다.
     env = dict(os.environ, PYTHONPATH=str(CG_ROOT / "src"))
+    env.pop("PYTHONHASHSEED", None)
     proc = subprocess.run([sys.executable, "-m", "lodestar_codegraph.deps"],
-                          cwd=CG_ROOT, env=env, capture_output=True, text=True)
+                          cwd=CG_ROOT, env=env, capture_output=True, text=True, timeout=120)
     if proc.returncode != 0:
         raise RuntimeError(f"런타임 의존성 선언을 읽지 못했다: {proc.stderr[-2000:]}")
-    return json.loads(proc.stdout)
+    # 종료 코드만 보고 바로 파싱하면, 출력이 JSON 이 아니거나 키가 빠졌을 때 날것의 트레이스백이
+    # 그대로 새어 나온다 — 실패 경로마다 진단의 질이 달라지지 않게 같은 예외로 모은다(LOD-182).
+    try:
+        doc = json.loads(proc.stdout)
+        for key in ("dependencyPins", "unpinnedDependencies", "installedMatchesDeclared"):
+            doc[key]
+    except (json.JSONDecodeError, KeyError, TypeError) as e:
+        raise RuntimeError(
+            f"런타임 의존성 선언을 해석하지 못했다({type(e).__name__}: {e}) — "
+            f"stdout[-500:]={proc.stdout[-500:]!r}") from e
+    return doc
 
 
 # 측정 규칙 (선언)
@@ -716,14 +730,15 @@ def main() -> int:
         if want != got:
             diff = [k for k in sorted(set(want) | set(got)) if want.get(k) != got.get(k)]
             print(f"[FAIL] 프로브 산출물 표류 — 블록: {diff}")
-            # 표류의 원인이 환경이면 그 자리에서 말한다 — 블록명만으로는 코드가 바뀐 것인지
-            # 내 venv 의 networkx 가 다른 것인지 구분되지 않는다(#123).
-            for e in environment_errors(probe):
-                print(f"[FAIL] {e}")
+            # 여기서 측정 환경을 다시 묻지 않는다 — 어긋난 환경은 `_measure()` 가 수집기를 돌리기
+            # 전에 이미 멈춰 세우므로, 이 지점의 `probe` 에 대한 환경 검사는 **항상 빈 결과**다.
+            # 그 자리에 검사를 두면 "검사하고 있다" 는 인상만 남는다.
             return 1
-        # 표류가 없어도 계약을 어긴 채 **일관되게** 어긴 실행이 있을 수 있다 — 커밋된 산출물이 이미
-        # 미고정 선언을 담고 있으면 대조는 통과한다. 그래서 규칙을 따로 건다.
-        det = determinism_errors(probe) + environment_errors(probe)
+        # 여기서 환경 규칙을 다시 걸지 않는다. 대조가 통과했다는 것은 기준 증거가 방금 잰 것과
+        # **같다**는 뜻이고, 방금 잰 쪽은 `_measure()` 의 fail-fast 를 이미 통과했다 — 어느 쪽에
+        # 걸어도 결과는 항상 빈 리스트다. 커밋된 증거 자체에 거는 판정은 확인기(V15)의 몫이며,
+        # 그쪽은 측정 없이 산출물만 읽으므로 실제로 살아 있다(결함 주입 5건이 그것을 문다).
+        det = determinism_errors(probe)
         if det:
             for e in det:
                 print(f"[FAIL] {e}")

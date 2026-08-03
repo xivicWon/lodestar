@@ -13,7 +13,7 @@ runId 로 남기고(I3 §5.5), 새 실행이 이전 것을 `baseline.previous` �
 ```
 probe_code.py     코드 트랙 프로브 (lodestar_codegraph 를 서브프로세스로 실행)
 build_report.py   프로브 산출물 → Run Quality Report v0 (프로브의 순수 함수)
-verify_l0.py      커밋된 증거의 적합성 확인기 V1~V15 + 결함 주입 38케이스
+verify_l0.py      커밋된 증거의 적합성 확인기 V1~V15 + 결함 주입 40케이스
 test_bench_l0.py  **계측기 자체의 단위 테스트** — 귀속·게이트 산식·확인기 규칙이 거짓을 무는가
 manifest.json     규칙 범위·케이스 총계 고정
 runs/run-l0-db-3c27259-001/     probe-db.json · report.json    (#88 실측 — 보고율 0.0)
@@ -78,10 +78,12 @@ git diff --exit-code docs/superpowers/specs/bench/l0/runs
 
 # 3) 증거 적합성 확인 (워킹트리와 무관 — 커밋된 산출물만 읽는다)
 python3 docs/superpowers/specs/bench/l0/verify_l0.py
-# 38 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount. #88 의 24 는 #112 가 V12~V13 을,
-#                            #114 가 V14 를, #125 가 입력 축·승인 경고 케이스 4건을, #123 이 런타임
-#                            의존성 고정(V15) 3건을 더하며 38 로 올렸다 — manifest 가 정본이고
-#                            확인기가 대조한다)
+# 40 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount)
+#   내역: 24(#88) + 5(#112 V12~V13) + 2(#114 V14) + 4(#125 입력 축·승인 경고)
+#         + 5(#123 V15 — 범위 선언 · 다른 환경에서 측정 · 판정 안 한 조건부 의존성
+#            · 선언 블록 누락 · 수집기 신원 없는 선언) = 40
+#   숫자를 생략하면 합이 맞는지 읽는 쪽이 검산할 수 없다. manifest 가 정본이고 확인기가
+#   실제 케이스 수와 대조하므로, 이 주석이 틀리면 주석만 틀린 것이다.
 
 # 4) 계측기 자체의 테스트 (실측 없이 합성 입력으로 돈다)
 python3 -m pytest docs/superpowers/specs/bench/l0/test_bench_l0.py -q
@@ -139,7 +141,7 @@ venv 를 쓰는 이유: 현재 워킹트리에서 `pip install -e codegraph` 를
 훅이 `sys.path` 보다 먼저 걸려, **역사적 입력에 현재 수집기**를 물릴 수 있다. 그러면 재현이 아니다.
 
 커밋된 증거 자체의 적합성(`verify_l0.py`)은 워킹트리와 무관하다 — 커밋된 산출물만 읽으므로
-현재 브랜치에서도 그대로 38 cases / 0 mismatches 여야 한다.
+현재 브랜치에서도 그대로 40 cases / 0 mismatches 여야 한다.
 
 ### 코드 트랙 재측정과 gold 입력 축 (#125 — 해소)
 
@@ -184,7 +186,8 @@ gold 의 **정답 축**(`sourceRevision` = 3c27259)에 묶여 있었다는 것�
   고정되지 않은 의존성이 검사 밖으로 사라진다.
 - 확인: `verify_l0.py` **V15** 가 커밋된 증거에서 이 선언을 검사한다 — 판정은 프로브의 순수 함수
   `environment_errors()` 를 그대로 쓴다(규칙을 두 번 쓰면 `--check` 와 확인기의 통과 기준이 갈린다).
-  결함 주입 3건: 범위 선언 · 선언과 다른 환경에서 측정 · 판정하지 않은 조건부 의존성.
+  결함 주입 5건: 범위 선언 · 선언과 다른 환경에서 측정 · 판정하지 않은 조건부 의존성 ·
+  선언 블록 누락 · 수집기 신원 없이 남은 선언.
 - 설치 방식과 무관: 선언은 소스 트리의 `pyproject.toml` 이 정본이고, 소스 트리 밖(휠 설치)에서는
   **이 모듈을 담고 있는 설치본**의 `Requires-Dist` 를 읽는다(`provenance._version()` 과 같은 순서).
   같은 이름의 다른 설치본의 선언은 쓰지 않는다 — 남의 선언을 재현 대상으로 적으면 그 기록은 이
@@ -246,8 +249,10 @@ $ /tmp/other-venv/bin/python docs/superpowers/specs/bench/l0/probe_code.py --che
 
 판정은 `probe_code.environment_errors()` 라는 순수 함수이고(`determinism_errors` 와 같은 이유 —
 `main(--check)` 안에만 두면 그 판정 자체는 아무도 검사하지 않는다), 확인기 V15 가 커밋된 증거에 같은
-함수를 건다. 같은 venv 에서 `-m lodestar_codegraph.deps` 를 돌리면 불일치 항목을 그대로 볼 수 있다.
-확인이 끝나면 `pip install -q -e codegraph` 로 되돌린다.
+함수를 건다. 같은 venv 에서 `"$WORK/venv/bin/python" -m lodestar_codegraph.deps` 를 돌리면 불일치 항목을 그대로
+볼 수 있다. 임시 venv 는 `$WORK` 째로 버리면 되고, 별도 정리가 필요 없다. 다만 비교하느라 **메인
+환경**의 버전을 바꿨다면(위 절차는 그러지 않는다) 리포 루트에서 `pip install -e codegraph` 로
+되돌린다 — 이 한 줄만 venv 접두어가 없는 이유다.
 
 의존성을 올려 산출물이 달라지면 그때는 의존성 인상이 곧 산출물 변경이므로 새 runId 로 재측정한다
 (I3 §5.5).

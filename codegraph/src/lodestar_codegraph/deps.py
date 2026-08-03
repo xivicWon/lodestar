@@ -113,7 +113,15 @@ def declared_pins(pyproject: os.PathLike | str | None = None) -> dict[str, str]:
                 "지목할 수 없는 선언은 고정으로 볼 수 없다(#123)")
         m = _PINNED.match(spec)
         if m:
-            pins[m.group(1)] = m.group(2)
+            name, version = m.group(1), m.group(2)
+            # 같은 이름을 **다른 버전**으로 두 번 고정하면 뒤가 앞을 덮어써 앞 선언이 흔적 없이
+            # 사라진다 — 목록에도 불일치에도 남지 않아 아무 데도 걸리지 않는다(LOD-181). 이 PR 이
+            # 없애려던 것과 같은 부류의 조용한 손실이므로 판정하지 않고 막는다.
+            if pins.get(name, version) != version:
+                raise ValueError(
+                    f"같은 의존성이 서로 다른 버전으로 고정돼 있다: {name}=={pins[name]} / "
+                    f"{name}=={version} — 어느 쪽이 재현 대상인지 정해지지 않는다(#123)")
+            pins[name] = version
     return pins
 
 

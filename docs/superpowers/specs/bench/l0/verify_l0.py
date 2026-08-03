@@ -7,7 +7,7 @@
 
     pip install jsonschema
     python3 docs/superpowers/specs/bench/l0/verify_l0.py
-    # 38 cases, 0 mismatches   (= manifest.json 의 caseCount)
+    # 40 cases, 0 mismatches   (= manifest.json 의 caseCount)
 
 각 규칙은 **결함 주입 케이스**를 가진다 — 규칙만 적고 검사가 없는 상태를 막는 장치다(I2 §5 · I3 §4.1
 과 같은 원칙). 규칙이 예외를 던지면 그 규칙의 실패로 기록하고 나머지 규칙을 계속 실행한다.
@@ -683,6 +683,16 @@ def injections() -> list[tuple[str, str, callable]]:
         c["probes"]["code"]["collector"]["dependencies"]["conditionalDependencies"] = [
             'networkx==3.6.1 ; sys_platform=="darwin"']
 
+    def dependencies_block_dropped(c):
+        # 코드 트랙 산출물에서 선언 블록이 통째로 사라진 상태 — 재현 대상이 닫히지 않는다.
+        # 이 분기(V15 의 'dep is None')는 규칙만 있고 주입이 없었다(round1 LOD-152).
+        c["probes"]["code"]["collector"].pop("dependencies")
+
+    def cited_version_dropped(c):
+        # 고정 선언이 수집기 신원과 떨어져 남은 상태. 선언만 있고 그것이 어느 수집기의 것인지
+        # 산출물이 말하지 못하면, 다른 실행의 선언을 옮겨 붙인 것과 구분되지 않는다.
+        c["probes"]["code"]["collector"]["citedVersion"] = ""
+
     def seed_dependent(c):
         # 3회는 우연히 같았지만 시드를 바꾸면 갈리는 실행 — 재현 보장이 없다.
         c["probes"]["code"]["determinismControl"]["seedIndependent"] = False
@@ -726,6 +736,8 @@ def injections() -> list[tuple[str, str, callable]]:
         ("V15", "런타임 의존성을 범위로 선언", unpinned_runtime_dependency),
         ("V15", "선언과 다른 환경에서 측정", measured_on_a_different_environment),
         ("V15", "판정하지 않은 조건부 의존성", unjudged_conditional_dependency),
+        ("V15", "선언 블록이 통째로 빠짐", dependencies_block_dropped),
+        ("V15", "고정 선언이 수집기 신원 없이 남음", cited_version_dropped),
     ]
 
 

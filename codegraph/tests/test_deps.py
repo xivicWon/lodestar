@@ -10,6 +10,7 @@
 """
 from __future__ import annotations
 
+import os
 import pathlib
 import subprocess
 import sys
@@ -63,9 +64,12 @@ def test_report_is_json_serializable_and_deterministic():
 
 def test_report_is_readable_from_a_subprocess():
     """프로브는 수집기를 서브프로세스로 돌린다 — 같은 인터프리터에서 이 블록을 읽어올 수 있어야 한다."""
+    # 부모 환경을 **상속**한 뒤 PYTHONPATH 만 덮어쓴다(`probe_code.run_collector()` 와 같은 방식).
+    # 환경을 통째로 갈아끼우면 HOME·LANG 이 사라져 이 테스트만 플랫폼별로 갈린다. 타임아웃도 건다 —
+    # 서브프로세스가 멈추면 테스트가 아니라 CI 가 멈춘다(LOD-180).
     p = subprocess.run([sys.executable, "-m", "lodestar_codegraph.deps"],
-                       env={"PYTHONPATH": SRC, "PATH": "/usr/bin:/bin"},
-                       capture_output=True, text=True)
+                       env=dict(os.environ, PYTHONPATH=SRC),
+                       capture_output=True, text=True, timeout=60)
     assert p.returncode == 0, p.stderr
     import json
     assert json.loads(p.stdout) == deps.report()
@@ -81,10 +85,15 @@ def test_unpinned_declaration_is_detected(tmp_path):
 
 
 def test_missing_dependency_is_not_silently_matched(tmp_path):
-    """설치되지 않은 고정 의존성은 '일치' 가 아니다 — 없는 것을 같다고 적으면 재현 주장이 거짓이 된다."""
+    """설치되지 않은 고정 의존성은 '일치' 가 아니다 — 없는 것을 같다고 적으면 재현 주장이 거짓이 된다.
+
+    메시지 **문구**가 아니라 그 안에 있어야 할 사실(무엇이·무엇으로 선언됐고·설치가 없다)로 잰다 —
+    문구에 완전 결합하면 무해한 표현 수정이 테스트를 깬다(LOD-154).
+    """
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text('[project]\nname = "x"\ndependencies = ["no-such-pkg==1.0.0"]\n')
-    assert deps.pin_mismatches(pyproject) == ["no-such-pkg: 선언 1.0.0 / 설치 없음"]
+    (msg,) = deps.pin_mismatches(pyproject)
+    assert "no-such-pkg" in msg and "1.0.0" in msg and "없음" in msg
 
 
 def test_extras_and_markers_do_not_hide_a_pin(tmp_path):
@@ -180,6 +189,35 @@ def test_a_dependency_without_a_pin_is_reported_not_raised(tmp_path, req):
     pyproject.write_text('[project]\nname = "x"\ndependencies = ["%s"]\n' % req)
     assert deps.declared_pins(pyproject) == {}
     assert deps.unpinned_dependencies(pyproject) == [req]
+
+
+def test_an_upper_bounded_range_is_still_unpinned(tmp_path):
+    """상한이 있어도 범위는 범위다 — 상한 **안에서** 구현이 바뀔 자리가 남는다(정책의 명시 요구)."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text('[project]\nname = "x"\ndependencies = ["networkx>=3.0,<4.0"]\n')
+    assert deps.declared_pins(pyproject) == {}
+    assert deps.unpinned_dependencies(pyproject) == ["networkx>=3.0,<4.0"]
+
+
+def test_the_same_package_pinned_twice_to_different_versions_is_refused(tmp_path):
+    """LOD-181 — 같은 이름이 서로 다른 버전으로 두 번 선언되면 뒤가 앞을 덮어써 **조용히 사라진다**.
+
+    이 PR 이 없애려던 것과 같은 부류다: 고정 선언 하나가 흔적 없이 없어지는데 목록도 불일치도
+    비어 있어 아무 데도 걸리지 않는다.
+    """
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        '[project]\nname = "x"\ndependencies = ["networkx==3.1", "networkx==3.6.1"]\n')
+    with pytest.raises(ValueError, match="networkx"):
+        deps.declared_pins(pyproject)
+
+
+def test_the_same_package_declared_twice_identically_is_not_an_error(tmp_path):
+    """중복이되 **같은 값**이면 잃는 것이 없다 — 거짓 경보를 만들지 않는다."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        '[project]\nname = "x"\ndependencies = ["networkx==3.6.1", "networkx==3.6.1"]\n')
+    assert deps.declared_pins(pyproject) == {"networkx": "3.6.1"}
 
 
 @pytest.mark.parametrize("req", ["== 3.6.1", "!!!"])
