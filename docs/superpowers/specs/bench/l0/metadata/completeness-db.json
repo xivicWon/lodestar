@@ -26,16 +26,16 @@
     }, {
       "path" : "sample",
       "sourceId" : "db:legacy-sample",
-      "revision" : "bundle:03bcefc79a18",
-      "contentHash" : "sha256:03bcefc79a188755c09cb8e6c655ff1bee3fb1c90bbbefb0d74a6e2d5d14b269",
+      "revision" : "bundle:89cc2651277e",
+      "contentHash" : "sha256:89cc2651277edf79113eb4714d1a30629aae9ad2b530ff2e80bdb88a4858f718",
       "present" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
       "absent" : [ ],
       "rate" : 1.0
     }, {
       "path" : "live-jdbc",
       "sourceId" : "db:jdbc:postgresql://db.example:5432/meta_completeness",
-      "revision" : "live:341e246b79c7",
-      "contentHash" : "sha256:341e246b79c7a333294bc340b908a18cc0f83819c96d01fea77bb06add5ea00b",
+      "revision" : "live:aa0d5becab65",
+      "contentHash" : "sha256:aa0d5becab65a833e9079f144f1cc6650d50f62f76fcfd0d19fc8020ce83c1a9",
       "present" : [ "projectId", "sourceId", "revision", "contentHash", "collectorVersion" ],
       "absent" : [ ],
       "rate" : 1.0
@@ -53,8 +53,8 @@
   },
   "volatile" : {
     "note" : "입력 내용에 따라 달라지는 값만 둔다 — 표류 검사 대상이 아니다. projectId·collectorVersion 은 계약이 고정하는 신원이므로 identity 블록에 있다",
-    "sampleContentHash" : "sha256:03bcefc79a188755c09cb8e6c655ff1bee3fb1c90bbbefb0d74a6e2d5d14b269",
-    "sampleRevision" : "bundle:03bcefc79a18",
+    "sampleContentHash" : "sha256:89cc2651277edf79113eb4714d1a30629aae9ad2b530ff2e80bdb88a4858f718",
+    "sampleRevision" : "bundle:89cc2651277e",
     "ddlContentHash" : "sha256:af16a259a6f47280c751fd7e475876ebd66fdf1139a571026c08859b2e167d3b"
   }
 }

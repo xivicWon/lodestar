@@ -326,6 +326,28 @@ main 워킹트리에서 상시 실패했다. gold 에 **L0 수집 입력 축**(`
 승인 전이라 **기준선이 아니다**(I3 R12 · I1 §7). 이전 실행들은 덮어쓰지 않고 `baseline.previous` 로
 인용만 한다(I3 §5.5). 확인기는 결함 주입 4건이 늘어 **V1-V14 · 35 케이스** 가 됐다.
 
+### 6.4 DB 수집 모델에 소속(schema) 신설 (#126)
+
+라이브 스냅샷의 `contentHash` 가 나오는 정규화 스냅샷(`SchemaCanonical.bytes`)에 테이블의 소속이
+없어, 스키마가 다른 동명 테이블(`sales.orders` · `archive.orders`)이 한 신원으로 접히고 테이블이
+스키마 사이를 옮겨도 신원이 그대로였다(#113 리뷰 지적). `TableInfo.schema` ·
+`ForeignKeyInfo.refSchema` 를 신설해 소속을 신원에 넣었다 — 계약 §5.1 의 "알려진 한계" 문단은
+그 사실로 대체됐다.
+
+DB 트랙을 새 runId `run-l0-db-aad4382-002` 로 다시 쟀다. **게이트 수치(수집률·보고율·결정성·
+완전성)는 `aad4382-001` 과 같다.** 프로브 산출물에서 달라진 것은 네 자리다:
+
+| 자리 | 왜 |
+|---|---|
+| `probeVersion` `v3` → `v4` | 정규화 표현에 `schema`·`refSchema` 를 넣었다 — 산출물에 있는 필드가 정규화에 없으면 결정성·PII 검사가 그 필드를 덮지 않은 채 덮었다고 센다 |
+| `determinism.artifactHashes` · `ingestStore.metadataService.artifactHashes` | 위 정규화가 바뀌면서 해시 입력이 달라졌다. **비율은 그대로 3/3 · 1.0** 이다(`determinism.rate` · `…metadataService.determinismRate`) |
+| `collector.sourceHash`(=`citedVersion`) | 수집기 구성 파일(`SchemaModel`·`MetadataService`·`DdlParser`)이 바뀌었다 |
+
+이 프로브가 재는 수집률·보고율·결정성 **비율**은 소속 축과 무관하다. 소속이 신원을 바꾸는 자리는
+라이브·번들 경로의 `contentHash` 이며, 그 값은 `bench/l0/metadata/completeness-db.json` 의
+`volatile` 이 싣고 #126 에서 한 번 바뀌었다. 코드 트랙은 이 이슈가 건드리지 않아 `aad4382-001` 이
+그대로 현행이다.
+
 **이 문서의 §3 수치는 #88 시점의 기준선이며 고쳐 쓰지 않는다.**
 ---
 

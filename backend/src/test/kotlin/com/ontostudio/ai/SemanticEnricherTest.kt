@@ -48,7 +48,7 @@ class SemanticEnricherTest {
         val candidates = svc.enrichSample()
 
         val cust = candidates.first { it.currentName == "TB_CUST_MST" }
-        assertEquals("http://lodestar/rdb/legacy#TB_CUST_MST", cust.targetIri)
+        assertEquals("http://lodestar/rdb/legacy#PUBLIC/TB_CUST_MST", cust.targetIri)
         assertEquals("고객 마스터", cust.suggestedLabel)
         assertTrue(candidates.any { it.currentName == "TB_ORD_HD" })
 
@@ -75,7 +75,7 @@ class SemanticEnricherTest {
     @Test fun `grounding excludes confirmed table from targets and injects it as anchor`() {
         val store = store()
         // 승인된 사실을 미리 저장(TB_CUST_MST → 고객 마스터).
-        store.confirm(ConfirmedFact("http://lodestar/rdb/legacy#TB_CUST_MST", "고객 마스터", "class"))
+        store.confirm(ConfirmedFact("http://lodestar/rdb/legacy#PUBLIC/TB_CUST_MST", "고객 마스터", "class"))
         val (svc, fake) = enricher(
             """[{"table":"TB_ORD_HD","label":"주문 헤더","description":"주문 전표 헤더"}]""",
             store,
@@ -106,7 +106,16 @@ class SemanticEnricherTest {
         // 샘플의 모든 테이블을 확정 처리.
         SampleLegacyDb().open().use { conn ->
             for (t in MetadataService().extract(conn, "db:test:semanticenricher").tables) {
-                store.confirm(ConfirmedFact("http://lodestar/rdb/legacy#${SchemaToOwlMapper().slug(t.name)}", t.name, "class"))
+                // 임포트가 만드는 IRI 와 같은 방식으로 조립한다 — 소속 한정을 포함한다(#126).
+                //
+                // 이 테스트가 보는 것은 "확정된 테이블은 추정 대상에서 빠진다" 이지 IRI 의 모양이
+                // 아니다. 그래서 기대값을 생산 코드와 같은 함수로 만든다 — 리터럴로 적으면 이 테스트가
+                // IRI 조합을 검증하는 자리로 바뀌어 목적이 흐려진다. **IRI 조합 자체의 회귀**는
+                // 리터럴로 못박은 단언들이 잡는다(이 파일 `enrich maps ai labels…` 의
+                // `…legacy#PUBLIC/TB_CUST_MST` · SchemaOwnershipTest 의 `base + "sales/orders"` 등 13곳).
+
+                val iri = SchemaToOwlMapper().classIri("http://lodestar/rdb/legacy#", t).toString()
+                store.confirm(ConfirmedFact(iri, t.name, "class"))
             }
         }
         val svc = SemanticEnricher(ThrowingAdvisor(), SampleLegacyDb(), MetadataService(), SchemaToOwlMapper(), store)

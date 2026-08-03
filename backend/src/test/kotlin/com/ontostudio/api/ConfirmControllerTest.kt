@@ -37,7 +37,7 @@ class ConfirmControllerTest {
     @Test fun `confirm applies label to ontology and records savepoint`() {
         mvc.perform(post("/api/rdb/import/sample")).andExpect(status().isOk)
 
-        val iri = "http://lodestar/rdb/legacy#TB_CUST_MST"
+        val iri = "http://lodestar/rdb/legacy#PUBLIC/TB_CUST_MST"
         mvc.perform(
             post("/api/enrich/confirm")
                 .contentType(MediaType.APPLICATION_JSON)

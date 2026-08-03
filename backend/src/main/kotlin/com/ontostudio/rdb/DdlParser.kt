@@ -300,10 +300,81 @@ class DdlParser(private val masker: SqlTextMasker = SqlTextMasker()) {
         return out
     }
 
-    private fun unquote(s: String): String = s.trim().trim('"', '`', '[', ']')
+    /**
+     * 식별자에서 인용을 벗긴다.
+     *
+     * **인용된 조각이면 안쪽의 겹인용을 한 문자로 접는다** — `"sch""ema"` 는 이름이 `sch"ema` 인
+     * 스키마다. 접지 않으면 신원(`contentHash`)이 있지도 않은 이름(`sch""ema`)을 지목한다.
+     * 겹침을 접는 규칙은 **인용된 조각에만** 선다: 비인용 식별자까지 손대면 원본에 없는 이름을
+     * 만들게 된다.
+     */
+    private fun unquote(s: String): String {
+        val t = s.trim()
+        val q = when {
+            t.length >= 2 && t.first() == '"' && t.last() == '"' -> "\""
+            t.length >= 2 && t.first() == '`' && t.last() == '`' -> "`"
+            t.length >= 2 && t.first() == '[' && t.last() == ']' -> null   // 대괄호는 겹침 규칙이 없다
+            else -> return t
+        }
+        val body = t.substring(1, t.length - 1)
+        return if (q == null) body else body.replace(q + q, q)
+    }
+
+    /**
+     * 한정 이름을 **인용부호를 존중해** 조각으로 나눈다: `catalog.schema.table`.
+     *
+     * 단순 `split('.')` 은 인용부호 **안의** 점에서도 자른다 — `"my.schema"."t"` 가 세 조각이 되어
+     * 소속이 `schema` 로 잘리고, 소속 없는 `"a.b"` 는 스키마 `a` 의 테이블 `b` 로 읽힌다. 같은 대상을
+     * 인라인 `REFERENCES` 로 적을 때와 테이블-레벨 제약으로 적을 때(이쪽은 JSqlParser 가 읽는다)
+     * 결과가 갈리면, 같은 스키마가 두 값으로 기록되어 신원(`contentHash`)이 표기 방식에 따라 달라진다.
+     *
+     * 조각은 인용부호를 **붙인 채로** 돌려준다 — 벗기는 일은 [unquote] 한 곳에서만 한다.
+     * 표준 이스케이프(`"a""b"`)는 닫는 인용부호로 세지 않는다.
+     */
+    private fun splitQualified(qualified: String): List<String> {
+        val parts = mutableListOf<String>()
+        val sb = StringBuilder()
+        var closing: Char? = null
+        var i = 0
+        val s = qualified.trim()
+        while (i < s.length) {
+            val c = s[i]
+            when {
+                closing != null -> {
+                    // 겹친 인용부호는 이름 안의 문자다: `"a""b"` 는 조각 하나(`a"b`)다.
+                    if (c == closing && i + 1 < s.length && s[i + 1] == c) { sb.append(c).append(c); i++ }
+                    else { if (c == closing) closing = null; sb.append(c) }
+                }
+                c == '"' || c == '`' -> { closing = c; sb.append(c) }
+                c == '[' -> { closing = ']'; sb.append(c) }
+                c == '.' -> { parts.add(sb.toString()); sb.clear() }
+                else -> sb.append(c)
+            }
+            i++
+        }
+        parts.add(sb.toString())
+        return parts
+    }
+
+    /**
+     * `schema.table` · `catalog.schema.table` 에서 **소속**(마지막 이름 바로 앞 부분)만 취한다(#126).
+     * 카탈로그는 모델이 담지 않는다([TableInfo] 참조) — JDBC 경로와 같은 축만 남겨야 두 경로의
+     * 산출물이 같은 것을 뜻한다.
+     *
+     * **빈 이름은 '모름'(`null`)으로 접는다**(`""."t"`). 정규화 계층은 `null` 과 `""` 를 다른 신원으로
+     * 구분하지만(그건 직렬화가 단사이기 위한 조건이다), **빈 식별자는 어느 방언에서도 유효한 스키마
+     * 이름이 아니므로** 수집기는 그것을 이름으로 받지 않는다 — 라이브 경로가 드라이버의 빈 문자열을
+     * 접는 것과 같은 규칙이다([MetadataService.ownerOf]).
+     */
+    private fun schemaOf(qualified: String): String? =
+        splitQualified(qualified).dropLast(1).lastOrNull()?.let { unquote(it) }?.takeIf { it.isNotEmpty() }
+
+    /** 한정 이름의 대상 이름. 인용부호 안의 점은 이름의 일부다(`"a.b"` 는 테이블 `a.b`). */
+    private fun nameOf(qualified: String): String = unquote(splitQualified(qualified).last())
 
     private fun toTableInfo(ct: CreateTable): TableInfo {
         val tableName = unquote(ct.table.name)
+        val tableSchema = ct.table.schemaName?.let { unquote(it) }?.takeIf { it.isNotEmpty() }
         val columns = (ct.columnDefinitions ?: emptyList()).map { cd ->
             val specs = (cd.columnSpecs ?: emptyList()).joinToString(" ").uppercase()
             ColumnInfo(unquote(cd.columnName), cd.colDataType.dataType, nullable = !specs.contains("NOT NULL"))
@@ -321,8 +392,9 @@ class DdlParser(private val masker: SqlTextMasker = SqlTextMasker()) {
             if (m != null) {
                 fks.add(ForeignKeyInfo(
                     listOf(unquote(cd.columnName)),
-                    unquote(m.groupValues[1].substringAfterLast('.')),
-                    listOf(unquote(m.groupValues[2]))))
+                    nameOf(m.groupValues[1]),
+                    listOf(unquote(m.groupValues[2])),
+                    refSchema = schemaOf(m.groupValues[1])))
             }
         }
 
@@ -332,12 +404,13 @@ class DdlParser(private val masker: SqlTextMasker = SqlTextMasker()) {
                 fks.add(ForeignKeyInfo(
                     idx.columnsNames.map { unquote(it) },
                     unquote(idx.table.name),
-                    (idx.referencedColumnNames ?: emptyList()).map { unquote(it) }))
+                    (idx.referencedColumnNames ?: emptyList()).map { unquote(it) },
+                    refSchema = idx.table.schemaName?.let { unquote(it) }?.takeIf { it.isNotEmpty() }))
             } else if (idx.type?.uppercase()?.contains("PRIMARY KEY") == true) {
                 idx.columnsNames.forEach { pk.add(unquote(it)) }
             }
         }
 
-        return TableInfo(tableName, columns, pk.distinct(), fks)
+        return TableInfo(tableName, columns, pk.distinct(), fks, schema = tableSchema)
     }
 }

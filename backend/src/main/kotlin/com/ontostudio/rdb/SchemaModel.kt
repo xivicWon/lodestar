@@ -74,20 +74,46 @@ data class SchemaModel(
     }
 }
 
+/**
+ * 수집된 테이블 하나.
+ *
+ * [schema] 는 이 테이블의 **소속**이다(#126). 소속이 없으면 `sales.orders` 와 `archive.orders` 가
+ * 모델 단계에서 이미 한 항목으로 접히고, 테이블이 스키마 사이를 옮겨도 스냅샷 신원이 그대로다 —
+ * "수집기가 실제로 본 것을 가리킨다" 는 계약(§5.1)이 그 지점에서 약해진다.
+ *
+ * `null` 은 **소속을 모른다**는 뜻이다(비한정 DDL 의 `CREATE TABLE orders`). 빈 문자열(이름이 빈
+ * 스키마)과 다른 값이며, 정규화 바이트도 둘을 구분한다.
+ *
+ * **catalog 는 담지 않는다.** [MetadataService] 의 수집은 `conn.catalog` 하나로 한정되므로
+ * 카탈로그는 한 스냅샷 안에서 상수이고, 그 신원은 이미 `sourceId`(vendor·host·port·database)가
+ * 담는다. 넣으면 번들 샘플의 H2 카탈로그(`LEGACY_<nanoTime>`)가 해시에 섞여 같은 스냅샷이 매 실행
+ * 다른 신원을 갖게 된다 — 소속을 담으려다 결정성을 잃는 교환이다.
+ */
 data class TableInfo(
     val name: String,
     val columns: List<ColumnInfo>,
     val primaryKey: List<String>,
-    val foreignKeys: List<ForeignKeyInfo>
-)
+    val foreignKeys: List<ForeignKeyInfo>,
+    val schema: String? = null,
+) {
+    /** 소속을 포함한 표시용 이름. 소속을 모르면 이름 그대로다. 신원 계산에는 쓰지 않는다(§ [SchemaCanonical]). */
+    val qualifiedName: String get() = if (schema == null) name else "$schema.$name"
+}
 
 data class ColumnInfo(val name: String, val sqlType: String, val nullable: Boolean)
 
-/** fkColumns(이 테이블의 컬럼) → refTable.refColumns 를 가리키는 외래키. 복합키는 리스트가 다중. */
+/**
+ * fkColumns(이 테이블의 컬럼) → refTable.refColumns 를 가리키는 외래키. 복합키는 리스트가 다중.
+ *
+ * [refSchema] 는 대상 테이블의 소속이다(#126). 없으면 동명 테이블이 여럿일 때 어느 쪽을 가리키는지
+ * 알 수 없어, 하류(매퍼)가 임의로 하나를 고르게 된다. `null` 은 원본이 한정하지 않았다는 뜻이며,
+ * 그때의 해석은 SQL 과 같은 방향으로 — 참조하는 쪽의 스키마 안을 먼저 본다([SchemaToOwlMapper]).
+ */
 data class ForeignKeyInfo(
     val fkColumns: List<String>,
     val refTable: String,
-    val refColumns: List<String>
+    val refColumns: List<String>,
+    val refSchema: String? = null,
 )
 
 /**
@@ -113,9 +139,19 @@ object SchemaCanonical {
     private fun escList(items: List<String>): String =
         items.size.toString() + ":" + items.joinToString(",") { esc(it) }
 
+    /**
+     * 소속처럼 **없을 수 있는** 필드. 없으면 필드 자체를 적지 않는다 — 그래야 소속을 모르는 입력
+     * (비한정 DDL)의 바이트가 이 변경 전과 같고, 이 이슈와 무관한 입력의 revision 이 갈리지 않는다.
+     * 있으면 탭으로 구분된 필드 하나가 늘어난다. `null`(모른다)과 `""`(이름이 빈 스키마)는
+     * 필드의 유무로 구분되므로 서로 다른 신원이다.
+     */
+    private fun optField(s: String?): String = if (s == null) "" else "\t" + esc(s)
+
     fun bytes(tables: List<TableInfo>): ByteArray = buildString {
-        for (t in tables.sortedBy { it.name }) {
-            append("T\t").append(esc(t.name)).append('\n')
+        // 소속이 정렬 키에 없으면 동명 테이블의 상대 순서가 입력 순서(JDBC 반환 순서)에 맡겨진다.
+        for (t in tables.sortedWith(
+            compareBy<TableInfo, String?>(nullsFirst(naturalOrder())) { it.schema }.thenBy { it.name })) {
+            append("T\t").append(esc(t.name)).append(optField(t.schema)).append('\n')
             // 컬럼은 정렬하지 않는다 — 순서 자체가 스키마의 일부이고, 두 수집 경로 모두
             // 순서가 결정적이다(DDL 은 선언 순, JDBC 는 ORDINAL_POSITION 순).
             for (c in t.columns) {
@@ -129,10 +165,12 @@ object SchemaCanonical {
             // 서로 다른 FK 가 같은 키가 되고(fk=["a b"]/ref="r" 와 fk=["b"]/ref="r a"),
             // 그러면 정렬이 입력 순서를 그대로 두어 JDBC 반환 순서에 따라 해시가 갈린다.
             for (f in t.foreignKeys.sortedBy {
-                esc(it.refTable) + "\t" + escList(it.fkColumns) + "\t" + escList(it.refColumns)
+                esc(it.refTable) + "\t" + escList(it.fkColumns) + "\t" + escList(it.refColumns) +
+                    optField(it.refSchema)
             }) {
                 append("F\t").append(escList(f.fkColumns)).append('\t')
-                    .append(esc(f.refTable)).append('\t').append(escList(f.refColumns)).append('\n')
+                    .append(esc(f.refTable)).append('\t').append(escList(f.refColumns))
+                    .append(optField(f.refSchema)).append('\n')
             }
         }
     }.toByteArray()

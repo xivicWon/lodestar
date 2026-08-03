@@ -13,7 +13,7 @@
                                 │     ▼
                     ┌───────────┴───────────── cmux 세션 issue-N (구현) ──────────┐
                     │  worktree ../lodestar-issue-N + 브랜치 feat/N-slug           │
-                    │  .claude-brief.md 읽고 TDD 구현 → push → gh pr create        │
+                    │  .claude-brief.md 읽고 TDD 구현 → push 전 자체리뷰(6렌즈·≤3회) → push → PR │
                     │  (Closes #N)  · 머지는 안 함                                  │
                     └──────────────────────────────────────────────────────────────┘
 ```
@@ -24,7 +24,16 @@
 | 디스패치 | `/issue-start <N> [slug]` | worktree+브랜치 생성, 브리프 기록, cmux 세션 기동 |
 | 리뷰·승인 | `/pr-review <N>` | 수용조건 대조 + 품질게이트 + **로컬 리뷰-응답 루프** → (승인) 머지·정리 |
 | 엔진 | `.claude/pipeline/dispatch.sh <N>` | 위 디스패치의 결정론 부분 |
-| 리뷰 루프 | `.claude/pipeline/review-loop.md` | AI 리뷰 대응: fan-out 로컬 리뷰 → FIX/COMMENT 분기 → 5회 상한·강도↑ |
+| push 전 자체리뷰 | `.claude/pipeline/pre-push-review.md` | 워커가 push 전 6렌즈(버그·보안·성능·유지보수·SOLID·호환성) 자가리뷰 → 범주 안 수정(≤3회)·범주 밖 코멘트+후속이슈 |
+| 리뷰 루프 | `.claude/pipeline/review-loop.md` | (push 후) AI 리뷰 대응: fan-out 로컬 리뷰 → FIX/COMMENT 분기 → 5회 상한·강도↑ |
+
+## 채용 스킬·에이전트 (.claude/skills, .claude/agents)
+| 이름 | 유형 | 쓰임 |
+|---|---|---|
+| `review-round-governor` | Skill | 리뷰 루프 상한·내용 dedup·발산 판정·HALT (자체리뷰 3 / AI리뷰 5) |
+| `evidence-gate-runner` | Agent | 변경 범위→L0~L3·결정성·빌드/테스트 게이트 PASS/FAIL 매트릭스 |
+| `adversarial-finding-verifier` | Agent | 리뷰 지적 1건을 반증 우선으로 검증 → CONFIRMED/오탐 |
+| `gold-oracle-guard` | Skill | gold 변경 전 자기승인·순환·축분리 3대 불변식 검사 |
 
 ## AI 리뷰 대응 루프 (요약)
 ```

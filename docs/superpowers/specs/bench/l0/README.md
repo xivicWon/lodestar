@@ -20,7 +20,10 @@ runs/run-l0-db-3c27259-001/     probe-db.json · report.json    (#88 실측 — 
 runs/run-l0-db-3c27259-002/     probe-db.json · report.json    (#114 재측정 — 보고율 1.0)
 runs/run-l0-db-3c27259-003/     probe-db.json · report.json    (#115 재측정 — 수집기에 마스킹 단계 · 수치 변화 없음)
 runs/run-l0-db-3c27259-004/     probe-db.json · report.json    (#115 경계 문자 통합 수정 — 수치 변화 없음)
-runs/run-l0-db-aad4382-001/     probe-db.json · report.json    (#125 입력 축 재고정 후 재측정 · 현행)
+runs/run-l0-db-aad4382-001/     probe-db.json · report.json    (#125 입력 축 재고정 후 재측정)
+runs/run-l0-db-aad4382-002/     probe-db.json · report.json    (#126 수집 모델에 소속(schema) 신설 ·
+                                                               프로브 v4 가 그 필드를 정규화에 포함 —
+                                                               수치 변화 없음 · 현행)
 runs/run-l0-code-3c27259-001/   probe-code.json · report.json  (#88 실측 — 결정성 0.3333 · H1)
 runs/run-l0-code-3c27259-002/   probe-code.json · report.json  (#112 재측정 — 결정성 1.0)
 runs/run-l0-code-3c27259-003/   probe-code.json · report.json  (#114 재측정 — 보고율 1.0)
@@ -31,7 +34,9 @@ test_bench_l0.py                계측기 자체의 단위 테스트 (합성 입
 metadata_completeness.py        #113 게이트 재측정 (코드 트랙 실측 + DB 트랙 결과 확인)
 metadata/completeness-{db,code}.json   그 결과```
 
-**현행 실행**은 db·code 모두 `aad4382-001` 이다(`build_report.RUNS` · `probe_code.RUN_DIR`). 각 트랙의
+**현행 실행**은 db 가 `aad4382-002`, code 가 `aad4382-001` 이다
+(`build_report.RUNS` · `probe_code.RUN_DIR`). 두 트랙의 runId 가 갈린 것은 #126 이 DB 수집기만
+고쳤기 때문이다 — 입력 축은 둘 다 `aad4382` 로 같다. 각 트랙의
 직전 실행이 `PREVIOUS` 이며 새 보고서가 그것을 `baseline.previous` 로 인용한다 — 덮어쓰지 않는다(I3 §5.5).
 현행 두 실행은 gold 입력 축이 아직 **미승인**(PROPOSED)이라 `eligibleAsBaseline: false` 이고
 `GOLD_UNAPPROVED` 경고를 싣는다 — 승인 전에는 다음 실행의 비교 기준선이 아니다(I3 R12 · I1 §7).
@@ -48,16 +53,23 @@ gold 의 **입력 축**에서 읽는다(정답 축이 아니다 — I2 §6).
 
 ## 재현
 
+아래가 **정본 재현 절차**다. `.github/workflows/verify.yml` 이 PR·main push 에서 이 명령을 글자 그대로
+돌린다(#124). 둘이 갈라지면 CI 그린이 재현을 보장하지 않으므로, 그 동일성은
+[`../ci/verify_ci.py`](../ci/verify_ci.py) 의 W3 이 검사한다 — 아래 블록의 `<!-- ci-parity -->` 표시가
+그 대조 대상이라는 뜻이다. **명령을 고치면 워크플로도 같이 고쳐야 한다**(안 고치면 CI 가 붉어진다).
+
+모든 명령은 리포 루트에서 실행한다. 서브셸로 격리한다 — `cd backend && ... && cd ..` 는 gradle 이
+실패하면 backend 에 남아 이후 `docs/...` 경로가 전부 어긋난다.
+
+<!-- ci-parity -->
 ```bash
-pip install jsonschema
+pip install jsonschema pyyaml pytest
 pip install -e codegraph                      # tree-sitter 수집기 의존성
 
-# 1) 프로브 재실행 + 커밋된 산출물 표류 검사 (모든 명령은 리포 루트에서 실행한다)
-#    서브셸로 격리한다 — `cd backend && ... && cd ..` 는 gradle 이 실패하면 backend 에 남아
-#    이후 docs/... 경로가 전부 어긋난다.
-( cd backend && ./gradlew test --tests 'com.ontostudio.rdb.L0DbSourceProbeTest' )
-# 현행 실행은 **main 워킹트리에서 그린이어야 한다**(#125 로 입력 축을 재고정해 그렇게 됐다).
-# 실패하면 입력(backend/src/main/kotlin)이나 수집기가 축 이후로 움직인 것이다 — 그때는 새 runId 로 남긴다.
+# 1) 코드 트랙 수집기 + 프로브 재실행·표류 검사
+#    현행 실행은 **main 워킹트리에서 그린이어야 한다**(#125 로 입력 축을 재고정해 그렇게 됐다).
+#    실패하면 입력(backend/src/main/kotlin)이나 수집기가 축 이후로 움직인 것이다 — 그때는 새 runId 로 남긴다.
+( cd codegraph && python3 -m pytest -q )
 python3 docs/superpowers/specs/bench/l0/probe_code.py --check
 
 # 2) 보고서 재생성 (프로브에서 결정적으로 파생된다 — diff 가 나오면 근거가 표류했다)
@@ -72,7 +84,30 @@ python3 docs/superpowers/specs/bench/l0/verify_l0.py
 #                            확인기가 대조한다)
 
 # 4) 계측기 자체의 테스트 (실측 없이 합성 입력으로 돈다)
-python3 -m pytest docs/superpowers/specs/bench/l0/test_bench_l0.py -q```
+python3 -m pytest docs/superpowers/specs/bench/l0/test_bench_l0.py -q
+python3 docs/superpowers/specs/bench/l0/metadata_completeness.py
+
+# 5) 마스킹 증거 (#115)
+python3 docs/superpowers/specs/bench/masking/probe_masking.py --check
+python3 docs/superpowers/specs/bench/masking/build_masking_report.py --check
+python3 docs/superpowers/specs/bench/masking/verify_masking.py
+
+# 6) 계약 스키마·픽스처·문서 수치 정합
+python3 docs/superpowers/specs/schemas/validate.py
+python3 docs/superpowers/specs/schemas/validate_rqr.py
+python3 docs/superpowers/specs/schemas/fuzz.py
+python3 docs/superpowers/specs/schemas/sweep.py
+python3 docs/superpowers/specs/verify_i1_counts.py
+
+# 7) 게이트가 CI 에 실제로 걸려 있는가 (자동 실행 계약 자신 — W1~W6)
+python3 docs/superpowers/specs/bench/ci/verify_ci.py
+
+# 8) DB 트랙 — L0 DB 프로브를 겸하는 백엔드 스위트
+( cd backend && ./gradlew test )
+```
+
+DB 프로브만 좁혀 돌리려면 `( cd backend && ./gradlew test --tests 'com.ontostudio.rdb.L0DbSourceProbeTest' )`
+로 줄일 수 있다. 다만 CI 는 전체 스위트를 돌린다 — 좁힌 실행이 그린이라고 전체가 그린은 아니다.
 
 새 runId 를 처음 만들 때만 DB 프로브를 부트스트랩한다 — 그 외에는 커밋된 산출물이 없으면 테스트가 실패한다.
 

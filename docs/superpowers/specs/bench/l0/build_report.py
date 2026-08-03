@@ -24,15 +24,15 @@ GOLD = REPO / "docs/superpowers/specs/gold"
 SCHEMAS = REPO / "docs/superpowers/specs/schemas"
 
 RUNS = {
-    "db": HERE / "runs/run-l0-db-aad4382-001",
+    "db": HERE / "runs/run-l0-db-aad4382-002",
     "code": HERE / "runs/run-l0-code-aad4382-001",
 }
 PROBE_NAME = {"db": "probe-db.json", "code": "probe-code.json"}
-RUN_ID = {"db": "run-l0-db-aad4382-001", "code": "run-l0-code-aad4382-001"}
+RUN_ID = {"db": "run-l0-db-aad4382-002", "code": "run-l0-code-aad4382-001"}
 # 이전 실행 — 있으면 그 보고서를 읽어 비교한다. 수치를 여기 적지 않는다: 손으로 옮긴 기준선은
 # 원본과 어긋나도 아무도 모른다(V2 가 보고서를 프로브+이 상수들에서 다시 만들어 대조한다).
 PREVIOUS = {
-    "db": HERE / "runs/run-l0-db-3c27259-004",
+    "db": HERE / "runs/run-l0-db-aad4382-001",
     "code": HERE / "runs/run-l0-code-3c27259-003",
 }
 # 실측 세션의 시각 (RFC 3339 축소 프로파일). 보고서를 다시 만들어도 흔들리지 않도록 못박는다 —
@@ -40,22 +40,34 @@ PREVIOUS = {
 TIMES = {
     # 실측이 끝난 시각과 그 실행의 소요다 — 프로브가 시각을 산출물에 넣으면 매 실행이 표류하므로
     # 여기 못박되, 지어내지 않는다.
-    "db": ("2026-07-31T08:46:00Z", "2026-07-31T08:46:11Z"),
+    "db": ("2026-08-03T08:38:44Z", "2026-08-03T08:38:45Z"),
     "code": ("2026-07-31T08:41:00Z", "2026-07-31T08:41:07Z"),
 }
 # 이번 실행에서 **수집기의 무엇이** 달라졌는가. 트랙마다 다르므로 한 문장을 공유하지 않는다 —
 # 공유하면 db 재측정에 code 트랙의 사유가 붙어 보고서가 근거를 잘못 가리킨다.
 COLLECTOR_CHANGE = {
-    "db": "#115 마스킹 경계 문자 처리 통합 수정(\\s·CRLF·백슬래시)",
+    "db": "#126 수집 모델에 테이블 소속(schema) 신설 — TableInfo.schema · ForeignKeyInfo.refSchema, "
+          "그리고 DDL 한정 이름을 인용부호를 존중해 분해",
     "code": "#112 결정성 수정",
 }
 # 이번 실행이 **왜 새 runId 인가**. 수집기가 아니라 gold 쪽이 움직인 재측정도 있다 —
 # 사유를 트랙 문장에 섞으면 "수집기가 바뀌어서 다시 쟀다" 는 거짓 서술이 남는다(#125).
-REPIN_REASON = (
-    "gold 입력 축 재고정(#125) — L0 프로브의 입력 revision 을 정답 축에서 분리해 새로 고정했고, "
-    "그 개정으로 goldSetId 가 바뀌어 이전 gold 로 채점된 실행은 비교 기준선에서 제외된다"
-    "(I1 §7.4 · I2 §10.4)"
-)
+# 트랙마다 사유가 다르므로 한 문장을 공유하지 않는다: db 는 수집기가, code 는 gold 축이 움직였다.
+REPIN_REASON = {
+    "db": (
+        "수집기 변경(#126) — 라이브 스냅샷에 테이블 소속(schema)이 없어 동명 테이블이 한 신원으로 "
+        "접히던 것을 고쳤다. 입력·gold 축은 그대로이고 게이트 수치도 그대로지만, 프로브 산출물은 "
+        "네 자리가 다르다: probeVersion(v3→v4 — 정규화가 schema·refSchema 를 포함하게 됐다), "
+        "그에 따른 determinism.artifactHashes 와 ingestStore.metadataService.artifactHashes"
+        "(비율은 둘 다 3/3·1.0 그대로), 그리고 수집기 구성 "
+        "파일이 바뀌며 달라진 collector.sourceHash — 그래서 덮어쓰지 않고 새 runId 로 남긴다(I3 §5.5)"
+    ),
+    "code": (
+        "gold 입력 축 재고정(#125) — L0 프로브의 입력 revision 을 정답 축에서 분리해 새로 고정했고, "
+        "그 개정으로 goldSetId 가 바뀌어 이전 gold 로 채점된 실행은 비교 기준선에서 제외된다"
+        "(I1 §7.4 · I2 §10.4)"
+    ),
+}
 # 비교 가능성은 신원이 같을 때만 성립한다(I3 R17).
 IDENTITY = ("projectId", "layer", "track", "sourceRevision", "fixtureHash")
 COMPARED_METRICS = ("determinism", "provenanceCompleteness", "scopeCoverage")
@@ -296,12 +308,26 @@ def baseline_block(track: str, run: dict, schema_version: str, metrics: dict,
         # 어느 필드가 갈렸는지 **계산해서** 적는다. "신원이 다르다" 만 적으면 gold 개정으로
         # 비교가 끊긴 것과 트랙을 잘못 인용한 것이 같은 문장이 된다.
         differing = [k for k in IDENTITY if prev["run"][k] != run[k]]
+        # 신원 필드가 **같은데도** 비교할 수 없는 경우가 있다 — 이전 실행이 기준선 자격을 갖지
+        # 못했거나(미승인 gold 축 위의 실행) 보고서 스키마·종류가 다를 때다. 그때 "신원이 다르다
+        # (다른 필드: 없음)" 이라고 적으면 보고서가 자기 자신과 모순된다. 사유를 실제로 계산해 적는다.
+        if differing:
+            detail = f"신원이 다르다(다른 필드: {', '.join(differing)})"
+        else:
+            causes = []
+            if not prev["baseline"]["eligibleAsBaseline"]:
+                causes.append("이전 실행이 기준선 자격을 갖지 못한다(eligibleAsBaseline=false)")
+            if prev["run"]["reportKind"] != "BASELINE":
+                causes.append(f"이전 실행의 reportKind 가 {prev['run']['reportKind']} 다")
+            if prev["schemaVersion"] != schema_version:
+                causes.append(f"보고서 스키마가 다르다({prev['schemaVersion']} → {schema_version})")
+            detail = "신원 필드는 같으나 비교 기준선이 아니다(" + " · ".join(causes) + ")"
         axis = probe_axis()
         return {
             "previous": ident,
             "comparable": False,
             "reason": (
-                f"{ident['runId']} 과 신원이 다르다(다른 필드: {', '.join(differing) or '없음'}) — "
+                f"{ident['runId']} 과 {detail} — "
                 f"gold 입력 축 재고정(#125: probeAxis {axis['revision'][:7]}, "
                 f"{axis['status']['state']})으로 이전 gold 로 채점된 실행은 비교 기준선에서 제외된다"
                 "(I1 §7.4 · I2 §10.4). 이전 실행은 덮어쓰지 않고 여기서 인용만 한다(I3 §5.5)."
@@ -495,9 +521,11 @@ def build_from(track: str, p: dict) -> dict:
             f"{f['reported']}/{f['shouldReport']} 이며, 실패 픽스처의 기대 보고 항목은 사유코드 일치와 좌표 "
             "겹침으로 귀속해 셌다 — 건수만 맞추거나 그럴듯한 좌표를 적어 통과하는 경로를 막는다. 조용한 부분 "
             f"복구는 {f['silentPartialRecovery']}건이다(TB_BAD_MIDDLE 은 부분 복구를 버리고 실패로 보고한다). "
-            f"새 runId 인 이유는 {REPIN_REASON} 이다 — 수집기는 {PREVIOUS['db'].name} 과 같고, 입력 "
-            f"파일(legacy-sample.sql)도 두 축에서 바이트가 같다(gold probeAxis.sameAsAnswerAxis=true). "
-            "그래서 수치는 그대로지만 채점 신원이 달라 비교 기준선으로는 인용만 한다(I1 §7.4). "
+            f"새 runId 인 이유는 {REPIN_REASON['db']} 이다. 비교 대상인 {PREVIOUS['db'].name} 과는 "
+            "입력 파일(legacy-sample.sql)도 gold 축도 같다. 소속(schema)은 라이브·번들 스냅샷의 "
+            "contentHash 산식에 들어가므로 그 두 경로의 revision 접미사가 바뀌지만, 이 프로브가 재는 "
+            "수집률·보고율·결정성 비율은 그 축과 무관하다. 채점 신원(gold 입력 축)이 아직 미승인이라 "
+            "비교 기준선으로는 인용만 한다(I1 §7.4). "
             f"{remaining}. 보안 게이트는 수집 경로에 마스킹 단계가 생긴 뒤에도 FAIL 로 읽는다 — "
             "이 프로브가 재는 것은 샘플 적재 경로를 **마스킹 없이**(IngestPolicy(maskRowData=false)) 돌린 "
             "기준선이기 때문이다. 마스킹 적용 상태의 게이트 회복은 I2 Gold Set 재고정(승인 사항) 뒤에 "
@@ -512,7 +540,7 @@ def build_from(track: str, p: dict) -> dict:
             else "무조건 게이트에 남은 실패는 없다"
         axis = probe_axis()
         notes = (
-            f"L0 코드 트랙 재실측 — {REPIN_REASON}. 이 실행이 처음으로 **현재 수집기**"
+            f"L0 코드 트랙 재실측 — {REPIN_REASON['code']}. 이 실행이 처음으로 **현재 수집기**"
             f"(#112 결정성 · #114 오류 가시성 · #115 마스킹이 모두 들어간 판)를 고정 입력 위에서 잰다. "
             f"입력은 gold 입력 축 {axis['revision'][:7]}({axis['status']['state']})의 blob 에서 재구성한 "
             f"{f['input']}개 파일이며, 정답 축(3c27259)은 승인된 채로 남는다 — 두 축을 함께 옮기면 "
