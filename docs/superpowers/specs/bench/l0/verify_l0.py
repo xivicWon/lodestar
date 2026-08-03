@@ -7,7 +7,7 @@
 
     pip install jsonschema
     python3 docs/superpowers/specs/bench/l0/verify_l0.py
-    # 37 cases, 0 mismatches   (= manifest.json 의 caseCount)
+    # 38 cases, 0 mismatches   (= manifest.json 의 caseCount)
 
 각 규칙은 **결함 주입 케이스**를 가진다 — 규칙만 적고 검사가 없는 상태를 막는 장치다(I2 §5 · I3 §4.1
 과 같은 원칙). 규칙이 예외를 던지면 그 규칙의 실패로 기록하고 나머지 규칙을 계속 실행한다.
@@ -487,13 +487,10 @@ def v15_runtime_dependencies_pinned(ctx):
                 seen += 1
             continue
         seen += 1
-        if dep["unpinnedDependencies"]:
-            errs.append(f"{t}: 고정되지 않은 런타임 의존성이 있다: {dep['unpinnedDependencies']}")
-        if not dep["dependencyPins"]:
-            errs.append(f"{t}: 고정 선언이 비어 있다 — 재현 대상을 지목하지 못한다")
-        if not dep["installedMatchesDeclared"] or dep["installedMismatches"]:
-            errs.append(f"{t}: 측정 환경이 선언한 고정과 다르다: {dep['installedMismatches']} — "
-                        "이 실행이 잰 것은 선언된 재현 대상이 아니다")
+        # 판정 규칙은 프로브의 순수 함수를 그대로 쓴다 — 여기서 다시 쓰면 `--check` 가 통과시키는
+        # 것과 확인기가 통과시키는 것이 갈릴 수 있고, 그 틈으로 계약 위반이 흘러간다(V12 와 같은 방식).
+        for e in probe_code.environment_errors(ctx["probes"][t]):
+            errs.append(f"{t}: {e}")
         # 이 실행의 수집기 신원과 같은 자리에 있어야 한다 — 다른 실행의 선언을 옮겨 붙이면
         # 재현 대상이 이 산출물과 무관해진다.
         seen += 1
@@ -681,6 +678,11 @@ def injections() -> list[tuple[str, str, callable]]:
         d["installedMatchesDeclared"] = False
         d["installedMismatches"] = ["networkx: 선언 3.6.1 / 설치 3.1"]
 
+    def unjudged_conditional_dependency(c):
+        # 마커가 붙어 이 환경에서 설치 여부를 판정하지 않은 선언 — 재현 대상이 환경에 따라 갈린다.
+        c["probes"]["code"]["collector"]["dependencies"]["conditionalDependencies"] = [
+            'networkx==3.6.1 ; sys_platform=="darwin"']
+
     def seed_dependent(c):
         # 3회는 우연히 같았지만 시드를 바꾸면 갈리는 실행 — 재현 보장이 없다.
         c["probes"]["code"]["determinismControl"]["seedIndependent"] = False
@@ -723,6 +725,7 @@ def injections() -> list[tuple[str, str, callable]]:
         ("V13", "인용한 실행의 신원을 다르게 적음", baseline_identity_lie),
         ("V15", "런타임 의존성을 범위로 선언", unpinned_runtime_dependency),
         ("V15", "선언과 다른 환경에서 측정", measured_on_a_different_environment),
+        ("V15", "판정하지 않은 조건부 의존성", unjudged_conditional_dependency),
     ]
 
 

@@ -13,7 +13,7 @@ runId 로 남기고(I3 §5.5), 새 실행이 이전 것을 `baseline.previous` �
 ```
 probe_code.py     코드 트랙 프로브 (lodestar_codegraph 를 서브프로세스로 실행)
 build_report.py   프로브 산출물 → Run Quality Report v0 (프로브의 순수 함수)
-verify_l0.py      커밋된 증거의 적합성 확인기 V1~V15 + 결함 주입 37케이스
+verify_l0.py      커밋된 증거의 적합성 확인기 V1~V15 + 결함 주입 38케이스
 test_bench_l0.py  **계측기 자체의 단위 테스트** — 귀속·게이트 산식·확인기 규칙이 거짓을 무는가
 manifest.json     규칙 범위·케이스 총계 고정
 runs/run-l0-db-3c27259-001/     probe-db.json · report.json    (#88 실측 — 보고율 0.0)
@@ -66,9 +66,9 @@ git diff --exit-code docs/superpowers/specs/bench/l0/runs
 
 # 3) 증거 적합성 확인 (워킹트리와 무관 — 커밋된 산출물만 읽는다)
 python3 docs/superpowers/specs/bench/l0/verify_l0.py
-# 37 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount. #88 의 24 는 #112 가 V12~V13 을,
+# 38 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount. #88 의 24 는 #112 가 V12~V13 을,
 #                            #114 가 V14 를, #125 가 입력 축·승인 경고 케이스 4건을, #123 이 런타임
-#                            의존성 고정(V15) 2건을 더하며 37 로 올렸다 — manifest 가 정본이고
+#                            의존성 고정(V15) 3건을 더하며 38 로 올렸다 — manifest 가 정본이고
 #                            확인기가 대조한다)
 
 # 4) 계측기 자체의 테스트 (실측 없이 합성 입력으로 돈다)
@@ -104,7 +104,7 @@ venv 를 쓰는 이유: 현재 워킹트리에서 `pip install -e codegraph` 를
 훅이 `sys.path` 보다 먼저 걸려, **역사적 입력에 현재 수집기**를 물릴 수 있다. 그러면 재현이 아니다.
 
 커밋된 증거 자체의 적합성(`verify_l0.py`)은 워킹트리와 무관하다 — 커밋된 산출물만 읽으므로
-현재 브랜치에서도 그대로 37 cases / 0 mismatches 여야 한다.
+현재 브랜치에서도 그대로 38 cases / 0 mismatches 여야 한다.
 
 ### 코드 트랙 재측정과 gold 입력 축 (#125 — 해소)
 
@@ -142,11 +142,18 @@ gold 의 **정답 축**(`sourceRevision` = 3c27259)에 묶여 있었다는 것�
   않는다 — 상한 안에서 구현이 바뀔 자리가 남는다). 정책 구현은 `codegraph/src/lodestar_codegraph/deps.py`,
   검사는 `codegraph/tests/test_deps.py`.
 - 기록: 프로브의 `collector.dependencies` 블록에 **선언**이 실린다(`dependencyPins` ·
-  `unpinnedDependencies` · `installedMatchesDeclared`). 설치된 버전 문자열은 싣지 않는다 — 그것을 실으면
-  환경마다 산출물 바이트가 달라져 표류 검사와 충돌한다. 환경이 선언과 어긋나면
-  `installedMatchesDeclared` 가 false 로 뒤집혀 `--check` 가 그 사실 자체를 표류로 잡는다.
-- 확인: `verify_l0.py` **V15** 가 커밋된 증거에서 이 선언을 검사한다(결함 주입 2건 — 범위 선언 ·
-  선언과 다른 환경에서 측정).
+  `unpinnedDependencies` · `conditionalDependencies` · `installedMatchesDeclared`). 설치된 버전
+  문자열은 싣지 않는다 — 그것을 실으면 환경마다 산출물 바이트가 달라져 표류 검사와 충돌한다.
+  마커가 붙어 이 환경에서 설치 여부를 판정하지 않은 선언은 `conditionalDependencies` 로 남는다:
+  마커를 평가하지 않은 채 '설치 없음' 으로 세면 정상 환경이 불일치로 뒤집히고, 조용히 건너뛰면
+  고정되지 않은 의존성이 검사 밖으로 사라진다.
+- 확인: `verify_l0.py` **V15** 가 커밋된 증거에서 이 선언을 검사한다 — 판정은 프로브의 순수 함수
+  `environment_errors()` 를 그대로 쓴다(규칙을 두 번 쓰면 `--check` 와 확인기의 통과 기준이 갈린다).
+  결함 주입 3건: 범위 선언 · 선언과 다른 환경에서 측정 · 판정하지 않은 조건부 의존성.
+- 설치 방식과 무관: 선언은 소스 트리의 `pyproject.toml` 이 정본이고, 소스 트리 밖(휠 설치)에서는
+  **이 모듈을 담고 있는 설치본**의 `Requires-Dist` 를 읽는다(`provenance._version()` 과 같은 순서).
+  같은 이름의 다른 설치본의 선언은 쓰지 않는다 — 남의 선언을 재현 대상으로 적으면 그 기록은 이
+  산출물을 만든 코드를 가리키지 않는다.
 
 `run-l0-code-aad4382-001` 의 `probe-code.json` 은 이 선언 블록이 더해지면서 갱신됐다. **측정은 그대로**
 이며(결정성 1.0 · 인벤토리 · 귀속 전부 동일, diff 는 `collector.dependencies` 추가 13줄뿐) 보고서는
@@ -178,12 +185,37 @@ diff <(canon "$WORK/pinned.json") <(canon "$WORK/other.json") && echo "동일" |
 
 **실측(2026-08-03, 입력 축 `aad4382`)**: networkx `3.6.1` 과 `3.1` 의 정규화 해시가
 `sha256:c50c10f6013a2f1218e71bc8b344002399a1710f489d20b7dbd59efbb7f9af89` 로 **같았다**(노드 410 ·
-엣지 865 · 군집 29). 즉 지금 당장 깨져 있지는 않다 — 고정은 **선언되지 않은 가정을 없애는 것**이
-목적이며, 이 절차는 그 가정이 언제 깨지는지 보는 자리다. 달라지면 그때는 의존성 인상이 곧 산출물
-변경이므로 새 runId 로 재측정한다(I3 §5.5).
+엣지 865 · 군집 29).
 
-같은 venv 에서 `"$WORK/venv/bin/python" -m lodestar_codegraph.deps` 를 돌리면 선언과 설치의 불일치가
-그대로 보인다(`installedMismatches`). 확인이 끝나면 `pip install -q -e codegraph` 로 되돌린다.
+**다만 그 결론은 이 입력에만 해당한다.** 같은 비교를 프로브 전체(범위 + 실패 픽스처 + PII 코퍼스)로
+돌리면 networkx `3.1` 은 산출물이 다른 정도가 아니라 **아예 죽는다**:
+
+```
+File ".../networkx/algorithms/community/quality.py", line 240, in modularity
+    norm = 1 / deg_sum**2
+ZeroDivisionError: division by zero
+```
+
+엣지가 하나도 없는 입력(수집 대상 확장자가 없는 PII 코퍼스, 단일 파일 픽스처)에서 `louvain_communities`
+가 빈 그래프를 처리하지 못한다. 3.6.1 은 같은 입력에서 정상적으로 군집 0건을 낸다. 즉 `networkx>=3.0`
+이라는 범위 선언은 **이미 거짓이었다** — 이슈가 인용한 "#112 리뷰에서 두 버전의 산출물이 같았다" 는
+관측은 엣지가 있는 하나의 입력에서만 성립한다. 이 사실이 고정의 근거를 강하게 만든다.
+
+그래서 선언과 다른 환경에서는 프로브가 **수집기를 돌리기 전에** 멈춘다.
+
+```
+$ /tmp/other-venv/bin/python docs/superpowers/specs/bench/l0/probe_code.py --check
+[FAIL] 측정 환경이 선언한 고정과 다르다: ['networkx: 선언 3.6.1 / 설치 3.1'] — 표류의 원인이
+코드가 아니라 환경이다. `pip install -e codegraph` 로 맞춘다
+```
+
+판정은 `probe_code.environment_errors()` 라는 순수 함수이고(`determinism_errors` 와 같은 이유 —
+`main(--check)` 안에만 두면 그 판정 자체는 아무도 검사하지 않는다), 확인기 V15 가 커밋된 증거에 같은
+함수를 건다. 같은 venv 에서 `-m lodestar_codegraph.deps` 를 돌리면 불일치 항목을 그대로 볼 수 있다.
+확인이 끝나면 `pip install -q -e codegraph` 로 되돌린다.
+
+의존성을 올려 산출물이 달라지면 그때는 의존성 인상이 곧 산출물 변경이므로 새 runId 로 재측정한다
+(I3 §5.5).
 
 ## #113 게이트 재측정
 

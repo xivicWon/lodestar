@@ -17,6 +17,7 @@
     "declaredVersion": "lodestar-codegraph v1 (meta.generated_by) · pyproject 0.2.0",
     "citedVersion": "lodestar-codegraph@0.2.0",
     "dependencies": {
+      "conditionalDependencies": [],
       "dependencyPins": [
         "networkx==3.6.1",
         "tree-sitter-java==0.23.5",

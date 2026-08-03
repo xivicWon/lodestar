@@ -313,6 +313,14 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
         },
     }
 
+    # 환경이 선언과 어긋나면 **수집기를 돌리기 전에** 멈춘다. 계속 가면 두 가지로 나빠진다:
+    # 운이 좋으면 표류가 `collector` 블록 하나로만 보고돼 원인이 코드인지 환경인지 구분되지 않고,
+    # 운이 나쁘면 수집기가 그 버전에서 아예 죽어 무관해 보이는 트레이스백만 남는다(실측: networkx
+    # 3.1 은 엣지가 없는 입력에서 `modularity` 의 `1/deg_sum**2` 로 ZeroDivisionError 를 낸다).
+    env_errs = environment_errors(probe)
+    if env_errs:
+        raise EnvironmentMismatch("; ".join(env_errs))
+
     # 1) 입력 신원 — 고정 revision blob 에서 재구성한 범위를 gold 고정 해시와 대조한다.
     #    gold 입력 축이 고정한 것은 범위 파일 중 7건뿐이므로 나머지도 blob 해시와 전수 대조한다
     #    (재구성 자체가 blob 이라 항등이지만, 경로 집합·건수의 어긋남은 여전히 잡힌다).
@@ -616,6 +624,40 @@ def stable(probe: dict) -> dict:
     return {k: v for k, v in probe.items() if k not in VOLATILE}
 
 
+class EnvironmentMismatch(RuntimeError):
+    """측정 환경이 선언한 재현 대상과 다르다 — 이 환경의 측정은 그 대상의 측정이 아니다(#123)."""
+
+
+def environment_errors(probe: dict) -> list[str]:
+    """측정 환경이 **선언한 재현 대상**과 같은가(#123).
+
+    `--check` 는 산출물 표류를 블록명으로만 보고한다. 이번 계약으로 `collector` 블록은 환경에
+    민감해졌으므로(선언과 다른 networkx 가 설치돼 있으면 `installedMatchesDeclared` 가 뒤집힌다),
+    표류의 원인이 코드인지 환경인지 구분해주지 않으면 읽는 쪽은 산출물을 직접 열어봐야 안다.
+
+    `determinism_errors` 와 같은 이유로 순수 함수다 — `main(--check)` 안에만 두면 그 판정 자체는
+    아무도 검사하지 않는다. 확인기(`verify_l0.py` V15)가 커밋된 증거에 같은 규칙을 건다.
+    """
+    dep = probe.get("collector", {}).get("dependencies")
+    if dep is None:
+        return ["런타임 의존성 선언이 산출물에 없다 — 재현 대상이 닫히지 않는다(#123)"]
+    errs = []
+    if dep["unpinnedDependencies"]:
+        errs.append(f"고정되지 않은 런타임 의존성: {dep['unpinnedDependencies']} — "
+                    "그 버전이 바뀌면 산출물이 바뀔 수 있고, 그 변화는 어디에도 잡히지 않는다")
+    if not dep["dependencyPins"]:
+        errs.append("고정 선언이 비어 있다 — 재현 대상을 지목하지 못한다")
+    # 마커가 붙어 이 환경에서 설치 여부를 판정하지 않은 선언. 판정하지 않은 것을 '검사했다' 에
+    # 넣지 않는다 — 재현 대상이 환경에 따라 갈리는 자리다.
+    if dep.get("conditionalDependencies"):
+        errs.append(f"이 환경에서 판정하지 않은 조건부 의존성: {dep['conditionalDependencies']} — "
+                    "재현 대상이 환경에 따라 갈린다")
+    if not dep["installedMatchesDeclared"] or dep["installedMismatches"]:
+        errs.append(f"측정 환경이 선언한 고정과 다르다: {dep['installedMismatches']} — "
+                    "표류의 원인이 코드가 아니라 환경이다. `pip install -e codegraph` 로 맞춘다")
+    return errs
+
+
 def determinism_errors(probe: dict) -> list[str]:
     """결정성 계약(#112) — 3회 실행이 하나로 모이고, 시드를 바꿔도 같아야 한다.
 
@@ -654,7 +696,12 @@ def main() -> int:
             return 1
         baseline = stable(json.loads(COMMITTED.read_text()))
 
-    probe = measure()
+    try:
+        probe = measure()
+    except EnvironmentMismatch as e:
+        # 트레이스백이 아니라 문장으로 끝낸다 — 이 실패는 버그가 아니라 '환경을 맞추라' 는 지시다.
+        print(f"[FAIL] {e}")
+        return 1
     text = json.dumps(probe, ensure_ascii=False, indent=2) + "\n"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text)
@@ -669,13 +716,19 @@ def main() -> int:
         if want != got:
             diff = [k for k in sorted(set(want) | set(got)) if want.get(k) != got.get(k)]
             print(f"[FAIL] 프로브 산출물 표류 — 블록: {diff}")
+            # 표류의 원인이 환경이면 그 자리에서 말한다 — 블록명만으로는 코드가 바뀐 것인지
+            # 내 venv 의 networkx 가 다른 것인지 구분되지 않는다(#123).
+            for e in environment_errors(probe):
+                print(f"[FAIL] {e}")
             return 1
-        det = determinism_errors(probe)
+        # 표류가 없어도 계약을 어긴 채 **일관되게** 어긴 실행이 있을 수 있다 — 커밋된 산출물이 이미
+        # 미고정 선언을 담고 있으면 대조는 통과한다. 그래서 규칙을 따로 건다.
+        det = determinism_errors(probe) + environment_errors(probe)
         if det:
             for e in det:
                 print(f"[FAIL] {e}")
             return 1
-        print("[ok] 프로브 산출물 일치 + 결정성 1.0 (시드 무관)")
+        print("[ok] 프로브 산출물 일치 + 결정성 1.0 (시드 무관) + 런타임 의존성 고정 일치")
     return 0
 
 

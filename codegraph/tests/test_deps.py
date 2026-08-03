@@ -87,9 +87,105 @@ def test_missing_dependency_is_not_silently_matched(tmp_path):
     assert deps.pin_mismatches(pyproject) == ["no-such-pkg: 선언 1.0.0 / 설치 없음"]
 
 
-def test_declared_pins_rejects_a_dependency_it_cannot_read(tmp_path):
-    """읽을 수 없는 선언을 조용히 건너뛰지 않는다 — 건너뛰면 고정되지 않은 의존성이 목록에서 사라진다."""
+def test_extras_and_markers_do_not_hide_a_pin(tmp_path):
+    """F2 — extras·마커가 붙어도 `==` 는 고정이다. 고정을 미고정으로 읽으면 거짓 경보가 된다."""
     pyproject = tmp_path / "pyproject.toml"
-    pyproject.write_text('[project]\nname = "x"\ndependencies = ["networkx ; python_version<\'3.9\'"]\n')
+    pyproject.write_text(
+        '[project]\nname = "x"\ndependencies = ['
+        "'uvicorn[standard]==0.30.0', "
+        "'networkx==3.6.1 ; python_version>=\"3.11\"', "
+        "'ranged[extra]>=1.0 ; sys_platform==\"darwin\"']\n")
+    assert deps.declared_pins(pyproject) == {"uvicorn": "0.30.0", "networkx": "3.6.1"}
+    # 미고정 판정은 extras·마커를 떼고 내리되, **선언 원문**으로 보고한다 — 원문이 있어야 고친다.
+    assert deps.unpinned_dependencies(pyproject) == ['ranged[extra]>=1.0 ; sys_platform=="darwin"']
+
+
+def test_conditional_dependency_is_not_silently_skipped(tmp_path):
+    """마커가 붙은 의존성은 이 환경에서 설치 여부를 판정하지 않는다 — 대신 **목록으로 남긴다**.
+
+    마커를 평가하지 않은 채 '설치 없음' 으로 세면 정상 환경이 불일치로 뒤집히고, 조용히 건너뛰면
+    고정되지 않은 의존성이 검사 밖으로 사라진다. 판정하지 않았다는 사실 자체를 남긴다.
+    """
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        '[project]\nname = "x"\ndependencies = ['
+        "'no-such-pkg==1.0.0 ; python_version<\"3.9\"']\n")
+    assert deps.pin_mismatches(pyproject) == []
+    r = deps.report(pyproject)
+    assert r["conditionalDependencies"] == ['no-such-pkg==1.0.0 ; python_version<"3.9"']
+    assert r["installedMatchesDeclared"] is True
+
+
+#: 휠 설치본의 `Requires-Dist` 모양 — dev extra 가 함께 실린다.
+_WHEEL_REQUIRES = ["tree-sitter==0.23.2", "tree-sitter-java==0.23.5",
+                   "tree-sitter-kotlin==1.1.0", "networkx==3.6.1",
+                   'pytest>=8.0; extra == "dev"']
+
+
+@pytest.fixture
+def wheel_install(monkeypatch):
+    """소스 트리가 없고 설치 메타데이터만 있는 상태.
+
+    주변에 설치된 것을 그대로 읽으면 테스트가 **엉뚱한 이유로** 통과한다 — 이 작업 중에 실제로
+    낡은 0.1.0 설치(`networkx>=3.0`)와 빌드 부산물(egg-info)이 번갈아 잡혀 그랬다. 그래서 선언을
+    주입해 판정 로직만 잰다. 휠 설치 자체가 도는지는 리포 밖 venv 로 따로 확인한다.
+    """
+    monkeypatch.setattr(deps, "_DEFAULT_PYPROJECT", pathlib.Path("/nonexistent/pyproject.toml"))
+    monkeypatch.setattr(deps, "_dist_requires", lambda: list(_WHEEL_REQUIRES))
+
+
+def test_pins_are_readable_without_a_source_tree(wheel_install):
+    """F1 — 휠로 설치된 수집기에도 선언은 있다(`Requires-Dist`). 소스 트리가 없다고 죽지 않는다.
+
+    `provenance._version()` 은 이미 같은 폴백을 가진다 — 두 모듈이 같은 상황에서 다르게
+    행동하면, 재현 대상을 읽는 경로가 설치 방식에 따라 갈린다.
+    """
+    assert deps.declared_pins()["networkx"] == "3.6.1"
+    assert deps.unpinned_dependencies() == []
+
+
+def test_optional_dependencies_are_not_counted_as_runtime(wheel_install):
+    """폴백 경로의 함정 — `Requires-Dist` 에는 dev extra(`pytest>=8.0`)도 들어 있다.
+
+    걸러내지 않으면 개발 의존성이 런타임 미고정으로 잡혀, 고칠 수 없는 실패가 상시로 남는다.
+    """
+    assert "pytest" not in deps.declared_pins()
+    assert not [r for r in deps.unpinned_dependencies() if "pytest" in r]
+
+
+def test_a_foreign_installation_is_not_read_as_ours(monkeypatch):
+    """같은 이름의 **다른 설치본**의 선언을 재현 대상으로 적지 않는다.
+
+    낡은 설치가 남아 있으면 `importlib.metadata` 는 그쪽을 돌려준다. 그 선언을 그대로 쓰면
+    이 파일이 지목하는 것은 이 산출물을 만든 코드가 아니게 된다 — 조용히 틀리느니 죽는 게 맞다.
+    """
+    monkeypatch.setattr(deps, "_DEFAULT_PYPROJECT", pathlib.Path("/nonexistent/pyproject.toml"))
+    monkeypatch.setattr(deps, "_dist_requires", lambda: None)
+    with pytest.raises(RuntimeError):
+        deps.declared_pins()
+
+
+@pytest.mark.parametrize("req", [
+    "networkx",                              # 버전이 아예 없다 — 가장 열린 선언이다
+    "pkg @ https://example.com/pkg.whl",     # 직접 참조 — `==` 가 아니다
+    "networkx >= 3.0",                       # 연산자 앞뒤 공백
+])
+def test_a_dependency_without_a_pin_is_reported_not_raised(tmp_path, req):
+    """고정되지 않은 선언은 **목록으로** 나와야 한다 — 예외로 죽으면 무엇이 문제인지 말하지 못한다.
+
+    맨 이름(`networkx`)은 가장 열린 선언인데, 이걸 '해석 불가' 로 던지면 프로브가 "networkx 가
+    고정되지 않았다" 대신 알 수 없는 오류로 죽는다. 판정할 수 있는 것은 판정해서 보고한다.
+    """
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text('[project]\nname = "x"\ndependencies = ["%s"]\n' % req)
+    assert deps.declared_pins(pyproject) == {}
+    assert deps.unpinned_dependencies(pyproject) == [req]
+
+
+@pytest.mark.parametrize("req", ["== 3.6.1", "!!!"])
+def test_declared_pins_rejects_a_dependency_it_cannot_name(tmp_path, req):
+    """패키지 이름조차 읽히지 않으면 조용히 건너뛰지 않는다 — 건너뛰면 목록에서 사라진다."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text('[project]\nname = "x"\ndependencies = ["%s"]\n' % req)
     with pytest.raises(ValueError):
         deps.declared_pins(pyproject)
