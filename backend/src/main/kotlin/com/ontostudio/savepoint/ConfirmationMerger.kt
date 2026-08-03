@@ -1,16 +1,12 @@
 package com.ontostudio.savepoint
 
 import com.ontostudio.core.OntologyHolder
-import com.ontostudio.dto.OntologyMetaDto
 import com.ontostudio.ontology.ClassService
 import org.semanticweb.owlapi.model.IRI
 import org.springframework.stereotype.Service
 
 /** 재임포트 병합 요약(E9): 재적용된 확정 수, 미매칭(stale) 수, 미매칭 IRI 목록. */
 data class MergeSummary(val reapplied: Int, val stale: Int, val staleIris: List<String>)
-
-/** 임포트 응답: 온톨로지 메타 + 확정 병합 요약. */
-data class ImportResult(val meta: OntologyMetaDto, val merge: MergeSummary)
 
 /**
  * E9 — 재임포트 시 확정(세이브포인트) 라벨을 새 온톨로지에 IRI로 매칭해 자동 복원한다.

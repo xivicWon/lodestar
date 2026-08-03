@@ -3,7 +3,39 @@ export interface ClassDto { iri: string; label: string | null; superClasses: str
 export interface OntologyMetaDto { ontologyIri: string | null; baseIri: string; prefixes: Record<string, string>; counts: Record<string, number> }
 
 export interface MergeSummary { reapplied: number; stale: number; staleIris: string[] }
-export interface ImportResult { meta: OntologyMetaDto; merge: MergeSummary }
+
+/** 수집기가 **하지 못한 일** 한 항목(#114 → #129). 종류·사유코드·사유문·좌표·대상 다섯을 항상 갖는다. */
+export type IssueKind = 'SKIPPED' | 'FAILED' | 'PARTIAL'
+export interface CollectionIssue {
+  kind: IssueKind
+  reasonCode: string
+  reason: string
+  /** 좌표. `locatorScheme` 이 `line` 이면 `path#L11-L14`, `jdbc` 면 `jdbc://catalog/schema/object`. */
+  locator: string
+  target: string
+}
+
+/** 입력 경로와 그 좌표 규약. 백엔드 `SchemaSource.KIND_*` · `CollectionReport.locatorScheme` 과 짝이다. */
+export type SourceKind = 'ddl' | 'jdbc' | 'sample'
+export type LocatorScheme = 'line' | 'jdbc'
+
+/**
+ * 임포트 응답의 수집 보고(#129). `complete` 는 **실패·부분수집이 없다**는 뜻이고, 정당한 제외(SKIPPED)는
+ * 완전 수집을 깨지 않는다 — 그래도 화면에는 사유와 함께 남는다.
+ */
+export interface CollectionReport {
+  sourceKind: SourceKind
+  locatorScheme: LocatorScheme
+  collected: number
+  skipped: number
+  failed: number
+  partial: number
+  complete: boolean
+  issues: CollectionIssue[]
+  partials: CollectionIssue[]
+}
+
+export interface ImportResult { meta: OntologyMetaDto; merge: MergeSummary; collection: CollectionReport }
 
 export interface InferredEdge { sub: string; sup: string }
 export interface ReasonResult {
