@@ -135,6 +135,38 @@ class SchemaOwnershipTest {
         assertEquals("orders", schema.tables.single().foreignKeys.single().refTable)
     }
 
+    @Test fun `인용부호 안의 점을 두 FK 표기가 같게 읽는다`() {
+        // 같은 대상을 인라인 REFERENCES 로 적든 테이블-레벨 제약으로 적든 소속은 하나여야 한다.
+        // 갈리면 같은 스키마가 두 값으로 기록되어 신원(contentHash)이 표기 방식에 따라 달라지고,
+        // 잘린 소속은 대상 해석에도 실패한다.
+        fun fkOf(ddl: String) = DdlParser().parse(ddl).tables.single().foreignKeys.single()
+
+        val inline = fkOf("""CREATE TABLE t (id INTEGER PRIMARY KEY, cid INTEGER
+              REFERENCES "my.schema"."customers"(id))""")
+        val tableLevel = fkOf("""CREATE TABLE t (id INTEGER PRIMARY KEY, cid INTEGER,
+              CONSTRAINT fk FOREIGN KEY (cid) REFERENCES "my.schema"."customers"(id))""")
+
+        assertEquals("my.schema", tableLevel.refSchema)
+        assertEquals(tableLevel.refSchema, inline.refSchema, "같은 대상을 두 표기가 다르게 읽는다")
+        assertEquals(tableLevel.refTable, inline.refTable)
+    }
+
+    @Test fun `소속 없는 인용 이름의 점은 이름의 일부다`() {
+        // `REFERENCES "a.b"(id)` 의 대상은 스키마 a 의 테이블 b 가 아니라 이름이 `a.b` 인 테이블이다.
+        val fk = DdlParser().parse("""CREATE TABLE t (id INTEGER PRIMARY KEY, cid INTEGER REFERENCES "a.b"(id))""")
+            .tables.single().foreignKeys.single()
+        assertNull(fk.refSchema)
+        assertEquals("a.b", fk.refTable)
+    }
+
+    @Test fun `백틱 한정 이름도 소속을 담는다`() {
+        val fk = DdlParser().parse(
+            "CREATE TABLE t (id INTEGER PRIMARY KEY, cid INTEGER REFERENCES `sales`.`customers`(id))")
+            .tables.single().foreignKeys.single()
+        assertEquals("sales", fk.refSchema)
+        assertEquals("customers", fk.refTable)
+    }
+
     @Test fun `비한정 DDL 은 소속이 없다`() {
         val schema = DdlParser().parse("CREATE TABLE orders (id INTEGER PRIMARY KEY)")
         assertNull(schema.tables.single().schema)

@@ -303,12 +303,51 @@ class DdlParser(private val masker: SqlTextMasker = SqlTextMasker()) {
     private fun unquote(s: String): String = s.trim().trim('"', '`', '[', ']')
 
     /**
+     * 한정 이름을 **인용부호를 존중해** 조각으로 나눈다: `catalog.schema.table`.
+     *
+     * 단순 `split('.')` 은 인용부호 **안의** 점에서도 자른다 — `"my.schema"."t"` 가 세 조각이 되어
+     * 소속이 `schema` 로 잘리고, 소속 없는 `"a.b"` 는 스키마 `a` 의 테이블 `b` 로 읽힌다. 같은 대상을
+     * 인라인 `REFERENCES` 로 적을 때와 테이블-레벨 제약으로 적을 때(이쪽은 JSqlParser 가 읽는다)
+     * 결과가 갈리면, 같은 스키마가 두 값으로 기록되어 신원(`contentHash`)이 표기 방식에 따라 달라진다.
+     *
+     * 조각은 인용부호를 **붙인 채로** 돌려준다 — 벗기는 일은 [unquote] 한 곳에서만 한다.
+     * 표준 이스케이프(`"a""b"`)는 닫는 인용부호로 세지 않는다.
+     */
+    private fun splitQualified(qualified: String): List<String> {
+        val parts = mutableListOf<String>()
+        val sb = StringBuilder()
+        var closing: Char? = null
+        var i = 0
+        val s = qualified.trim()
+        while (i < s.length) {
+            val c = s[i]
+            when {
+                closing != null -> {
+                    // 겹친 인용부호는 이름 안의 문자다: `"a""b"` 는 조각 하나(`a"b`)다.
+                    if (c == closing && i + 1 < s.length && s[i + 1] == c) { sb.append(c).append(c); i++ }
+                    else { if (c == closing) closing = null; sb.append(c) }
+                }
+                c == '"' || c == '`' -> { closing = c; sb.append(c) }
+                c == '[' -> { closing = ']'; sb.append(c) }
+                c == '.' -> { parts.add(sb.toString()); sb.clear() }
+                else -> sb.append(c)
+            }
+            i++
+        }
+        parts.add(sb.toString())
+        return parts
+    }
+
+    /**
      * `schema.table` · `catalog.schema.table` 에서 **소속**(마지막 이름 바로 앞 부분)만 취한다(#126).
      * 카탈로그는 모델이 담지 않는다([TableInfo] 참조) — JDBC 경로와 같은 축만 남겨야 두 경로의
      * 산출물이 같은 것을 뜻한다.
      */
     private fun schemaOf(qualified: String): String? =
-        qualified.split('.').dropLast(1).lastOrNull()?.let { unquote(it) }?.takeIf { it.isNotEmpty() }
+        splitQualified(qualified).dropLast(1).lastOrNull()?.let { unquote(it) }?.takeIf { it.isNotEmpty() }
+
+    /** 한정 이름의 대상 이름. 인용부호 안의 점은 이름의 일부다(`"a.b"` 는 테이블 `a.b`). */
+    private fun nameOf(qualified: String): String = unquote(splitQualified(qualified).last())
 
     private fun toTableInfo(ct: CreateTable): TableInfo {
         val tableName = unquote(ct.table.name)
@@ -330,7 +369,7 @@ class DdlParser(private val masker: SqlTextMasker = SqlTextMasker()) {
             if (m != null) {
                 fks.add(ForeignKeyInfo(
                     listOf(unquote(cd.columnName)),
-                    unquote(m.groupValues[1].substringAfterLast('.')),
+                    nameOf(m.groupValues[1]),
                     listOf(unquote(m.groupValues[2])),
                     refSchema = schemaOf(m.groupValues[1])))
             }

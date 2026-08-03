@@ -8,14 +8,14 @@
     "reportKind": "BASELINE",
     "sourceRevision": "aad4382",
     "fixtureHash": "sha256:42c7580540a7e988429e18138d7c3d1943a94e85e16705a6953872afde75ac93",
-    "startedAt": "2026-08-03T05:02:15Z",
-    "completedAt": "2026-08-03T05:02:16Z",
+    "startedAt": "2026-08-03T06:27:45Z",
+    "completedAt": "2026-08-03T06:27:46Z",
     "executedBy": "claude-code agent (Claude Opus 4.8) — 판정 승인권자는 @xivicWon (I1 §1.2)"
   },
   "versions": {
     "collector": {
       "status": "PINNED",
-      "value": "DdlParser+SampleLegacyDb@sha256:90f41d599fa21c14ba01d5d71a4da3aef8e7a63d9229412762fa135b620ed86a"
+      "value": "DdlParser+SampleLegacyDb@sha256:9fcd050ce894d915a7f663dda0406289e109a911c19488e3cf931a3edd5fa8e1"
     },
     "extractor": {
       "status": "NOT_APPLICABLE",

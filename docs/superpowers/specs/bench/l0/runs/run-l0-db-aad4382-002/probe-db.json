@@ -9,8 +9,8 @@
   "collector" : {
     "impl" : "DdlParser + DdlSource (DDL 텍스트 경로) · SampleLegacyDb + MetadataService (샘플 적재 경로)",
     "declaredVersion" : "none",
-    "citedVersion" : "DdlParser+SampleLegacyDb@sha256:90f41d599fa21c14ba01d5d71a4da3aef8e7a63d9229412762fa135b620ed86a",
-    "sourceHash" : "sha256:90f41d599fa21c14ba01d5d71a4da3aef8e7a63d9229412762fa135b620ed86a",
+    "citedVersion" : "DdlParser+SampleLegacyDb@sha256:9fcd050ce894d915a7f663dda0406289e109a911c19488e3cf931a3edd5fa8e1",
+    "sourceHash" : "sha256:9fcd050ce894d915a7f663dda0406289e109a911c19488e3cf931a3edd5fa8e1",
     "sourceFiles" : [ "backend/src/main/kotlin/com/ontostudio/rdb/DdlParser.kt", "backend/src/main/kotlin/com/ontostudio/rdb/SchemaModel.kt", "backend/src/main/kotlin/com/ontostudio/rdb/MetadataService.kt", "backend/src/main/kotlin/com/ontostudio/rdb/SampleLegacyDb.kt" ],
     "note" : "수집기 자체는 여전히 버전을 선언하지 않는다(L0-fix-2 — #114 범위 밖). 재측정 시점의 커밋이 아직 없으므로 수집기 신원은 구성 파일 해시로 고정한다 — 값은 재계산으로 검증된다"
   },
