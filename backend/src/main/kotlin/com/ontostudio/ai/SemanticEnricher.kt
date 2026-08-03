@@ -88,10 +88,18 @@ class SemanticEnricher(
         sb.appendLine("비즈니스 의미를 추정하라. 반드시 아래 JSON 배열만 출력한다(그 외 텍스트 금지):")
         sb.appendLine("""[{"table":"<원본테이블명>","label":"<한국어 비즈니스 이름>","description":"<한 줄 설명>"}]""")
         sb.appendLine()
-        for (t in targets) {
-            sb.appendLine("### ${t.name}")
+        // 소속이 달라 이름만 같은 테이블은 이름으로 되돌릴 수 없다. 프롬프트에서 빼면 조용한
+        // 누락이고, 넣고 응답을 버리면 물어보고 버리는 것이다 — E12(enrichCurrent)와 같은 방식으로
+        // 청크 안에서 고유 키(`name__2`)를 준다.
+        val seen = HashMap<String, Int>()
+        val keyed = targets.map { t ->
+            val n = seen.merge(t.name, 1, Int::plus)!!
+            (if (n == 1) t.name else "${t.name}__$n") to t
+        }
+        for ((key, t) in keyed) {
+            sb.appendLine("### $key")
             sb.appendLine("컬럼: " + t.columns.joinToString(", ") { it.name })
-            val rows = sampleRows(conn, t.name, 3)
+            val rows = sampleRows(conn, t, 3)
             if (rows.isNotEmpty()) {
                 sb.appendLine("샘플:")
                 // #115/#85: 마스킹은 저장·로그·**AI 요청**보다 먼저다. 적재 경로가 이미 마스킹하지만
@@ -101,17 +109,19 @@ class SemanticEnricher(
             }
             sb.appendLine()
         }
-        // 소속이 달라 이름만 같은 테이블이 둘이면 AI 응답의 이름으로는 어느 쪽인지 정할 수 없다 —
-        // 아무 쪽이나 고르면 다른 테이블의 라벨을 제안하게 되므로, 그런 이름은 후보에서 뺀다.
-        return sb.toString() to targets.groupBy { it.name }
-            .filterValues { it.size == 1 }
-            .mapValues { (_, v) -> classIri(v.single()) }
+        return sb.toString() to keyed.associate { (key, t) -> key to classIri(t) }
     }
 
-    private fun sampleRows(conn: Connection, table: String, limit: Int): List<Map<String, String>> {
+    /**
+     * 근거로 쓸 샘플 행. 조회는 **소속까지 한정**한다(#126) — 한정하지 않으면 소속이 다른 동명
+     * 테이블에서 검색 경로가 고른 쪽의 행이 실려 다른 테이블의 값이 이 테이블의 근거가 되고,
+     * 기본 스키마 밖의 테이블은 아예 조회되지 않는다(라이브 PostgreSQL 의 비-public 스키마).
+     */
+    private fun sampleRows(conn: Connection, table: TableInfo, limit: Int): List<Map<String, String>> {
+        val qualified = table.schema?.let { "\"$it\".\"${table.name}\"" } ?: "\"${table.name}\""
         val out = mutableListOf<Map<String, String>>()
         conn.createStatement().use { st ->
-            st.executeQuery("SELECT * FROM \"$table\" FETCH FIRST $limit ROWS ONLY").use { rs ->
+            st.executeQuery("SELECT * FROM $qualified FETCH FIRST $limit ROWS ONLY").use { rs ->
                 val md = rs.metaData
                 while (rs.next()) {
                     val m = LinkedHashMap<String, String>()

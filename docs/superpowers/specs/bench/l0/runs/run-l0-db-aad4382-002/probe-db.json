@@ -1,5 +1,5 @@
 {
-  "probeVersion" : "l0-db-probe/v3",
+  "probeVersion" : "l0-db-probe/v4",
   "layer" : "L0",
   "track" : "db",
   "projectId" : "lodestar",
@@ -59,7 +59,7 @@
   },
   "determinism" : {
     "runs" : 3,
-    "artifactHashes" : [ "sha256:b19e15f98eef00898af40ecb5cf6763e8913da324e13353b4c4baf2219b85c3a", "sha256:b19e15f98eef00898af40ecb5cf6763e8913da324e13353b4c4baf2219b85c3a", "sha256:b19e15f98eef00898af40ecb5cf6763e8913da324e13353b4c4baf2219b85c3a" ],
+    "artifactHashes" : [ "sha256:1f0d8f70f5d14a377061f2e5bb140c853bf4ff4149a697a2501d00bb12778c1c", "sha256:1f0d8f70f5d14a377061f2e5bb140c853bf4ff4149a697a2501d00bb12778c1c", "sha256:1f0d8f70f5d14a377061f2e5bb140c853bf4ff4149a697a2501d00bb12778c1c" ],
     "largestIdenticalGroup" : 3,
     "rate" : 1.0
   },
@@ -223,7 +223,7 @@
       "viewExclusionNote" : "getTables(..., arrayOf(\"TABLE\")) 가 뷰를 타입 필터로 걸러낸다 — #114 이후 그 제외는 UNSUPPORTED_OBJECT_TYPE 사유로 반환형에 남는다",
       "foreignKeys" : 1,
       "runs" : 3,
-      "artifactHashes" : [ "sha256:4d97295c02f95118ee3ca9147ac67b19018cbb02d124c64dae11c6ea97a68641", "sha256:4d97295c02f95118ee3ca9147ac67b19018cbb02d124c64dae11c6ea97a68641", "sha256:4d97295c02f95118ee3ca9147ac67b19018cbb02d124c64dae11c6ea97a68641" ],
+      "artifactHashes" : [ "sha256:9103aec37242b318c174c87ee2283af4c10a88f737c59891e7733422b262cf32", "sha256:9103aec37242b318c174c87ee2283af4c10a88f737c59891e7733422b262cf32", "sha256:9103aec37242b318c174c87ee2283af4c10a88f737c59891e7733422b262cf32" ],
       "largestIdenticalGroup" : 3,
       "determinismRate" : 1.0,
       "provenanceRate" : 1.0,

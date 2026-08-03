@@ -11,13 +11,18 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * #125 L0 Source — DB 트랙 프로브 **v3** (gold 입력 축 재고정 후 재측정).
+ * #126 L0 Source — DB 트랙 프로브 **v4** (수집 모델에 소속(schema) 신설 후 재측정).
+ *
+ * **v4 의 차이**: 정규화 표현이 `TableInfo.schema` · `ForeignKeyInfo.refSchema` 를 포함하고,
+ * 테이블 정렬 키에도 소속이 들어간다. 산출물에 있는 필드가 정규화에 없으면 결정성(M-DB-4)과
+ * PII 검사가 그 필드를 **덮지 않은 채** 덮었다고 세게 된다 — 관측하지 않은 것을 관측했다고
+ * 적지 않기 위한 변경이다(#126). 측정된 수치는 v3 와 같다.
  *
  * 이 테스트는 기능이 아니라 **계측기**다. gold 입력 축(`probeAxis.revision`)의 `legacy-sample.sql` 을 입력으로
  * 실제 수집기(`DdlParser` · `SampleLegacyDb` · `MetadataService`)를 돌려 I1 §4.1 의 L0 무조건 게이트
  * 4종을 측정하고, 결과를 결정적 JSON 프로브 산출물로 남긴다. 보고서는 이 산출물에서만 만든다.
  *
- * **v3 의 차이**: 입력 신원을 gold 의 정답 축이 아니라 **입력 축**(`probeAxis`)에서 읽는다(#125).
+ * **v3 의 차이**(#125): 입력 신원을 gold 의 정답 축이 아니라 **입력 축**(`probeAxis`)에서 읽는다.
  * `legacy-sample.sql` 자체는 두 축에서 바이트가 같다(`sameAsAnswerAxis: true`) — 달라진 것은 이 실행이
  * 무엇을 입력으로 삼았다고 **주장하는지**뿐이다. 그럼에도 새 runId 로 남기는 이유는 gold 개정으로
  * `goldSetId` 가 바뀌었고, 개정 전 gold 로 채점된 실행은 비교 기준선에서 제외되기 때문이다(I1 §7.4).
@@ -131,9 +136,15 @@ class L0DbSourceProbeTest {
     private fun canonical(schema: SchemaModel): String {
         val root = mapper.createObjectNode()
         val tabs = root.putArray("tables")
-        for (t in schema.tables.sortedBy { it.name }) {
+        // 소속(schema)까지 정렬 키에 넣는다 — 넣지 않으면 동명 테이블의 순서가 입력 순서에 맡겨져
+        // '수집기가 비결정적' 이라고 잘못 적게 된다(#126).
+        for (t in schema.tables.sortedWith(
+            compareBy<TableInfo, String?>(nullsFirst(naturalOrder())) { it.schema }.thenBy { it.name })) {
             val n = mapper.createObjectNode()
             n.put("name", t.name)
+            // 산출물에 있는 필드는 정규화에도 있어야 한다. 빠지면 결정성(M-DB-4)과 PII 검사가
+            // 그 필드를 **덮지 않은 채** 덮었다고 세게 된다.
+            n.put("schema", t.schema)
             val cols = n.putArray("columns")
             for (c in t.columns) {
                 val cn = mapper.createObjectNode()
@@ -142,9 +153,12 @@ class L0DbSourceProbeTest {
             }
             val pk = n.putArray("primaryKey"); t.primaryKey.forEach { pk.add(it) }
             val fks = n.putArray("foreignKeys")
-            for (f in t.foreignKeys.sortedBy { it.refTable + it.fkColumns.joinToString(",") }) {
+            for (f in t.foreignKeys.sortedBy {
+                (it.refSchema ?: "") + "\t" + it.refTable + "\t" + it.fkColumns.joinToString(",")
+            }) {
                 val fn = mapper.createObjectNode()
                 fn.put("refTable", f.refTable)
+                fn.put("refSchema", f.refSchema)
                 fn.putArray("fkColumns").also { a -> f.fkColumns.forEach { a.add(it) } }
                 fn.putArray("refColumns").also { a -> f.refColumns.forEach { a.add(it) } }
                 fks.add(fn)
@@ -236,7 +250,7 @@ class L0DbSourceProbeTest {
 
         val pinned = probeSource("probe:db:legacy-sample")
         val probe = mapper.createObjectNode()
-        probe.put("probeVersion", "l0-db-probe/v3")
+        probe.put("probeVersion", "l0-db-probe/v4")
         probe.put("layer", "L0")
         probe.put("track", "db")
         probe.put("projectId", "lodestar")

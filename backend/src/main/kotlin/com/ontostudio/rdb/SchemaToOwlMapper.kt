@@ -48,18 +48,28 @@ class SchemaToOwlMapper {
             fkColumns.joinToString("_") { slug(it) } + "_ref")
 
     /**
-     * FK 대상 테이블을 이 스냅샷 안에서 찾는다. 못 찾으면 `null` — 그때는 이름만으로 IRI 를 만든다
-     * (수집 범위 밖의 테이블을 가리키는 FK 는 실제로 있다).
+     * FK 대상의 클래스 IRI. 스냅샷 안에서 대상 테이블을 찾으면 그 테이블의 IRI 이고, 못 찾으면
+     * **FK 가 적어 준 소속을 그대로 살려** IRI 를 만든다(수집 범위 밖의 테이블을 가리키는 FK 는
+     * 실제로 있다). 여기서 소속을 버리면 `sales.orders` 와 `archive.orders` 를 가리키는 두 FK 가
+     * 같은 클래스로 수렴해, 이 이슈가 없앤 충돌이 '해석 실패' 분기에 그대로 남는다.
      *
-     * 우선순위는 SQL 의 이름 해석과 같은 방향이다: 원본이 대상 소속을 적었으면 그대로 따르고,
-     * 적지 않았으면 **참조하는 쪽의 스키마 안**을 먼저 본다. 그래도 없으면 이름이 유일할 때만
-     * 그 테이블로 간다 — 후보가 여럿인데 아무거나 고르면 잘못된 관계를 사실로 산출하게 된다.
+     * 해석 우선순위는 SQL 의 이름 해석과 같은 방향이다:
+     * 1. 원본이 대상 소속을 적었으면 **그 소속 안에서만** 찾는다. 없으면 거기서 끝이다 —
+     *    이름이 같다는 이유로 소속이 다른 테이블에 묶으면 원본에 없는 관계를 `EXTRACTED` ·
+     *    confidence 1.0 으로 산출하게 된다.
+     * 2. 적지 않았으면 참조하는 쪽의 스키마 안을 먼저 본다.
+     * 3. 그래도 없으면 이름이 유일할 때만 그 테이블로 간다 — 후보가 여럿인데 아무거나 고르면
+     *    역시 잘못된 관계가 사실이 된다.
      */
-    private fun resolveRef(from: TableInfo, fk: ForeignKeyInfo, byQualified: Map<Pair<String?, String>, TableInfo>,
-                           byName: Map<String, List<TableInfo>>): TableInfo? {
-        fk.refSchema?.let { return byQualified[it to fk.refTable] }
-        byQualified[from.schema to fk.refTable]?.let { return it }
-        return byName[fk.refTable]?.singleOrNull()
+    private fun refTarget(base: String, from: TableInfo, fk: ForeignKeyInfo,
+                          byQualified: Map<Pair<String?, String>, TableInfo>,
+                          byName: Map<String, List<TableInfo>>): Pair<IRI, String> {
+        val resolved = if (fk.refSchema != null) byQualified[fk.refSchema to fk.refTable]
+        else byQualified[from.schema to fk.refTable] ?: byName[fk.refTable]?.singleOrNull()
+
+        if (resolved != null) return classIri(base, resolved) to resolved.qualifiedName
+        val iri = IRI.create(base + qualifier(fk.refSchema) + slug(fk.refTable))
+        return iri to (fk.refSchema?.let { "$it.${fk.refTable}" } ?: fk.refTable)
     }
 
     fun build(schema: SchemaModel, baseIri: String): OWLOntology {
@@ -105,11 +115,8 @@ class SchemaToOwlMapper {
 
             for (fk in table.foreignKeys) {
                 val op = df.getOWLObjectProperty(fkPropIri(baseIri, table, fk.fkColumns))
-                val resolved = resolveRef(table, fk, byQualified, byName)
-                val target = df.getOWLClass(
-                    resolved?.let { classIri(baseIri, it) } ?: classIri(baseIri, fk.refTable))
-                val refLabel = resolved?.qualifiedName
-                    ?: fk.refSchema?.let { "$it.${fk.refTable}" } ?: fk.refTable
+                val (targetIri, refLabel) = refTarget(baseIri, table, fk, byQualified, byName)
+                val target = df.getOWLClass(targetIri)
                 mgr.addAxiom(ont, df.getOWLDeclarationAxiom(op))
                 mgr.addAxiom(ont, df.getOWLAnnotationAssertionAxiom(
                     op.iri, df.getOWLAnnotation(df.rdfsLabel, df.getOWLLiteral(

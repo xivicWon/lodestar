@@ -187,6 +187,38 @@ class SchemaOwnershipTest {
             ont.objectPropertyRangeAxioms(op).map { it.range.asOWLClass().iri.toString() }.toList())
     }
 
+    /** 대상 클래스 IRI 하나를 읽는다. */
+    private fun rangeOf(base: String, propIri: String, tables: List<TableInfo>): List<String> {
+        val ont = SchemaToOwlMapper().build(SchemaModel.of(sourceId = "db:test:ownership", tables = tables), base)
+        val op = ont.owlOntologyManager.owlDataFactory
+            .getOWLObjectProperty(org.semanticweb.owlapi.model.IRI.create(base + propIri))
+        return ont.objectPropertyRangeAxioms(op).map { it.range.asOWLClass().iri.toString() }.toList()
+    }
+
+    @Test fun `수집 범위 밖을 가리키는 FK 도 대상 소속을 잃지 않는다`() {
+        // 대상 테이블이 스냅샷에 없다고 해서(다른 스키마가 수집 범위 밖) 소속을 버리면,
+        // sales.orders 와 archive.orders 를 가리키는 두 FK 가 같은 클래스로 수렴한다 —
+        // 이 이슈가 없앤 충돌이 '해석 실패' 분기에 그대로 남는 자리다.
+        val base = "http://lodestar/rdb/shop#"
+        val toSales = ForeignKeyInfo(listOf("oid"), "orders", listOf("id"), refSchema = "sales")
+        val toArchive = ForeignKeyInfo(listOf("oid"), "orders", listOf("id"), refSchema = "archive")
+        assertEquals(listOf(base + "sales/orders"),
+            rangeOf(base, "s/lines_oid_ref", listOf(t("lines", "s", toSales))))
+        assertEquals(listOf(base + "archive/orders"),
+            rangeOf(base, "s/lines_oid_ref", listOf(t("lines", "s", toArchive))))
+    }
+
+    @Test fun `소속을 명시한 FK 는 소속이 다른 테이블로 폴백하지 않는다`() {
+        // `REFERENCES sales.orders` 인데 스냅샷에는 소속을 모르는 orders 만 있다. 이름이 같다는
+        // 이유로 그 클래스에 묶으면 **원본에 없는 관계**를 EXTRACTED·confidence 1.0 으로 산출하게 된다.
+        val base = "http://lodestar/rdb/shop#"
+        val toSales = ForeignKeyInfo(listOf("oid"), "orders", listOf("id"), refSchema = "sales")
+        val unqualified = TableInfo("orders", listOf(ColumnInfo("id", "integer", false)), listOf("id"), emptyList())
+        assertEquals(listOf(base + "sales/orders"),
+            rangeOf(base, "s/lines_oid_ref", listOf(t("lines", "s", toSales), unqualified)),
+            "소속이 다른 동명 테이블에 FK 가 잘못 묶였다")
+    }
+
     @Test fun `동명 테이블의 데이터 프로퍼티도 충돌하지 않는다`() {
         val base = "http://lodestar/rdb/shop#"
         val cols = listOf(ColumnInfo("id", "integer", false), ColumnInfo("memo", "varchar", true))
