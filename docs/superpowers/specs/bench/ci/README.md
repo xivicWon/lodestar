@@ -7,7 +7,7 @@ I1 §4.1 은 "재현할 수 없는 측정은 측정이 아니다" 를 무조건 
 
 ```
 .github/workflows/verify.yml   PR·main push 에서 도는 게이트 (자동 실행 자체)
-verify_ci.py                   그 자동 실행이 계약대로인가 — W1~W7 + 결함 주입 21케이스
+verify_ci.py                   그 자동 실행이 계약대로인가 — W1~W8 + 결함 주입 22케이스
 manifest.json                  규칙 범위·케이스 총계 고정
 ```
 
@@ -22,6 +22,7 @@ manifest.json                  규칙 범위·케이스 총계 고정
 | **W5** | Python 3.11+ · JDK · `pip install jsonschema` · `pip install -e codegraph` | 검사가 임포트·툴체인 부재로 죽거나 건너뛴다 |
 | **W6** | gradle 증거 입력 선언이 유효하고 CI 가 gradle 빌드 캐시를 켜지 않는다 | 증거가 바뀌어도 `:test` 가 UP-TO-DATE 로 생략된다 — 건너뛴 그린은 그린이 아니다 |
 | **W7** | 체크아웃이 얕지 않다 (`fetch-depth: 0`) | 코드 프로브가 gold 입력 축의 blob 을 못 읽어 `git ls-tree` 가 exit 128 로 죽는다 |
+| **W8** | 검사 단계에 `if:` 조건이 없다 | 게이트가 조건부로 통째로 건너뛰어진 채 잡이 초록으로 끝난다 |
 
 W3 이 이 확인기의 핵심이다. CI 를 따로 쓰면 "CI 는 초록인데 손으로 돌리면 빨갛다"(또는 그 반대)가
 생기고, 그러면 어느 쪽도 증거가 아니다. 그래서 README 의 표시된 블록이 **정본**이고 워크플로가 그것을
@@ -41,10 +42,10 @@ W6 은 #124 완료 기준의 "건너뛴 그린은 그린이 아니다" 를 두 �
 ```bash
 pip install pyyaml
 python3 docs/superpowers/specs/bench/ci/verify_ci.py
-# 28 cases, 0 mismatches   (= manifest.json 의 caseCount — 규칙·케이스가 늘었는데 이 수치가 그대로면 실패한다)
+# 30 cases, 0 mismatches   (= manifest.json 의 caseCount — 규칙·케이스가 늘었는데 이 수치가 그대로면 실패한다)
 ```
 
-케이스 28 = 규칙 7 (현행 계약이 규칙을 지키는가) + 결함 주입 21 (규칙이 정말 무는가). 주입은 워크플로·
+케이스 30 = 규칙 8 (현행 계약이 규칙을 지키는가) + 결함 주입 22 (규칙이 정말 무는가). 주입은 워크플로·
 `build.gradle.kts` · README 원문을 **메모리에서** 훼손한 뒤 해당 규칙이 위반을 내야 통과다. 파일은
 건드리지 않는다. 한 규칙이 여러 위반을 낼 때는 기대 위반의 메시지 접두사까지 지정한다 — 같은 규칙이
 다른 이유로 물었는데 통과로 세면 주입이 아무것도 확인하지 못한다(`W5.no-jdk` 가 그 사례다).

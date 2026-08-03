@@ -102,7 +102,7 @@ jobs:
         run: python3 docs/superpowers/specs/verify_i1_counts.py
 
       # ── CI 계약 자신 — 게이트가 CI 에 있고 재현 절차와 갈라지지 않는가 ──────
-      - name: verify_ci — 증거 게이트 자동 실행 계약 (W1~W6)
+      - name: verify_ci — 증거 게이트 자동 실행 계약 (W1~W8)
         run: python3 docs/superpowers/specs/bench/ci/verify_ci.py
 
       # ── DB 트랙: L0 DB 프로브를 겸하는 백엔드 스위트 ────────────────────────
