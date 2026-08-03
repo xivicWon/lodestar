@@ -340,7 +340,7 @@ DB 트랙을 새 runId `run-l0-db-aad4382-002` 로 다시 쟀다. **게이트 �
 | 자리 | 왜 |
 |---|---|
 | `probeVersion` `v3` → `v4` | 정규화 표현에 `schema`·`refSchema` 를 넣었다 — 산출물에 있는 필드가 정규화에 없으면 결정성·PII 검사가 그 필드를 덮지 않은 채 덮었다고 센다 |
-| `determinism.artifactHashes` · `jdbc…artifactHashes` | 위 정규화가 바뀌면서 해시 입력이 달라졌다. **비율은 그대로 3/3 · 1.0** 이다 |
+| `determinism.artifactHashes` · `ingestStore.metadataService.artifactHashes` | 위 정규화가 바뀌면서 해시 입력이 달라졌다. **비율은 그대로 3/3 · 1.0** 이다(`determinism.rate` · `…metadataService.determinismRate`) |
 | `collector.sourceHash`(=`citedVersion`) | 수집기 구성 파일(`SchemaModel`·`MetadataService`·`DdlParser`)이 바뀌었다 |
 
 이 프로브가 재는 수집률·보고율·결정성 **비율**은 소속 축과 무관하다. 소속이 신원을 바꾸는 자리는

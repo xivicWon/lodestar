@@ -58,7 +58,8 @@ REPIN_REASON = {
         "수집기 변경(#126) — 라이브 스냅샷에 테이블 소속(schema)이 없어 동명 테이블이 한 신원으로 "
         "접히던 것을 고쳤다. 입력·gold 축은 그대로이고 게이트 수치도 그대로지만, 프로브 산출물은 "
         "네 자리가 다르다: probeVersion(v3→v4 — 정규화가 schema·refSchema 를 포함하게 됐다), "
-        "그에 따른 determinism·jdbc 의 artifactHashes(비율은 3/3·1.0 그대로), 그리고 수집기 구성 "
+        "그에 따른 determinism.artifactHashes 와 ingestStore.metadataService.artifactHashes"
+        "(비율은 둘 다 3/3·1.0 그대로), 그리고 수집기 구성 "
         "파일이 바뀌며 달라진 collector.sourceHash — 그래서 덮어쓰지 않고 새 runId 로 남긴다(I3 §5.5)"
     ),
     "code": (
