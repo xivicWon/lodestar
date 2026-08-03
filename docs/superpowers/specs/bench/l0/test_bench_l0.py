@@ -487,3 +487,68 @@ def test_확인기는_프로브가_잰_입력축을_gold_와_대조한다(ctx):
     bad["gold"]["probeAxis"]["revision"] = "deadbeef" + "0" * 32
     errs, _ = verify_l0.v4_gold_pinning(bad)
     assert any("입력 축" in e for e in errs), errs
+
+
+# ---- 런타임 의존성 고정 (#123) ---------------------------------------------------------
+
+def _dep_probe(**over) -> dict:
+    dep = {"pinPolicy": "exact", "dependencyPins": ["networkx==3.6.1"],
+           "unpinnedDependencies": [], "conditionalDependencies": [],
+           "installedMatchesDeclared": True, "installedMismatches": []}
+    dep.update(over)
+    return {"collector": {"citedVersion": "lodestar-codegraph@0.2.0", "dependencies": dep}}
+
+
+def test_환경규칙_선언과_설치가_같으면_통과():
+    assert probe_code.environment_errors(_dep_probe()) == []
+
+
+def test_환경규칙_설치가_선언과_다르면_원인을_말한다():
+    """표류 메시지가 블록명뿐이면 코드가 바뀐 것인지 내 venv 가 다른 것인지 구분되지 않는다."""
+    errs = probe_code.environment_errors(_dep_probe(
+        installedMatchesDeclared=False,
+        installedMismatches=["networkx: 선언 3.6.1 / 설치 3.1"]))
+    assert len(errs) == 1
+    assert "3.1" in errs[0] and "환경" in errs[0]
+
+
+def test_환경규칙_범위로_선언된_의존성을_문다():
+    errs = probe_code.environment_errors(_dep_probe(unpinnedDependencies=["networkx>=3.0"]))
+    assert any("networkx>=3.0" in e for e in errs), errs
+
+
+def test_환경규칙_선언_블록이_없으면_침묵하지_않는다():
+    """블록이 사라지면 '어긋난 것이 없다' 가 아니라 '재현 대상이 닫히지 않았다' 다."""
+    assert probe_code.environment_errors({"collector": {}}) != []
+
+
+def test_확인기는_같은_규칙을_커밋된_증거에_건다(ctx):
+    """V15 가 프로브의 순수 함수를 쓰는가 — 규칙을 두 번 쓰면 통과 기준이 갈린다."""
+    bad = copy.deepcopy(ctx)
+    bad["probes"]["code"]["collector"]["dependencies"]["unpinnedDependencies"] = ["networkx>=3.0"]
+    errs, seen = verify_l0.v15_runtime_dependencies_pinned(bad)
+    assert seen > 0 and any("networkx>=3.0" in e for e in errs), errs
+
+
+def test_확인기는_판정하지_않은_조건부_의존성을_드러낸다(ctx):
+    bad = copy.deepcopy(ctx)
+    bad["probes"]["code"]["collector"]["dependencies"]["conditionalDependencies"] = [
+        'networkx==3.6.1 ; sys_platform=="darwin"']
+    errs, _ = verify_l0.v15_runtime_dependencies_pinned(bad)
+    assert any("조건부" in e for e in errs), errs
+
+
+def test_환경이_어긋나면_트레이스백이_아니라_문장으로_끝난다(monkeypatch, capsys):
+    """이 실패는 버그가 아니라 '환경을 맞추라' 는 지시다 — 수집기 트레이스백으로 끝나면 읽을 수 없다.
+
+    실측: networkx 3.1 은 엣지가 없는 입력에서 `modularity` 의 `1/deg_sum**2` 로 죽는다. 그때
+    남는 것이 수집기 트레이스백뿐이면, 원인이 코드인지 환경인지 알아내는 데 시간이 든다.
+    """
+    def boom():
+        raise probe_code.EnvironmentMismatch("networkx: 선언 3.6.1 / 설치 3.1")
+
+    monkeypatch.setattr(probe_code, "measure", boom)
+    monkeypatch.setattr(sys, "argv", ["probe_code.py", "--check"])
+    assert probe_code.main() == 1
+    out = capsys.readouterr().out
+    assert "[FAIL]" in out and "3.1" in out

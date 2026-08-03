@@ -48,6 +48,38 @@ def collector_version() -> str:
     return tomllib.loads((CG_ROOT / "pyproject.toml").read_text())["project"]["version"]
 
 
+def collector_dependencies() -> dict:
+    """런타임 의존성의 **고정 선언**을 수집기 자신에게서 읽는다(#123).
+
+    여기서 다시 파싱하지 않고 수집기 모듈(`lodestar_codegraph.deps`)을 **수집 실행과 같은
+    인터프리터**로 돌려 읽는다. 프로브가 따로 파싱하면 수집기가 보는 선언과 프로브가 적는 선언이
+    갈릴 수 있고, 그때 이 블록은 산출물과 무관한 사실을 증거처럼 싣는다.
+
+    블록의 값은 선언에서만 나오므로 환경이 선언과 같은 한 실행마다 동일하다 — `--check` 의 바이트
+    대조와 충돌하지 않는다. 어긋난 환경에서는 `installedMatchesDeclared` 가 뒤집혀 표류로 걸린다.
+    """
+    # 기동 방식은 `run_collector()` 와 같게 둔다 — 같은 파일 안에서 서브프로세스를 두 가지로 띄우면
+    # 어느 쪽이 무엇을 상속하는지가 읽는 사람에게 보이지 않는다. 시드도 같이 지운다: 이 출력은
+    # 정렬돼 있어 시드에 무관하지만(실측), 그 사실이 앞으로도 참인지는 여기서 보장되지 않는다.
+    env = dict(os.environ, PYTHONPATH=str(CG_ROOT / "src"))
+    env.pop("PYTHONHASHSEED", None)
+    proc = subprocess.run([sys.executable, "-m", "lodestar_codegraph.deps"],
+                          cwd=CG_ROOT, env=env, capture_output=True, text=True, timeout=120)
+    if proc.returncode != 0:
+        raise RuntimeError(f"런타임 의존성 선언을 읽지 못했다: {proc.stderr[-2000:]}")
+    # 종료 코드만 보고 바로 파싱하면, 출력이 JSON 이 아니거나 키가 빠졌을 때 날것의 트레이스백이
+    # 그대로 새어 나온다 — 실패 경로마다 진단의 질이 달라지지 않게 같은 예외로 모은다(LOD-182).
+    try:
+        doc = json.loads(proc.stdout)
+        for key in ("dependencyPins", "unpinnedDependencies", "installedMatchesDeclared"):
+            doc[key]
+    except (json.JSONDecodeError, KeyError, TypeError) as e:
+        raise RuntimeError(
+            f"런타임 의존성 선언을 해석하지 못했다({type(e).__name__}: {e}) — "
+            f"stdout[-500:]={proc.stdout[-500:]!r}") from e
+    return doc
+
+
 # 측정 규칙 (선언)
 # M-CODE-1  입력 단위는 파일이다. 수집 범위 루트 아래의 모든 정규 파일이 분모이며,
 #           확장자 필터로 걸러진 파일은 '사유와 함께 보고되어야 하는 제외' 다.
@@ -285,12 +317,23 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
             "impl": "lodestar_codegraph (walk → tree-sitter parse → extract → resolve → cluster → emit)",
             "declaredVersion": f"lodestar-codegraph v1 (meta.generated_by) · pyproject {collector_version()}",
             "citedVersion": f"lodestar-codegraph@{collector_version()}",
+            # 재현 대상은 수집기 semver 하나로 지목되지 않는다 — 산출물의 바이트는 런타임 의존성에도
+            # 달려 있다(군집 라벨은 networkx 의 louvain 이 만든다). 그 선언을 여기 함께 남긴다(#123).
+            "dependencies": collector_dependencies(),
             "note": "산출물이 선언하는 것은 이름과 세대뿐이다 — 커밋·semver 가 없어 산출물만으로는 재현 대상을 "
                     f"특정할 수 없다(L0-fix-2). 입력 revision({rev[:7]})과 수집기 버전은 다른 축이며, 이 "
                     "실행의 수집기는 #112 의 결정성 수정 · #114 의 제외·실패 채널 · #115 의 마스킹 단계가 "
                     "모두 들어간 판이다.",
         },
     }
+
+    # 환경이 선언과 어긋나면 **수집기를 돌리기 전에** 멈춘다. 계속 가면 두 가지로 나빠진다:
+    # 운이 좋으면 표류가 `collector` 블록 하나로만 보고돼 원인이 코드인지 환경인지 구분되지 않고,
+    # 운이 나쁘면 수집기가 그 버전에서 아예 죽어 무관해 보이는 트레이스백만 남는다(실측: networkx
+    # 3.1 은 엣지가 없는 입력에서 `modularity` 의 `1/deg_sum**2` 로 ZeroDivisionError 를 낸다).
+    env_errs = environment_errors(probe)
+    if env_errs:
+        raise EnvironmentMismatch("; ".join(env_errs))
 
     # 1) 입력 신원 — 고정 revision blob 에서 재구성한 범위를 gold 고정 해시와 대조한다.
     #    gold 입력 축이 고정한 것은 범위 파일 중 7건뿐이므로 나머지도 blob 해시와 전수 대조한다
@@ -595,6 +638,40 @@ def stable(probe: dict) -> dict:
     return {k: v for k, v in probe.items() if k not in VOLATILE}
 
 
+class EnvironmentMismatch(RuntimeError):
+    """측정 환경이 선언한 재현 대상과 다르다 — 이 환경의 측정은 그 대상의 측정이 아니다(#123)."""
+
+
+def environment_errors(probe: dict) -> list[str]:
+    """측정 환경이 **선언한 재현 대상**과 같은가(#123).
+
+    `--check` 는 산출물 표류를 블록명으로만 보고한다. 이번 계약으로 `collector` 블록은 환경에
+    민감해졌으므로(선언과 다른 networkx 가 설치돼 있으면 `installedMatchesDeclared` 가 뒤집힌다),
+    표류의 원인이 코드인지 환경인지 구분해주지 않으면 읽는 쪽은 산출물을 직접 열어봐야 안다.
+
+    `determinism_errors` 와 같은 이유로 순수 함수다 — `main(--check)` 안에만 두면 그 판정 자체는
+    아무도 검사하지 않는다. 확인기(`verify_l0.py` V15)가 커밋된 증거에 같은 규칙을 건다.
+    """
+    dep = probe.get("collector", {}).get("dependencies")
+    if dep is None:
+        return ["런타임 의존성 선언이 산출물에 없다 — 재현 대상이 닫히지 않는다(#123)"]
+    errs = []
+    if dep["unpinnedDependencies"]:
+        errs.append(f"고정되지 않은 런타임 의존성: {dep['unpinnedDependencies']} — "
+                    "그 버전이 바뀌면 산출물이 바뀔 수 있고, 그 변화는 어디에도 잡히지 않는다")
+    if not dep["dependencyPins"]:
+        errs.append("고정 선언이 비어 있다 — 재현 대상을 지목하지 못한다")
+    # 마커가 붙어 이 환경에서 설치 여부를 판정하지 않은 선언. 판정하지 않은 것을 '검사했다' 에
+    # 넣지 않는다 — 재현 대상이 환경에 따라 갈리는 자리다.
+    if dep.get("conditionalDependencies"):
+        errs.append(f"이 환경에서 판정하지 않은 조건부 의존성: {dep['conditionalDependencies']} — "
+                    "재현 대상이 환경에 따라 갈린다")
+    if not dep["installedMatchesDeclared"] or dep["installedMismatches"]:
+        errs.append(f"측정 환경이 선언한 고정과 다르다: {dep['installedMismatches']} — "
+                    "표류의 원인이 코드가 아니라 환경이다. `pip install -e codegraph` 로 맞춘다")
+    return errs
+
+
 def determinism_errors(probe: dict) -> list[str]:
     """결정성 계약(#112) — 3회 실행이 하나로 모이고, 시드를 바꿔도 같아야 한다.
 
@@ -633,7 +710,12 @@ def main() -> int:
             return 1
         baseline = stable(json.loads(COMMITTED.read_text()))
 
-    probe = measure()
+    try:
+        probe = measure()
+    except EnvironmentMismatch as e:
+        # 트레이스백이 아니라 문장으로 끝낸다 — 이 실패는 버그가 아니라 '환경을 맞추라' 는 지시다.
+        print(f"[FAIL] {e}")
+        return 1
     text = json.dumps(probe, ensure_ascii=False, indent=2) + "\n"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text)
@@ -648,13 +730,20 @@ def main() -> int:
         if want != got:
             diff = [k for k in sorted(set(want) | set(got)) if want.get(k) != got.get(k)]
             print(f"[FAIL] 프로브 산출물 표류 — 블록: {diff}")
+            # 여기서 측정 환경을 다시 묻지 않는다 — 어긋난 환경은 `_measure()` 가 수집기를 돌리기
+            # 전에 이미 멈춰 세우므로, 이 지점의 `probe` 에 대한 환경 검사는 **항상 빈 결과**다.
+            # 그 자리에 검사를 두면 "검사하고 있다" 는 인상만 남는다.
             return 1
+        # 여기서 환경 규칙을 다시 걸지 않는다. 대조가 통과했다는 것은 기준 증거가 방금 잰 것과
+        # **같다**는 뜻이고, 방금 잰 쪽은 `_measure()` 의 fail-fast 를 이미 통과했다 — 어느 쪽에
+        # 걸어도 결과는 항상 빈 리스트다. 커밋된 증거 자체에 거는 판정은 확인기(V15)의 몫이며,
+        # 그쪽은 측정 없이 산출물만 읽으므로 실제로 살아 있다(결함 주입 5건이 그것을 문다).
         det = determinism_errors(probe)
         if det:
             for e in det:
                 print(f"[FAIL] {e}")
             return 1
-        print("[ok] 프로브 산출물 일치 + 결정성 1.0 (시드 무관)")
+        print("[ok] 프로브 산출물 일치 + 결정성 1.0 (시드 무관) + 런타임 의존성 고정 일치")
     return 0
 
 
