@@ -16,6 +16,19 @@
     "impl": "lodestar_codegraph (walk → tree-sitter parse → extract → resolve → cluster → emit)",
     "declaredVersion": "lodestar-codegraph v1 (meta.generated_by) · pyproject 0.2.0",
     "citedVersion": "lodestar-codegraph@0.2.0",
+    "dependencies": {
+      "dependencyPins": [
+        "networkx==3.6.1",
+        "tree-sitter-java==0.23.5",
+        "tree-sitter-kotlin==1.1.0",
+        "tree-sitter==0.23.2"
+      ],
+      "installedMatchesDeclared": true,
+      "installedMismatches": [],
+      "note": "런타임 의존성은 전부 `==` 로 고정한다(#123). 여기 실리는 것은 **선언**이며, 설치된 버전 문자열은 싣지 않는다 — 그것을 실으면 환경마다 산출물 바이트가 달라져 표류 검사와 충돌한다. 환경이 선언과 어긋나면 installedMatchesDeclared 가 false 로 뒤집히고, 그때는 표류로 걸리는 것이 맞다.",
+      "pinPolicy": "exact",
+      "unpinnedDependencies": []
+    },
     "note": "산출물이 선언하는 것은 이름과 세대뿐이다 — 커밋·semver 가 없어 산출물만으로는 재현 대상을 특정할 수 없다(L0-fix-2). 입력 revision(aad4382)과 수집기 버전은 다른 축이며, 이 실행의 수집기는 #112 의 결정성 수정 · #114 의 제외·실패 채널 · #115 의 마스킹 단계가 모두 들어간 판이다."
   },
   "input": {

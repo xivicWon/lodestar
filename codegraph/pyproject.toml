@@ -3,11 +3,16 @@ name = "lodestar-codegraph"
 version = "0.2.0"
 description = "Lodestar code source collector — source → codegraph.json (tree-sitter)"
 requires-python = ">=3.11"
+# 런타임 의존성은 **전부 `==` 로 고정한다**(#123). 산출물의 바이트가 이 목록에 달려 있기 때문이다 —
+# 군집 배정은 networkx 의 louvain 구현이 만들고, 파스 트리는 tree-sitter 문법이 만든다. 상한 있는
+# 범위를 쓰면 그 안에서 구현이 바뀔 자리가 남고, 그 변화는 `versions.collector: PINNED` 에도
+# `probe_code.py --check` 의 바이트 대조에도 잡히지 않는다. 정책과 검사는 `deps.py`·`tests/test_deps.py`.
+# 버전을 올릴 때는 여기서 올리고 `probe_code.py --check` 로 산출물 변화를 확인한다.
 dependencies = [
   "tree-sitter==0.23.2",
   "tree-sitter-java==0.23.5",
   "tree-sitter-kotlin==1.1.0",
-  "networkx>=3.0",
+  "networkx==3.6.1",
 ]
 
 [project.optional-dependencies]

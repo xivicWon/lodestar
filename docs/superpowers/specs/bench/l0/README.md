@@ -13,7 +13,7 @@ runId 로 남기고(I3 §5.5), 새 실행이 이전 것을 `baseline.previous` �
 ```
 probe_code.py     코드 트랙 프로브 (lodestar_codegraph 를 서브프로세스로 실행)
 build_report.py   프로브 산출물 → Run Quality Report v0 (프로브의 순수 함수)
-verify_l0.py      커밋된 증거의 적합성 확인기 V1~V14 + 결함 주입 31케이스
+verify_l0.py      커밋된 증거의 적합성 확인기 V1~V15 + 결함 주입 37케이스
 test_bench_l0.py  **계측기 자체의 단위 테스트** — 귀속·게이트 산식·확인기 규칙이 거짓을 무는가
 manifest.json     규칙 범위·케이스 총계 고정
 runs/run-l0-db-3c27259-001/     probe-db.json · report.json    (#88 실측 — 보고율 0.0)
@@ -66,9 +66,10 @@ git diff --exit-code docs/superpowers/specs/bench/l0/runs
 
 # 3) 증거 적합성 확인 (워킹트리와 무관 — 커밋된 산출물만 읽는다)
 python3 docs/superpowers/specs/bench/l0/verify_l0.py
-# 35 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount. #88 의 24 는 #112 가 V12~V13 을,
-#                            #114 가 V14 를, #125 가 입력 축·승인 경고 케이스 4건을 더하며 35 로 올렸다 —
-#                            manifest 가 정본이고 확인기가 대조한다)
+# 37 cases, 0 mismatches   (= bench/l0/manifest.json 의 caseCount. #88 의 24 는 #112 가 V12~V13 을,
+#                            #114 가 V14 를, #125 가 입력 축·승인 경고 케이스 4건을, #123 이 런타임
+#                            의존성 고정(V15) 2건을 더하며 37 로 올렸다 — manifest 가 정본이고
+#                            확인기가 대조한다)
 
 # 4) 계측기 자체의 테스트 (실측 없이 합성 입력으로 돈다)
 python3 -m pytest docs/superpowers/specs/bench/l0/test_bench_l0.py -q```
@@ -103,7 +104,7 @@ venv 를 쓰는 이유: 현재 워킹트리에서 `pip install -e codegraph` 를
 훅이 `sys.path` 보다 먼저 걸려, **역사적 입력에 현재 수집기**를 물릴 수 있다. 그러면 재현이 아니다.
 
 커밋된 증거 자체의 적합성(`verify_l0.py`)은 워킹트리와 무관하다 — 커밋된 산출물만 읽으므로
-현재 브랜치에서도 그대로 35 cases / 0 mismatches 여야 한다.
+현재 브랜치에서도 그대로 37 cases / 0 mismatches 여야 한다.
 
 ### 코드 트랙 재측정과 gold 입력 축 (#125 — 해소)
 
@@ -128,6 +129,61 @@ gold 의 **정답 축**(`sourceRevision` = 3c27259)에 묶여 있었다는 것�
 
 `metadata_completeness.py` 는 계속 별도로 돈다. 프로브는 *고정 입력의 실측*, 이쪽은 *지금 수집기가
 계약을 지키는가* 로 목적이 다르다 — 후자는 워킹트리를 직접 재므로 입력 축과 무관하게 움직인다.
+
+## 런타임 의존성 고정과 교차 버전 확인 (#123)
+
+`codegraph.json` 의 바이트는 수집기 코드만으로 정해지지 않는다. 군집 배정은
+`networkx.community.louvain_communities` 가 만들고, 파스 트리는 tree-sitter 문법이 만든다. #112 가
+없앤 것은 **같은 환경 안에서** 프로세스마다 갈리는 비결정(PYTHONHASHSEED)이고, **환경이 달라질 때의
+재현성**은 선언으로만 막힌다 — 그런데 `versions.collector: PINNED` 도 `probe_code.py --check` 의
+바이트 대조도 의존성 버전은 보지 않는다. 그 사각지대를 닫은 것이 #123 이다.
+
+- 정책: `codegraph/pyproject.toml` 의 **런타임 의존성은 전부 `==` 고정**이다(상한 있는 범위도 쓰지
+  않는다 — 상한 안에서 구현이 바뀔 자리가 남는다). 정책 구현은 `codegraph/src/lodestar_codegraph/deps.py`,
+  검사는 `codegraph/tests/test_deps.py`.
+- 기록: 프로브의 `collector.dependencies` 블록에 **선언**이 실린다(`dependencyPins` ·
+  `unpinnedDependencies` · `installedMatchesDeclared`). 설치된 버전 문자열은 싣지 않는다 — 그것을 실으면
+  환경마다 산출물 바이트가 달라져 표류 검사와 충돌한다. 환경이 선언과 어긋나면
+  `installedMatchesDeclared` 가 false 로 뒤집혀 `--check` 가 그 사실 자체를 표류로 잡는다.
+- 확인: `verify_l0.py` **V15** 가 커밋된 증거에서 이 선언을 검사한다(결함 주입 2건 — 범위 선언 ·
+  선언과 다른 환경에서 측정).
+
+`run-l0-code-aad4382-001` 의 `probe-code.json` 은 이 선언 블록이 더해지면서 갱신됐다. **측정은 그대로**
+이며(결정성 1.0 · 인벤토리 · 귀속 전부 동일, diff 는 `collector.dependencies` 추가 13줄뿐) 보고서는
+바이트가 바뀌지 않아 새 runId 를 만들지 않았다.
+
+### 다른 networkx 버전에서 산출물이 달라지는가
+
+의존성을 올릴 때(또는 올려도 되는지 볼 때) 돌린다. 워킹트리의 인터프리터를 건드리지 않도록 venv 로
+격리하고, 입력은 gold 입력 축의 blob 에서 재구성한다 — 작업 트리를 입력으로 쓰면 수집기를 고치는
+순간 비교의 두 항이 함께 움직인다.
+
+```bash
+WORK=$(mktemp -d)
+python3 -m venv "$WORK/venv"
+"$WORK/venv/bin/pip" install -q -e codegraph          # 고정 버전이 설치된다
+mkdir -p "$WORK/scope"
+git archive aad4382 backend/src/main/kotlin | tar -x -C "$WORK/scope"   # gold probeAxis.revision
+
+canon() {  # meta.source_root 만 뺀 정규화 해시 — probe_code.canonical 과 같은 규칙이다
+  python3 -c 'import json,hashlib,sys; d=json.load(open(sys.argv[1])); d["meta"].pop("source_root",None);
+print(hashlib.sha256(json.dumps(d,ensure_ascii=False,sort_keys=True,separators=(",",":")).encode()).hexdigest())' "$1"
+}
+
+"$WORK/venv/bin/python" -m lodestar_codegraph "$WORK/scope/backend/src/main/kotlin" -o "$WORK/pinned.json"
+"$WORK/venv/bin/pip" install -q "networkx==3.1"       # 비교할 다른 버전
+"$WORK/venv/bin/python" -m lodestar_codegraph "$WORK/scope/backend/src/main/kotlin" -o "$WORK/other.json"
+diff <(canon "$WORK/pinned.json") <(canon "$WORK/other.json") && echo "동일" || echo "산출물이 달라진다"
+```
+
+**실측(2026-08-03, 입력 축 `aad4382`)**: networkx `3.6.1` 과 `3.1` 의 정규화 해시가
+`sha256:c50c10f6013a2f1218e71bc8b344002399a1710f489d20b7dbd59efbb7f9af89` 로 **같았다**(노드 410 ·
+엣지 865 · 군집 29). 즉 지금 당장 깨져 있지는 않다 — 고정은 **선언되지 않은 가정을 없애는 것**이
+목적이며, 이 절차는 그 가정이 언제 깨지는지 보는 자리다. 달라지면 그때는 의존성 인상이 곧 산출물
+변경이므로 새 runId 로 재측정한다(I3 §5.5).
+
+같은 venv 에서 `"$WORK/venv/bin/python" -m lodestar_codegraph.deps` 를 돌리면 선언과 설치의 불일치가
+그대로 보인다(`installedMismatches`). 확인이 끝나면 `pip install -q -e codegraph` 로 되돌린다.
 
 ## #113 게이트 재측정
 

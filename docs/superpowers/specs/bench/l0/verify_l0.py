@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""#88 L0 Source — 커밋된 실측 증거의 적합성 확인기 (V1~V14).
+"""#88 L0 Source — 커밋된 실측 증거의 적합성 확인기 (V1~V15).
 
 보고서 하나가 스키마를 통과하는 것으로는 부족하다. 확인해야 하는 것은 **보고서의 수치가 프로브
 산출물에서 나왔고, 프로브의 입력이 고정 revision·gold 해시와 같고, 보고서가 가리키는 좌표가 실제로
@@ -7,7 +7,7 @@
 
     pip install jsonschema
     python3 docs/superpowers/specs/bench/l0/verify_l0.py
-    # 31 cases, 0 mismatches   (= manifest.json 의 caseCount)
+    # 37 cases, 0 mismatches   (= manifest.json 의 caseCount)
 
 각 규칙은 **결함 주입 케이스**를 가진다 — 규칙만 적고 검사가 없는 상태를 막는 장치다(I2 §5 · I3 §4.1
 과 같은 원칙). 규칙이 예외를 던지면 그 규칙의 실패로 기록하고 나머지 규칙을 계속 실행한다.
@@ -37,7 +37,7 @@ import validate_rqr  # noqa: E402
 from jsonschema import Draft202012Validator  # noqa: E402
 
 TRACKS = ("db", "code")
-MAX_RULE = 14
+MAX_RULE = 15
 L0_COLLECTOR_FEATURES = {"db": {"P-ddl-parser", "E1"}, "code": {"E17"}}
 
 
@@ -465,6 +465,43 @@ def v14_report_attribution(ctx):
     return errs, seen
 
 
+def v15_runtime_dependencies_pinned(ctx):
+    """V15 산출물을 만든 **런타임 의존성**이 고정 선언돼 있고, 보고서가 그것을 싣는다(#123).
+
+    `versions.collector: PINNED` 는 '재현할 수 있는 실행' 의 근거로 읽히고(V10), `--check` 는
+    커밋된 산출물과의 바이트 대조로 표류를 판정한다. 그런데 군집 라벨은 networkx 의 louvain 구현이
+    만들므로, 의존성이 범위로 선언돼 있으면 같은 수집기 버전이 다른 산출물을 낼 수 있다 — 두 주장
+    어디에도 걸리지 않는 채로. 그 사각지대를 여기서 닫는다.
+
+    측정 환경까지 본다: 선언만 고정돼 있고 실행 환경이 다른 버전이면, 이 실행이 잰 것은 선언된
+    재현 대상이 아니다.
+    """
+    errs, seen = [], 0
+    for t in TRACKS:
+        dep = ctx["probes"][t]["collector"].get("dependencies")
+        if dep is None:
+            # db 수집기는 Kotlin(gradle)이라 이 선언을 갖지 않는다 — 없음 자체는 결함이 아니지만,
+            # 그렇다고 검사 대상에서 조용히 빠지면 코드 트랙에서 블록이 사라져도 규칙이 침묵한다.
+            if t == "code":
+                errs.append("code: 런타임 의존성 선언이 프로브에 없다 — 재현 대상이 닫히지 않는다(#123)")
+                seen += 1
+            continue
+        seen += 1
+        if dep["unpinnedDependencies"]:
+            errs.append(f"{t}: 고정되지 않은 런타임 의존성이 있다: {dep['unpinnedDependencies']}")
+        if not dep["dependencyPins"]:
+            errs.append(f"{t}: 고정 선언이 비어 있다 — 재현 대상을 지목하지 못한다")
+        if not dep["installedMatchesDeclared"] or dep["installedMismatches"]:
+            errs.append(f"{t}: 측정 환경이 선언한 고정과 다르다: {dep['installedMismatches']} — "
+                        "이 실행이 잰 것은 선언된 재현 대상이 아니다")
+        # 이 실행의 수집기 신원과 같은 자리에 있어야 한다 — 다른 실행의 선언을 옮겨 붙이면
+        # 재현 대상이 이 산출물과 무관해진다.
+        seen += 1
+        if not ctx["probes"][t]["collector"]["citedVersion"]:
+            errs.append(f"{t}: 고정 선언이 수집기 버전과 함께 남지 않았다")
+    return errs, seen
+
+
 RULES = {
     "V1": v1_schema_and_i3_rules,
     "V2": v2_report_derives_from_probe,
@@ -480,6 +517,7 @@ RULES = {
     "V12": v12_determinism_contract,
     "V13": v13_cited_baseline_resolves,
     "V14": v14_report_attribution,
+    "V15": v15_runtime_dependencies_pinned,
 }
 
 
@@ -631,6 +669,18 @@ def injections() -> list[tuple[str, str, callable]]:
     def baseline_identity_lie(c):
         c["reports"]["code"]["baseline"]["previous"]["sourceRevision"] = "deadbee"
 
+    def unpinned_runtime_dependency(c):
+        # networkx 를 다시 범위로 푼 상태 — 산출물 바이트가 그 구현에 달려 있는데 선언은 열려 있다.
+        d = c["probes"]["code"]["collector"]["dependencies"]
+        d["unpinnedDependencies"] = ["networkx>=3.0"]
+        d["dependencyPins"] = [p for p in d["dependencyPins"] if not p.startswith("networkx==")]
+
+    def measured_on_a_different_environment(c):
+        # 선언은 고정인데 실제로 돌린 환경이 다른 버전이었던 실행.
+        d = c["probes"]["code"]["collector"]["dependencies"]
+        d["installedMatchesDeclared"] = False
+        d["installedMismatches"] = ["networkx: 선언 3.6.1 / 설치 3.1"]
+
     def seed_dependent(c):
         # 3회는 우연히 같았지만 시드를 바꾸면 갈리는 실행 — 재현 보장이 없다.
         c["probes"]["code"]["determinismControl"]["seedIndependent"] = False
@@ -671,6 +721,8 @@ def injections() -> list[tuple[str, str, callable]]:
         ("V14", "관측 좌표가 gold 구간과 겹치지 않음", wrong_report_locator),
         ("V13", "deltas 의 기준선 값을 손으로 고침", forged_delta_baseline),
         ("V13", "인용한 실행의 신원을 다르게 적음", baseline_identity_lie),
+        ("V15", "런타임 의존성을 범위로 선언", unpinned_runtime_dependency),
+        ("V15", "선언과 다른 환경에서 측정", measured_on_a_different_environment),
     ]
 
 

@@ -48,6 +48,24 @@ def collector_version() -> str:
     return tomllib.loads((CG_ROOT / "pyproject.toml").read_text())["project"]["version"]
 
 
+def collector_dependencies() -> dict:
+    """런타임 의존성의 **고정 선언**을 수집기 자신에게서 읽는다(#123).
+
+    여기서 다시 파싱하지 않고 수집기 모듈(`lodestar_codegraph.deps`)을 **수집 실행과 같은
+    인터프리터**로 돌려 읽는다. 프로브가 따로 파싱하면 수집기가 보는 선언과 프로브가 적는 선언이
+    갈릴 수 있고, 그때 이 블록은 산출물과 무관한 사실을 증거처럼 싣는다.
+
+    블록의 값은 선언에서만 나오므로 환경이 선언과 같은 한 실행마다 동일하다 — `--check` 의 바이트
+    대조와 충돌하지 않는다. 어긋난 환경에서는 `installedMatchesDeclared` 가 뒤집혀 표류로 걸린다.
+    """
+    env = dict(os.environ, PYTHONPATH=str(CG_ROOT / "src"))
+    proc = subprocess.run([sys.executable, "-m", "lodestar_codegraph.deps"],
+                          cwd=CG_ROOT, env=env, capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise RuntimeError(f"런타임 의존성 선언을 읽지 못했다: {proc.stderr[-2000:]}")
+    return json.loads(proc.stdout)
+
+
 # 측정 규칙 (선언)
 # M-CODE-1  입력 단위는 파일이다. 수집 범위 루트 아래의 모든 정규 파일이 분모이며,
 #           확장자 필터로 걸러진 파일은 '사유와 함께 보고되어야 하는 제외' 다.
@@ -285,6 +303,9 @@ def _measure(manifest: dict, work: pathlib.Path) -> dict:
             "impl": "lodestar_codegraph (walk → tree-sitter parse → extract → resolve → cluster → emit)",
             "declaredVersion": f"lodestar-codegraph v1 (meta.generated_by) · pyproject {collector_version()}",
             "citedVersion": f"lodestar-codegraph@{collector_version()}",
+            # 재현 대상은 수집기 semver 하나로 지목되지 않는다 — 산출물의 바이트는 런타임 의존성에도
+            # 달려 있다(군집 라벨은 networkx 의 louvain 이 만든다). 그 선언을 여기 함께 남긴다(#123).
+            "dependencies": collector_dependencies(),
             "note": "산출물이 선언하는 것은 이름과 세대뿐이다 — 커밋·semver 가 없어 산출물만으로는 재현 대상을 "
                     f"특정할 수 없다(L0-fix-2). 입력 revision({rev[:7]})과 수집기 버전은 다른 축이며, 이 "
                     "실행의 수집기는 #112 의 결정성 수정 · #114 의 제외·실패 채널 · #115 의 마스킹 단계가 "
